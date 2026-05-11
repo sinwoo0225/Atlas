@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ProjectManager.Application/ProjectManager.Application.csproj" />
+    <Project Path="src/ProjectManager.Core/ProjectManager.Core.csproj" />
+    <Project Path="src/ProjectManager.Infrastructure/ProjectManager.Infrastructure.csproj" />
+    <Project Path="src/ProjectManager.WebService/ProjectManager.WebService.csproj" />
+    <Project Path="src/ProjectManager.DesktopApp/ProjectManager.DesktopApp.csproj" />
+  </Folder>
+</Solution>

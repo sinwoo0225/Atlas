@@ -1,0 +1,144 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Pretendard', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: #141414;
+  color: #e5e7eb;
+  -webkit-font-smoothing: antialiased;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track { background: #1c1c1c; }
+::-webkit-scrollbar-thumb { background: #3a3a3a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
+
+/* Light mode overrides */
+html.light body {
+  background-color: #f5f5f5;
+  color: #1f2937;
+}
+html.light ::-webkit-scrollbar-track { background: #e5e7eb; }
+html.light ::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 3px; }
+html.light ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+/* In light mode, force slate-darks to act as light surfaces */
+html.light .bg-slate-900 { background-color: #f5f5f5 !important; }
+html.light .bg-slate-800 { background-color: #ffffff !important; }
+html.light .bg-slate-800\/60,
+html.light .bg-slate-700\/60,
+html.light .bg-slate-700\/40,
+html.light .bg-slate-700\/30,
+html.light .bg-slate-700\/50 { background-color: #f3f4f6 !important; }
+html.light .bg-slate-700 { background-color: #e5e7eb !important; }
+html.light .bg-slate-600 { background-color: #d1d5db !important; }
+html.light .border-slate-700,
+html.light .border-slate-700\/50,
+html.light .border-slate-700\/60,
+html.light .border-slate-600 { border-color: #d1d5db !important; }
+html.light .text-slate-100,
+html.light .text-slate-200 { color: #111827 !important; }
+html.light .text-slate-300 { color: #374151 !important; }
+html.light .text-slate-400 { color: #4b5563 !important; }
+html.light .text-slate-500 { color: #6b7280 !important; }
+
+/* Markdown rendering (no tailwind typography plugin available) */
+.markdown-body {
+  font-size: 14px;
+  line-height: 1.7;
+  color: #e2e8f0;
+}
+.markdown-body h1 { font-size: 1.5rem; font-weight: 600; margin: 1rem 0 0.5rem; color: #f3f4f6; border-bottom: 1px solid #2a2a2a; padding-bottom: 0.25rem; }
+.markdown-body h2 { font-size: 1.25rem; font-weight: 600; margin: 0.875rem 0 0.5rem; color: #f3f4f6; }
+.markdown-body h3 { font-size: 1.125rem; font-weight: 600; margin: 0.75rem 0 0.5rem; color: #f3f4f6; }
+.markdown-body h4 { font-size: 1rem; font-weight: 600; margin: 0.625rem 0 0.5rem; color: #f3f4f6; }
+.markdown-body h5, .markdown-body h6 { font-size: 0.95rem; font-weight: 600; margin: 0.5rem 0; color: #d1d5db; }
+.markdown-body p { margin: 0.5rem 0; }
+.markdown-body a { color: #9ca3af; text-decoration: underline; }
+.markdown-body a:hover { color: #e5e7eb; }
+.markdown-body ul, .markdown-body ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+.markdown-body ul { list-style: disc; }
+.markdown-body ol { list-style: decimal; }
+.markdown-body li { margin: 0.125rem 0; }
+.markdown-body code {
+  background: #2a2a2a;
+  color: #fbbf24;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-family: 'Consolas', 'Courier New', monospace;
+}
+.markdown-body pre {
+  background: #1c1c1c;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+.markdown-body pre code {
+  background: transparent;
+  color: #e5e7eb;
+  padding: 0;
+  font-size: 0.85em;
+}
+.markdown-body blockquote {
+  border-left: 3px solid #6b7280;
+  margin: 0.5rem 0;
+  padding: 0.25rem 0.75rem;
+  color: #9ca3af;
+  background: rgba(107, 114, 128, 0.06);
+}
+.markdown-body table {
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+  width: 100%;
+  font-size: 0.875rem;
+}
+.markdown-body th, .markdown-body td {
+  border: 1px solid #2a2a2a;
+  padding: 0.375rem 0.625rem;
+  text-align: left;
+}
+.markdown-body th {
+  background: #1f1f1f;
+  font-weight: 600;
+  color: #f3f4f6;
+}
+.markdown-body hr {
+  border: 0;
+  border-top: 1px solid #2a2a2a;
+  margin: 1rem 0;
+}
+.markdown-body img { max-width: 100%; border-radius: 4px; }
+
+/* Light mode markdown */
+html.light .markdown-body { color: #1f2937; }
+html.light .markdown-body h1,
+html.light .markdown-body h2,
+html.light .markdown-body h3,
+html.light .markdown-body h4 { color: #111827; border-color: #e5e7eb; }
+html.light .markdown-body h5,
+html.light .markdown-body h6 { color: #374151; }
+html.light .markdown-body a { color: #4b5563; }
+html.light .markdown-body a:hover { color: #111827; }
+html.light .markdown-body code { background: #f3f4f6; color: #b45309; }
+html.light .markdown-body pre { background: #f9fafb; border-color: #e5e7eb; }
+html.light .markdown-body pre code { color: #1f2937; }
+html.light .markdown-body th { background: #f3f4f6; color: #111827; }
+html.light .markdown-body th,
+html.light .markdown-body td { border-color: #e5e7eb; }
+html.light .markdown-body hr { border-color: #e5e7eb; }
+html.light .markdown-body blockquote { color: #6b7280; background: rgba(107, 114, 128, 0.06); }

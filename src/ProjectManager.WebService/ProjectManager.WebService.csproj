@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProjectManager.Application\ProjectManager.Application.csproj" />
+    <ProjectReference Include="..\ProjectManager.Core\ProjectManager.Core.csproj" />
+    <ProjectReference Include="..\ProjectManager.Infrastructure\ProjectManager.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.16">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.16" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <Target Name="PublishFrontend" BeforeTargets="BeforePublish">
+    <Message Text="Building React frontend..." Importance="high" />
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildThisFileDirectory)..\..\frontend" />
+    <ItemGroup>
+      <FrontendDist Include="$(MSBuildThisFileDirectory)..\..\frontend\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FrontendDist)"
+          DestinationFolder="$(MSBuildThisFileDirectory)wwwroot\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="Frontend build copied to wwwroot." Importance="high" />
+  </Target>
+
+</Project>
