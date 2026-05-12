@@ -4,7 +4,7 @@ import cytoscape from 'cytoscape';
 // @ts-expect-error - cytoscape-dagre has no types
 import dagre from 'cytoscape-dagre';
 import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
-import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Network, Search, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Minus, Network, Plus, Search, X } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
@@ -13,6 +13,7 @@ import { devInfoApi } from '../api/devinfo';
 import { issuesApi } from '../api/issues';
 import type { ChangeLog, DevInfoItem, Issue, Meeting, Project, WbsItem } from '../types';
 import { MapNodePanel, type PanelSelection } from './projectMap/MapNodePanel';
+import { MiniMap } from './projectMap/MiniMap';
 import { TimelineGuides } from './projectMap/TimelineGuides';
 import {
   buildRadialPositions,
@@ -44,13 +45,23 @@ type LoadedData = {
   issues: Issue[];
 };
 
-const PALETTE = {
+type NodePalette = { fill: string; stroke: string; text: string };
+type ThemePalette = {
+  project: NodePalette; wbsHub: NodePalette; changeHub: NodePalette; meetingHub: NodePalette; devHub: NodePalette; issueHub: NodePalette;
+  wbs: NodePalette; milestone: NodePalette; meeting: NodePalette; dev: NodePalette;
+  changeLow: NodePalette; changeMedium: NodePalette; changeHigh: NodePalette; changeCritical: NodePalette;
+  issueLow: NodePalette; issueMedium: NodePalette; issueHigh: NodePalette;
+  wbsStatusPlanned: string; wbsStatusInProgress: string; wbsStatusDone: string;
+  textOutline: string;
+};
+
+const DARK_PALETTE: ThemePalette = {
   project: { fill: '#27272a', stroke: '#a1a1aa', text: '#fafafa' },
   wbsHub:      { fill: '#3730a3', stroke: '#a5b4fc', text: '#eef2ff' },
   changeHub:   { fill: '#9a3412', stroke: '#fdba74', text: '#ffedd5' },
   meetingHub:  { fill: '#065f46', stroke: '#6ee7b7', text: '#d1fae5' },
   devHub:      { fill: '#155e75', stroke: '#67e8f9', text: '#cffafe' },
-  issueHub:    { fill: '#9f1239', stroke: '#fda4af', text: '#ffe4e6' }, // rose
+  issueHub:    { fill: '#9f1239', stroke: '#fda4af', text: '#ffe4e6' },
   wbs:         { fill: '#312e81', stroke: '#818cf8', text: '#e0e7ff' },
   milestone:   { fill: '#4338ca', stroke: '#c7d2fe', text: '#ffffff' },
   meeting:     { fill: '#064e3b', stroke: '#34d399', text: '#a7f3d0' },
@@ -59,15 +70,52 @@ const PALETTE = {
   changeMedium:   { fill: '#a16207', stroke: '#facc15', text: '#fef9c3' },
   changeHigh:     { fill: '#b45309', stroke: '#fb923c', text: '#fed7aa' },
   changeCritical: { fill: '#991b1b', stroke: '#f87171', text: '#fecaca' },
-  // Issue priority palette (mirrors ChangeLog impact style)
   issueLow:    { fill: '#155e75', stroke: '#67e8f9', text: '#cffafe' },
   issueMedium: { fill: '#a16207', stroke: '#facc15', text: '#fef9c3' },
   issueHigh:   { fill: '#9f1239', stroke: '#fb7185', text: '#ffe4e6' },
-  // WBS status borders (Planned / InProgress / Done)
   wbsStatusPlanned:    '#6b7280',
   wbsStatusInProgress: '#60a5fa',
   wbsStatusDone:       '#34d399',
+  textOutline: '#0a0a0a',
 };
+
+const LIGHT_PALETTE: ThemePalette = {
+  project: { fill: '#ffffff', stroke: '#52525b', text: '#171717' },
+  wbsHub:      { fill: '#e0e7ff', stroke: '#4f46e5', text: '#312e81' },
+  changeHub:   { fill: '#ffedd5', stroke: '#c2410c', text: '#7c2d12' },
+  meetingHub:  { fill: '#d1fae5', stroke: '#047857', text: '#064e3b' },
+  devHub:      { fill: '#cffafe', stroke: '#0e7490', text: '#164e63' },
+  issueHub:    { fill: '#ffe4e6', stroke: '#be123c', text: '#9f1239' },
+  wbs:         { fill: '#eef2ff', stroke: '#4f46e5', text: '#312e81' },
+  milestone:   { fill: '#c7d2fe', stroke: '#4338ca', text: '#1e1b4b' },
+  meeting:     { fill: '#d1fae5', stroke: '#059669', text: '#064e3b' },
+  dev:         { fill: '#cffafe', stroke: '#0891b2', text: '#164e63' },
+  changeLow:      { fill: '#dcfce7', stroke: '#16a34a', text: '#14532d' },
+  changeMedium:   { fill: '#fef9c3', stroke: '#ca8a04', text: '#713f12' },
+  changeHigh:     { fill: '#fed7aa', stroke: '#ea580c', text: '#7c2d12' },
+  changeCritical: { fill: '#fecaca', stroke: '#dc2626', text: '#7f1d1d' },
+  issueLow:    { fill: '#cffafe', stroke: '#0891b2', text: '#164e63' },
+  issueMedium: { fill: '#fef9c3', stroke: '#ca8a04', text: '#713f12' },
+  issueHigh:   { fill: '#fecdd3', stroke: '#e11d48', text: '#881337' },
+  wbsStatusPlanned:    '#9ca3af',
+  wbsStatusInProgress: '#3b82f6',
+  wbsStatusDone:       '#10b981',
+  textOutline: '#ffffff',
+};
+
+function useThemeMode(): 'light' | 'dark' {
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('light') ? 'light' : 'dark'
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const update = () => setTheme(document.documentElement.classList.contains('light') ? 'light' : 'dark');
+    const observer = new MutationObserver(update);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
 
 const SELECTED_GLOW = '#fbbf24';
 
@@ -159,6 +207,9 @@ export function ProjectMapPage() {
   const [timeWindow, setTimeWindow] = useState<TimeWindow | null>(null);
   // Bumped each time the cy instance is rebuilt so child overlays can re-subscribe.
   const [cyVersion, setCyVersion] = useState(0);
+
+  const theme = useThemeMode();
+  const PALETTE = useMemo(() => (theme === 'light' ? LIGHT_PALETTE : DARK_PALETTE), [theme]);
 
   useEffect(() => {
     if (!pid || isNaN(pid)) return;
@@ -369,7 +420,7 @@ export function ProjectMapPage() {
             'font-weight': 500,
             'text-wrap': 'wrap',
             'text-max-width': '120px',
-            'text-outline-color': '#0a0a0a',
+            'text-outline-color': PALETTE.textOutline,
             'text-outline-width': 1,
             width: 'data(size)',
             height: 'data(size)',
@@ -495,8 +546,7 @@ export function ProjectMapPage() {
 
     cy.fit(undefined, 60);
     cyRef.current = cy;
-    // Notify overlays (TimelineGuides) that cy was rebuilt so they can re-subscribe.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    // Notify overlays (TimelineGuides, MiniMap) that cy was rebuilt so they can re-subscribe.
     setCyVersion((v) => v + 1);
 
     return () => {
@@ -507,7 +557,7 @@ export function ProjectMapPage() {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [data, filter, pid, navigate, mode, windowStart, windowEnd]);
+  }, [data, filter, pid, navigate, mode, windowStart, windowEnd, PALETTE]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -517,7 +567,7 @@ export function ProjectMapPage() {
       const n = cy.getElementById(selectionDomId(selected));
       if (n && n.length > 0) n.addClass('selected-map-node');
     }
-  }, [selected, data, filter, mode, windowStart, windowEnd]);
+  }, [selected, data, filter, mode, windowStart, windowEnd, theme]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -538,7 +588,7 @@ export function ProjectMapPage() {
       const dim = e.source().hasClass('search-dim') || e.target().hasClass('search-dim');
       e.toggleClass('search-dim', dim);
     });
-  }, [query, data, filter, mode, windowStart, windowEnd]);
+  }, [query, data, filter, mode, windowStart, windowEnd, theme]);
 
   useEffect(() => {
     const t = setTimeout(() => cyRef.current?.fit(undefined, 60), 60);
@@ -589,7 +639,7 @@ export function ProjectMapPage() {
     { key: 'meetings', label: '회의록',     color: PALETTE.meetingHub.stroke },
     { key: 'dev',      label: '개발 정보',  color: PALETTE.devHub.stroke },
     { key: 'issues',   label: '이슈',       color: PALETTE.issueHub.stroke },
-  ], []);
+  ], [PALETTE]);
 
   if (error) return <div className="p-6 text-sm text-red-400">{error}</div>;
   if (!data) return <div className="p-6 text-sm text-muted">로딩 중...</div>;
@@ -664,6 +714,22 @@ export function ProjectMapPage() {
           <button onClick={() => toggleFilter('issues')} className={btnClass(filter.issues)} title="이슈 토글 (5)">
             <AlertTriangle size={14} /> 이슈
           </button>
+          <div className="inline-flex rounded-md border border-default overflow-hidden bg-surface-2">
+            <button
+              onClick={() => zoomBy(cyRef.current, 1 / 1.25)}
+              className="px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-3 border-r border-default"
+              title="축소"
+            >
+              <Minus size={14} />
+            </button>
+            <button
+              onClick={() => zoomBy(cyRef.current, 1.25)}
+              className="px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-3"
+              title="확대"
+            >
+              <Plus size={14} />
+            </button>
+          </div>
           <button
             onClick={() => cyRef.current?.fit(undefined, 60)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-surface-2 text-secondary hover:bg-surface-3 border border-default"
@@ -742,6 +808,7 @@ export function ProjectMapPage() {
         {mode === 'timeline' && (
           <TimelineGuides cyRef={cyRef} cyVersion={cyVersion} window={effectiveWindow} />
         )}
+        <MiniMap cyRef={cyRef} cyVersion={cyVersion} />
         {showTimelineEmpty && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-sm text-muted bg-surface-2/80 backdrop-blur px-4 py-2 rounded-md border border-default">
@@ -758,6 +825,16 @@ export function ProjectMapPage() {
       </div>
     </div>
   );
+}
+
+// Zoom around the canvas center while preserving the focal point.
+function zoomBy(cy: Core | null, factor: number): void {
+  if (!cy) return;
+  const container = cy.container();
+  if (!container) return;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+  cy.zoom({ level: cy.zoom() * factor, renderedPosition: { x: w / 2, y: h / 2 } });
 }
 
 function elementCountInWindow(data: LoadedData, filter: FilterState, w: TimeWindow | null): number {
