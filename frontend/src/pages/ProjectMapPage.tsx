@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import cytoscape from 'cytoscape';
 // @ts-expect-error - cytoscape-dagre has no types
 import dagre from 'cytoscape-dagre';
-import type { Core, ElementDefinition } from 'cytoscape';
-import { Network, CalendarDays, GitBranch, FileText, Code2, Maximize2 } from 'lucide-react';
+import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
+import { CalendarDays, Code2, FileText, GitBranch, Maximize2, Network, Search, X } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { devInfoApi } from '../api/devinfo';
-import type { Project, WbsItem, ChangeLog, Meeting, DevInfoItem } from '../types';
+import type { ChangeLog, DevInfoItem, Meeting, Project, WbsItem } from '../types';
+import { MapNodePanel, type PanelSelection } from './projectMap/MapNodePanel';
 
 cytoscape.use(dagre);
 
@@ -21,6 +22,8 @@ type LoadedData = {
   meetings: Meeting[];
   devInfo: DevInfoItem[];
 };
+
+type FilterState = { wbs: boolean; changes: boolean; meetings: boolean; dev: boolean };
 
 function flattenWbs(items: WbsItem[]): WbsItem[] {
   return items.flatMap((it) => [it, ...flattenWbs(it.children ?? [])]);
@@ -43,10 +46,9 @@ const PALETTE = {
   changeCritical: { fill: '#991b1b', stroke: '#f87171', text: '#fecaca' },
 };
 
-function buildPositions(
-  data: LoadedData,
-  filter: { wbs: boolean; changes: boolean; meetings: boolean; dev: boolean },
-) {
+const SELECTED_GLOW = '#fbbf24';
+
+function buildPositions(data: LoadedData, filter: FilterState) {
   const cx = 0, cy = 0;
   const HUB_DIST = 280;
   const NODE_SPACING = 80;
@@ -103,6 +105,62 @@ function buildPositions(
   return positions;
 }
 
+function resolveSelection(nodeId: string, data: LoadedData): PanelSelection | null {
+  if (nodeId === 'project') {
+    return {
+      kind: 'project',
+      entity: data.project,
+      counts: {
+        wbs: flattenWbs(data.wbs).length,
+        changes: data.changeLogs.length,
+        meetings: data.meetings.length,
+        dev: data.devInfo.length,
+      },
+    };
+  }
+  const m = nodeId.match(/^(wbs|change|meeting|dev)-(\d+)$/);
+  if (!m) return null;
+  const itemId = parseInt(m[2]);
+  switch (m[1]) {
+    case 'wbs': {
+      const e = flattenWbs(data.wbs).find((w) => w.id === itemId);
+      return e ? { kind: 'wbs', entity: e } : null;
+    }
+    case 'change': {
+      const e = data.changeLogs.find((c) => c.id === itemId);
+      return e ? { kind: 'change', entity: e } : null;
+    }
+    case 'meeting': {
+      const e = data.meetings.find((mt) => mt.id === itemId);
+      return e ? { kind: 'meeting', entity: e } : null;
+    }
+    case 'dev': {
+      const e = data.devInfo.find((d) => d.id === itemId);
+      return e ? { kind: 'dev', entity: e } : null;
+    }
+  }
+  return null;
+}
+
+function listingRouteFor(nodeId: string): string | null {
+  if (nodeId === 'project') return 'dashboard';
+  if (nodeId === 'cat-wbs' || nodeId.startsWith('wbs-')) return 'wbs';
+  if (nodeId === 'cat-changes' || nodeId.startsWith('change-')) return 'changelogs';
+  if (nodeId === 'cat-meetings' || nodeId.startsWith('meeting-')) return 'meetings';
+  if (nodeId === 'cat-dev' || nodeId.startsWith('dev-')) return 'devinfo';
+  return null;
+}
+
+function selectionDomId(sel: PanelSelection): string {
+  switch (sel.kind) {
+    case 'project': return 'project';
+    case 'wbs': return `wbs-${sel.entity.id}`;
+    case 'change': return `change-${sel.entity.id}`;
+    case 'meeting': return `meeting-${sel.entity.id}`;
+    case 'dev': return `dev-${sel.entity.id}`;
+  }
+}
+
 export function ProjectMapPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
@@ -110,9 +168,14 @@ export function ProjectMapPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
+  const tapTimerRef = useRef<number | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
   const [data, setData] = useState<LoadedData | null>(null);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState({ wbs: true, changes: true, meetings: true, dev: true });
+  const [filter, setFilter] = useState<FilterState>({ wbs: true, changes: true, meetings: true, dev: true });
+  const [query, setQuery] = useState('');
+  const [selected, setSelected] = useState<PanelSelection | null>(null);
 
   useEffect(() => {
     if (!pid || isNaN(pid)) return;
@@ -129,6 +192,7 @@ export function ProjectMapPage() {
       .catch(() => setError('맵 데이터를 불러올 수 없습니다.'));
   }, [pid]);
 
+  // Build / rebuild Cytoscape when data or filter changes.
   useEffect(() => {
     if (!data || !containerRef.current) return;
 
@@ -141,16 +205,16 @@ export function ProjectMapPage() {
     });
 
     const categories = [
-      { id: 'cat-wbs',      label: 'WBS',       kind: 'wbs-hub',     visible: filter.wbs,      route: 'wbs',        count: flattenWbs(data.wbs).length },
-      { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  route: 'changelogs', count: Math.min(data.changeLogs.length, 30) },
-      { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, route: 'meetings',   count: Math.min(data.meetings.length, 30) },
-      { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      route: 'devinfo',    count: Math.min(data.devInfo.length, 30) },
+      { id: 'cat-wbs',      label: 'WBS',       kind: 'wbs-hub',     visible: filter.wbs,      count: flattenWbs(data.wbs).length },
+      { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  count: Math.min(data.changeLogs.length, 30) },
+      { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, count: Math.min(data.meetings.length, 30) },
+      { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      count: Math.min(data.devInfo.length, 30) },
     ];
 
     for (const cat of categories) {
       if (!cat.visible) continue;
       elements.push({
-        data: { id: cat.id, label: `${cat.label}\n(${cat.count})`, kind: cat.kind, size: 70, route: cat.route, tooltip: `카테고리 · ${cat.label} (${cat.count}건)` },
+        data: { id: cat.id, label: `${cat.label}\n(${cat.count})`, kind: cat.kind, size: 70, tooltip: `카테고리 · ${cat.label} (${cat.count}건)` },
         position: positions[cat.id],
       });
       elements.push({ data: { id: `e-project-${cat.id}`, source: 'project', target: cat.id, kind: 'cat-edge' } });
@@ -275,55 +339,162 @@ export function ProjectMapPage() {
         { selector: 'edge[kind = "change-edge"]',  style: { 'line-color': PALETTE.changeHub.stroke,  opacity: 0.6 } as any },
         { selector: 'edge[kind = "meeting-edge"]', style: { 'line-color': PALETTE.meetingHub.stroke, opacity: 0.6 } as any },
         { selector: 'edge[kind = "dev-edge"]',     style: { 'line-color': PALETTE.devHub.stroke,     opacity: 0.6 } as any },
+        // Phase A: dim + selection states (must come last so they win the cascade)
+        { selector: '.search-dim, .hover-dim', style: { opacity: 0.12 } as any },
+        { selector: 'node.selected-map-node', style: { 'border-width': 4, 'border-color': SELECTED_GLOW, 'shadow-blur': 28, 'shadow-color': SELECTED_GLOW, 'shadow-opacity': 0.7 } as any },
+        { selector: 'node.search-hit', style: { 'border-width': 3.5, 'border-color': SELECTED_GLOW } as any },
       ],
       layout: { name: 'preset' } as any,
       wheelSensitivity: 0.2,
     });
 
-    // Hover tooltip
-    const tip = tooltipRef.current;
+    // Hover: tooltip + neighborhood focus.
     cy.on('mouseover', 'node', (evt) => {
-      const t = evt.target.data('tooltip');
-      if (!t || !tip) return;
-      tip.textContent = t;
-      tip.style.display = 'block';
+      const node = evt.target as NodeSingular;
+      cy.elements().addClass('hover-dim');
+      node.closedNeighborhood().removeClass('hover-dim');
+      const t = node.data('tooltip');
+      if (t && tooltipRef.current) {
+        tooltipRef.current.textContent = t;
+        tooltipRef.current.style.display = 'block';
+      }
     });
     cy.on('mousemove', 'node', (evt) => {
-      if (!tip) return;
+      if (!tooltipRef.current || !containerRef.current) return;
       const orig = evt.originalEvent as MouseEvent;
-      const rect = containerRef.current!.getBoundingClientRect();
-      tip.style.left = `${orig.clientX - rect.left + 14}px`;
-      tip.style.top = `${orig.clientY - rect.top + 14}px`;
+      const rect = containerRef.current.getBoundingClientRect();
+      tooltipRef.current.style.left = `${orig.clientX - rect.left + 14}px`;
+      tooltipRef.current.style.top = `${orig.clientY - rect.top + 14}px`;
     });
     cy.on('mouseout', 'node', () => {
-      if (tip) tip.style.display = 'none';
+      cy.elements().removeClass('hover-dim');
+      if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     });
 
+    // Tap → panel (debounced against dbltap). Dbltap → page navigation.
     cy.on('tap', 'node', (evt) => {
-      const node = evt.target;
-      const id: string = node.data('id');
-      const route: string | undefined = node.data('route');
-      if (route) navigate(`/projects/${pid}/${route}`);
-      else if (id.startsWith('wbs-')) navigate(`/projects/${pid}/wbs`);
-      else if (id.startsWith('change-')) navigate(`/projects/${pid}/changelogs`);
-      else if (id.startsWith('meeting-')) navigate(`/projects/${pid}/meetings`);
-      else if (id.startsWith('dev-')) navigate(`/projects/${pid}/devinfo`);
+      const node = evt.target as NodeSingular;
+      if (tapTimerRef.current != null) {
+        clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
+      tapTimerRef.current = window.setTimeout(() => {
+        tapTimerRef.current = null;
+        const id: string = node.data('id');
+        // Category hubs don't have a detail entity — go straight to listing.
+        if (id.startsWith('cat-')) {
+          const r = listingRouteFor(id);
+          if (r) navigate(`/projects/${pid}/${r}`);
+          return;
+        }
+        const sel = resolveSelection(id, data);
+        if (sel) {
+          setSelected(sel);
+          cy.nodes('.selected-map-node').removeClass('selected-map-node');
+          node.addClass('selected-map-node');
+        }
+      }, 260);
+    });
+
+    cy.on('dbltap', 'node', (evt) => {
+      if (tapTimerRef.current != null) {
+        clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
+      const id: string = evt.target.data('id');
+      const r = listingRouteFor(id);
+      if (r) navigate(`/projects/${pid}/${r}`);
     });
 
     cy.fit(undefined, 60);
     cyRef.current = cy;
 
     return () => {
+      if (tapTimerRef.current != null) {
+        clearTimeout(tapTimerRef.current);
+        tapTimerRef.current = null;
+      }
       cy.destroy();
       cyRef.current = null;
     };
   }, [data, filter, pid, navigate]);
 
-  // Re-fit when filter changes (after re-render)
+  // Re-apply selected-node highlight after cy rebuild.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    cy.nodes('.selected-map-node').removeClass('selected-map-node');
+    if (selected) {
+      const n = cy.getElementById(selectionDomId(selected));
+      if (n && n.length > 0) n.addClass('selected-map-node');
+    }
+  }, [selected, data, filter]);
+
+  // Search → fade non-matching nodes/edges.
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      cy.elements().removeClass('search-dim').removeClass('search-hit');
+      return;
+    }
+    cy.nodes().forEach((n) => {
+      const label = String(n.data('label') ?? '').toLowerCase();
+      const tip = String(n.data('tooltip') ?? '').toLowerCase();
+      const hit = label.includes(q) || tip.includes(q);
+      n.toggleClass('search-dim', !hit);
+      n.toggleClass('search-hit', hit);
+    });
+    cy.edges().forEach((e) => {
+      const dim = e.source().hasClass('search-dim') || e.target().hasClass('search-dim');
+      e.toggleClass('search-dim', dim);
+    });
+  }, [query, data, filter]);
+
+  // Re-fit when filter changes (after re-render).
   useEffect(() => {
     const t = setTimeout(() => cyRef.current?.fit(undefined, 60), 60);
     return () => clearTimeout(t);
   }, [filter]);
+
+  const toggleFilter = useCallback((k: keyof FilterState) => {
+    setFilter((f) => ({ ...f, [k]: !f[k] }));
+  }, []);
+
+  // Global keyboard shortcuts.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const isTyping = tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable;
+      if (e.key === 'Escape') {
+        if (selected) { setSelected(null); e.preventDefault(); return; }
+        if (query) { setQuery(''); e.preventDefault(); return; }
+        if (isTyping) target?.blur();
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        searchRef.current?.focus();
+        searchRef.current?.select();
+        e.preventDefault();
+        return;
+      }
+      if (isTyping) return;
+      if (e.key === '/') {
+        searchRef.current?.focus();
+        e.preventDefault();
+        return;
+      }
+      if (e.key === 'f' || e.key === 'F') { cyRef.current?.fit(undefined, 60); return; }
+      if (e.key === '1') { toggleFilter('wbs'); return; }
+      if (e.key === '2') { toggleFilter('changes'); return; }
+      if (e.key === '3') { toggleFilter('meetings'); return; }
+      if (e.key === '4') { toggleFilter('dev'); return; }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [selected, query, toggleFilter]);
 
   const legendItems = useMemo(() => [
     { key: 'wbs',      label: 'WBS',       color: PALETTE.wbsHub.stroke },
@@ -335,7 +506,6 @@ export function ProjectMapPage() {
   if (error) return <div className="p-6 text-sm text-red-400">{error}</div>;
   if (!data) return <div className="p-6 text-sm text-muted">로딩 중...</div>;
 
-  const toggle = (k: keyof typeof filter) => setFilter((f) => ({ ...f, [k]: !f[k] }));
   const btnClass = (active: boolean) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border ${
       active
@@ -344,28 +514,50 @@ export function ProjectMapPage() {
     }`;
 
   return (
-    <div className="p-6 h-full flex flex-col gap-4">
+    <div className="p-6 h-full flex flex-col gap-3">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-lg font-semibold text-primary flex items-center gap-2">
           <Network size={18} className="text-accent" />
           프로젝트 맵
         </h1>
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={() => toggle('wbs')} className={btnClass(filter.wbs)}>
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              ref={searchRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="검색…  (/)"
+              className="pl-8 pr-7 py-1.5 text-sm rounded-md w-56"
+            />
+            {query && (
+              <button
+                onClick={() => { setQuery(''); searchRef.current?.focus(); }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted hover:text-primary hover:bg-surface-3"
+                title="검색 초기화 (Esc)"
+                aria-label="검색 초기화"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <button onClick={() => toggleFilter('wbs')} className={btnClass(filter.wbs)} title="WBS 토글 (1)">
             <CalendarDays size={14} /> WBS
           </button>
-          <button onClick={() => toggle('changes')} className={btnClass(filter.changes)}>
+          <button onClick={() => toggleFilter('changes')} className={btnClass(filter.changes)} title="변경이력 토글 (2)">
             <GitBranch size={14} /> 변경
           </button>
-          <button onClick={() => toggle('meetings')} className={btnClass(filter.meetings)}>
+          <button onClick={() => toggleFilter('meetings')} className={btnClass(filter.meetings)} title="회의록 토글 (3)">
             <FileText size={14} /> 회의
           </button>
-          <button onClick={() => toggle('dev')} className={btnClass(filter.dev)}>
+          <button onClick={() => toggleFilter('dev')} className={btnClass(filter.dev)} title="개발 정보 토글 (4)">
             <Code2 size={14} /> 개발
           </button>
           <button
             onClick={() => cyRef.current?.fit(undefined, 60)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-surface-2 text-secondary hover:bg-surface-3 border border-default"
+            title="화면 맞춤 (f)"
           >
             <Maximize2 size={14} /> 화면 맞춤
           </button>
@@ -373,7 +565,7 @@ export function ProjectMapPage() {
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-4 text-xs text-muted">
+      <div className="flex items-center gap-4 text-xs text-muted flex-wrap">
         <span>범례</span>
         {legendItems.map((l) => (
           <span key={l.key} className="flex items-center gap-1.5">
@@ -381,6 +573,9 @@ export function ProjectMapPage() {
             {l.label}
           </span>
         ))}
+        <span className="ml-auto text-[11px] text-muted">
+          클릭 → 상세 패널 · 더블클릭 → 페이지 이동 · <kbd>/</kbd> 검색 · <kbd>f</kbd> 맞춤 · <kbd>1~4</kbd> 필터 · <kbd>Esc</kbd> 닫기
+        </span>
       </div>
 
       <div className="flex-1 relative bg-surface border border-default rounded-lg overflow-hidden min-h-0">
@@ -397,11 +592,8 @@ export function ProjectMapPage() {
           className="absolute pointer-events-none z-10 px-2.5 py-1.5 rounded-md text-xs whitespace-pre bg-surface-2 border border-strong text-primary shadow-lg"
           style={{ display: 'none' }}
         />
+        <MapNodePanel selection={selected} projectId={pid} onClose={() => setSelected(null)} />
       </div>
-
-      <p className="text-xs text-muted">
-        중앙: 프로젝트 / ↑ WBS / → 변경이력 / ↓ 회의록 / ← 개발 정보. 노드 클릭 → 해당 페이지로 이동, hover → 상세 표시.
-      </p>
     </div>
   );
 }
