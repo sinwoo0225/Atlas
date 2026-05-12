@@ -4,8 +4,10 @@ using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Application.Services;
 
-public class IssueService(IIssueRepository repo)
+public class IssueService(IIssueRepository repo, WorkLogService workLogService)
 {
+    private static bool IsCompleted(IssueStatus s) => s == IssueStatus.Resolved || s == IssueStatus.Closed;
+
     public async Task<IEnumerable<IssueDto>> GetByProjectAsync(int projectId) =>
         (await repo.GetByProjectAsync(projectId)).Select(ToDto);
 
@@ -35,6 +37,7 @@ public class IssueService(IIssueRepository repo)
     {
         var issue = await repo.GetByIdAsync(id);
         if (issue is null) return null;
+        var wasCompleted = IsCompleted(issue.Status);
         issue.Title = dto.Title;
         issue.Description = dto.Description;
         issue.Status = dto.Status;
@@ -42,6 +45,8 @@ public class IssueService(IIssueRepository repo)
         issue.AssigneeResourceId = dto.AssigneeResourceId;
         issue.DueDate = dto.DueDate;
         var updated = await repo.UpdateAsync(issue);
+        if (!wasCompleted && IsCompleted(updated.Status))
+            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- [이슈] {updated.Title}");
         return ToDto((await repo.GetByIdAsync(updated.Id))!);
     }
 

@@ -114,7 +114,7 @@ function IssueForm({ projectId, initial, resources, onSave, onCancel }: {
           <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
             <X size={14} /> 취소
           </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-700 hover:bg-zinc-600 text-white transition-colors">
+          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
             <Save size={14} /> 저장
           </button>
         </div>
@@ -149,7 +149,7 @@ export function IssuesPage() {
   const filtered = filter === 'All' ? issues : issues.filter((i) => i.status === filter);
   const filterBtn = (active: boolean) =>
     `px-3 py-1.5 rounded-md text-sm transition-colors ${
-      active ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
+      active ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
     }`;
 
   return (
@@ -161,7 +161,7 @@ export function IssuesPage() {
         </h1>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-md text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
         >
           <Plus size={14} /> 이슈 등록
         </button>

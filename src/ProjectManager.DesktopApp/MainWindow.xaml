@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
-        Title="SW 프로젝트 관리" Height="900" Width="1400"
+        Title="MiPala" Height="900" Width="1400"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
         WindowStyle="None"
@@ -20,13 +20,14 @@
         </Grid.RowDefinitions>
 
         <!-- Custom title bar -->
-        <Border Grid.Row="0" Background="#1c1c1c" BorderBrush="#2a2a2a" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+        <Border Grid.Row="0" Background="#1a1a1a" BorderBrush="#3f3f46" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
-                    <Rectangle Width="14" Height="14" Fill="#6b7280" RadiusX="3" RadiusY="3" Margin="0,0,10,0"/>
-                    <TextBlock Text="SW 프로젝트 관리" Foreground="#e5e7eb" FontSize="13"
-                               FontWeight="SemiBold" FontFamily="Segoe UI"
-                               VerticalAlignment="Center"/>
+                    <TextBlock VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="16">
+                        <Run Text="Mi" Foreground="#818cf8" FontStyle="Italic" FontWeight="ExtraBold"/><Run Text="Pala" Foreground="#fbbf24" FontStyle="Italic" FontWeight="ExtraBold"/>
+                    </TextBlock>
+                    <TextBlock Text="MindPalace for Projects" Foreground="#a1a1aa" FontSize="11"
+                               FontFamily="Segoe UI" VerticalAlignment="Center" Margin="10,2,0,0"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="0,0,4,0">
@@ -51,13 +52,15 @@
 
         <!-- Loading overlay -->
         <Border x:Name="LoadingOverlay" Grid.Row="1" Background="#141414">
-            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="320">
-                <TextBlock Text="SW 프로젝트 관리" Foreground="#e5e7eb" FontSize="28"
-                           FontWeight="Bold" HorizontalAlignment="Center"
-                           FontFamily="Segoe UI"/>
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="360">
+                <TextBlock HorizontalAlignment="Center" FontFamily="Segoe UI" FontSize="40">
+                    <Run Text="Mi" Foreground="#818cf8" FontStyle="Italic" FontWeight="ExtraBold"/><Run Text="Pala" Foreground="#fbbf24" FontStyle="Italic" FontWeight="ExtraBold"/>
+                </TextBlock>
+                <TextBlock Text="MindPalace for Projects" Foreground="#a1a1aa" FontSize="13"
+                           HorizontalAlignment="Center" Margin="0,4,0,0" FontFamily="Segoe UI"/>
                 <TextBlock x:Name="StatusText" Text="서버 시작 중..."
                            Foreground="#9ca3af" FontSize="13"
-                           HorizontalAlignment="Center" Margin="0,12,0,0"
+                           HorizontalAlignment="Center" Margin="0,18,0,0"
                            FontFamily="Segoe UI"/>
             </StackPanel>
         </Border>

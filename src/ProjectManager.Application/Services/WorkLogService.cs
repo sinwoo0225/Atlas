@@ -1,0 +1,60 @@
+using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
+using ProjectManager.Core.Interfaces;
+
+namespace ProjectManager.Application.Services;
+
+public class WorkLogService(IWorkLogRepository repo)
+{
+    public static DateTime StartOfWeek(DateTime date)
+    {
+        var d = date.Date;
+        var diff = ((int)d.DayOfWeek + 6) % 7; // Monday = 0
+        return d.AddDays(-diff);
+    }
+
+    public async Task<IEnumerable<WorkLogDto>> GetWeekAsync(int projectId, DateTime weekStart) =>
+        (await repo.GetByProjectWeekAsync(projectId, StartOfWeek(weekStart))).Select(ToDto);
+
+    public async Task<WorkLogDto> UpsertAsync(int projectId, DateTime date, UpsertWorkLogDto dto)
+    {
+        var log = new WorkLog
+        {
+            ProjectId = projectId,
+            Date = date.Date,
+            Done = dto.Done ?? string.Empty,
+            Plan = dto.Plan ?? string.Empty,
+            Issues = dto.Issues ?? string.Empty,
+        };
+        return ToDto(await repo.UpsertAsync(log));
+    }
+
+    /// <summary>
+    /// 지정 날짜의 Done 필드 끝에 line 을 추가. 이미 같은 줄이 있으면 skip.
+    /// </summary>
+    public async Task AppendDoneAsync(int projectId, DateTime date, string line)
+    {
+        if (string.IsNullOrWhiteSpace(line)) return;
+        var d = date.Date;
+        var existing = await repo.GetByProjectDateAsync(projectId, d);
+        if (existing is null)
+        {
+            await repo.UpsertAsync(new WorkLog
+            {
+                ProjectId = projectId, Date = d,
+                Done = line, Plan = string.Empty, Issues = string.Empty,
+            });
+            return;
+        }
+        var lines = (existing.Done ?? string.Empty).Replace("\r\n", "\n").Split('\n');
+        var trimmed = line.Trim();
+        foreach (var existingLine in lines)
+            if (existingLine.Trim() == trimmed) return;
+        var done = string.IsNullOrWhiteSpace(existing.Done) ? line : existing.Done.TrimEnd() + "\n" + line;
+        existing.Done = done;
+        await repo.UpsertAsync(existing);
+    }
+
+    internal static WorkLogDto ToDto(WorkLog w) =>
+        new(w.Id, w.ProjectId, w.Date, w.Done, w.Plan, w.Issues, w.CreatedAt, w.UpdatedAt);
+}

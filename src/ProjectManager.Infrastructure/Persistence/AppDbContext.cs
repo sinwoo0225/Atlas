@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DevInfoItem> DevInfoItems => Set<DevInfoItem>();
     public DbSet<Resource> Resources => Set<Resource>();
     public DbSet<Issue> Issues => Set<Issue>();
+    public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -67,6 +68,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.AssigneeResource).WithMany().HasForeignKey(x => x.AssigneeResourceId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => x.ProjectId);
             e.HasIndex(x => x.AssigneeResourceId);
+        });
+
+        modelBuilder.Entity<WorkLog>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.HasOne(x => x.Project).WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ProjectId, x.Date }).IsUnique();
         });
     }
 }

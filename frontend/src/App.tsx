@@ -12,6 +12,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
+import { WorkLogPage } from './pages/WorkLogPage';
 import { applyTheme, loadSettings } from './store/settings';
 
 export default function App() {
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/projects/:projectId/dashboard" element={<Dashboard />} />
           <Route path="/projects/:projectId/wbs" element={<WbsPage />} />
+          <Route path="/projects/:projectId/worklog" element={<WorkLogPage />} />
           <Route path="/projects/:projectId/issues" element={<IssuesPage />} />
           <Route path="/projects/:projectId/changelogs" element={<ChangeLogsPage />} />
           <Route path="/projects/:projectId/meetings" element={<MeetingsPage />} />

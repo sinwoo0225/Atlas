@@ -68,3 +68,11 @@ public interface IIssueRepository
     Task<Issue> UpdateAsync(Issue issue);
     Task DeleteAsync(int id);
 }
+
+public interface IWorkLogRepository
+{
+    Task<IEnumerable<WorkLog>> GetByProjectWeekAsync(int projectId, DateTime weekStart);
+    Task<WorkLog?> GetByProjectDateAsync(int projectId, DateTime date);
+    Task<IEnumerable<WorkLog>> GetAllInRangeAsync(DateTime fromInclusive, DateTime toExclusive);
+    Task<WorkLog> UpsertAsync(WorkLog log);
+}

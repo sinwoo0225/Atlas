@@ -148,3 +148,33 @@ export interface TodayWbs {
 export interface MonitoringData {
   items: TodayWbs[];
 }
+
+export interface WorkLog {
+  id: number;
+  projectId: number;
+  date: string; // ISO date
+  done: string;
+  plan: string;
+  issues: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertWorkLog {
+  done: string;
+  plan: string;
+  issues: string;
+}
+
+export interface WeeklyWorkLogProject {
+  projectId: number;
+  projectName: string;
+  done: string;
+  plan: string;
+  issues: string;
+}
+
+export interface WeeklyWorkLog {
+  weekStart: string;
+  projects: WeeklyWorkLogProject[];
+}

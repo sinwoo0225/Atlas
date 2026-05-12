@@ -4,7 +4,7 @@ using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Application.Services;
 
-public class WbsService(IWbsRepository repo)
+public class WbsService(IWbsRepository repo, WorkLogService workLogService)
 {
     public async Task<IEnumerable<WbsItemDto>> GetByProjectAsync(int projectId, int? versionId = null)
     {
@@ -36,11 +36,15 @@ public class WbsService(IWbsRepository repo)
     {
         var item = await repo.GetByIdAsync(id);
         if (item is null) return null;
+        var wasDone = item.Status == WbsStatus.Done;
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
         item.Status = dto.Status; item.IsMilestone = dto.IsMilestone;
         item.Order = dto.Order; item.Notes = dto.Notes;
-        return ToDto(await repo.UpdateAsync(item), []);
+        var updated = await repo.UpdateAsync(item);
+        if (!wasDone && updated.Status == WbsStatus.Done)
+            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- {updated.Name}");
+        return ToDto(updated, []);
     }
 
     public async Task<bool> DeleteAsync(int id)

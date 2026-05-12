@@ -104,7 +104,7 @@ function DevInfoForm({
                   onClick={() => set('type', t)}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
                     form.type === t
-                      ? 'bg-zinc-700 text-white'
+                      ? 'bg-indigo-600 text-white'
                       : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
                   }`}
                 >
@@ -184,7 +184,7 @@ function DevInfoForm({
           <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
             <X size={14} /> 취소
           </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-700 hover:bg-zinc-600 text-white transition-colors">
+          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
             <Save size={14} /> 저장
           </button>
         </div>
@@ -309,7 +309,7 @@ export function DevInfoPage() {
         </h1>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-md text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
         >
           <Plus size={14} /> 정보 추가
         </button>
@@ -319,7 +319,7 @@ export function DevInfoPage() {
         <button
           onClick={() => setFilterType('')}
           className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-            !filterType ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
+            !filterType ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
           }`}
         >
           전체
@@ -331,7 +331,7 @@ export function DevInfoPage() {
               key={t}
               onClick={() => setFilterType(t === filterType ? '' : t)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                filterType === t ? 'bg-zinc-700 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
+                filterType === t ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
               }`}
             >
               <Icon size={14} /> {t}

@@ -235,7 +235,7 @@ function WbsItemForm({
           <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
             <X size={14} /> 취소
           </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-700 hover:bg-zinc-600 text-white transition-colors">
+          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
             <Save size={14} /> 저장
           </button>
         </div>
@@ -286,7 +286,7 @@ function DateEditModal({
           <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
             <X size={14} /> 취소
           </button>
-          <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-700 hover:bg-zinc-600 text-white transition-colors">
+          <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
             <Save size={14} /> 저장
           </button>
         </div>
@@ -414,7 +414,7 @@ export function WbsPage() {
   };
 
   const tabClass = (active: boolean) =>
-    `px-3 py-1 text-sm rounded-md transition-colors ${active ? 'bg-zinc-700 text-white' : 'text-slate-400 hover:text-slate-200'}`;
+    `px-3 py-1 text-sm rounded-md transition-colors ${active ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`;
 
   return (
     <div className="p-6 space-y-4">
@@ -430,7 +430,7 @@ export function WbsPage() {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-md text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
           >
             <Plus size={14} /> 작업 추가
           </button>
@@ -458,7 +458,7 @@ export function WbsPage() {
               placeholder="v1.0"
               className="bg-zinc-800 border border-zinc-700 rounded-md px-2 py-1 text-sm text-slate-100 w-24 focus:outline-none"
             />
-            <button onClick={handleCreateVersion} className="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-white text-xs rounded-md">
+            <button onClick={handleCreateVersion} className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-md">
               확인
             </button>
           </div>

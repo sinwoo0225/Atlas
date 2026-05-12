@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-"PM Hub" / "SW 프로젝트 관리" — a personal, single-user, **local-first** project management app. All data lives under `%USERPROFILE%/Documents/ProjectManager/` (SQLite DB + per-project file folders) — there is no remote backend. The product/UI language is Korean.
+"MiPala" — short for *MindPalace* (the WPF/web subtitle reads "MindPalace for Projects"). A personal, single-user, **local-first** project management app. All data lives under `%USERPROFILE%/Documents/ProjectManager/` (SQLite DB + per-project file folders) — there is no remote backend. The product/UI language is Korean.
+
+Note on naming: the assembly/folder names (`ProjectManager.*`, `Documents/ProjectManager/`) and the `pm-hub-settings` localStorage key are preserved from earlier iterations. Don't rename them — it would break the DB path and the user's stored settings. Only the user-facing brand and titles say "MiPala".
 
 `docs/개발로그.md` is the running development changelog. Append a new dated section there for each session's work; treat it as the canonical "what's been done" log.
 

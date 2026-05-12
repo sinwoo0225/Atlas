@@ -126,7 +126,7 @@ function ProjectForm({
           <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
             <X size={14} /> 취소
           </button>
-          <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-700 hover:bg-zinc-600 text-white transition-colors">
+          <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
             <Save size={14} /> 저장
           </button>
         </div>
@@ -188,7 +188,7 @@ export function ProjectList() {
         <h1 className="text-lg font-semibold text-slate-100">프로젝트 목록</h1>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-md text-sm font-medium transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
         >
           <Plus size={14} /> 새 프로젝트
         </button>

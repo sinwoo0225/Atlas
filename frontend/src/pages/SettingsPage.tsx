@@ -52,7 +52,7 @@ export function SettingsPage() {
           {savedAt && <span className="text-sm text-emerald-400">저장되었습니다.</span>}
           <button
             onClick={handleSave}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-white rounded-md text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
           >
             <Save size={14} /> 저장
           </button>
@@ -68,7 +68,7 @@ export function SettingsPage() {
                 onClick={() => update('theme', t)}
                 className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
                   settings.theme === t
-                    ? 'bg-zinc-700 text-white'
+                    ? 'bg-indigo-600 text-white'
                     : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
                 }`}
               >

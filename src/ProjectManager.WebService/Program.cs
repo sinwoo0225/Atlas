@@ -26,6 +26,7 @@ builder.Services.AddScoped<IMeetingRepository, MeetingRepository>();
 builder.Services.AddScoped<IDevInfoRepository, DevInfoRepository>();
 builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
 builder.Services.AddScoped<IIssueRepository, IssueRepository>();
+builder.Services.AddScoped<IWorkLogRepository, WorkLogRepository>();
 
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<WbsService>();
@@ -34,6 +35,7 @@ builder.Services.AddScoped<MeetingService>();
 builder.Services.AddScoped<DevInfoService>();
 builder.Services.AddScoped<ResourceService>();
 builder.Services.AddScoped<IssueService>();
+builder.Services.AddScoped<WorkLogService>();
 builder.Services.AddScoped<MonitoringService>();
 
 builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
