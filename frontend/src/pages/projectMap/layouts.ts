@@ -1,7 +1,7 @@
-import type { ChangeLog, DevInfoItem, Meeting, WbsItem } from '../../types';
+import type { ChangeLog, DevInfoItem, Issue, Meeting, WbsItem } from '../../types';
 
 export type LayoutMode = 'radial' | 'hierarchy' | 'timeline';
-export type FilterState = { wbs: boolean; changes: boolean; meetings: boolean; dev: boolean };
+export type FilterState = { wbs: boolean; changes: boolean; meetings: boolean; dev: boolean; issues: boolean };
 export type TimeWindow = { start: string; end: string };
 export type Position = { x: number; y: number };
 export type DateRange = { min: string; max: string };
@@ -11,6 +11,7 @@ export type MapData = {
   changeLogs: ChangeLog[];
   meetings: Meeting[];
   devInfo: DevInfoItem[];
+  issues: Issue[];
 };
 
 export function flattenWbs(items: WbsItem[]): WbsItem[] {
@@ -21,6 +22,7 @@ export function flattenWbs(items: WbsItem[]): WbsItem[] {
 // WBS: endDate (delivery point) → fall back to startDate.
 // ChangeLog / Meeting: their `date`.
 // DevInfo: createdAt (no domain date field exists).
+// Issue: dueDate (when it needs to be done) → fall back to createdAt.
 export function wbsDate(w: WbsItem): string | null {
   return w.endDate ?? w.startDate ?? null;
 }
@@ -33,6 +35,9 @@ export function meetingDate(m: Meeting): string {
 export function devDate(d: DevInfoItem): string {
   return d.createdAt;
 }
+export function issueDate(i: Issue): string | null {
+  return i.dueDate ?? i.createdAt ?? null;
+}
 
 export function computeDateRange(data: MapData): DateRange | null {
   const all: string[] = [];
@@ -40,6 +45,7 @@ export function computeDateRange(data: MapData): DateRange | null {
   data.changeLogs.forEach((c) => all.push(c.date.slice(0, 10)));
   data.meetings.forEach((m) => all.push(m.date.slice(0, 10)));
   data.devInfo.forEach((d) => all.push(d.createdAt.slice(0, 10)));
+  data.issues.forEach((i) => { const d = issueDate(i); if (d) all.push(d.slice(0, 10)); });
   if (all.length === 0) return null;
   all.sort();
   return { min: all[0], max: all[all.length - 1] };
@@ -49,6 +55,12 @@ export function computeDateRange(data: MapData): DateRange | null {
 const HUB_DIST = 280;
 const NODE_SPACING = 80;
 const COL_OFFSET = 170;
+// Issue 카테고리는 5번째 → 4 cardinal 외 NE 대각선에 배치 (기존 십자 그리드는 보존).
+const DIAG = HUB_DIST * Math.SQRT1_2;
+
+function gridCols(n: number): number {
+  return Math.max(3, Math.ceil(Math.sqrt(n)));
+}
 
 export function buildRadialPositions(data: MapData, filter: FilterState): Record<string, Position> {
   const cx = 0, cy = 0;
@@ -58,41 +70,68 @@ export function buildRadialPositions(data: MapData, filter: FilterState): Record
     'cat-changes': { x: cx + HUB_DIST, y: cy },
     'cat-meetings': { x: cx, y: cy + HUB_DIST },
     'cat-dev': { x: cx - HUB_DIST, y: cy },
+    'cat-issues': { x: cx + DIAG, y: cy - DIAG },
   };
 
   if (filter.wbs) {
-    flattenWbs(data.wbs).forEach((item, idx) => {
-      const col = idx % 3, row = Math.floor(idx / 3);
+    const items = flattenWbs(data.wbs);
+    const cols = gridCols(items.length);
+    items.forEach((item, idx) => {
+      const col = idx % cols, row = Math.floor(idx / cols);
       positions[`wbs-${item.id}`] = {
-        x: cx + (col - 1) * COL_OFFSET,
+        x: cx + (col - (cols - 1) / 2) * COL_OFFSET,
         y: cy - HUB_DIST - (row + 1) * NODE_SPACING - 40,
       };
     });
   }
   if (filter.changes) {
-    data.changeLogs.slice(0, 30).forEach((c, idx) => {
-      const col = idx % 3, row = Math.floor(idx / 3);
+    const items = data.changeLogs;
+    const cols = gridCols(items.length);
+    items.forEach((c, idx) => {
+      const col = idx % cols, row = Math.floor(idx / cols);
       positions[`change-${c.id}`] = {
         x: cx + HUB_DIST + (col + 1) * COL_OFFSET + 30,
-        y: cy + (row - 4) * NODE_SPACING * 0.8,
+        y: cy + (row - (cols - 1) / 2) * NODE_SPACING * 0.8,
       };
     });
   }
   if (filter.meetings) {
-    data.meetings.slice(0, 30).forEach((m, idx) => {
-      const col = idx % 3, row = Math.floor(idx / 3);
+    const items = data.meetings;
+    const cols = gridCols(items.length);
+    items.forEach((m, idx) => {
+      const col = idx % cols, row = Math.floor(idx / cols);
       positions[`meeting-${m.id}`] = {
-        x: cx + (col - 1) * COL_OFFSET,
+        x: cx + (col - (cols - 1) / 2) * COL_OFFSET,
         y: cy + HUB_DIST + (row + 1) * NODE_SPACING + 40,
       };
     });
   }
   if (filter.dev) {
-    data.devInfo.slice(0, 30).forEach((d, idx) => {
-      const col = idx % 3, row = Math.floor(idx / 3);
+    const items = data.devInfo;
+    const cols = gridCols(items.length);
+    items.forEach((d, idx) => {
+      const col = idx % cols, row = Math.floor(idx / cols);
       positions[`dev-${d.id}`] = {
         x: cx - HUB_DIST - (col + 1) * COL_OFFSET - 30,
-        y: cy + (row - 4) * NODE_SPACING * 0.8,
+        y: cy + (row - (cols - 1) / 2) * NODE_SPACING * 0.8,
+      };
+    });
+  }
+  if (filter.issues) {
+    const items = data.issues;
+    const cols = gridCols(items.length);
+    // NE 대각선 방향 — 각 노드는 (col, row) 를 대각선 회전해 배치
+    const dx = Math.SQRT1_2, dy = -Math.SQRT1_2;
+    items.forEach((i, idx) => {
+      const col = idx % cols, row = Math.floor(idx / cols);
+      const radialOffset = (row + 1) * NODE_SPACING + 40;       // hub 외측 방향
+      const lateralOffset = (col - (cols - 1) / 2) * COL_OFFSET; // hub 수직 방향
+      // perpendicular = (-dy, dx) = (Math.SQRT1_2, Math.SQRT1_2) → SE 방향
+      const px = dx, py = dy;
+      const qx = -dy, qy = dx;
+      positions[`issue-${i.id}`] = {
+        x: cx + DIAG + radialOffset * px + lateralOffset * qx,
+        y: cy - DIAG + radialOffset * py + lateralOffset * qy,
       };
     });
   }
@@ -102,12 +141,13 @@ export function buildRadialPositions(data: MapData, filter: FilterState): Record
 // ===== Timeline =====
 export const TIMELINE_WIDTH = 1800;
 export const LANE_HEIGHT = 130;
-export type LaneKey = 'wbs' | 'change' | 'meeting' | 'dev';
+export type LaneKey = 'wbs' | 'change' | 'meeting' | 'dev' | 'issue';
 export const LANE_Y: Record<LaneKey, number> = {
   wbs: 0,
   change: LANE_HEIGHT,
   meeting: LANE_HEIGHT * 2,
   dev: LANE_HEIGHT * 3,
+  issue: LANE_HEIGHT * 4,
 };
 
 export const TIMELINE_LANES: { key: LaneKey; label: string; strokeColor: string; bgColor: string }[] = [
@@ -115,6 +155,7 @@ export const TIMELINE_LANES: { key: LaneKey; label: string; strokeColor: string;
   { key: 'change',  label: '변경이력',   strokeColor: '#fdba74', bgColor: 'rgba(251, 146, 60, 0.05)' },
   { key: 'meeting', label: '회의록',     strokeColor: '#6ee7b7', bgColor: 'rgba(110, 231, 183, 0.05)' },
   { key: 'dev',     label: '개발 정보',  strokeColor: '#67e8f9', bgColor: 'rgba(103, 232, 249, 0.05)' },
+  { key: 'issue',   label: '이슈',       strokeColor: '#fda4af', bgColor: 'rgba(244, 63, 94, 0.05)' },
 ];
 
 function isoToMs(iso: string): number {
@@ -207,7 +248,7 @@ export function buildTimelinePositions(
   // Group by x within each lane to apply jitter for overlapping nodes.
   type Bucket = Map<number, number>; // rounded-x → count
   const buckets: Record<LaneKey, Bucket> = {
-    wbs: new Map(), change: new Map(), meeting: new Map(), dev: new Map(),
+    wbs: new Map(), change: new Map(), meeting: new Map(), dev: new Map(), issue: new Map(),
   };
   const placeOnLane = (lane: LaneKey, iso: string, id: string) => {
     const x = scaleDateToWorldX(iso, window);
@@ -231,6 +272,12 @@ export function buildTimelinePositions(
   }
   if (filter.dev) {
     data.devInfo.forEach((d) => placeOnLane('dev', d.createdAt, `dev-${d.id}`));
+  }
+  if (filter.issues) {
+    data.issues.forEach((i) => {
+      const d = issueDate(i);
+      if (d) placeOnLane('issue', d, `issue-${i.id}`);
+    });
   }
   return positions;
 }

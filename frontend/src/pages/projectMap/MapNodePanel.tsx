@@ -1,17 +1,18 @@
-import { CalendarDays, Code2, ExternalLink, FileText, GitBranch, Link as LinkIcon, Network, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Code2, ExternalLink, FileText, GitBranch, Link as LinkIcon, Network, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
-import type { ChangeLog, DevInfoItem, Meeting, Project, WbsItem } from '../../types';
+import type { ChangeLog, DevInfoItem, Issue, Meeting, Project, WbsItem } from '../../types';
 import { parseActionItems, parseAttendees, parseDecisions } from '../../utils/meetingHelpers';
 
-export type ProjectCounts = { wbs: number; changes: number; meetings: number; dev: number };
+export type ProjectCounts = { wbs: number; changes: number; meetings: number; dev: number; issues: number };
 
 export type PanelSelection =
   | { kind: 'project'; entity: Project; counts: ProjectCounts }
   | { kind: 'wbs'; entity: WbsItem }
   | { kind: 'change'; entity: ChangeLog }
   | { kind: 'meeting'; entity: Meeting }
-  | { kind: 'dev'; entity: DevInfoItem };
+  | { kind: 'dev'; entity: DevInfoItem }
+  | { kind: 'issue'; entity: Issue };
 
 type Tone = 'gray' | 'blue' | 'green' | 'amber' | 'orange' | 'red';
 
@@ -70,6 +71,7 @@ export function MapNodePanel({ selection, projectId, onClose }: Props) {
             {selection.kind === 'change' && <ChangeView entity={selection.entity} />}
             {selection.kind === 'meeting' && <MeetingView entity={selection.entity} />}
             {selection.kind === 'dev' && <DevView entity={selection.entity} />}
+            {selection.kind === 'issue' && <IssueView entity={selection.entity} />}
           </div>
         </>
       )}
@@ -84,6 +86,7 @@ function routeFor(kind: PanelSelection['kind']): string {
     case 'change': return 'changelogs';
     case 'meeting': return 'meetings';
     case 'dev': return 'devinfo';
+    case 'issue': return 'issues';
   }
 }
 
@@ -94,6 +97,7 @@ function kindLabel(kind: PanelSelection['kind']): string {
     case 'change': return '변경이력';
     case 'meeting': return '회의록';
     case 'dev': return '개발 정보';
+    case 'issue': return '이슈';
   }
 }
 
@@ -105,6 +109,7 @@ function KindIcon({ kind }: { kind: PanelSelection['kind'] }) {
     case 'change': return <GitBranch size={size} className="text-orange-400" />;
     case 'meeting': return <FileText size={size} className="text-emerald-400" />;
     case 'dev': return <Code2 size={size} className="text-cyan-400" />;
+    case 'issue': return <AlertTriangle size={size} className="text-rose-400" />;
   }
 }
 
@@ -135,7 +140,29 @@ function ProjectView({ entity, counts }: { entity: Project; counts: ProjectCount
         <Stat label="변경이력" value={counts.changes} />
         <Stat label="회의록" value={counts.meetings} />
         <Stat label="개발 정보" value={counts.dev} />
+        <Stat label="이슈" value={counts.issues} />
       </div>
+    </>
+  );
+}
+
+function IssueView({ entity }: { entity: Issue }) {
+  return (
+    <>
+      <h2 className="text-base font-semibold text-primary">{entity.title}</h2>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge tone={priorityTone(entity.priority)}>{entity.priority}</Badge>
+        <Badge tone={issueStatusTone(entity.status)}>{entity.status}</Badge>
+        {entity.dueDate && (
+          <span className="text-xs text-muted">마감 {entity.dueDate.slice(0, 10)}</span>
+        )}
+      </div>
+      {entity.assigneeName && <KV label="담당" value={entity.assigneeName} />}
+      {entity.description && (
+        <Section label="설명">
+          <p className="text-sm text-secondary whitespace-pre-wrap">{entity.description}</p>
+        </Section>
+      )}
     </>
   );
 }
@@ -343,6 +370,25 @@ function impactTone(s: string): Tone {
     case 'Medium': return 'amber';
     case 'High': return 'orange';
     case 'Critical': return 'red';
+    default: return 'gray';
+  }
+}
+
+function priorityTone(s: string): Tone {
+  switch (s) {
+    case 'Low': return 'green';
+    case 'Medium': return 'amber';
+    case 'High': return 'red';
+    default: return 'gray';
+  }
+}
+
+function issueStatusTone(s: string): Tone {
+  switch (s) {
+    case 'Open': return 'red';
+    case 'InProgress': return 'blue';
+    case 'Resolved': return 'green';
+    case 'Closed': return 'gray';
     default: return 'gray';
   }
 }

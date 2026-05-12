@@ -4,13 +4,14 @@ import cytoscape from 'cytoscape';
 // @ts-expect-error - cytoscape-dagre has no types
 import dagre from 'cytoscape-dagre';
 import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
-import { CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Network, Search, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Network, Search, X } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { devInfoApi } from '../api/devinfo';
-import type { ChangeLog, DevInfoItem, Meeting, Project, WbsItem } from '../types';
+import { issuesApi } from '../api/issues';
+import type { ChangeLog, DevInfoItem, Issue, Meeting, Project, WbsItem } from '../types';
 import { MapNodePanel, type PanelSelection } from './projectMap/MapNodePanel';
 import { TimelineGuides } from './projectMap/TimelineGuides';
 import {
@@ -22,6 +23,7 @@ import {
   flattenWbs,
   getLayoutForMode,
   isInTimeline,
+  issueDate,
   meetingDate,
   shouldIncludeHubs,
   wbsDate,
@@ -39,6 +41,7 @@ type LoadedData = {
   changeLogs: ChangeLog[];
   meetings: Meeting[];
   devInfo: DevInfoItem[];
+  issues: Issue[];
 };
 
 const PALETTE = {
@@ -47,6 +50,7 @@ const PALETTE = {
   changeHub:   { fill: '#9a3412', stroke: '#fdba74', text: '#ffedd5' },
   meetingHub:  { fill: '#065f46', stroke: '#6ee7b7', text: '#d1fae5' },
   devHub:      { fill: '#155e75', stroke: '#67e8f9', text: '#cffafe' },
+  issueHub:    { fill: '#9f1239', stroke: '#fda4af', text: '#ffe4e6' }, // rose
   wbs:         { fill: '#312e81', stroke: '#818cf8', text: '#e0e7ff' },
   milestone:   { fill: '#4338ca', stroke: '#c7d2fe', text: '#ffffff' },
   meeting:     { fill: '#064e3b', stroke: '#34d399', text: '#a7f3d0' },
@@ -55,6 +59,14 @@ const PALETTE = {
   changeMedium:   { fill: '#a16207', stroke: '#facc15', text: '#fef9c3' },
   changeHigh:     { fill: '#b45309', stroke: '#fb923c', text: '#fed7aa' },
   changeCritical: { fill: '#991b1b', stroke: '#f87171', text: '#fecaca' },
+  // Issue priority palette (mirrors ChangeLog impact style)
+  issueLow:    { fill: '#155e75', stroke: '#67e8f9', text: '#cffafe' },
+  issueMedium: { fill: '#a16207', stroke: '#facc15', text: '#fef9c3' },
+  issueHigh:   { fill: '#9f1239', stroke: '#fb7185', text: '#ffe4e6' },
+  // WBS status borders (Planned / InProgress / Done)
+  wbsStatusPlanned:    '#6b7280',
+  wbsStatusInProgress: '#60a5fa',
+  wbsStatusDone:       '#34d399',
 };
 
 const SELECTED_GLOW = '#fbbf24';
@@ -75,10 +87,11 @@ function resolveSelection(nodeId: string, data: LoadedData): PanelSelection | nu
         changes: data.changeLogs.length,
         meetings: data.meetings.length,
         dev: data.devInfo.length,
+        issues: data.issues.length,
       },
     };
   }
-  const m = nodeId.match(/^(wbs|change|meeting|dev)-(\d+)$/);
+  const m = nodeId.match(/^(wbs|change|meeting|dev|issue)-(\d+)$/);
   if (!m) return null;
   const itemId = parseInt(m[2]);
   switch (m[1]) {
@@ -98,6 +111,10 @@ function resolveSelection(nodeId: string, data: LoadedData): PanelSelection | nu
       const e = data.devInfo.find((d) => d.id === itemId);
       return e ? { kind: 'dev', entity: e } : null;
     }
+    case 'issue': {
+      const e = data.issues.find((i) => i.id === itemId);
+      return e ? { kind: 'issue', entity: e } : null;
+    }
   }
   return null;
 }
@@ -108,6 +125,7 @@ function listingRouteFor(nodeId: string): string | null {
   if (nodeId === 'cat-changes' || nodeId.startsWith('change-')) return 'changelogs';
   if (nodeId === 'cat-meetings' || nodeId.startsWith('meeting-')) return 'meetings';
   if (nodeId === 'cat-dev' || nodeId.startsWith('dev-')) return 'devinfo';
+  if (nodeId === 'cat-issues' || nodeId.startsWith('issue-')) return 'issues';
   return null;
 }
 
@@ -118,6 +136,7 @@ function selectionDomId(sel: PanelSelection): string {
     case 'change': return `change-${sel.entity.id}`;
     case 'meeting': return `meeting-${sel.entity.id}`;
     case 'dev': return `dev-${sel.entity.id}`;
+    case 'issue': return `issue-${sel.entity.id}`;
   }
 }
 
@@ -133,7 +152,7 @@ export function ProjectMapPage() {
 
   const [data, setData] = useState<LoadedData | null>(null);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<FilterState>({ wbs: true, changes: true, meetings: true, dev: true });
+  const [filter, setFilter] = useState<FilterState>({ wbs: true, changes: true, meetings: true, dev: true, issues: true });
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<PanelSelection | null>(null);
   const [mode, setMode] = useState<LayoutMode>('radial');
@@ -149,9 +168,10 @@ export function ProjectMapPage() {
       changeLogsApi.getByProject(pid),
       meetingsApi.getByProject(pid),
       devInfoApi.getByProject(pid),
+      issuesApi.getByProject(pid),
     ])
-      .then(([project, wbs, changeLogs, meetings, devInfo]) => {
-        setData({ project, wbs, changeLogs, meetings, devInfo });
+      .then(([project, wbs, changeLogs, meetings, devInfo, issues]) => {
+        setData({ project, wbs, changeLogs, meetings, devInfo, issues });
       })
       .catch(() => setError('맵 데이터를 불러올 수 없습니다.'));
   }, [pid]);
@@ -196,9 +216,10 @@ export function ProjectMapPage() {
       });
       const categories = [
         { id: 'cat-wbs',      label: 'WBS',       kind: 'wbs-hub',     visible: filter.wbs,      count: flattenWbs(data.wbs).length },
-        { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  count: Math.min(data.changeLogs.length, 30) },
-        { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, count: Math.min(data.meetings.length, 30) },
-        { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      count: Math.min(data.devInfo.length, 30) },
+        { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  count: data.changeLogs.length },
+        { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, count: data.meetings.length },
+        { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      count: data.devInfo.length },
+        { id: 'cat-issues',   label: '이슈',       kind: 'issue-hub',   visible: filter.issues,   count: data.issues.length },
       ];
       for (const cat of categories) {
         if (!cat.visible) continue;
@@ -227,6 +248,7 @@ export function ProjectMapPage() {
             id,
             label: item.name + (item.isMilestone ? ' ◆' : ''),
             kind: item.isMilestone ? 'milestone' : 'wbs',
+            status: item.status,
             size: item.isMilestone ? 42 : 34,
             date: d ?? null,
             tooltip: `${item.isMilestone ? '마일스톤' : 'WBS'} · ${item.name}\n상태: ${item.status} / 종료: ${dateLabel}\n담당: ${item.assignee || '-'}`,
@@ -247,9 +269,9 @@ export function ProjectMapPage() {
       }
     }
 
-    // ChangeLogs (timeline removes the 30 cap so the timeline isn't artificially truncated)
+    // ChangeLogs
     if (filter.changes) {
-      const items = mode === 'timeline' ? data.changeLogs : data.changeLogs.slice(0, 30);
+      const items = data.changeLogs;
       for (const c of items) {
         const id = `change-${c.id}`;
         const d = changeDate(c);
@@ -267,7 +289,7 @@ export function ProjectMapPage() {
 
     // Meetings
     if (filter.meetings) {
-      const items = mode === 'timeline' ? data.meetings : data.meetings.slice(0, 30);
+      const items = data.meetings;
       for (const m of items) {
         const id = `meeting-${m.id}`;
         const d = meetingDate(m);
@@ -285,7 +307,7 @@ export function ProjectMapPage() {
 
     // DevInfo
     if (filter.dev) {
-      const items = mode === 'timeline' ? data.devInfo : data.devInfo.slice(0, 30);
+      const items = data.devInfo;
       for (const dv of items) {
         const id = `dev-${dv.id}`;
         const d = devDate(dv);
@@ -297,6 +319,34 @@ export function ProjectMapPage() {
         });
         if (mode !== 'timeline' && includeHubs) {
           elements.push({ data: { id: `e-cat-dev-${id}`, source: 'cat-dev', target: id, kind: 'dev-edge' } });
+        }
+      }
+    }
+
+    // Issues
+    if (filter.issues) {
+      const items = data.issues;
+      for (const it of items) {
+        const id = `issue-${it.id}`;
+        const d = issueDate(it);
+        if (mode === 'timeline' && (!d || !tlWindow || !isInTimeline(d, tlWindow))) continue;
+        const label = it.title.length > 24 ? it.title.slice(0, 24) + '…' : it.title;
+        const due = it.dueDate?.slice(0, 10) ?? '-';
+        elements.push({
+          data: {
+            id,
+            label,
+            kind: 'issue',
+            priority: it.priority,
+            issueStatus: it.status,
+            size: 32,
+            date: d ?? null,
+            tooltip: `이슈 · ${it.priority} / ${it.status}\n${it.title}\n마감: ${due}`,
+          },
+          ...posOf(id),
+        });
+        if (mode !== 'timeline' && includeHubs) {
+          elements.push({ data: { id: `e-cat-issues-${id}`, source: 'cat-issues', target: id, kind: 'issue-edge' } });
         }
       }
     }
@@ -341,6 +391,7 @@ export function ProjectMapPage() {
         { selector: 'node[kind = "change-hub"]',  style: { 'background-color': PALETTE.changeHub.fill,  'border-color': PALETTE.changeHub.stroke,  color: PALETTE.changeHub.text,  'font-weight': 700, 'border-width': 2.5 } as any },
         { selector: 'node[kind = "meeting-hub"]', style: { 'background-color': PALETTE.meetingHub.fill, 'border-color': PALETTE.meetingHub.stroke, color: PALETTE.meetingHub.text, 'font-weight': 700, 'border-width': 2.5 } as any },
         { selector: 'node[kind = "dev-hub"]',     style: { 'background-color': PALETTE.devHub.fill,     'border-color': PALETTE.devHub.stroke,     color: PALETTE.devHub.text,     'font-weight': 700, 'border-width': 2.5 } as any },
+        { selector: 'node[kind = "issue-hub"]',   style: { 'background-color': PALETTE.issueHub.fill,   'border-color': PALETTE.issueHub.stroke,   color: PALETTE.issueHub.text,   'font-weight': 700, 'border-width': 2.5 } as any },
         { selector: 'node[kind = "wbs"]',         style: { 'background-color': PALETTE.wbs.fill,         'border-color': PALETTE.wbs.stroke,         color: PALETTE.wbs.text } as any },
         { selector: 'node[kind = "milestone"]',   style: { 'background-color': PALETTE.milestone.fill,   'border-color': PALETTE.milestone.stroke,   color: PALETTE.milestone.text, shape: 'diamond' } as any },
         { selector: 'node[kind = "meeting"]',     style: { 'background-color': PALETTE.meeting.fill,     'border-color': PALETTE.meeting.stroke,     color: PALETTE.meeting.text } as any },
@@ -349,6 +400,18 @@ export function ProjectMapPage() {
         { selector: 'node[kind = "change"][impact = "Medium"]',   style: { 'background-color': PALETTE.changeMedium.fill,   'border-color': PALETTE.changeMedium.stroke,   color: PALETTE.changeMedium.text } as any },
         { selector: 'node[kind = "change"][impact = "High"]',     style: { 'background-color': PALETTE.changeHigh.fill,     'border-color': PALETTE.changeHigh.stroke,     color: PALETTE.changeHigh.text } as any },
         { selector: 'node[kind = "change"][impact = "Critical"]', style: { 'background-color': PALETTE.changeCritical.fill, 'border-color': PALETTE.changeCritical.stroke, color: PALETTE.changeCritical.text } as any },
+        // Issue priority colors (mirrors ChangeLog impact pattern)
+        { selector: 'node[kind = "issue"]',                          style: { 'background-color': PALETTE.issueMedium.fill, 'border-color': PALETTE.issueMedium.stroke, color: PALETTE.issueMedium.text } as any },
+        { selector: 'node[kind = "issue"][priority = "Low"]',        style: { 'background-color': PALETTE.issueLow.fill,    'border-color': PALETTE.issueLow.stroke,    color: PALETTE.issueLow.text } as any },
+        { selector: 'node[kind = "issue"][priority = "Medium"]',     style: { 'background-color': PALETTE.issueMedium.fill, 'border-color': PALETTE.issueMedium.stroke, color: PALETTE.issueMedium.text } as any },
+        { selector: 'node[kind = "issue"][priority = "High"]',       style: { 'background-color': PALETTE.issueHigh.fill,   'border-color': PALETTE.issueHigh.stroke,   color: PALETTE.issueHigh.text } as any },
+        // Closed/Resolved issues — dim slightly so attention is on open ones
+        { selector: 'node[kind = "issue"][issueStatus = "Closed"]',   style: { opacity: 0.55 } as any },
+        { selector: 'node[kind = "issue"][issueStatus = "Resolved"]', style: { opacity: 0.75 } as any },
+        // WBS status border tint (Planned / InProgress / Done) — applied to non-milestone wbs only
+        { selector: 'node[kind = "wbs"][status = "Planned"]',    style: { 'border-color': PALETTE.wbsStatusPlanned } as any },
+        { selector: 'node[kind = "wbs"][status = "InProgress"]', style: { 'border-color': PALETTE.wbsStatusInProgress } as any },
+        { selector: 'node[kind = "wbs"][status = "Done"]',       style: { 'border-color': PALETTE.wbsStatusDone, opacity: 0.75 } as any },
         {
           selector: 'edge',
           style: {
@@ -365,6 +428,7 @@ export function ProjectMapPage() {
         { selector: 'edge[kind = "change-edge"]',  style: { 'line-color': PALETTE.changeHub.stroke,  opacity: 0.6 } as any },
         { selector: 'edge[kind = "meeting-edge"]', style: { 'line-color': PALETTE.meetingHub.stroke, opacity: 0.6 } as any },
         { selector: 'edge[kind = "dev-edge"]',     style: { 'line-color': PALETTE.devHub.stroke,     opacity: 0.6 } as any },
+        { selector: 'edge[kind = "issue-edge"]',   style: { 'line-color': PALETTE.issueHub.stroke,   opacity: 0.6 } as any },
         // Phase A: dim + selection states (must come last so they win the cascade)
         { selector: '.search-dim, .hover-dim', style: { opacity: 0.12 } as any },
         { selector: 'node.selected-map-node', style: { 'border-width': 4, 'border-color': SELECTED_GLOW, 'shadow-blur': 28, 'shadow-color': SELECTED_GLOW, 'shadow-opacity': 0.7 } as any },
@@ -513,6 +577,7 @@ export function ProjectMapPage() {
       if (e.key === '2') { toggleFilter('changes'); return; }
       if (e.key === '3') { toggleFilter('meetings'); return; }
       if (e.key === '4') { toggleFilter('dev'); return; }
+      if (e.key === '5') { toggleFilter('issues'); return; }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -523,6 +588,7 @@ export function ProjectMapPage() {
     { key: 'changes',  label: '변경이력',   color: PALETTE.changeHub.stroke },
     { key: 'meetings', label: '회의록',     color: PALETTE.meetingHub.stroke },
     { key: 'dev',      label: '개발 정보',  color: PALETTE.devHub.stroke },
+    { key: 'issues',   label: '이슈',       color: PALETTE.issueHub.stroke },
   ], []);
 
   if (error) return <div className="p-6 text-sm text-red-400">{error}</div>;
@@ -595,6 +661,9 @@ export function ProjectMapPage() {
           <button onClick={() => toggleFilter('dev')} className={btnClass(filter.dev)} title="개발 정보 토글 (4)">
             <Code2 size={14} /> 개발
           </button>
+          <button onClick={() => toggleFilter('issues')} className={btnClass(filter.issues)} title="이슈 토글 (5)">
+            <AlertTriangle size={14} /> 이슈
+          </button>
           <button
             onClick={() => cyRef.current?.fit(undefined, 60)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-surface-2 text-secondary hover:bg-surface-3 border border-default"
@@ -614,7 +683,7 @@ export function ProjectMapPage() {
           </span>
         ))}
         <span className="ml-auto text-[11px] text-muted">
-          클릭 → 패널 · 더블클릭 → 페이지 · <kbd>/</kbd> 검색 · <kbd>f</kbd> 맞춤 · <kbd>1~4</kbd> 필터 · <kbd>Esc</kbd> 닫기
+          클릭 → 패널 · 더블클릭 → 페이지 · <kbd>/</kbd> 검색 · <kbd>f</kbd> 맞춤 · <kbd>1~5</kbd> 필터 · <kbd>Esc</kbd> 닫기
         </span>
       </div>
 
@@ -698,5 +767,6 @@ function elementCountInWindow(data: LoadedData, filter: FilterState, w: TimeWind
   if (filter.changes) data.changeLogs.forEach((c) => { if (isInTimeline(changeDate(c), w)) n++; });
   if (filter.meetings) data.meetings.forEach((m) => { if (isInTimeline(meetingDate(m), w)) n++; });
   if (filter.dev) data.devInfo.forEach((d) => { if (isInTimeline(devDate(d), w)) n++; });
+  if (filter.issues) data.issues.forEach((i) => { if (isInTimeline(issueDate(i), w)) n++; });
   return n;
 }
