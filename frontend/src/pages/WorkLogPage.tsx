@@ -35,6 +35,7 @@ function fmtMD(d: Date): string {
 }
 
 type DayEntry = { date: string; done: string; plan: string; issues: string };
+type FieldKey = 'done' | 'plan' | 'issues';
 
 export function WorkLogPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -42,9 +43,16 @@ export function WorkLogPage() {
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
   const [entries, setEntries] = useState<DayEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState<number>(0);
 
   const weekDates = useMemo(() => Array.from({ length: 5 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const weekStartIso = isoDate(weekStart);
+
+  useEffect(() => {
+    const todayIso = isoDate(new Date());
+    const todayIdx = weekDates.findIndex((d) => isoDate(d) === todayIso);
+    setSelectedIdx(todayIdx >= 0 ? todayIdx : 0);
+  }, [weekStartIso]);
 
   useEffect(() => {
     if (!pid) return;
@@ -68,7 +76,7 @@ export function WorkLogPage() {
     return () => { cancelled = true; };
   }, [pid, weekStartIso]);
 
-  const updateField = (idx: number, field: 'done' | 'plan' | 'issues', value: string) => {
+  const updateField = (idx: number, field: FieldKey, value: string) => {
     setEntries((prev) => {
       const next = [...prev];
       next[idx] = { ...next[idx], [field]: value };
@@ -78,6 +86,7 @@ export function WorkLogPage() {
 
   const persist = async (idx: number) => {
     const e = entries[idx];
+    if (!e) return;
     await worklogApi.upsert(pid, e.date, { done: e.done, plan: e.plan, issues: e.issues });
   };
 
@@ -86,6 +95,8 @@ export function WorkLogPage() {
   const goThis = () => setWeekStart(startOfWeek(new Date()));
 
   const weekEnd = addDays(weekStart, 4);
+  const selectedEntry = entries[selectedIdx];
+  const selectedDate = weekDates[selectedIdx];
 
   return (
     <div className="p-6 space-y-4">
@@ -113,89 +124,117 @@ export function WorkLogPage() {
       {loading ? (
         <div className="text-sm text-muted">로딩중…</div>
       ) : (
-        <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
-          {entries.map((entry, idx) => (
-            <DayCard
-              key={entry.date}
-              dayLabel={DAY_LABELS[idx]}
-              date={weekDates[idx]}
-              entry={entry}
-              onChange={(field, value) => updateField(idx, field, value)}
-              onBlur={() => persist(idx)}
+        <>
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
+            {entries.map((entry, idx) => (
+              <PreviewCard
+                key={entry.date}
+                dayLabel={DAY_LABELS[idx]}
+                date={weekDates[idx]}
+                entry={entry}
+                selected={idx === selectedIdx}
+                onSelect={() => setSelectedIdx(idx)}
+              />
+            ))}
+          </div>
+
+          {selectedEntry && selectedDate && (
+            <DayEditor
+              dayLabel={DAY_LABELS[selectedIdx]}
+              date={selectedDate}
+              entry={selectedEntry}
+              onChange={(field, value) => updateField(selectedIdx, field, value)}
+              onBlur={() => persist(selectedIdx)}
             />
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
 }
 
-function DayCard({
-  dayLabel, date, entry, onChange, onBlur,
+function PreviewCard({
+  dayLabel, date, entry, selected, onSelect,
 }: {
   dayLabel: string;
   date: Date;
   entry: DayEntry;
-  onChange: (field: 'done' | 'plan' | 'issues', value: string) => void;
-  onBlur: () => void;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const isToday = isoDate(date) === isoDate(new Date());
+  const borderCls = selected
+    ? 'border-accent ring-1 ring-accent'
+    : 'border-default hover:border-strong';
   return (
-    <div className={`bg-surface border border-default rounded-lg overflow-hidden ${isToday ? 'ring-1 ring-accent' : ''}`}>
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`text-left bg-surface border rounded-lg overflow-hidden transition-colors ${borderCls}`}
+    >
       <div className={`px-3 py-2 border-b border-default flex items-baseline gap-2 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
         <span className="text-xs text-muted">{fmtMD(date)}</span>
         {isToday && <span className="text-[10px] text-accent uppercase tracking-wider ml-auto">Today</span>}
       </div>
-      <div className="p-3 space-y-3">
+      <div className="p-2 space-y-1.5">
         {FIELDS.map((f) => (
-          <Field
-            key={f.key}
-            label={f.label}
-            placeholder={f.placeholder}
-            value={entry[f.key]}
-            onChange={(v) => onChange(f.key, v)}
-            onBlur={onBlur}
-          />
+          <PreviewField key={f.key} label={f.label} value={entry[f.key]} />
         ))}
       </div>
+    </button>
+  );
+}
+
+function PreviewField({ label, value }: { label: string; value: string }) {
+  const empty = !value || !value.trim();
+  return (
+    <div>
+      <div className="text-[10px] text-muted font-medium uppercase tracking-wide mb-0.5">{label}</div>
+      {empty ? (
+        <div className="text-xs text-muted italic leading-tight">—</div>
+      ) : (
+        <div className="markdown-body text-xs leading-tight max-h-[3.6em] overflow-hidden">
+          <ReactMarkdown>{value}</ReactMarkdown>
+        </div>
+      )}
     </div>
   );
 }
 
-function Field({
-  label, placeholder, value, onChange, onBlur,
+function DayEditor({
+  dayLabel, date, entry, onChange, onBlur,
 }: {
-  label: string;
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
+  dayLabel: string;
+  date: Date;
+  entry: DayEntry;
+  onChange: (field: FieldKey, value: string) => void;
   onBlur: () => void;
 }) {
-  const [editing, setEditing] = useState(false);
-  const empty = !value || !value.trim();
+  const isToday = isoDate(date) === isoDate(new Date());
   return (
-    <div>
-      <label className="block text-[11px] text-muted mb-1 font-medium">{label}</label>
-      {editing || empty ? (
-        <textarea
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onFocus={() => setEditing(true)}
-          onBlur={() => { setEditing(false); onBlur(); }}
-          rows={4}
-          placeholder={placeholder}
-          className="w-full text-sm font-mono resize-none px-2 py-1.5"
-          autoFocus={editing}
-        />
-      ) : (
-        <div
-          onClick={() => setEditing(true)}
-          className="markdown-body min-h-[60px] cursor-text bg-surface-2 border border-default rounded-md px-2 py-1.5 hover:border-strong"
-        >
-          <ReactMarkdown>{value}</ReactMarkdown>
-        </div>
-      )}
+    <div className="bg-surface border border-default rounded-lg overflow-hidden">
+      <div className={`px-4 py-2 border-b border-default flex items-baseline gap-2 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
+        <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
+        <span className="text-xs text-muted">{fmtMD(date)}</span>
+        <span className="ml-2 text-xs text-muted">선택한 요일 편집</span>
+        {isToday && <span className="text-[10px] text-accent uppercase tracking-wider ml-auto">Today</span>}
+      </div>
+      <div className="p-4 grid gap-4 grid-cols-1 md:grid-cols-3">
+        {FIELDS.map((f) => (
+          <div key={f.key} className="flex flex-col">
+            <label className="block text-xs text-muted mb-1 font-medium">{f.label}</label>
+            <textarea
+              value={entry[f.key]}
+              onChange={(e) => onChange(f.key, e.target.value)}
+              onBlur={onBlur}
+              placeholder={f.placeholder}
+              rows={12}
+              className="w-full text-sm font-mono resize-y px-2 py-1.5"
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

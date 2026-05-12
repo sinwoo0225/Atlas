@@ -34,3 +34,6 @@ Thumbs.db
 
 # Misc
 publish/
+
+# Claude Code (machine-local settings)
+.claude/

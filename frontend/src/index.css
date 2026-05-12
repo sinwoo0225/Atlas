@@ -2,6 +2,7 @@
 
 /* ========== Theme tokens ========== */
 :root {
+  color-scheme: dark;
   --bg-base:         #141414;
   --bg-sidebar:      #1a1a1a;
   --bg-surface:      #202022;
@@ -26,6 +27,7 @@
 }
 
 html.light {
+  color-scheme: light;
   --bg-base:         #f6f7f9;
   --bg-sidebar:      #ffffff;
   --bg-surface:      #ffffff;
