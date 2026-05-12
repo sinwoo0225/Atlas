@@ -4,7 +4,7 @@ import cytoscape from 'cytoscape';
 // @ts-expect-error - cytoscape-dagre has no types
 import dagre from 'cytoscape-dagre';
 import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
-import { CalendarDays, Code2, FileText, GitBranch, Maximize2, Network, Search, X } from 'lucide-react';
+import { CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Network, Search, X } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
@@ -12,6 +12,24 @@ import { meetingsApi } from '../api/meetings';
 import { devInfoApi } from '../api/devinfo';
 import type { ChangeLog, DevInfoItem, Meeting, Project, WbsItem } from '../types';
 import { MapNodePanel, type PanelSelection } from './projectMap/MapNodePanel';
+import { TimelineGuides } from './projectMap/TimelineGuides';
+import {
+  buildRadialPositions,
+  buildTimelinePositions,
+  changeDate,
+  computeDateRange,
+  devDate,
+  flattenWbs,
+  getLayoutForMode,
+  isInTimeline,
+  meetingDate,
+  shouldIncludeHubs,
+  wbsDate,
+  type FilterState,
+  type LayoutMode,
+  type Position,
+  type TimeWindow,
+} from './projectMap/layouts';
 
 cytoscape.use(dagre);
 
@@ -23,19 +41,12 @@ type LoadedData = {
   devInfo: DevInfoItem[];
 };
 
-type FilterState = { wbs: boolean; changes: boolean; meetings: boolean; dev: boolean };
-
-function flattenWbs(items: WbsItem[]): WbsItem[] {
-  return items.flatMap((it) => [it, ...flattenWbs(it.children ?? [])]);
-}
-
-// Category palette — saturated fill + darker border for hub, soft fill for leaves.
 const PALETTE = {
   project: { fill: '#27272a', stroke: '#a1a1aa', text: '#fafafa' },
-  wbsHub:      { fill: '#3730a3', stroke: '#a5b4fc', text: '#eef2ff' }, // indigo
-  changeHub:   { fill: '#9a3412', stroke: '#fdba74', text: '#ffedd5' }, // orange
-  meetingHub:  { fill: '#065f46', stroke: '#6ee7b7', text: '#d1fae5' }, // emerald
-  devHub:      { fill: '#155e75', stroke: '#67e8f9', text: '#cffafe' }, // cyan
+  wbsHub:      { fill: '#3730a3', stroke: '#a5b4fc', text: '#eef2ff' },
+  changeHub:   { fill: '#9a3412', stroke: '#fdba74', text: '#ffedd5' },
+  meetingHub:  { fill: '#065f46', stroke: '#6ee7b7', text: '#d1fae5' },
+  devHub:      { fill: '#155e75', stroke: '#67e8f9', text: '#cffafe' },
   wbs:         { fill: '#312e81', stroke: '#818cf8', text: '#e0e7ff' },
   milestone:   { fill: '#4338ca', stroke: '#c7d2fe', text: '#ffffff' },
   meeting:     { fill: '#064e3b', stroke: '#34d399', text: '#a7f3d0' },
@@ -48,62 +59,11 @@ const PALETTE = {
 
 const SELECTED_GLOW = '#fbbf24';
 
-function buildPositions(data: LoadedData, filter: FilterState) {
-  const cx = 0, cy = 0;
-  const HUB_DIST = 280;
-  const NODE_SPACING = 80;
-  const COL_OFFSET = 170;
-
-  const positions: Record<string, { x: number; y: number }> = {
-    project: { x: cx, y: cy },
-    'cat-wbs': { x: cx, y: cy - HUB_DIST },
-    'cat-changes': { x: cx + HUB_DIST, y: cy },
-    'cat-meetings': { x: cx, y: cy + HUB_DIST },
-    'cat-dev': { x: cx - HUB_DIST, y: cy },
-  };
-
-  if (filter.wbs) {
-    flattenWbs(data.wbs).forEach((item, idx) => {
-      const col = idx % 3;
-      const row = Math.floor(idx / 3);
-      positions[`wbs-${item.id}`] = {
-        x: cx + (col - 1) * COL_OFFSET,
-        y: cy - HUB_DIST - (row + 1) * NODE_SPACING - 40,
-      };
-    });
-  }
-  if (filter.changes) {
-    data.changeLogs.slice(0, 30).forEach((c, idx) => {
-      const col = idx % 3;
-      const row = Math.floor(idx / 3);
-      positions[`change-${c.id}`] = {
-        x: cx + HUB_DIST + (col + 1) * COL_OFFSET + 30,
-        y: cy + (row - 4) * NODE_SPACING * 0.8,
-      };
-    });
-  }
-  if (filter.meetings) {
-    data.meetings.slice(0, 30).forEach((m, idx) => {
-      const col = idx % 3;
-      const row = Math.floor(idx / 3);
-      positions[`meeting-${m.id}`] = {
-        x: cx + (col - 1) * COL_OFFSET,
-        y: cy + HUB_DIST + (row + 1) * NODE_SPACING + 40,
-      };
-    });
-  }
-  if (filter.dev) {
-    data.devInfo.slice(0, 30).forEach((d, idx) => {
-      const col = idx % 3;
-      const row = Math.floor(idx / 3);
-      positions[`dev-${d.id}`] = {
-        x: cx - HUB_DIST - (col + 1) * COL_OFFSET - 30,
-        y: cy + (row - 4) * NODE_SPACING * 0.8,
-      };
-    });
-  }
-  return positions;
-}
+const MODES: { key: LayoutMode; label: string; title: string }[] = [
+  { key: 'radial',    label: '방사형',   title: '방사형 레이아웃 — 중앙 프로젝트, 사방 카테고리' },
+  { key: 'hierarchy', label: '계층',     title: '계층 레이아웃 (dagre) — 프로젝트→카테고리→항목 트리' },
+  { key: 'timeline',  label: '타임라인', title: '타임라인 레이아웃 — 좌→우 시간축, 위→아래 카테고리 레인' },
+];
 
 function resolveSelection(nodeId: string, data: LoadedData): PanelSelection | null {
   if (nodeId === 'project') {
@@ -176,6 +136,10 @@ export function ProjectMapPage() {
   const [filter, setFilter] = useState<FilterState>({ wbs: true, changes: true, meetings: true, dev: true });
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<PanelSelection | null>(null);
+  const [mode, setMode] = useState<LayoutMode>('radial');
+  const [timeWindow, setTimeWindow] = useState<TimeWindow | null>(null);
+  // Bumped each time the cy instance is rebuilt so child overlays can re-subscribe.
+  const [cyVersion, setCyVersion] = useState(0);
 
   useEffect(() => {
     if (!pid || isNaN(pid)) return;
@@ -192,86 +156,148 @@ export function ProjectMapPage() {
       .catch(() => setError('맵 데이터를 불러올 수 없습니다.'));
   }, [pid]);
 
-  // Build / rebuild Cytoscape when data or filter changes.
+  const dateRange = useMemo(() => (data ? computeDateRange(data) : null), [data]);
+  const effectiveWindow: TimeWindow | null =
+    timeWindow ?? (dateRange ? { start: dateRange.min, end: dateRange.max } : null);
+  const windowStart = effectiveWindow?.start ?? null;
+  const windowEnd = effectiveWindow?.end ?? null;
+
+  // Reset time window when switching projects (React's "reset on prop change" pattern).
+  const [trackedPid, setTrackedPid] = useState(pid);
+  if (trackedPid !== pid) {
+    setTrackedPid(pid);
+    setTimeWindow(null);
+  }
+
+  // Build / rebuild Cytoscape when relevant inputs change.
   useEffect(() => {
     if (!data || !containerRef.current) return;
 
     const elements: ElementDefinition[] = [];
-    const positions = buildPositions(data, filter);
+    const includeHubs = shouldIncludeHubs(mode);
+    const tlWindow: TimeWindow | null =
+      mode === 'timeline' && windowStart && windowEnd ? { start: windowStart, end: windowEnd } : null;
 
-    elements.push({
-      data: { id: 'project', label: data.project.name, kind: 'project', size: 100, tooltip: `프로젝트 · ${data.project.name}` },
-      position: positions['project'],
-    });
+    const positions: Record<string, Position> | null =
+      mode === 'hierarchy'
+        ? null
+        : mode === 'timeline' && tlWindow
+          ? buildTimelinePositions(data, filter, tlWindow)
+          : buildRadialPositions(data, filter);
 
-    const categories = [
-      { id: 'cat-wbs',      label: 'WBS',       kind: 'wbs-hub',     visible: filter.wbs,      count: flattenWbs(data.wbs).length },
-      { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  count: Math.min(data.changeLogs.length, 30) },
-      { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, count: Math.min(data.meetings.length, 30) },
-      { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      count: Math.min(data.devInfo.length, 30) },
-    ];
+    const posOf = (id: string): { position?: Position } =>
+      positions && positions[id] ? { position: positions[id] } : {};
 
-    for (const cat of categories) {
-      if (!cat.visible) continue;
+    // Project hub + category hubs (non-timeline modes only)
+    if (includeHubs) {
       elements.push({
-        data: { id: cat.id, label: `${cat.label}\n(${cat.count})`, kind: cat.kind, size: 70, tooltip: `카테고리 · ${cat.label} (${cat.count}건)` },
-        position: positions[cat.id],
+        data: { id: 'project', label: data.project.name, kind: 'project', size: 100, tooltip: `프로젝트 · ${data.project.name}` },
+        ...posOf('project'),
       });
-      elements.push({ data: { id: `e-project-${cat.id}`, source: 'project', target: cat.id, kind: 'cat-edge' } });
+      const categories = [
+        { id: 'cat-wbs',      label: 'WBS',       kind: 'wbs-hub',     visible: filter.wbs,      count: flattenWbs(data.wbs).length },
+        { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  count: Math.min(data.changeLogs.length, 30) },
+        { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, count: Math.min(data.meetings.length, 30) },
+        { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      count: Math.min(data.devInfo.length, 30) },
+      ];
+      for (const cat of categories) {
+        if (!cat.visible) continue;
+        elements.push({
+          data: { id: cat.id, label: `${cat.label}\n(${cat.count})`, kind: cat.kind, size: 70, tooltip: `카테고리 · ${cat.label} (${cat.count}건)` },
+          ...posOf(cat.id),
+        });
+        elements.push({ data: { id: `e-project-${cat.id}`, source: 'project', target: cat.id, kind: 'cat-edge' } });
+      }
     }
 
+    // WBS items
     if (filter.wbs) {
-      for (const item of flattenWbs(data.wbs)) {
+      const allWbs = flattenWbs(data.wbs);
+      const included = new Set<number>();
+      for (const item of allWbs) {
         const id = `wbs-${item.id}`;
-        const date = item.endDate?.slice(0, 10) ?? '-';
+        const d = wbsDate(item);
+        if (mode === 'timeline') {
+          if (!tlWindow || !isInTimeline(d, tlWindow)) continue;
+        }
+        included.add(item.id);
+        const dateLabel = item.endDate?.slice(0, 10) ?? '-';
         elements.push({
           data: {
             id,
             label: item.name + (item.isMilestone ? ' ◆' : ''),
             kind: item.isMilestone ? 'milestone' : 'wbs',
             size: item.isMilestone ? 42 : 34,
-            tooltip: `${item.isMilestone ? '마일스톤' : 'WBS'} · ${item.name}\n상태: ${item.status} / 종료: ${date}\n담당: ${item.assignee || '-'}`,
+            date: d ?? null,
+            tooltip: `${item.isMilestone ? '마일스톤' : 'WBS'} · ${item.name}\n상태: ${item.status} / 종료: ${dateLabel}\n담당: ${item.assignee || '-'}`,
           },
-          position: positions[id],
+          ...posOf(id),
         });
-        const parent = item.parentId ? `wbs-${item.parentId}` : 'cat-wbs';
-        elements.push({ data: { id: `e-${parent}-${id}`, source: parent, target: id, kind: 'wbs-edge' } });
+      }
+      // Parent-child WBS edges (only between included nodes)
+      for (const item of allWbs) {
+        if (!included.has(item.id)) continue;
+        const targetId = `wbs-${item.id}`;
+        if (item.parentId && included.has(item.parentId)) {
+          const parentId = `wbs-${item.parentId}`;
+          elements.push({ data: { id: `e-${parentId}-${targetId}`, source: parentId, target: targetId, kind: 'wbs-edge' } });
+        } else if (mode !== 'timeline' && includeHubs) {
+          elements.push({ data: { id: `e-cat-wbs-${targetId}`, source: 'cat-wbs', target: targetId, kind: 'wbs-edge' } });
+        }
       }
     }
 
+    // ChangeLogs (timeline removes the 30 cap so the timeline isn't artificially truncated)
     if (filter.changes) {
-      for (const c of data.changeLogs.slice(0, 30)) {
+      const items = mode === 'timeline' ? data.changeLogs : data.changeLogs.slice(0, 30);
+      for (const c of items) {
         const id = `change-${c.id}`;
+        const d = changeDate(c);
+        if (mode === 'timeline' && (!tlWindow || !isInTimeline(d, tlWindow))) continue;
         const label = c.content.length > 24 ? c.content.slice(0, 24) + '…' : c.content;
         elements.push({
-          data: { id, label, kind: 'change', impact: c.impact, size: 32, tooltip: `변경이력 · ${c.impact}\n${c.content}\n${c.date.slice(0, 10)}` },
-          position: positions[id],
+          data: { id, label, kind: 'change', impact: c.impact, size: 32, date: d, tooltip: `변경이력 · ${c.impact}\n${c.content}\n${d.slice(0, 10)}` },
+          ...posOf(id),
         });
-        elements.push({ data: { id: `e-cat-changes-${id}`, source: 'cat-changes', target: id, kind: 'change-edge' } });
+        if (mode !== 'timeline' && includeHubs) {
+          elements.push({ data: { id: `e-cat-changes-${id}`, source: 'cat-changes', target: id, kind: 'change-edge' } });
+        }
       }
     }
 
+    // Meetings
     if (filter.meetings) {
-      for (const m of data.meetings.slice(0, 30)) {
+      const items = mode === 'timeline' ? data.meetings : data.meetings.slice(0, 30);
+      for (const m of items) {
         const id = `meeting-${m.id}`;
+        const d = meetingDate(m);
+        if (mode === 'timeline' && (!tlWindow || !isInTimeline(d, tlWindow))) continue;
         const label = m.topic.length > 24 ? m.topic.slice(0, 24) + '…' : m.topic;
         elements.push({
-          data: { id, label, kind: 'meeting', size: 32, tooltip: `회의록 · ${m.topic}\n${m.date.slice(0, 10)}` },
-          position: positions[id],
+          data: { id, label, kind: 'meeting', size: 32, date: d, tooltip: `회의록 · ${m.topic}\n${d.slice(0, 10)}` },
+          ...posOf(id),
         });
-        elements.push({ data: { id: `e-cat-meetings-${id}`, source: 'cat-meetings', target: id, kind: 'meeting-edge' } });
+        if (mode !== 'timeline' && includeHubs) {
+          elements.push({ data: { id: `e-cat-meetings-${id}`, source: 'cat-meetings', target: id, kind: 'meeting-edge' } });
+        }
       }
     }
 
+    // DevInfo
     if (filter.dev) {
-      for (const d of data.devInfo.slice(0, 30)) {
-        const id = `dev-${d.id}`;
-        const label = d.title.length > 24 ? d.title.slice(0, 24) + '…' : d.title;
+      const items = mode === 'timeline' ? data.devInfo : data.devInfo.slice(0, 30);
+      for (const dv of items) {
+        const id = `dev-${dv.id}`;
+        const d = devDate(dv);
+        if (mode === 'timeline' && (!tlWindow || !isInTimeline(d, tlWindow))) continue;
+        const label = dv.title.length > 24 ? dv.title.slice(0, 24) + '…' : dv.title;
         elements.push({
-          data: { id, label, kind: 'dev', size: 32, tooltip: `개발 정보 · ${d.type}\n${d.title}` },
-          position: positions[id],
+          data: { id, label, kind: 'dev', size: 32, date: d, tooltip: `개발 정보 · ${dv.type}\n${dv.title}` },
+          ...posOf(id),
         });
-        elements.push({ data: { id: `e-cat-dev-${id}`, source: 'cat-dev', target: id, kind: 'dev-edge' } });
+        if (mode !== 'timeline' && includeHubs) {
+          elements.push({ data: { id: `e-cat-dev-${id}`, source: 'cat-dev', target: id, kind: 'dev-edge' } });
+        }
       }
     }
 
@@ -344,11 +370,10 @@ export function ProjectMapPage() {
         { selector: 'node.selected-map-node', style: { 'border-width': 4, 'border-color': SELECTED_GLOW, 'shadow-blur': 28, 'shadow-color': SELECTED_GLOW, 'shadow-opacity': 0.7 } as any },
         { selector: 'node.search-hit', style: { 'border-width': 3.5, 'border-color': SELECTED_GLOW } as any },
       ],
-      layout: { name: 'preset' } as any,
+      layout: getLayoutForMode(mode) as any,
       wheelSensitivity: 0.2,
     });
 
-    // Hover: tooltip + neighborhood focus.
     cy.on('mouseover', 'node', (evt) => {
       const node = evt.target as NodeSingular;
       cy.elements().addClass('hover-dim');
@@ -371,7 +396,6 @@ export function ProjectMapPage() {
       if (tooltipRef.current) tooltipRef.current.style.display = 'none';
     });
 
-    // Tap → panel (debounced against dbltap). Dbltap → page navigation.
     cy.on('tap', 'node', (evt) => {
       const node = evt.target as NodeSingular;
       if (tapTimerRef.current != null) {
@@ -381,7 +405,6 @@ export function ProjectMapPage() {
       tapTimerRef.current = window.setTimeout(() => {
         tapTimerRef.current = null;
         const id: string = node.data('id');
-        // Category hubs don't have a detail entity — go straight to listing.
         if (id.startsWith('cat-')) {
           const r = listingRouteFor(id);
           if (r) navigate(`/projects/${pid}/${r}`);
@@ -408,6 +431,9 @@ export function ProjectMapPage() {
 
     cy.fit(undefined, 60);
     cyRef.current = cy;
+    // Notify overlays (TimelineGuides) that cy was rebuilt so they can re-subscribe.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCyVersion((v) => v + 1);
 
     return () => {
       if (tapTimerRef.current != null) {
@@ -417,9 +443,8 @@ export function ProjectMapPage() {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [data, filter, pid, navigate]);
+  }, [data, filter, pid, navigate, mode, windowStart, windowEnd]);
 
-  // Re-apply selected-node highlight after cy rebuild.
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -428,9 +453,8 @@ export function ProjectMapPage() {
       const n = cy.getElementById(selectionDomId(selected));
       if (n && n.length > 0) n.addClass('selected-map-node');
     }
-  }, [selected, data, filter]);
+  }, [selected, data, filter, mode, windowStart, windowEnd]);
 
-  // Search → fade non-matching nodes/edges.
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy) return;
@@ -450,19 +474,17 @@ export function ProjectMapPage() {
       const dim = e.source().hasClass('search-dim') || e.target().hasClass('search-dim');
       e.toggleClass('search-dim', dim);
     });
-  }, [query, data, filter]);
+  }, [query, data, filter, mode, windowStart, windowEnd]);
 
-  // Re-fit when filter changes (after re-render).
   useEffect(() => {
     const t = setTimeout(() => cyRef.current?.fit(undefined, 60), 60);
     return () => clearTimeout(t);
-  }, [filter]);
+  }, [filter, mode]);
 
   const toggleFilter = useCallback((k: keyof FilterState) => {
     setFilter((f) => ({ ...f, [k]: !f[k] }));
   }, []);
 
-  // Global keyboard shortcuts.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
@@ -513,6 +535,13 @@ export function ProjectMapPage() {
         : 'bg-surface-2 text-secondary border-default hover:bg-surface-3'
     }`;
 
+  const modeBtnClass = (active: boolean) =>
+    `px-3 py-1.5 text-sm transition-colors ${
+      active ? 'bg-indigo-600 text-white' : 'text-secondary hover:bg-surface-3'
+    }`;
+
+  const showTimelineEmpty = mode === 'timeline' && (!dateRange || elementCountInWindow(data, filter, effectiveWindow) === 0);
+
   return (
     <div className="p-6 h-full flex flex-col gap-3">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -521,6 +550,18 @@ export function ProjectMapPage() {
           프로젝트 맵
         </h1>
         <div className="flex gap-2 flex-wrap items-center">
+          <div className="inline-flex rounded-md border border-default overflow-hidden bg-surface-2">
+            {MODES.map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setMode(m.key)}
+                className={modeBtnClass(mode === m.key)}
+                title={m.title}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
@@ -564,7 +605,6 @@ export function ProjectMapPage() {
         </div>
       </div>
 
-      {/* Legend */}
       <div className="flex items-center gap-4 text-xs text-muted flex-wrap">
         <span>범례</span>
         {legendItems.map((l) => (
@@ -574,9 +614,52 @@ export function ProjectMapPage() {
           </span>
         ))}
         <span className="ml-auto text-[11px] text-muted">
-          클릭 → 상세 패널 · 더블클릭 → 페이지 이동 · <kbd>/</kbd> 검색 · <kbd>f</kbd> 맞춤 · <kbd>1~4</kbd> 필터 · <kbd>Esc</kbd> 닫기
+          클릭 → 패널 · 더블클릭 → 페이지 · <kbd>/</kbd> 검색 · <kbd>f</kbd> 맞춤 · <kbd>1~4</kbd> 필터 · <kbd>Esc</kbd> 닫기
         </span>
       </div>
+
+      {mode === 'timeline' && (
+        <div className="flex items-center gap-2 text-xs bg-surface-2 border border-default rounded-md px-3 py-2 flex-wrap">
+          <CalendarRange size={14} className="text-accent" />
+          <span className="text-muted">기간</span>
+          <input
+            type="date"
+            value={effectiveWindow?.start ?? ''}
+            min={dateRange?.min}
+            max={effectiveWindow?.end ?? dateRange?.max}
+            disabled={!dateRange}
+            onChange={(e) => {
+              if (!e.target.value || !effectiveWindow) return;
+              setTimeWindow({ start: e.target.value, end: effectiveWindow.end });
+            }}
+            className="px-2 py-0.5 text-xs"
+          />
+          <span className="text-muted">~</span>
+          <input
+            type="date"
+            value={effectiveWindow?.end ?? ''}
+            min={effectiveWindow?.start ?? dateRange?.min}
+            max={dateRange?.max}
+            disabled={!dateRange}
+            onChange={(e) => {
+              if (!e.target.value || !effectiveWindow) return;
+              setTimeWindow({ start: effectiveWindow.start, end: e.target.value });
+            }}
+            className="px-2 py-0.5 text-xs"
+          />
+          <button
+            onClick={() => setTimeWindow(null)}
+            className="px-2 py-0.5 rounded text-secondary hover:text-primary hover:bg-surface-3 border border-default disabled:opacity-40 disabled:cursor-not-allowed"
+            disabled={timeWindow === null}
+            title="전체 범위로 복원"
+          >
+            전체
+          </button>
+          <span className="ml-auto text-muted">
+            {dateRange ? `전체 데이터: ${dateRange.min} ~ ${dateRange.max}` : '날짜 데이터 없음'}
+          </span>
+        </div>
+      )}
 
       <div className="flex-1 relative bg-surface border border-default rounded-lg overflow-hidden min-h-0">
         <div
@@ -587,6 +670,16 @@ export function ProjectMapPage() {
             backgroundImage: 'radial-gradient(circle at center, var(--bg-surface) 0%, var(--bg-base) 75%)',
           }}
         />
+        {mode === 'timeline' && (
+          <TimelineGuides cyRef={cyRef} cyVersion={cyVersion} window={effectiveWindow} />
+        )}
+        {showTimelineEmpty && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="text-sm text-muted bg-surface-2/80 backdrop-blur px-4 py-2 rounded-md border border-default">
+              타임라인에 표시할 항목이 없습니다.
+            </div>
+          </div>
+        )}
         <div
           ref={tooltipRef}
           className="absolute pointer-events-none z-10 px-2.5 py-1.5 rounded-md text-xs whitespace-pre bg-surface-2 border border-strong text-primary shadow-lg"
@@ -596,4 +689,14 @@ export function ProjectMapPage() {
       </div>
     </div>
   );
+}
+
+function elementCountInWindow(data: LoadedData, filter: FilterState, w: TimeWindow | null): number {
+  if (!w) return 0;
+  let n = 0;
+  if (filter.wbs) flattenWbs(data.wbs).forEach((it) => { if (isInTimeline(wbsDate(it), w)) n++; });
+  if (filter.changes) data.changeLogs.forEach((c) => { if (isInTimeline(changeDate(c), w)) n++; });
+  if (filter.meetings) data.meetings.forEach((m) => { if (isInTimeline(meetingDate(m), w)) n++; });
+  if (filter.dev) data.devInfo.forEach((d) => { if (isInTimeline(devDate(d), w)) n++; });
+  return n;
 }
