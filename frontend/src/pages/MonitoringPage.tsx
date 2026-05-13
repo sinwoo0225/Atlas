@@ -4,7 +4,14 @@ import { Activity, RefreshCw, Calendar, NotebookPen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
-import type { TodayWbs, WeeklyWorkLog } from '../types';
+import type { TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject } from '../types';
+
+type WorkLogField = 'done' | 'plan' | 'issues';
+const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
+  { key: 'done',   label: '한 일' },
+  { key: 'plan',   label: '계획' },
+  { key: 'issues', label: '이슈' },
+];
 
 const statusLabel = { Planned: '예정', InProgress: '진행', Done: '완료' };
 const statusBadge = {
@@ -156,24 +163,47 @@ export function MonitoringPage() {
         )}
       </section>
 
-      <WeeklySection title="이번 주 업무일지" data={thisWeek} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/worklog`)} />
-      <WeeklySection title="지난 주 업무일지" data={lastWeek} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/worklog`)} />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <WeeklySection
+          title="지난 주 업무일지"
+          data={lastWeek}
+          loading={loading}
+          onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
+          variant="muted"
+        />
+        <WeeklySection
+          title="이번 주 업무일지"
+          data={thisWeek}
+          loading={loading}
+          onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
+          variant="current"
+        />
+      </div>
     </div>
   );
 }
 
+type WeeklyVariant = 'current' | 'muted';
+
 function WeeklySection({
-  title, data, loading, onProjectClick,
+  title, data, loading, onProjectClick, variant = 'current',
 }: {
   title: string;
   data: WeeklyWorkLog | null;
   loading: boolean;
   onProjectClick: (id: number) => void;
+  variant?: WeeklyVariant;
 }) {
+  const muted = variant === 'muted';
+  const titleCls = muted ? 'text-secondary' : 'text-primary';
+  const iconCls = muted ? 'text-muted' : 'text-accent';
+  const emptyCls = muted
+    ? 'bg-surface-2/40 border border-default/60 rounded-lg p-6 text-center text-muted text-sm'
+    : 'bg-surface border border-default rounded-lg p-6 text-center text-muted text-sm';
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-semibold text-primary flex items-center gap-2">
-        <NotebookPen size={16} className="text-accent" />
+      <h2 className={`text-base font-semibold flex items-center gap-2 ${titleCls}`}>
+        <NotebookPen size={16} className={iconCls} />
         {title}
         {data && (
           <span className="text-xs text-muted font-normal">
@@ -184,43 +214,63 @@ function WeeklySection({
       {loading ? (
         <p className="text-sm text-muted">불러오는 중...</p>
       ) : !data || data.projects.length === 0 ? (
-        <div className="bg-surface border border-default rounded-lg p-6 text-center text-muted text-sm">
+        <div className={emptyCls}>
           기록 없음
         </div>
       ) : (
         <div className="space-y-3">
           {data.projects.map((p) => (
-            <div key={p.projectId} className="bg-surface border border-default rounded-lg p-4">
-              <button
-                onClick={() => onProjectClick(p.projectId)}
-                className="text-base font-bold text-primary hover:text-accent transition-colors"
-              >
-                {p.projectName}
-              </button>
-              <div className="mt-2 space-y-2">
-                {p.done && (
-                  <div>
-                    <p className="text-xs text-accent font-medium mb-1">한 일</p>
-                    <div className="markdown-body pl-2"><ReactMarkdown>{p.done}</ReactMarkdown></div>
-                  </div>
-                )}
-                {p.plan && (
-                  <div>
-                    <p className="text-xs text-accent font-medium mb-1">계획</p>
-                    <div className="markdown-body pl-2"><ReactMarkdown>{p.plan}</ReactMarkdown></div>
-                  </div>
-                )}
-                {p.issues && (
-                  <div>
-                    <p className="text-xs text-accent font-medium mb-1">이슈</p>
-                    <div className="markdown-body pl-2"><ReactMarkdown>{p.issues}</ReactMarkdown></div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ProjectWeekCard key={p.projectId} project={p} onProjectClick={onProjectClick} variant={variant} />
           ))}
         </div>
       )}
     </section>
+  );
+}
+
+function ProjectWeekCard({
+  project, onProjectClick, variant = 'current',
+}: {
+  project: WeeklyWorkLogProject;
+  onProjectClick: (id: number) => void;
+  variant?: WeeklyVariant;
+}) {
+  const cardCls = variant === 'muted'
+    ? 'bg-surface-2/40 border border-default/60 rounded-lg p-4 opacity-90'
+    : 'bg-surface border border-default rounded-lg p-4';
+  return (
+    <div className={cardCls}>
+      <button
+        onClick={() => onProjectClick(project.projectId)}
+        className="text-base font-bold text-primary hover:text-accent transition-colors"
+      >
+        {project.projectName}
+      </button>
+      <div className="mt-2 space-y-3">
+        {FIELD_DEFS.map((f) => {
+          const daysWithContent = project.days.filter((d) => (d[f.key] ?? '').trim() !== '');
+          if (daysWithContent.length === 0) return null;
+          return (
+            <div key={f.key}>
+              <p className="text-xs text-accent font-medium mb-1">{f.label}</p>
+              <div className="pl-2 space-y-2">
+                {daysWithContent.map((d) => (
+                  <DayBlock key={d.dayIndex} day={d} field={f.key} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DayBlock({ day, field }: { day: WeeklyWorkLogDay; field: WorkLogField }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-secondary">{day.dayLabel}</p>
+      <div className="markdown-body pl-3"><ReactMarkdown>{day[field]}</ReactMarkdown></div>
+    </div>
   );
 }

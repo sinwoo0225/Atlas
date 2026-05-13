@@ -17,6 +17,8 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
 {
     private static readonly string[] DayLabels = { "월", "화", "수", "목", "금" };
 
+    private static string IsoDate(DateTime d) => d.ToString("yyyy-MM-dd");
+
     public async Task<MonitoringDto> GetTodayAsync()
     {
         var today = DateTime.Now.Date;
@@ -57,46 +59,30 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
             .Select(g =>
             {
                 var dayLog = g.ToDictionary(l => (l.Date.Date - start).Days, l => l);
-                var done = JoinByDays(dayLog, l => l.Done);
-                var plan = JoinByDays(dayLog, l => l.Plan);
-                var issues = JoinByDays(dayLog, l => l.Issues);
+                var days = new List<WeeklyWorkLogDayDto>(5);
+                for (var i = 0; i < 5; i++)
+                {
+                    dayLog.TryGetValue(i, out var log);
+                    days.Add(new WeeklyWorkLogDayDto(
+                        i,
+                        DayLabels[i],
+                        IsoDate(start.AddDays(i)),
+                        log?.Done ?? string.Empty,
+                        log?.Plan ?? string.Empty,
+                        log?.Issues ?? string.Empty));
+                }
                 return new WeeklyWorkLogProjectDto(
                     g.Key,
                     projectNames.TryGetValue(g.Key, out var n) ? n : $"Project #{g.Key}",
-                    done, plan, issues);
+                    days);
             })
-            .Where(p => !(string.IsNullOrWhiteSpace(p.Done) && string.IsNullOrWhiteSpace(p.Plan) && string.IsNullOrWhiteSpace(p.Issues)))
+            .Where(p => p.Days.Any(d =>
+                !string.IsNullOrWhiteSpace(d.Done)
+                || !string.IsNullOrWhiteSpace(d.Plan)
+                || !string.IsNullOrWhiteSpace(d.Issues)))
             .OrderBy(p => p.ProjectName)
             .ToList();
 
         return new WeeklyWorkLogDto(start, grouped);
-    }
-
-    private static string JoinByDays(Dictionary<int, WorkLog> dayLog, Func<WorkLog, string> selector)
-    {
-        var lines = new List<string>();
-        for (var i = 0; i < 5; i++)
-        {
-            if (!dayLog.TryGetValue(i, out var log)) continue;
-            var content = selector(log);
-            if (string.IsNullOrWhiteSpace(content)) continue;
-            var label = DayLabels[i];
-            foreach (var raw in content.Replace("\r\n", "\n").Split('\n'))
-            {
-                var trimmed = raw.TrimEnd();
-                if (string.IsNullOrWhiteSpace(trimmed)) continue;
-                if (trimmed.StartsWith("- ") || trimmed.StartsWith("* "))
-                {
-                    var prefix = trimmed.Substring(0, 2);
-                    var rest = trimmed.Substring(2);
-                    lines.Add($"{prefix}({label}) {rest}");
-                }
-                else
-                {
-                    lines.Add($"- ({label}) {trimmed}");
-                }
-            }
-        }
-        return string.Join("\n", lines);
     }
 }

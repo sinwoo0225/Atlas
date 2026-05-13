@@ -7,9 +7,18 @@ public record WorkLogDto(
 
 public record UpsertWorkLogDto(string Done, string Plan, string Issues);
 
+public record WeeklyWorkLogDayDto(
+    int DayIndex,
+    string DayLabel,
+    string Date,
+    string Done,
+    string Plan,
+    string Issues);
+
 public record WeeklyWorkLogProjectDto(
-    int ProjectId, string ProjectName,
-    string Done, string Plan, string Issues);
+    int ProjectId,
+    string ProjectName,
+    IEnumerable<WeeklyWorkLogDayDto> Days);
 
 public record WeeklyWorkLogDto(
     DateTime WeekStart,

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
@@ -224,17 +224,79 @@ function DayEditor({
         {FIELDS.map((f) => (
           <div key={f.key} className="flex flex-col">
             <label className="block text-xs text-muted mb-1 font-medium">{f.label}</label>
-            <textarea
+            <EditablePreviewField
+              key={`${entry.date}-${f.key}`}
               value={entry[f.key]}
-              onChange={(e) => onChange(f.key, e.target.value)}
-              onBlur={onBlur}
               placeholder={f.placeholder}
-              rows={12}
-              className="w-full text-sm font-mono resize-y px-2 py-1.5"
+              onChange={(v) => onChange(f.key, v)}
+              onBlur={onBlur}
             />
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+function EditablePreviewField({
+  value, placeholder, onChange, onBlur,
+}: {
+  value: string;
+  placeholder: string;
+  onChange: (value: string) => void;
+  onBlur: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    if (editing && textareaRef.current) {
+      const el = textareaRef.current;
+      el.focus();
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    }
+  }, [editing]);
+
+  if (editing) {
+    return (
+      <textarea
+        ref={textareaRef}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => {
+          onBlur();
+          setEditing(false);
+        }}
+        placeholder={placeholder}
+        rows={12}
+        className="w-full text-sm font-mono resize-y px-2 py-1.5"
+      />
+    );
+  }
+
+  const empty = !value || !value.trim();
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={() => setEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setEditing(true);
+        }
+      }}
+      className="w-full min-h-[18rem] cursor-text rounded border border-default bg-surface-2/30 hover:bg-surface-2/60 px-2 py-1.5 transition-colors"
+      title="클릭하여 편집"
+    >
+      {empty ? (
+        <span className="text-sm text-muted italic whitespace-pre-wrap">{placeholder}</span>
+      ) : (
+        <div className="markdown-body text-sm">
+          <ReactMarkdown>{value}</ReactMarkdown>
+        </div>
+      )}
     </div>
   );
 }

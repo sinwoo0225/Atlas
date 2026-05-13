@@ -166,12 +166,19 @@ export interface UpsertWorkLog {
   issues: string;
 }
 
-export interface WeeklyWorkLogProject {
-  projectId: number;
-  projectName: string;
+export interface WeeklyWorkLogDay {
+  dayIndex: number;
+  dayLabel: string;
+  date: string;
   done: string;
   plan: string;
   issues: string;
+}
+
+export interface WeeklyWorkLogProject {
+  projectId: number;
+  projectName: string;
+  days: WeeklyWorkLogDay[];
 }
 
 export interface WeeklyWorkLog {
