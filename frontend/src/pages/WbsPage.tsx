@@ -7,6 +7,7 @@ import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { wbsStatusBadge, wbsImportanceBadge } from '../utils/statusMaps';
+import { useThemeMode, getChartColors } from '../utils/themeColors';
 import type { WbsItem, WbsVersion, Resource } from '../types';
 
 function flattenItems(items: WbsItem[]): WbsItem[] {
@@ -14,6 +15,9 @@ function flattenItems(items: WbsItem[]): WbsItem[] {
 }
 
 function GanttChart({ items, onDoubleClick }: { items: WbsItem[]; onDoubleClick: (item: WbsItem) => void }) {
+  const theme = useThemeMode();
+  const colors = getChartColors(theme);
+
   const flat = flattenItems(items)
     .filter((i) => i.startDate && i.endDate)
     .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime());
@@ -28,6 +32,9 @@ function GanttChart({ items, onDoubleClick }: { items: WbsItem[]; onDoubleClick:
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
+      backgroundColor: colors.tooltipBg,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
       formatter: (p: any) => {
         const v = p.data?.value;
         if (!v) return p.name;
@@ -41,14 +48,14 @@ function GanttChart({ items, onDoubleClick }: { items: WbsItem[]; onDoubleClick:
       type: 'time',
       min: minDate,
       max: maxDate,
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#3a3a3a' } },
-      splitLine: { lineStyle: { color: '#2a2a2a' } },
+      axisLabel: { color: colors.axisText, fontSize: 11 },
+      axisLine: { lineStyle: { color: colors.axisLine } },
+      splitLine: { lineStyle: { color: colors.splitLine } },
     },
     yAxis: {
       data: flat.map((i) => i.name),
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#3a3a3a' } },
+      axisLabel: { color: colors.axisText, fontSize: 11 },
+      axisLine: { lineStyle: { color: colors.axisLine } },
     },
     series: [{
       type: 'custom',
@@ -72,7 +79,7 @@ function GanttChart({ items, onDoubleClick }: { items: WbsItem[]; onDoubleClick:
           idx,
           new Date(item.startDate!).getTime(),
           new Date(item.endDate!).getTime(),
-          item.parentId == null ? '#9ca3af' : '#6b7280',
+          item.parentId == null ? colors.accentBar : colors.mutedBar,
         ],
       })),
     }],

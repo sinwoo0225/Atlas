@@ -198,6 +198,15 @@ input, select, textarea {
   border: 1px solid var(--border-default);
   border-radius: 4px;
 }
+
+/* Disabled 상태 — 모든 인터랙티브 폼 요소에 동일 시각 표현 */
+input:disabled,
+select:disabled,
+textarea:disabled,
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 /* 마우스 클릭으로 인한 포커스 — outline 제거(시각 노이즈 ↓), 강조는 border 만 */
 input:focus:not(:focus-visible),
 select:focus:not(:focus-visible),
@@ -362,6 +371,36 @@ textarea:focus-visible {
 .text-zinc-400 { color: var(--text-muted) !important; }
 .text-zinc-500 { color: var(--text-muted) !important; }
 .hover\:text-zinc-300:hover { color: var(--text-secondary) !important; }
+
+/* ========== Project map category colors — 라이트 모드 오버라이드 ==========
+   MapNodePanel 의 카테고리 아이콘 색 (text-indigo-400, text-orange-400 등) 과
+   tone Badge 색 (bg-*-700/30, text-*-200, border-*-600/40) 은 다크 전용 톤이라
+   라이트 모드에서 가독성이 떨어진다. 같은 의미 유지하며 라이트 친화 값으로 매핑. */
+html.light .text-indigo-400  { color: #4f46e5 !important; }
+html.light .text-orange-400  { color: #c2410c !important; }
+html.light .text-emerald-400 { color: #047857 !important; }
+html.light .text-cyan-400    { color: #0e7490 !important; }
+html.light .text-rose-400    { color: #be123c !important; }
+
+html.light .bg-blue-700\/30      { background-color: rgba(37, 99, 235, 0.12) !important; }
+html.light .text-blue-200        { color: #1e3a8a !important; }
+html.light .border-blue-600\/40  { border-color: rgba(37, 99, 235, 0.30) !important; }
+
+html.light .bg-emerald-700\/30      { background-color: rgba(5, 150, 105, 0.12) !important; }
+html.light .text-emerald-200        { color: #064e3b !important; }
+html.light .border-emerald-600\/40  { border-color: rgba(5, 150, 105, 0.30) !important; }
+
+html.light .bg-amber-700\/30      { background-color: rgba(217, 119, 6, 0.12) !important; }
+html.light .text-amber-200        { color: #78350f !important; }
+html.light .border-amber-600\/40  { border-color: rgba(217, 119, 6, 0.30) !important; }
+
+html.light .bg-orange-700\/30      { background-color: rgba(234, 88, 12, 0.12) !important; }
+html.light .text-orange-200        { color: #7c2d12 !important; }
+html.light .border-orange-600\/40  { border-color: rgba(234, 88, 12, 0.30) !important; }
+
+html.light .bg-red-700\/30      { background-color: rgba(220, 38, 38, 0.12) !important; }
+html.light .text-red-200        { color: #7f1d1d !important; }
+html.light .border-red-600\/40  { border-color: rgba(220, 38, 38, 0.30) !important; }
 
 /* slate (legacy from initial design) */
 .bg-slate-900 { background-color: var(--bg-base) !important; }

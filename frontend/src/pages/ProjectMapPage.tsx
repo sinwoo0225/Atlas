@@ -6,6 +6,7 @@ import dagre from 'cytoscape-dagre';
 import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
 import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Minus, Network, Plus, Search, X } from 'lucide-react';
 import { Spinner } from '../components/ui';
+import { useThemeMode } from '../utils/themeColors';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
@@ -54,6 +55,7 @@ type ThemePalette = {
   issueLow: NodePalette; issueMedium: NodePalette; issueHigh: NodePalette;
   wbsStatusPlanned: string; wbsStatusInProgress: string; wbsStatusDone: string;
   textOutline: string;
+  accentGlow: string;
 };
 
 const DARK_PALETTE: ThemePalette = {
@@ -78,6 +80,7 @@ const DARK_PALETTE: ThemePalette = {
   wbsStatusInProgress: '#60a5fa',
   wbsStatusDone:       '#34d399',
   textOutline: '#0a0a0a',
+  accentGlow:  '#9eb2ce',
 };
 
 const LIGHT_PALETTE: ThemePalette = {
@@ -102,21 +105,8 @@ const LIGHT_PALETTE: ThemePalette = {
   wbsStatusInProgress: '#3b82f6',
   wbsStatusDone:       '#10b981',
   textOutline: '#ffffff',
+  accentGlow:  '#5b7299',
 };
-
-function useThemeMode(): 'light' | 'dark' {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    typeof document !== 'undefined' && document.documentElement.classList.contains('light') ? 'light' : 'dark'
-  );
-  useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const update = () => setTheme(document.documentElement.classList.contains('light') ? 'light' : 'dark');
-    const observer = new MutationObserver(update);
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-  return theme;
-}
 
 const SELECTED_GLOW = '#fbbf24';
 
@@ -438,7 +428,7 @@ export function ProjectMapPage() {
             'shadow-offset-y': 3,
           } as any,
         },
-        { selector: 'node[kind = "project"]',     style: { 'background-color': PALETTE.project.fill, 'border-color': PALETTE.project.stroke, color: PALETTE.project.text, 'font-size': '16px', 'font-weight': 800, 'border-width': 3, 'shadow-blur': 24, 'shadow-color': '#818cf8', 'shadow-opacity': 0.5 } as any },
+        { selector: 'node[kind = "project"]',     style: { 'background-color': PALETTE.project.fill, 'border-color': PALETTE.project.stroke, color: PALETTE.project.text, 'font-size': '16px', 'font-weight': 800, 'border-width': 3, 'shadow-blur': 24, 'shadow-color': PALETTE.accentGlow, 'shadow-opacity': 0.5 } as any },
         { selector: 'node[kind = "wbs-hub"]',     style: { 'background-color': PALETTE.wbsHub.fill,     'border-color': PALETTE.wbsHub.stroke,     color: PALETTE.wbsHub.text,     'font-weight': 700, 'border-width': 2.5 } as any },
         { selector: 'node[kind = "change-hub"]',  style: { 'background-color': PALETTE.changeHub.fill,  'border-color': PALETTE.changeHub.stroke,  color: PALETTE.changeHub.text,  'font-weight': 700, 'border-width': 2.5 } as any },
         { selector: 'node[kind = "meeting-hub"]', style: { 'background-color': PALETTE.meetingHub.fill, 'border-color': PALETTE.meetingHub.stroke, color: PALETTE.meetingHub.text, 'font-weight': 700, 'border-width': 2.5 } as any },
@@ -475,7 +465,7 @@ export function ProjectMapPage() {
             opacity: 0.85,
           } as any,
         },
-        { selector: 'edge[kind = "cat-edge"]',     style: { width: 3, 'line-color': '#818cf8', opacity: 0.9 } as any },
+        { selector: 'edge[kind = "cat-edge"]',     style: { width: 3, 'line-color': PALETTE.accentGlow, opacity: 0.9 } as any },
         { selector: 'edge[kind = "wbs-edge"]',     style: { 'line-color': PALETTE.wbsHub.stroke,     opacity: 0.6 } as any },
         { selector: 'edge[kind = "change-edge"]',  style: { 'line-color': PALETTE.changeHub.stroke,  opacity: 0.6 } as any },
         { selector: 'edge[kind = "meeting-edge"]', style: { 'line-color': PALETTE.meetingHub.stroke, opacity: 0.6 } as any },

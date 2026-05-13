@@ -6,6 +6,7 @@ import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { impactBadge } from '../utils/statusMaps';
+import { useThemeMode, getChartColors } from '../utils/themeColors';
 import type { ChangeLog, ImpactLevel, Meeting } from '../types';
 
 const impactColor: Record<ImpactLevel, string> = {
@@ -17,6 +18,9 @@ const impactColor: Record<ImpactLevel, string> = {
 
 // 영향도 분포 + 일자별 차트 (히트맵 대신 stacked bar chart 사용)
 function ImpactBarChart({ logs }: { logs: ChangeLog[] }) {
+  const theme = useThemeMode();
+  const colors = getChartColors(theme);
+
   if (logs.length === 0) return null;
 
   // 날짜별로 영향도별 카운트 집계
@@ -44,13 +48,13 @@ function ImpactBarChart({ logs }: { logs: ChangeLog[] }) {
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
-      backgroundColor: '#1f1f1f',
-      borderColor: '#2a2a2a',
-      textStyle: { color: '#e5e7eb' },
+      backgroundColor: colors.tooltipBg,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
     },
     legend: {
       data: impacts,
-      textStyle: { color: '#9ca3af', fontSize: 11 },
+      textStyle: { color: colors.axisText, fontSize: 11 },
       top: 0,
     },
     grid: { left: 50, right: 20, top: 32, bottom: 50 },
@@ -58,18 +62,18 @@ function ImpactBarChart({ logs }: { logs: ChangeLog[] }) {
       type: 'category',
       data: sortedDates,
       axisLabel: {
-        color: '#9ca3af',
+        color: colors.axisText,
         fontSize: 10,
         rotate: sortedDates.length > 12 ? 45 : 0,
       },
-      axisLine: { lineStyle: { color: '#3a3a3a' } },
+      axisLine: { lineStyle: { color: colors.axisLine } },
     },
     yAxis: {
       type: 'value',
       name: '건수',
-      nameTextStyle: { color: '#9ca3af', fontSize: 11 },
-      axisLabel: { color: '#9ca3af', fontSize: 11 },
-      splitLine: { lineStyle: { color: '#2a2a2a' } },
+      nameTextStyle: { color: colors.axisText, fontSize: 11 },
+      axisLabel: { color: colors.axisText, fontSize: 11 },
+      splitLine: { lineStyle: { color: colors.splitLine } },
     },
     series,
   };
