@@ -17,9 +17,9 @@
   --text-muted:      #b4b4bb;     /* WCAG AA: bg-surface-3 위에서 4.5:1 확보 (기존 #a1a1aa → 약간 밝힘) */
   --border-default:  #3f3f46;
   --border-strong:   #52525b;
-  --accent:          #818cf8;
+  --accent:          #9eb2ce;   /* steel blue family — Atlas 워드마크와 톤 일치, 인디고보다 부드러움 */
   --accent-2:        #fbbf24;
-  --accent-soft:     rgba(129, 140, 248, 0.18);
+  --accent-soft:     rgba(158, 178, 206, 0.18);
   --success:         #34d399;
   --warning:         #f59e0b;
   --danger:          #f87171;
@@ -44,7 +44,7 @@
   --text-on-neutral: #d4d4d8;
 
   /* Focus ring — 키보드 포커스 가시화 */
-  --ring-accent:     rgba(129, 140, 248, 0.7);
+  --ring-accent:     rgba(158, 178, 206, 0.7);
 }
 
 html.light {
@@ -59,9 +59,9 @@ html.light {
   --text-muted:      #6b7280;
   --border-default:  #d1d5db;
   --border-strong:   #9ca3af;
-  --accent:          #4f46e5;
+  --accent:          #5b7299;   /* steel blue family (라이트 모드) */
   --accent-2:        #d97706;
-  --accent-soft:     rgba(79, 70, 229, 0.10);
+  --accent-soft:     rgba(91, 114, 153, 0.12);
   --success:         #059669;
   --warning:         #d97706;
   --danger:          #dc2626;
@@ -83,7 +83,7 @@ html.light {
   --text-on-info:    #1d4ed8;
   --text-on-neutral: #374151;
 
-  --ring-accent:     rgba(79, 70, 229, 0.5);
+  --ring-accent:     rgba(91, 114, 153, 0.5);
 }
 
 /* ========== Spacing scale (사용 규칙 — 단순 참고용, CSS 미적용) ==========
