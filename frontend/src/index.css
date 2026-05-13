@@ -172,17 +172,17 @@ input::placeholder, textarea::placeholder { color: var(--text-muted); }
 }
 .markdown-body img { max-width: 100%; border-radius: 4px; }
 
-/* ========== Logo (MiPala) ========== */
-.logo-mi {
+/* ========== Logo (Atlas) ========== */
+.logo-primary {
   font-weight: 800;
   font-style: italic;
-  color: var(--accent);
+  color: #7c8db5;
   letter-spacing: -0.01em;
 }
-.logo-pala {
+.logo-accent {
   font-weight: 800;
   font-style: italic;
-  color: var(--accent-2);
+  color: #c9a96b;
   letter-spacing: -0.01em;
 }
 

@@ -129,9 +129,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <aside className="w-60 bg-sidebar border-r border-default flex flex-col shrink-0">
         <div className="px-4 py-4 border-b border-default">
           <h1 className="text-2xl leading-none tracking-tight">
-            <span className="logo-mi">Mi</span><span className="logo-pala">Pala</span>
+            <span className="logo-primary">At</span><span className="logo-accent">las</span>
           </h1>
-          <p className="text-[11px] text-muted mt-1 tracking-wide">MindPalace for Projects</p>
+          <p className="text-[11px] text-muted mt-1 tracking-wide">The map of your projects</p>
         </div>
 
         <div className="px-3 pt-3">

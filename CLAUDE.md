@@ -4,7 +4,7 @@
 
 ## 한눈에 보기
 
-**MiPala** (= *MindPalace for Projects*) — 단일 사용자, 로컬 우선 프로젝트 관리 앱. UI 언어는 한국어.
+**Atlas** — *The map of your projects.* 단일 사용자, 로컬 우선 프로젝트 관리 앱. UI 언어는 한국어.
 
 - 데이터: `%USERPROFILE%/Documents/ProjectManager/` 아래 SQLite DB + 프로젝트별 파일 폴더. 원격 백엔드 없음.
 - 셸: WPF + WebView2 데스크톱 앱이 ASP.NET Core WebService 를 자식 프로세스로 띄우고 React SPA 를 표시.
@@ -12,7 +12,7 @@
 
 ### 네이밍 호환성 (변경 금지)
 
-어셈블리/폴더 이름 (`ProjectManager.*`, `Documents/ProjectManager/`) 과 localStorage 키 `pm-hub-settings` 는 과거 이름을 유지한다 — 변경하면 DB 경로와 사용자 설정 호환성이 깨진다. 사용자에게 노출되는 브랜드·타이틀에서만 "MiPala" 를 쓴다.
+어셈블리/폴더 이름 (`ProjectManager.*`, `Documents/ProjectManager/`) 과 localStorage 키 `pm-hub-settings` 는 과거 이름을 유지한다 — 변경하면 DB 경로와 사용자 설정 호환성이 깨진다. 사용자에게 노출되는 브랜드·타이틀에서만 "Atlas" 를 쓴다.
 
 ## 자주 쓰는 커맨드
 

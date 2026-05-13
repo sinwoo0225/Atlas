@@ -1,7 +1,7 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-    MiPala 배포 스크립트 — WebService + DesktopApp을 publish/ 폴더에 빌드하고 zip 생성.
+    Atlas 배포 스크립트 — WebService + DesktopApp을 publish/ 폴더에 빌드하고 zip 생성.
 .EXAMPLE
     .\publish.ps1
     .\publish.ps1 -SkipZip
@@ -40,7 +40,7 @@ Write-Host "  - wwwroot/index   : OK" -ForegroundColor Green
 
 if (-not $SkipZip) {
     $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $zipPath = Join-Path $root "MiPala-$stamp.zip"
+    $zipPath = Join-Path $root "Atlas-$stamp.zip"
     Write-Host "==> 압축 생성: $zipPath" -ForegroundColor Cyan
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath

@@ -3,7 +3,7 @@ $rootDir = $PSScriptRoot
 $backendDir = Join-Path $rootDir "src\ProjectManager.WebService"
 $frontendDir = Join-Path $rootDir "frontend"
 
-Write-Host "===== MiPala 시작 =====" -ForegroundColor Cyan
+Write-Host "===== Atlas 시작 =====" -ForegroundColor Cyan
 
 # 백엔드 실행 (백그라운드)
 Write-Host "백엔드 서버 시작 중... (http://localhost:5200)" -ForegroundColor Yellow
