@@ -132,8 +132,28 @@ body {
 .border-strong  { border-color: var(--border-strong); }
 .border-accent  { border-color: var(--accent); }
 
-.hover\:bg-surface-2:hover { background-color: var(--bg-surface-2); }
-.hover\:bg-surface-3:hover { background-color: var(--bg-surface-3); }
+/* hover variants for token utility classes — Tailwind 의 hover: 프리픽스가 커스텀
+   CSS 클래스에 자동 적용되지 않으므로 토큰 유틸 각각에 hover 규칙을 별도로 명시. */
+.hover\:bg-surface:hover     { background-color: var(--bg-surface); }
+.hover\:bg-surface-2:hover   { background-color: var(--bg-surface-2); }
+.hover\:bg-surface-3:hover   { background-color: var(--bg-surface-3); }
+.hover\:text-primary:hover   { color: var(--text-primary); }
+.hover\:text-secondary:hover { color: var(--text-secondary); }
+.hover\:text-muted:hover     { color: var(--text-muted); }
+.hover\:text-accent:hover    { color: var(--accent); }
+.hover\:border-default:hover { border-color: var(--border-default); }
+.hover\:border-strong:hover  { border-color: var(--border-strong); }
+.hover\:border-accent:hover  { border-color: var(--accent); }
+
+/* group-hover variants — 부모의 .group 클래스가 hover 일 때 자식 토큰 색을 바꾼다. */
+.group:hover .group-hover\:text-primary   { color: var(--text-primary); }
+.group:hover .group-hover\:text-secondary { color: var(--text-secondary); }
+.group:hover .group-hover\:text-muted     { color: var(--text-muted); }
+.group:hover .group-hover\:text-accent    { color: var(--accent); }
+.group:hover .group-hover\:bg-surface-2   { background-color: var(--bg-surface-2); }
+.group:hover .group-hover\:bg-surface-3   { background-color: var(--bg-surface-3); }
+.group:hover .group-hover\:border-strong  { border-color: var(--border-strong); }
+.group:hover .group-hover\:border-accent  { border-color: var(--accent); }
 
 /* ========== Heading hierarchy =========
    페이지 위계: h-page > h-section > h-card. 각 페이지가 직접 text-lg/text-base 를 박지 않고
