@@ -3,23 +3,9 @@ import { useParams } from 'react-router-dom';
 import { AlertTriangle, Plus, Pencil, X, Save } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
+import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import type { Issue, IssueStatus, IssuePriority, Resource } from '../types';
-
-const statusLabel: Record<IssueStatus, string> = {
-  Open: '열림', InProgress: '진행중', Resolved: '해결됨', Closed: '닫힘',
-};
-const statusBadge: Record<IssueStatus, string> = {
-  Open: 'bg-red-500/15 text-red-300',
-  InProgress: 'bg-amber-500/15 text-amber-300',
-  Resolved: 'bg-emerald-500/15 text-emerald-300',
-  Closed: 'bg-zinc-700/40 text-slate-300',
-};
-const priorityLabel: Record<IssuePriority, string> = { High: '높음', Medium: '중간', Low: '낮음' };
-const priorityBadge: Record<IssuePriority, string> = {
-  High: 'bg-red-500/15 text-red-300',
-  Medium: 'bg-amber-500/15 text-amber-300',
-  Low: 'bg-slate-500/15 text-slate-300',
-};
 
 function IssueForm({ projectId, initial, resources, onSave, onCancel }: {
   projectId: number; initial?: Issue; resources: Resource[];
@@ -33,9 +19,6 @@ function IssueForm({ projectId, initial, resources, onSave, onCancel }: {
     assigneeResourceId: initial?.assigneeResourceId ?? null,
     dueDate: initial?.dueDate?.slice(0, 10) ?? '',
   });
-
-  const inputClass =
-    'w-full bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500';
 
   const handleSubmit = async () => {
     const payload = {
@@ -54,38 +37,33 @@ function IssueForm({ projectId, initial, resources, onSave, onCancel }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-2xl border border-[#2a2a2a] my-4 space-y-3">
-        <h2 className="text-base font-medium text-slate-100">{initial ? '이슈 수정' : '이슈 등록'}</h2>
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">제목 *</label>
+      <Card padding="spacious" className="w-full max-w-2xl my-4 space-y-3">
+        <h2 className="h-section">{initial ? '이슈 수정' : '이슈 등록'}</h2>
+        <FormField label="제목" required>
           <input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} className={inputClass} />
-        </div>
+        </FormField>
 
         <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">상태</label>
+          <FormField label="상태">
             <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as IssueStatus }))} className={inputClass}>
               {(['Open', 'InProgress', 'Resolved', 'Closed'] as IssueStatus[]).map((s) => (
-                <option key={s} value={s}>{statusLabel[s]}</option>
+                <option key={s} value={s}>{issueStatusBadge[s].label}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">우선순위</label>
+          </FormField>
+          <FormField label="우선순위">
             <select value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as IssuePriority }))} className={inputClass}>
               {(['High', 'Medium', 'Low'] as IssuePriority[]).map((p) => (
-                <option key={p} value={p}>{priorityLabel[p]}</option>
+                <option key={p} value={p}>{issuePriorityBadge[p].label}</option>
               ))}
             </select>
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">마감일</label>
+          </FormField>
+          <FormField label="마감일">
             <input type="date" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} className={inputClass} />
-          </div>
+          </FormField>
         </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">담당자 (리소스)</label>
+        <FormField label="담당자 (리소스)">
           <select
             value={form.assigneeResourceId ?? ''}
             onChange={(e) => setForm((f) => ({ ...f, assigneeResourceId: e.target.value ? Number(e.target.value) : null }))}
@@ -98,27 +76,22 @@ function IssueForm({ projectId, initial, resources, onSave, onCancel }: {
               </option>
             ))}
           </select>
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">설명</label>
+        <FormField label="설명">
           <textarea
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             rows={6}
             className={`${inputClass} resize-none`}
           />
-        </div>
+        </FormField>
 
-        <div className="flex gap-2 justify-end pt-3 border-t border-[#2a2a2a]">
-          <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
-            <X size={14} /> 취소
-          </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
-            <Save size={14} /> 저장
-          </button>
+        <div className="flex gap-2 justify-end pt-3 border-t border-default">
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -147,48 +120,51 @@ export function IssuesPage() {
   };
 
   const filtered = filter === 'All' ? issues : issues.filter((i) => i.status === filter);
-  const filterBtn = (active: boolean) =>
-    `px-3 py-1.5 rounded-md text-sm transition-colors ${
-      active ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-    }`;
 
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-          <AlertTriangle size={18} className="text-slate-400" />
+        <h1 className="h-page flex items-center gap-2">
+          <AlertTriangle size={18} className="text-muted" />
           이슈 관리
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus size={14} /> 이슈 등록
-        </button>
+        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+          이슈 등록
+        </Button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
-        <button onClick={() => setFilter('All')} className={filterBtn(filter === 'All')}>전체 ({issues.length})</button>
+        <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>
+          전체 ({issues.length})
+        </Button>
         {(['Open', 'InProgress', 'Resolved', 'Closed'] as IssueStatus[]).map((s) => {
           const count = issues.filter((i) => i.status === s).length;
           return (
-            <button key={s} onClick={() => setFilter(s)} className={filterBtn(filter === s)}>
-              {statusLabel[s]} ({count})
-            </button>
+            <Button
+              key={s}
+              variant={filter === s ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setFilter(s)}
+            >
+              {issueStatusBadge[s].label} ({count})
+            </Button>
           );
         })}
       </div>
 
-      <div className="bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg overflow-hidden">
-        {filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
-            <AlertTriangle size={36} className="mx-auto mb-2 text-slate-600" />
-            <p className="text-sm">이슈가 없습니다.</p>
-          </div>
-        ) : (
+      {filtered.length === 0 ? (
+        <Card padding="none">
+          <EmptyState
+            icon={<AlertTriangle size={40} />}
+            title="이슈가 없습니다."
+            description={filter === 'All' ? '우측 상단 \'이슈 등록\' 버튼으로 새 이슈를 만들어보세요.' : '해당 상태의 이슈가 없습니다.'}
+          />
+        </Card>
+      ) : (
+        <Card padding="none" className="overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="text-xs text-slate-400 border-b border-[#2a2a2a]">
+              <tr className="text-xs text-muted border-b border-default">
                 <th className="text-left py-3 px-4 font-medium">제목</th>
                 <th className="text-left py-3 px-3 font-medium">상태</th>
                 <th className="text-left py-3 px-3 font-medium">우선순위</th>
@@ -198,40 +174,44 @@ export function IssuesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((it) => (
-                <tr
-                  key={it.id}
-                  className="border-b border-[#2a2a2a] last:border-0 hover:bg-zinc-800/30 cursor-pointer"
-                  onClick={() => setEditing(it)}
-                >
-                  <td className="py-2 px-4">
-                    <p className="text-sm text-slate-100 font-medium">{it.title}</p>
-                    {it.description && <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{it.description}</p>}
-                  </td>
-                  <td className="py-2 px-3">
-                    <span className={`text-xs px-2 py-0.5 rounded ${statusBadge[it.status]}`}>{statusLabel[it.status]}</span>
-                  </td>
-                  <td className="py-2 px-3">
-                    <span className={`text-xs px-2 py-0.5 rounded ${priorityBadge[it.priority]}`}>{priorityLabel[it.priority]}</span>
-                  </td>
-                  <td className="py-2 px-3 text-sm text-slate-300">{it.assigneeName || '-'}</td>
-                  <td className="py-2 px-3 text-xs text-slate-400">{it.dueDate?.slice(0, 10) ?? '-'}</td>
-                  <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => setEditing(it)} className="p-1 text-slate-400 hover:text-slate-200" title="수정">
-                        <Pencil size={14} />
-                      </button>
-                      <button onClick={(e) => handleDelete(it.id, e)} className="p-1 text-red-400 hover:text-red-300" title="삭제">
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {filtered.map((it) => {
+                const status = issueStatusBadge[it.status];
+                const priority = issuePriorityBadge[it.priority];
+                return (
+                  <tr
+                    key={it.id}
+                    className="border-b border-default last:border-0 hover:bg-surface-2 cursor-pointer transition-colors"
+                    onClick={() => setEditing(it)}
+                  >
+                    <td className="py-2 px-4">
+                      <p className="text-sm text-primary font-medium">{it.title}</p>
+                      {it.description && <p className="text-xs text-muted line-clamp-1 mt-0.5">{it.description}</p>}
+                    </td>
+                    <td className="py-2 px-3">
+                      <Badge variant={status.variant} size="sm">{status.label}</Badge>
+                    </td>
+                    <td className="py-2 px-3">
+                      <Badge variant={priority.variant} size="sm">{priority.label}</Badge>
+                    </td>
+                    <td className="py-2 px-3 text-sm text-secondary">{it.assigneeName || '-'}</td>
+                    <td className="py-2 px-3 text-xs text-muted">{it.dueDate?.slice(0, 10) ?? '-'}</td>
+                    <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setEditing(it)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
+                          <Pencil size={14} />
+                        </button>
+                        <button onClick={(e) => handleDelete(it.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        )}
-      </div>
+        </Card>
+      )}
 
       {showForm && (
         <IssueForm
