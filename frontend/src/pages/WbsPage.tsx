@@ -405,26 +405,26 @@ export function WbsPage() {
         </div>
       </div>
 
-      <Card padding="tight" className="flex items-center gap-3">
+      <Card padding="tight" className="flex items-center gap-3 flex-wrap">
         <span className="text-sm text-muted">버전:</span>
         <select
           value={currentVersion ?? ''}
           onChange={(e) => setCurrentVersion(e.target.value ? parseInt(e.target.value) : undefined)}
-          className={`${inputClass} w-auto py-1.5`}
+          className="px-3 py-1.5 text-sm rounded-md"
         >
           <option value="">전체</option>
           {versions.map((v) => <option key={v.id} value={v.id}>{v.versionName}{v.isCurrent ? ' (현재)' : ''}</option>)}
         </select>
-        <button onClick={() => setShowVersionForm(!showVersionForm)} className="text-sm text-secondary hover:text-primary transition-colors">
+        <Button variant="ghost" size="sm" onClick={() => setShowVersionForm(!showVersionForm)}>
           + 버전
-        </button>
+        </Button>
         {showVersionForm && (
           <div className="flex gap-2 items-center">
             <input
               value={newVersionName}
               onChange={(e) => setNewVersionName(e.target.value)}
               placeholder="v1.0"
-              className={`${inputClass} w-24 py-1`}
+              className="px-2 py-1 text-sm rounded-md w-24"
             />
             <Button variant="primary" size="sm" onClick={handleCreateVersion}>확인</Button>
           </div>
