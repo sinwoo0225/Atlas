@@ -138,7 +138,7 @@ function WbsItemForm({
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card padding="spacious" className="w-full max-w-3xl my-4">
         <h2 className="h-section mb-4">{initial ? '작업 수정' : '작업 추가'}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 좌측 - 기본 필드 */}
           <div className="space-y-3">
             <FormField label="작업명" required>

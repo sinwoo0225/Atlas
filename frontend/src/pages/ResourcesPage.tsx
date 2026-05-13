@@ -244,13 +244,13 @@ export function ResourcesPage() {
               </div>
               <div className="space-y-1 text-xs text-muted">
                 {r.department && (
-                  <p className="flex items-center gap-1.5"><Building size={11} /> {r.department}</p>
+                  <p className="flex items-center gap-1.5"><Building size={12} /> {r.department}</p>
                 )}
                 {r.email && (
-                  <p className="flex items-center gap-1.5 truncate"><Mail size={11} /> {r.email}</p>
+                  <p className="flex items-center gap-1.5 truncate"><Mail size={12} /> {r.email}</p>
                 )}
                 {r.phone && (
-                  <p className="flex items-center gap-1.5"><Phone size={11} /> {r.phone}</p>
+                  <p className="flex items-center gap-1.5"><Phone size={12} /> {r.phone}</p>
                 )}
               </div>
               {r.notes && <p className="text-xs text-muted mt-2 line-clamp-2">{r.notes}</p>}

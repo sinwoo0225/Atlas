@@ -40,7 +40,7 @@ export function SettingsPage() {
   const lastProject = projects.find((p) => p.id === settings.lastProjectId);
 
   return (
-    <div className="p-6 max-w-3xl space-y-5">
+    <div className="p-6 max-w-3xl space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="h-page flex items-center gap-2">
           <SettingsIcon size={18} className="text-muted" />

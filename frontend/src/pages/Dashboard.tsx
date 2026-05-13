@@ -38,7 +38,7 @@ export function Dashboard() {
     'text-on-success';
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-6 space-y-6">
       <Card padding="spacious">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -86,7 +86,7 @@ export function Dashboard() {
         )}
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Section title="주요 마일스톤" Icon={Diamond}>
           {upcomingMilestones.length === 0 ? (
             <Empty text="예정된 마일스톤 없음" />
@@ -168,7 +168,7 @@ export function Dashboard() {
       </div>
 
       {(p.deliverables || p.relatedLinks) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {p.deliverables && (
             <Section title="주요 산출물" Icon={Package}>
               <p className="text-sm text-secondary whitespace-pre-wrap">{p.deliverables}</p>

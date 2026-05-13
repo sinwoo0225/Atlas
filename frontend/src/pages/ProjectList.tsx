@@ -54,7 +54,7 @@ function ProjectForm({
           {initial?.id ? '프로젝트 수정' : '새 프로젝트'}
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 좌측 - 기본 정보 */}
           <div className="space-y-3">
             <FormField label="프로젝트명" required>

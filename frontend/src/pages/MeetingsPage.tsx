@@ -105,7 +105,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
       <Card padding="spacious" className="w-full max-w-7xl my-4">
         <h2 className="h-section mb-5">{initial ? '회의록 수정' : '회의록 작성'}</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 좌측 */}
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -388,7 +388,7 @@ export function MeetingsPage() {
                   <span className="text-xs text-muted truncate">{attendeesToDisplay(m.attendees)}</span>
                 </div>
                 <h3
-                  className="text-base font-medium text-primary hover:text-accent cursor-pointer transition-colors"
+                  className="h-section hover:text-accent cursor-pointer transition-colors"
                   onClick={() => setEditing(m)}
                 >
                   {m.topic}

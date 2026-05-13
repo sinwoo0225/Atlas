@@ -371,7 +371,7 @@ export function DevInfoPage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Badge variant={devInfoTypeBadge[selected.type].variant}>{selected.type}</Badge>
-                <h2 className="text-base font-medium text-primary">{selected.title}</h2>
+                <h2 className="h-section">{selected.title}</h2>
               </div>
 
               {selected.type === 'Markdown' && (
