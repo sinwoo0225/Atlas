@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
-/* ========== Theme tokens ========== */
+/* ========== Theme tokens ==========
+   모든 시각 스타일은 이 토큰을 통해서만 적용. 페이지 코드는 토큰을 우회한
+   임의 hex / Tailwind palette 클래스(zinc/slate 등) 를 직접 사용하지 않음 — 새 색이
+   필요하면 여기 토큰부터 추가한다.
+*/
 :root {
   color-scheme: dark;
   --bg-base:         #141414;
@@ -10,7 +14,7 @@
   --bg-surface-3:    #353538;
   --text-primary:    #f4f4f5;
   --text-secondary:  #d4d4d8;
-  --text-muted:      #a1a1aa;
+  --text-muted:      #b4b4bb;     /* WCAG AA: bg-surface-3 위에서 4.5:1 확보 (기존 #a1a1aa → 약간 밝힘) */
   --border-default:  #3f3f46;
   --border-strong:   #52525b;
   --accent:          #818cf8;
@@ -24,6 +28,23 @@
   --scroll-track:    #1c1c1c;
   --scroll-thumb:    #3a3a3a;
   --scroll-hover:    #555555;
+
+  /* Status soft backgrounds — 배지/얇은 강조 영역 */
+  --bg-success-soft: rgba(52, 211, 153, 0.15);
+  --bg-warning-soft: rgba(245, 158, 11, 0.15);
+  --bg-danger-soft:  rgba(248, 113, 113, 0.15);
+  --bg-info-soft:    rgba(96, 165, 250, 0.15);
+  --bg-neutral-soft: rgba(161, 161, 170, 0.18);
+
+  /* Text on status soft — 배지 라벨 텍스트 */
+  --text-on-success: #6ee7b7;
+  --text-on-warning: #fcd34d;
+  --text-on-danger:  #fca5a5;
+  --text-on-info:    #93c5fd;
+  --text-on-neutral: #d4d4d8;
+
+  /* Focus ring — 키보드 포커스 가시화 */
+  --ring-accent:     rgba(129, 140, 248, 0.7);
 }
 
 html.light {
@@ -49,7 +70,32 @@ html.light {
   --scroll-track:    #e5e7eb;
   --scroll-thumb:    #9ca3af;
   --scroll-hover:    #6b7280;
+
+  --bg-success-soft: rgba(5, 150, 105, 0.12);
+  --bg-warning-soft: rgba(217, 119, 6, 0.12);
+  --bg-danger-soft:  rgba(220, 38, 38, 0.10);
+  --bg-info-soft:    rgba(37, 99, 235, 0.10);
+  --bg-neutral-soft: rgba(107, 114, 128, 0.12);
+
+  --text-on-success: #047857;
+  --text-on-warning: #b45309;
+  --text-on-danger:  #b91c1c;
+  --text-on-info:    #1d4ed8;
+  --text-on-neutral: #374151;
+
+  --ring-accent:     rgba(79, 70, 229, 0.5);
 }
+
+/* ========== Spacing scale (사용 규칙 — 단순 참고용, CSS 미적용) ==========
+   padding/gap 은 다음 3단계로 통일하여 사용한다. 중간값(p-5, gap-5 등) 금지.
+     tight    : p-3  / gap-2  (12px / 8px)  — 인라인, 컴팩트한 카드
+     normal   : p-4  / gap-3  (16px / 12px) — 표준 카드, 폼 그룹
+     spacious : p-6  / gap-4  (24px / 16px) — 모달, 페이지 섹션 사이
+   아이콘 크기:
+     인라인 라벨 옆: size={14}
+     버튼 내부:     size={16}
+     페이지 타이틀: size={18}
+*/
 
 * { box-sizing: border-box; }
 
@@ -89,6 +135,42 @@ body {
 .hover\:bg-surface-2:hover { background-color: var(--bg-surface-2); }
 .hover\:bg-surface-3:hover { background-color: var(--bg-surface-3); }
 
+/* ========== Heading hierarchy =========
+   페이지 위계: h-page > h-section > h-card. 각 페이지가 직접 text-lg/text-base 를 박지 않고
+   이 유틸을 쓰면 위계 통일.
+*/
+.h-page {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.5;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.h-section {
+  font-size: 1rem;     /* 16px */
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.h-card {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* ========== Status soft utility classes ========== */
+.bg-success-soft { background-color: var(--bg-success-soft); }
+.bg-warning-soft { background-color: var(--bg-warning-soft); }
+.bg-danger-soft  { background-color: var(--bg-danger-soft); }
+.bg-info-soft    { background-color: var(--bg-info-soft); }
+.bg-neutral-soft { background-color: var(--bg-neutral-soft); }
+
+.text-on-success { color: var(--text-on-success); }
+.text-on-warning { color: var(--text-on-warning); }
+.text-on-danger  { color: var(--text-on-danger); }
+.text-on-info    { color: var(--text-on-info); }
+.text-on-neutral { color: var(--text-on-neutral); }
+
 /* Inputs/buttons inherit theme by default */
 input, select, textarea {
   background-color: var(--bg-surface-2);
@@ -96,11 +178,35 @@ input, select, textarea {
   border: 1px solid var(--border-default);
   border-radius: 4px;
 }
-input:focus, select:focus, textarea:focus {
+/* 마우스 클릭으로 인한 포커스 — outline 제거(시각 노이즈 ↓), 강조는 border 만 */
+input:focus:not(:focus-visible),
+select:focus:not(:focus-visible),
+textarea:focus:not(:focus-visible) {
   outline: none;
   border-color: var(--accent);
 }
 input::placeholder, textarea::placeholder { color: var(--text-muted); }
+
+/* ========== Focus ring (keyboard a11y) ==========
+   모든 인터랙티브 요소가 키보드 포커스 시 가시적인 ring 을 갖도록 한다.
+   마우스 포커스(:focus:not(:focus-visible)) 에는 영향 없음.
+*/
+*:focus-visible {
+  outline: 2px solid var(--ring-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible {
+  outline-offset: 3px;
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline-offset: 0;
+  border-color: var(--accent);
+}
 
 /* ========== Markdown rendering ========== */
 .markdown-body {
