@@ -4,14 +4,9 @@ import ReactECharts from 'echarts-for-react';
 import { Plus, Pencil, X, Save, GitBranch } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
+import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { impactBadge } from '../utils/statusMaps';
 import type { ChangeLog, ImpactLevel, Meeting } from '../types';
-
-const impactBg: Record<ImpactLevel, string> = {
-  Low: 'bg-emerald-500/15 text-emerald-300',
-  Medium: 'bg-amber-500/15 text-amber-300',
-  High: 'bg-orange-500/15 text-orange-300',
-  Critical: 'bg-red-500/15 text-red-300',
-};
 
 const impactColor: Record<ImpactLevel, string> = {
   Low: '#34d399',
@@ -129,9 +124,6 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
     );
   }, [meetings, meetingKeyword]);
 
-  const inputClass =
-    'w-full bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500';
-
   const toggleMeeting = (id: number) => {
     setSelectedMeetings((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
@@ -158,53 +150,48 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-2xl space-y-3 border border-[#2a2a2a] my-4">
-        <h2 className="text-base font-medium text-slate-100">{initial ? '변경 이력 수정' : '변경 이력 추가'}</h2>
+      <Card padding="spacious" className="w-full max-w-2xl my-4 space-y-3">
+        <h2 className="h-section">{initial ? '변경 이력 수정' : '변경 이력 추가'}</h2>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">날짜</label>
+          <FormField label="날짜">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">영향도</label>
+          </FormField>
+          <FormField label="영향도">
             <select value={impact} onChange={(e) => setImpact(e.target.value as ImpactLevel)} className={inputClass}>
               {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
                 <option key={v} value={v}>{v}</option>
               ))}
             </select>
-          </div>
+          </FormField>
         </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">변경 내용 *</label>
+        <FormField label="변경 내용" required>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
             className={`${inputClass} resize-none`}
           />
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">작성자</label>
+        <FormField label="작성자">
           <input value={author} onChange={(e) => setAuthor(e.target.value)} className={inputClass} />
-        </div>
+        </FormField>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">관련 문서 링크 (한 줄에 하나)</label>
+        <FormField label="관련 문서 링크 (한 줄에 하나)">
           <textarea
             value={otherLinks}
             onChange={(e) => setOtherLinks(e.target.value)}
             rows={2}
             className={`${inputClass} resize-none`}
           />
-        </div>
+        </FormField>
 
         <div>
           <div className="flex items-center justify-between mb-1">
-            <label className="block text-xs text-slate-400">관련 회의록</label>
-            <span className="text-xs text-slate-500">
+            <label className="block text-xs text-muted font-medium">관련 회의록</label>
+            <span className="text-xs text-muted">
               {selectedMeetings.length}개 선택 / {meetings.length}개 중
             </span>
           </div>
@@ -215,35 +202,31 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
             className={`${inputClass} mb-2`}
           />
           {meetings.length === 0 ? (
-            <p className="text-xs text-slate-500">회의록이 없습니다.</p>
+            <p className="text-xs text-muted">회의록이 없습니다.</p>
           ) : (
-            <div className="h-48 overflow-y-auto border border-zinc-700 rounded-md p-2 space-y-1">
+            <div className="h-48 overflow-y-auto border border-default rounded-md p-2 space-y-1">
               {filteredMeetings.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-2">검색 결과 없음</p>
+                <p className="text-xs text-muted text-center py-2">검색 결과 없음</p>
               ) : filteredMeetings.map((m) => (
-                <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-zinc-800/60 px-2 py-1 rounded">
+                <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-surface-2 px-2 py-1 rounded transition-colors">
                   <input
                     type="checkbox"
                     checked={selectedMeetings.includes(m.id)}
                     onChange={() => toggleMeeting(m.id)}
                   />
-                  <span className="text-xs text-zinc-400">{m.date.slice(0, 10)}</span>
-                  <span className="text-sm text-slate-200 truncate">{m.topic}</span>
+                  <span className="text-xs text-muted">{m.date.slice(0, 10)}</span>
+                  <span className="text-sm text-secondary truncate">{m.topic}</span>
                 </label>
               ))}
             </div>
           )}
         </div>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-[#2a2a2a]">
-          <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
-            <X size={14} /> 취소
-          </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
-            <Save size={14} /> 저장
-          </button>
+        <div className="flex gap-2 justify-end pt-2 border-t border-default">
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -272,31 +255,29 @@ export function ChangeLogsPage() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-          <GitBranch size={18} className="text-slate-400" />
+        <h1 className="h-page flex items-center gap-2">
+          <GitBranch size={18} className="text-muted" />
           변경 이력
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus size={14} /> 변경 이력 추가
-        </button>
+        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+          변경 이력 추가
+        </Button>
       </div>
 
       {logs.length > 0 && (
-        <div className="bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg p-4">
-          <p className="text-xs text-slate-400 mb-2">날짜별 변경 건수 (영향도별)</p>
+        <Card padding="normal">
+          <p className="text-xs text-muted mb-2">날짜별 변경 건수 (영향도별)</p>
           <ImpactBarChart logs={logs} />
-        </div>
+        </Card>
       )}
 
       <div className="space-y-3">
         {logs.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
-            <GitBranch size={36} className="mx-auto mb-2 text-slate-600" />
-            <p className="text-sm">변경 이력이 없습니다.</p>
-          </div>
+          <EmptyState
+            icon={<GitBranch size={36} />}
+            title="변경 이력이 없습니다."
+            description="우측 상단 '변경 이력 추가' 버튼으로 시작해보세요."
+          />
         ) : logs.map((log) => {
           const meetingIds = extractMeetingIds(log.relatedDocLinks);
           const otherLinks = extractOtherLinks(log.relatedDocLinks);
@@ -305,52 +286,53 @@ export function ChangeLogsPage() {
             .filter((m): m is Meeting => !!m);
 
           return (
-            <div
+            <Card
               key={log.id}
-              className="bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg p-4 cursor-pointer hover:border-zinc-500 transition-colors"
+              padding="normal"
+              className="cursor-pointer hover:border-strong transition-colors"
               onClick={() => setEditing(log)}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
-                  <span className={`text-xs px-2 py-0.5 rounded font-medium ${impactBg[log.impact]}`}>{log.impact}</span>
-                  <span className="text-sm text-slate-400">{log.date.slice(0, 10)}</span>
-                  {log.author && <span className="text-xs text-slate-500">by {log.author}</span>}
+                  <Badge variant={impactBadge[log.impact].variant} size="sm">{log.impact}</Badge>
+                  <span className="text-sm text-muted">{log.date.slice(0, 10)}</span>
+                  {log.author && <span className="text-xs text-muted">by {log.author}</span>}
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setEditing(log)} className="p-1 text-slate-400 hover:text-slate-200" title="수정">
+                  <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={(e) => handleDelete(log.id, e)} className="p-1 text-red-400 hover:text-red-300" title="삭제">
+                  <button onClick={(e) => handleDelete(log.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
                     <X size={14} />
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-slate-200 mt-2 line-clamp-2">{log.content}</p>
+              <p className="text-sm text-secondary mt-2 line-clamp-2">{log.content}</p>
 
               {(otherLinks.length > 0 || linkedMeetings.length > 0) && (
-                <div className="mt-3 pt-3 border-t border-[#2a2a2a] space-y-1" onClick={(e) => e.stopPropagation()}>
+                <div className="mt-3 pt-3 border-t border-default space-y-1" onClick={(e) => e.stopPropagation()}>
                   {linkedMeetings.length > 0 && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">관련 회의록:</p>
+                      <p className="text-xs text-muted mb-1">관련 회의록:</p>
                       <div className="flex flex-wrap gap-1.5">
                         {linkedMeetings.map((m) => (
-                          <span key={m.id} className="text-xs bg-zinc-700/40 text-zinc-200 px-2 py-0.5 rounded">
+                          <Badge key={m.id} variant="neutral" size="sm">
                             {m.date.slice(0, 10)} {m.topic}
-                          </span>
+                          </Badge>
                         ))}
                       </div>
                     </div>
                   )}
                   {otherLinks.length > 0 && (
                     <div>
-                      <p className="text-xs text-slate-400 mb-1">관련 문서:</p>
+                      <p className="text-xs text-muted mb-1">관련 문서:</p>
                       {otherLinks.map((link, i) => (
                         <a
                           key={i}
                           href={link}
                           target="_blank"
                           rel="noreferrer"
-                          className="block text-xs text-zinc-300 hover:text-white hover:underline"
+                          className="block text-xs text-secondary hover:text-primary hover:underline transition-colors"
                         >
                           {link}
                         </a>
@@ -359,7 +341,7 @@ export function ChangeLogsPage() {
                   )}
                 </div>
               )}
-            </div>
+            </Card>
           );
         })}
       </div>

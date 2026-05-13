@@ -1,5 +1,5 @@
 import type { BadgeVariant } from '../components/ui/Badge';
-import type { ProjectStatus, WbsStatus, ImpactLevel, IssueStatus, IssuePriority } from '../types';
+import type { ProjectStatus, WbsStatus, ImpactLevel, IssueStatus, IssuePriority, DevInfoType } from '../types';
 
 export const projectStatusBadge: Record<ProjectStatus, { label: string; variant: BadgeVariant }> = {
   Planned:    { label: '계획', variant: 'neutral' },
@@ -40,3 +40,9 @@ export function wbsImportanceBadge(order: number): { label: string; variant: Bad
   if (order === 1) return { label: '낮음', variant: 'neutral' };
   return { label: '중간', variant: 'warning' };
 }
+
+export const devInfoTypeBadge: Record<DevInfoType, { variant: BadgeVariant }> = {
+  Markdown: { variant: 'neutral' },
+  File:     { variant: 'warning' },
+  Link:     { variant: 'success' },
+};

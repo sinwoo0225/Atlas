@@ -5,17 +5,13 @@ import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Uploa
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, Project } from '../types';
 import { projectsApi } from '../api/projects';
+import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { devInfoTypeBadge } from '../utils/statusMaps';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
   File: Folder,
   Link: LinkIcon,
-};
-
-const typeBg: Record<DevInfoType, string> = {
-  Markdown: 'bg-zinc-700/50 text-zinc-200',
-  File: 'bg-amber-500/15 text-amber-300',
-  Link: 'bg-emerald-500/15 text-emerald-300',
 };
 
 const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
@@ -51,9 +47,6 @@ function DevInfoForm({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const inputClass =
-    'w-full bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500';
-
   const handleSubmit = async () => {
     const payload = { projectId, ...form };
     if (initial) await devInfoApi.update(projectId, initial.id, payload);
@@ -85,52 +78,46 @@ function DevInfoForm({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-2xl space-y-4 border border-[#2a2a2a] my-4">
-        <h2 className="text-base font-medium text-slate-100">{initial ? '정보 수정' : '개발 정보 추가'}</h2>
+      <Card padding="spacious" className="w-full max-w-2xl space-y-4 my-4">
+        <h2 className="h-section">{initial ? '정보 수정' : '개발 정보 추가'}</h2>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">제목 *</label>
+        <FormField label="제목" required>
           <input value={form.title} onChange={(e) => set('title', e.target.value)} className={inputClass} />
-        </div>
+        </FormField>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">타입</label>
+          <label className="block text-xs text-muted font-medium mb-1">타입</label>
           <div className="flex gap-2">
             {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((t) => {
               const Icon = typeIcon[t];
               return (
-                <button
+                <Button
                   key={t}
+                  variant={form.type === t ? 'primary' : 'secondary'}
+                  size="md"
                   onClick={() => set('type', t)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    form.type === t
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-                  }`}
+                  leadingIcon={<Icon size={14} />}
                 >
-                  <Icon size={14} /> {t}
-                </button>
+                  {t}
+                </Button>
               );
             })}
           </div>
         </div>
 
         {form.type === 'Markdown' && (
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">내용 (Markdown)</label>
+          <FormField label="내용 (Markdown)" hint="저장 시 프로젝트 폴더에 [제목].md 파일로 저장됩니다.">
             <textarea
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
               rows={10}
               className={`${inputClass} resize-none font-mono`}
             />
-            <p className="text-xs text-slate-500 mt-1">저장 시 프로젝트 폴더에 [제목].md 파일로 저장됩니다.</p>
-          </div>
+          </FormField>
         )}
 
         {form.type === 'File' && (
-          <div className="space-y-2">
-            <label className="block text-xs text-slate-400 mb-1">파일 경로</label>
+          <FormField label="파일 경로">
             <div className="flex gap-2">
               <input
                 value={form.filePath}
@@ -138,13 +125,14 @@ function DevInfoForm({
                 placeholder="C:\..."
                 className={inputClass}
               />
-              <button
+              <Button
+                variant="secondary"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-slate-200 rounded-md text-sm shrink-0 disabled:opacity-50"
+                leadingIcon={<Upload size={16} />}
               >
-                <Upload size={14} /> {uploading ? '업로드 중...' : '파일 찾기'}
-              </button>
+                {uploading ? '업로드 중...' : '파일 찾기'}
+              </Button>
             </div>
             <input
               ref={fileInputRef}
@@ -155,40 +143,34 @@ function DevInfoForm({
                 if (f) handleFileChosen(f);
               }}
             />
-          </div>
+          </FormField>
         )}
 
         {form.type === 'Link' && (
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">URL</label>
+          <FormField label="URL">
             <input
               value={form.url}
               onChange={(e) => set('url', e.target.value)}
               placeholder="https://..."
               className={inputClass}
             />
-          </div>
+          </FormField>
         )}
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">태그 (쉼표 구분)</label>
+        <FormField label="태그 (쉼표 구분)">
           <input
             value={form.tags}
             onChange={(e) => set('tags', e.target.value)}
             placeholder="API, 설계, 문서"
             className={inputClass}
           />
-        </div>
+        </FormField>
 
-        <div className="flex gap-2 justify-end pt-3 border-t border-[#2a2a2a]">
-          <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
-            <X size={14} /> 취소
-          </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
-            <Save size={14} /> 저장
-          </button>
+        <div className="flex gap-2 justify-end pt-3 border-t border-default">
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -215,40 +197,39 @@ function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem
     }
   }, [projectId, item.id, item.filePath, ext, item.updatedAt]);
 
-  if (!item.filePath) return <p className="text-sm text-slate-400">파일 경로가 없습니다.</p>;
+  if (!item.filePath) return <p className="text-sm text-muted">파일 경로가 없습니다.</p>;
 
   if (imageExts.includes(ext)) {
     if (imgError) {
       return (
-        <p className="text-sm text-red-400">
+        <p className="text-sm text-on-danger">
           이미지를 불러올 수 없습니다. 파일 경로를 확인하세요: {item.filePath}
         </p>
       );
     }
-    // updatedAt을 쿼리에 포함시켜 파일 변경 시 캐시 무효화
     const cacheBust = encodeURIComponent(item.updatedAt || '');
     return (
       <img
         src={`/api/projects/${projectId}/devinfo/${item.id}/preview?t=${cacheBust}`}
         alt={item.title}
-        className="max-w-full rounded border border-zinc-700"
+        className="max-w-full rounded border border-default"
         onError={() => setImgError(true)}
       />
     );
   }
 
   if (textExts.includes(ext)) {
-    if (error) return <p className="text-sm text-red-400">{error}</p>;
-    if (text === null) return <p className="text-sm text-slate-400">불러오는 중...</p>;
+    if (error) return <p className="text-sm text-on-danger">{error}</p>;
+    if (text === null) return <p className="text-sm text-muted">불러오는 중...</p>;
     if (ext === 'md') {
       return (
-        <div className="markdown-body text-slate-200">
+        <div className="markdown-body text-secondary">
           <ReactMarkdown>{text}</ReactMarkdown>
         </div>
       );
     }
     return (
-      <pre className="text-xs text-slate-200 bg-[#1a1a1a] border border-zinc-700 rounded-md p-3 overflow-auto whitespace-pre-wrap">
+      <pre className="text-xs text-secondary bg-base border border-default rounded-md p-3 overflow-auto whitespace-pre-wrap">
         {text}
       </pre>
     );
@@ -282,9 +263,6 @@ export function DevInfoPage() {
 
   const handleOpenFile = async (item: DevInfoItem) => {
     try {
-      // POST /open returns 200 OK with empty body; api.post returns undefined on 204 but
-      // for empty 200 responses fetch may try to parse JSON and fail.
-      // Use raw fetch to avoid JSON parse issues.
       const res = await fetch(`/api/projects/${pid}/devinfo/${item.id}/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -303,39 +281,35 @@ export function DevInfoPage() {
   return (
     <div className="p-6 h-full flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-          <Code2 size={18} className="text-slate-400" />
+        <h1 className="h-page flex items-center gap-2">
+          <Code2 size={18} className="text-muted" />
           개발 정보
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus size={14} /> 정보 추가
-        </button>
+        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+          정보 추가
+        </Button>
       </div>
 
-      <div className="flex gap-2">
-        <button
+      <div className="flex gap-2 flex-wrap">
+        <Button
+          variant={!filterType ? 'primary' : 'secondary'}
+          size="sm"
           onClick={() => setFilterType('')}
-          className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-            !filterType ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-          }`}
         >
           전체
-        </button>
+        </Button>
         {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((t) => {
           const Icon = typeIcon[t];
           return (
-            <button
+            <Button
               key={t}
+              variant={filterType === t ? 'primary' : 'secondary'}
+              size="sm"
               onClick={() => setFilterType(t === filterType ? '' : t)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                filterType === t ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-              }`}
+              leadingIcon={<Icon size={14} />}
             >
-              <Icon size={14} /> {t}
-            </button>
+              {t}
+            </Button>
           );
         })}
       </div>
@@ -343,66 +317,65 @@ export function DevInfoPage() {
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
         <div className="lg:col-span-1 overflow-y-auto space-y-2">
           {filtered.length === 0 ? (
-            <div className="text-center py-16 text-slate-500">
-              <Code2 size={36} className="mx-auto mb-2 text-slate-600" />
-              <p className="text-sm">개발 정보가 없습니다.</p>
-            </div>
+            <EmptyState
+              icon={<Code2 size={36} />}
+              title="개발 정보가 없습니다."
+              description={filterType ? '해당 타입의 항목이 없습니다.' : '우측 상단 \'정보 추가\' 버튼으로 시작해보세요.'}
+            />
           ) : filtered.map((item) => {
             const Icon = typeIcon[item.type];
+            const isSelected = selected?.id === item.id;
             return (
-              <div
+              <Card
                 key={item.id}
-                className={`bg-[#1f1f1f] border rounded-md p-4 cursor-pointer transition-colors ${
-                  selected?.id === item.id ? 'border-zinc-500' : 'border-[#2a2a2a] hover:border-zinc-600'
-                }`}
-                onClick={() => setSelected(selected?.id === item.id ? null : item)}
+                padding="normal"
+                className={`cursor-pointer transition-colors ${isSelected ? 'border-accent ring-1 ring-accent' : 'hover:border-strong'}`}
+                onClick={() => setSelected(isSelected ? null : item)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className={`flex items-center gap-1 text-xs px-1.5 py-0.5 rounded font-medium ${typeBg[item.type]}`}>
-                        <Icon size={12} /> {item.type}
-                      </span>
+                      <Badge variant={devInfoTypeBadge[item.type].variant} size="sm">
+                        <Icon size={12} className="mr-1" /> {item.type}
+                      </Badge>
                     </div>
-                    <p className="text-sm font-medium text-slate-100 truncate">{item.title}</p>
+                    <p className="text-sm font-medium text-primary truncate">{item.title}</p>
                     {item.tags && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {item.tags.split(',').map((tag) => tag.trim()).filter(Boolean).map((tag) => (
-                          <span key={tag} className="text-xs bg-zinc-800 text-slate-400 px-1.5 py-0.5 rounded">{tag}</span>
+                          <Badge key={tag} variant="neutral" size="sm">{tag}</Badge>
                         ))}
                       </div>
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => setEditing(item)} className="p-1 text-slate-400 hover:text-slate-200" title="수정">
+                    <button onClick={() => setEditing(item)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="p-1 text-red-400 hover:text-red-300" title="삭제">
+                    <button onClick={() => handleDelete(item.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
                       <X size={14} />
                     </button>
                   </div>
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
 
-        <div className="lg:col-span-2 bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg p-5 overflow-y-auto">
+        <Card padding="spacious" className="lg:col-span-2 overflow-y-auto">
           {!selected ? (
-            <div className="h-full flex items-center justify-center text-slate-500">
+            <div className="h-full flex items-center justify-center text-muted">
               <p className="text-sm">항목을 선택하면 상세 내용이 표시됩니다.</p>
             </div>
           ) : (
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className={`text-xs px-2 py-0.5 rounded font-medium ${typeBg[selected.type]}`}>
-                  {selected.type}
-                </span>
-                <h2 className="text-base font-medium text-slate-100">{selected.title}</h2>
+                <Badge variant={devInfoTypeBadge[selected.type].variant}>{selected.type}</Badge>
+                <h2 className="text-base font-medium text-primary">{selected.title}</h2>
               </div>
 
               {selected.type === 'Markdown' && (
-                <div className="markdown-body text-slate-200">
+                <div className="markdown-body text-secondary">
                   <ReactMarkdown>{selected.content}</ReactMarkdown>
                 </div>
               )}
@@ -410,45 +383,42 @@ export function DevInfoPage() {
               {selected.type === 'File' && (
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-slate-400 mb-1">파일 경로</p>
-                    <p className="text-sm text-slate-200 font-mono bg-zinc-800/50 px-3 py-2 rounded-md break-all border border-zinc-700">
+                    <p className="text-xs text-muted mb-1">파일 경로</p>
+                    <p className="text-sm text-secondary font-mono bg-surface-2 px-3 py-2 rounded-md break-all border border-default">
                       {selected.filePath}
                     </p>
                   </div>
                   <FilePreview projectId={pid} item={selected} />
-                  <button
-                    onClick={() => handleOpenFile(selected)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-slate-200 rounded-md text-sm transition-colors"
-                  >
-                    <Folder size={14} /> 파일 열기
-                  </button>
+                  <Button variant="secondary" onClick={() => handleOpenFile(selected)} leadingIcon={<Folder size={16} />}>
+                    파일 열기
+                  </Button>
                 </div>
               )}
 
               {selected.type === 'Link' && (
                 <div className="space-y-2">
-                  <p className="text-xs text-slate-400">링크</p>
-                  <a href={selected.url} target="_blank" rel="noreferrer" className="text-sm text-zinc-300 hover:text-white hover:underline break-all">
+                  <p className="text-xs text-muted">링크</p>
+                  <a href={selected.url} target="_blank" rel="noreferrer" className="text-sm text-secondary hover:text-primary hover:underline break-all transition-colors">
                     {selected.url}
                   </a>
                   {selected.content && (
-                    <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
-                      <p className="text-sm text-slate-300 whitespace-pre-wrap">{selected.content}</p>
+                    <div className="mt-4 pt-4 border-t border-default">
+                      <p className="text-sm text-secondary whitespace-pre-wrap">{selected.content}</p>
                     </div>
                   )}
                 </div>
               )}
 
               {selected.tags && (
-                <div className="mt-4 pt-4 border-t border-[#2a2a2a] flex flex-wrap gap-1">
+                <div className="mt-4 pt-4 border-t border-default flex flex-wrap gap-1">
                   {selected.tags.split(',').map((t) => t.trim()).filter(Boolean).map((tag) => (
-                    <span key={tag} className="text-xs bg-zinc-800 text-slate-300 px-2 py-1 rounded">{tag}</span>
+                    <Badge key={tag} variant="neutral">{tag}</Badge>
                   ))}
                 </div>
               )}
             </div>
           )}
-        </div>
+        </Card>
       </div>
 
       {showForm && (

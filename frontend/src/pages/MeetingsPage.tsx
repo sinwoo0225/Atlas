@@ -11,6 +11,7 @@ import {
   type AttendeeOrg,
   type ActionItem,
 } from '../utils/meetingHelpers';
+import { Button, Card, EmptyState, FormField, inputClass } from '../components/ui';
 import type { Meeting } from '../types';
 
 function MeetingForm({ projectId, initial, onSave, onCancel }: {
@@ -35,9 +36,6 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   const [decisionInput, setDecisionInput] = useState('');
 
   const [actionItems, setActionItems] = useState<ActionItem[]>(() => parseActionItems(initial?.actionItems ?? ''));
-
-  const inputClass =
-    'w-full bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500';
 
   const addOrg = () => setAttendees([...attendees, { org: '', members: [''] }]);
   const updateOrg = (i: number, k: 'org', v: string) => {
@@ -104,39 +102,34 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-4xl border border-[#2a2a2a] my-4">
-        <h2 className="text-base font-medium text-slate-100 mb-5">{initial ? '회의록 수정' : '회의록 작성'}</h2>
+      <Card padding="spacious" className="w-full max-w-4xl my-4">
+        <h2 className="h-section mb-5">{initial ? '회의록 수정' : '회의록 작성'}</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* 좌측 */}
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">날짜</label>
+              <FormField label="날짜">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">주제 *</label>
+              </FormField>
+              <FormField label="주제" required>
                 <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} />
-              </div>
+              </FormField>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs text-slate-400">참석자 (소속별)</label>
-                <button
-                  onClick={addOrg}
-                  className="flex items-center gap-1 text-xs text-slate-300 hover:text-white"
-                >
-                  <Building2 size={12} /> 소속 추가
-                </button>
+                <label className="block text-xs text-muted font-medium">참석자 (소속별)</label>
+                <Button variant="ghost" size="sm" onClick={addOrg} leadingIcon={<Building2 size={14} />}>
+                  소속 추가
+                </Button>
               </div>
               {legacyAttendees && (
-                <p className="text-xs text-slate-500 mb-2">기존 값: {legacyAttendees}</p>
+                <p className="text-xs text-muted mb-2">기존 값: {legacyAttendees}</p>
               )}
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {attendees.map((org, i) => (
-                  <div key={i} className="border border-zinc-700 rounded-md p-2 space-y-2">
+                  <div key={i} className="border border-default rounded-md p-2 space-y-2">
                     <div className="flex gap-2">
                       <input
                         value={org.org}
@@ -144,7 +137,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         placeholder="소속명"
                         className={inputClass}
                       />
-                      <button onClick={() => removeOrg(i)} className="p-1 text-red-400 hover:text-red-300" title="소속 삭제">
+                      <button onClick={() => removeOrg(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="소속 삭제">
                         <X size={14} />
                       </button>
                     </div>
@@ -156,24 +149,27 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                           placeholder="이름"
                           className={inputClass}
                         />
-                        <button onClick={() => removeMember(i, j)} className="p-1 text-red-400 hover:text-red-300" title="삭제">
+                        <button onClick={() => removeMember(i, j)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
                           <X size={14} />
                         </button>
                       </div>
                     ))}
-                    <button
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="ml-3"
                       onClick={() => addMember(i)}
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-200 ml-3"
+                      leadingIcon={<UserPlus size={14} />}
                     >
-                      <UserPlus size={12} /> 인원 추가
-                    </button>
+                      인원 추가
+                    </Button>
                   </div>
                 ))}
               </div>
             </div>
 
             <div>
-              <label className="block text-xs text-slate-400 mb-1">주요 결정사항</label>
+              <label className="block text-xs text-muted font-medium mb-1">주요 결정사항</label>
               <div className="flex gap-2 mb-2">
                 <input
                   value={decisionInput}
@@ -182,18 +178,13 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                   placeholder="결정사항 입력 후 추가"
                   className={inputClass}
                 />
-                <button
-                  onClick={addDecision}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-zinc-800 hover:bg-zinc-700 text-slate-200 rounded-md"
-                >
-                  <Plus size={14} /> 추가
-                </button>
+                <Button variant="secondary" onClick={addDecision} leadingIcon={<Plus size={16} />}>추가</Button>
               </div>
               <ul className="space-y-1">
                 {decisions.map((d, i) => (
-                  <li key={i} className="flex items-center justify-between bg-zinc-800/40 px-2 py-1 rounded">
-                    <span className="text-sm text-slate-200">{d}</span>
-                    <button onClick={() => removeDecision(i)} className="p-0.5 text-red-400 hover:text-red-300">
+                  <li key={i} className="flex items-center justify-between bg-surface-2 px-2 py-1 rounded">
+                    <span className="text-sm text-secondary">{d}</span>
+                    <button onClick={() => removeDecision(i)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity">
                       <X size={14} />
                     </button>
                   </li>
@@ -203,14 +194,12 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs text-slate-400">Action Items</label>
-                <button onClick={addAction} className="flex items-center gap-1 text-xs text-slate-300 hover:text-white">
-                  <Plus size={12} /> 추가
-                </button>
+                <label className="block text-xs text-muted font-medium">Action Items</label>
+                <Button variant="ghost" size="sm" onClick={addAction} leadingIcon={<Plus size={14} />}>추가</Button>
               </div>
               <div className="space-y-2">
                 {actionItems.map((a, i) => (
-                  <div key={i} className="border border-zinc-700 rounded-md p-2 space-y-2">
+                  <div key={i} className="border border-default rounded-md p-2 space-y-2">
                     <div className="flex gap-2">
                       <input
                         value={a.content}
@@ -218,7 +207,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         placeholder="내용"
                         className={inputClass}
                       />
-                      <button onClick={() => removeAction(i)} className="p-1 text-red-400 hover:text-red-300">
+                      <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
                         <X size={14} />
                       </button>
                     </div>
@@ -243,8 +232,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
           </div>
 
           {/* 우측 - 논의 내용 (마크다운) */}
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">논의 내용 (마크다운 지원, 포커스 아웃 시 렌더링)</label>
+          <FormField label="논의 내용 (마크다운 지원, 포커스 아웃 시 렌더링)">
             {discussionEditing || !discussion ? (
               <textarea
                 value={discussion}
@@ -258,23 +246,19 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
             ) : (
               <div
                 onClick={() => setDiscussionEditing(true)}
-                className="markdown-body min-h-[400px] cursor-text bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 hover:border-zinc-500"
+                className="markdown-body min-h-[400px] cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
                 <ReactMarkdown>{discussion}</ReactMarkdown>
               </div>
             )}
-          </div>
+          </FormField>
         </div>
 
-        <div className="flex gap-2 justify-end pt-5 mt-5 border-t border-[#2a2a2a]">
-          <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
-            <X size={14} /> 취소
-          </button>
-          <button onClick={handleSubmit} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
-            <Save size={14} /> 저장
-          </button>
+        <div className="flex gap-2 justify-end pt-5 mt-5 border-t border-default">
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -284,30 +268,30 @@ function MeetingDetail({ meeting }: { meeting: Meeting }) {
   const actions = parseActionItems(meeting.actionItems);
 
   return (
-    <div className="mt-4 pt-4 border-t border-[#2a2a2a] space-y-4">
+    <div className="mt-4 pt-4 border-t border-default space-y-4">
       {/* 1. 주요 결정사항 */}
       {decisions.length > 0 && (
         <div>
-          <p className="text-xs text-slate-400 font-medium mb-1">주요 결정사항</p>
-          <ul className="text-sm text-slate-200 list-disc pl-5 space-y-0.5">
+          <p className="text-xs text-muted font-medium mb-1">주요 결정사항</p>
+          <ul className="text-sm text-secondary list-disc pl-5 space-y-0.5">
             {decisions.map((d, i) => <li key={i}>{d}</li>)}
           </ul>
         </div>
       )}
       {!decisions.length && meeting.decisions && (
         <div>
-          <p className="text-xs text-slate-400 font-medium mb-1">주요 결정사항</p>
-          <p className="text-sm text-slate-200 whitespace-pre-wrap">{meeting.decisions}</p>
+          <p className="text-xs text-muted font-medium mb-1">주요 결정사항</p>
+          <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.decisions}</p>
         </div>
       )}
 
       {/* 2. Action Items */}
       {actions.length > 0 && (
         <div>
-          <p className="text-xs text-slate-400 font-medium mb-1">Action Items</p>
+          <p className="text-xs text-muted font-medium mb-1">Action Items</p>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs text-slate-400">
+              <tr className="text-xs text-muted">
                 <th className="text-left pb-1 pr-2 font-medium">내용</th>
                 <th className="text-left pb-1 pr-2 font-medium">담당자</th>
                 <th className="text-left pb-1 font-medium">기한</th>
@@ -315,10 +299,10 @@ function MeetingDetail({ meeting }: { meeting: Meeting }) {
             </thead>
             <tbody>
               {actions.map((a, i) => (
-                <tr key={i} className="border-t border-[#2a2a2a]">
-                  <td className="py-1 pr-2 text-slate-200">{a.content}</td>
-                  <td className="py-1 pr-2 text-slate-300">{a.assignee}</td>
-                  <td className="py-1 text-slate-400">{a.deadline}</td>
+                <tr key={i} className="border-t border-default">
+                  <td className="py-1 pr-2 text-secondary">{a.content}</td>
+                  <td className="py-1 pr-2 text-secondary">{a.assignee}</td>
+                  <td className="py-1 text-muted">{a.deadline}</td>
                 </tr>
               ))}
             </tbody>
@@ -327,15 +311,15 @@ function MeetingDetail({ meeting }: { meeting: Meeting }) {
       )}
       {!actions.length && meeting.actionItems && (
         <div>
-          <p className="text-xs text-slate-400 font-medium mb-1">Action Items</p>
-          <p className="text-sm text-slate-200 whitespace-pre-wrap">{meeting.actionItems}</p>
+          <p className="text-xs text-muted font-medium mb-1">Action Items</p>
+          <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.actionItems}</p>
         </div>
       )}
 
       {/* 3. 논의 내용 - 마크다운 렌더링 */}
       {meeting.discussion && (
         <div>
-          <p className="text-xs text-slate-400 font-medium mb-1">논의 내용</p>
+          <p className="text-xs text-muted font-medium mb-1">논의 내용</p>
           <div className="markdown-body">
             <ReactMarkdown>{meeting.discussion}</ReactMarkdown>
           </div>
@@ -366,16 +350,13 @@ export function MeetingsPage() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-          <FileText size={18} className="text-slate-400" />
+        <h1 className="h-page flex items-center gap-2">
+          <FileText size={18} className="text-muted" />
           회의록
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus size={14} /> 회의록 작성
-        </button>
+        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+          회의록 작성
+        </Button>
       </div>
 
       <div className="flex gap-2">
@@ -384,55 +365,52 @@ export function MeetingsPage() {
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="키워드 검색..."
           onKeyDown={(e) => e.key === 'Enter' && load(keyword || undefined)}
-          className="flex-1 bg-[#1f1f1f] border border-[#2a2a2a] rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500"
+          className={`${inputClass} flex-1`}
         />
-        <button onClick={() => load(keyword || undefined)} className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-slate-200 rounded-md text-sm">
-          검색
-        </button>
-        <button onClick={() => { setKeyword(''); load(); }} className="px-3 py-2 text-slate-400 hover:text-slate-200 text-sm">
-          초기화
-        </button>
+        <Button variant="secondary" onClick={() => load(keyword || undefined)}>검색</Button>
+        <Button variant="ghost" onClick={() => { setKeyword(''); load(); }}>초기화</Button>
       </div>
 
       <div className="space-y-3">
         {meetings.length === 0 ? (
-          <div className="text-center py-16 text-slate-500">
-            <FileText size={36} className="mx-auto mb-2 text-slate-600" />
-            <p className="text-sm">회의록이 없습니다.</p>
-          </div>
+          <EmptyState
+            icon={<FileText size={36} />}
+            title="회의록이 없습니다."
+            description="우측 상단 '회의록 작성' 버튼으로 새 회의록을 만들어보세요."
+          />
         ) : meetings.map((m) => (
-          <div key={m.id} className="bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg p-5">
+          <Card key={m.id} padding="spacious">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-zinc-300 font-medium">{m.date.slice(0, 10)}</span>
-                  <span className="text-xs text-slate-500">|</span>
-                  <span className="text-xs text-slate-400 truncate">{attendeesToDisplay(m.attendees)}</span>
+                  <span className="text-sm text-secondary font-medium">{m.date.slice(0, 10)}</span>
+                  <span className="text-xs text-muted">|</span>
+                  <span className="text-xs text-muted truncate">{attendeesToDisplay(m.attendees)}</span>
                 </div>
                 <h3
-                  className="text-base font-medium text-slate-100 hover:text-zinc-300 cursor-pointer"
+                  className="text-base font-medium text-primary hover:text-accent cursor-pointer transition-colors"
                   onClick={() => setEditing(m)}
                 >
                   {m.topic}
                 </h3>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => setEditing(m)} className="p-1 text-slate-400 hover:text-slate-200" title="수정">
+                <button onClick={() => setEditing(m)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => handleDelete(m.id)} className="p-1 text-red-400 hover:text-red-300" title="삭제">
+                <button onClick={() => handleDelete(m.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
                   <X size={14} />
                 </button>
                 <button
                   onClick={() => setExpanded(expanded === m.id ? null : m.id)}
-                  className="px-2 text-xs text-slate-400 hover:text-slate-200"
+                  className="px-2 text-xs text-muted hover:text-primary transition-colors"
                 >
                   {expanded === m.id ? '접기' : '펼치기'}
                 </button>
               </div>
             </div>
             {expanded === m.id && <MeetingDetail meeting={m} />}
-          </div>
+          </Card>
         ))}
       </div>
 
