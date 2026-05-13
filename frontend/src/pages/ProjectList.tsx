@@ -4,6 +4,7 @@ import { Plus, Pencil, X, Save, Download, FolderOpen, Calendar, Users } from 'lu
 import { projectsApi } from '../api/projects';
 import { useProjectStore } from '../store/useProjectStore';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
+import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import type { Project, ProjectStatus } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
@@ -46,91 +47,78 @@ function ProjectForm({
     } as any);
   };
 
-  const inputClass =
-    'w-full bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500';
-
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-3xl border border-[#2a2a2a] my-4">
-        <h2 className="text-base font-medium text-slate-100 mb-5">
+      <Card padding="spacious" className="w-full max-w-3xl my-4">
+        <h2 className="h-section mb-5">
           {initial?.id ? '프로젝트 수정' : '새 프로젝트'}
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* 좌측 - 기본 정보 */}
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">프로젝트명 *</label>
+            <FormField label="프로젝트명" required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">상태</label>
+            </FormField>
+            <FormField label="상태">
               <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
                 {statusOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-            </div>
+            </FormField>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">시작일</label>
+              <FormField label="시작일">
                 <input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className={inputClass} />
-              </div>
-              <div>
-                <label className="block text-xs text-slate-400 mb-1">종료일</label>
+              </FormField>
+              <FormField label="종료일">
                 <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
-              </div>
+              </FormField>
             </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">예산</label>
+            <FormField label="예산">
               <input type="number" value={form.budget} onChange={(e) => set('budget', e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">참여 인원</label>
+            </FormField>
+            <FormField label="참여 인원">
               <input value={form.participants} onChange={(e) => set('participants', e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">주요 산출물</label>
+            </FormField>
+            <FormField label="주요 산출물">
               <input value={form.deliverables} onChange={(e) => set('deliverables', e.target.value)} className={inputClass} />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">관련 링크</label>
+            </FormField>
+            <FormField label="관련 링크">
               <input value={form.relatedLinks} onChange={(e) => set('relatedLinks', e.target.value)} className={inputClass} />
-            </div>
+            </FormField>
           </div>
 
           {/* 우측 - 긴 텍스트 */}
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">목표</label>
+            <FormField label="목표">
               <textarea
                 value={form.goal}
                 onChange={(e) => set('goal', e.target.value)}
                 rows={3}
                 className={`${inputClass} resize-none`}
               />
-            </div>
-            <div>
-              <label className="block text-xs text-slate-400 mb-1">설명</label>
+            </FormField>
+            <FormField label="설명">
               <textarea
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
                 rows={12}
                 className={`${inputClass} resize-none`}
               />
-            </div>
+            </FormField>
           </div>
         </div>
 
-        <div className="flex gap-2 justify-end pt-5 mt-5 border-t border-[#2a2a2a]">
-          <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
-            <X size={14} /> 취소
-          </button>
-          <button onClick={handleSave} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors">
-            <Save size={14} /> 저장
-          </button>
+        <div className="flex gap-2 justify-end pt-5 mt-5 border-t border-default">
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>
+            취소
+          </Button>
+          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>
+            저장
+          </Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -185,49 +173,47 @@ export function ProjectList() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-lg font-semibold text-slate-100">프로젝트 목록</h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus size={14} /> 새 프로젝트
-        </button>
+        <h1 className="h-page">프로젝트 목록</h1>
+        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+          새 프로젝트
+        </Button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-900/40 border border-red-700/50 rounded-md text-red-300 text-sm">{error}</div>
+        <div className="mb-4 p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
 
       {projects.length === 0 ? (
-        <div className="text-center py-20 text-slate-500">
-          <FolderOpen size={40} className="mx-auto mb-3 text-slate-600" />
-          <p className="text-sm">프로젝트가 없습니다. 새 프로젝트를 만들어보세요.</p>
-        </div>
+        <EmptyState
+          icon={<FolderOpen size={40} />}
+          title="프로젝트가 없습니다."
+          description="새 프로젝트를 만들어보세요."
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {projects.map((p) => {
             const daysLeft = p.endDate
               ? Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000)
               : null;
-            // 모든 상태에 대해 endDate가 있으면 남은 일수 표시
             const showDaysLeft = daysLeft !== null && p.status !== 'Done';
 
             return (
-              <div
+              <Card
                 key={p.id}
-                className="bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg p-5 hover:border-zinc-500 transition-colors cursor-pointer group"
+                padding="normal"
+                className="hover:border-strong transition-colors cursor-pointer group"
                 onClick={() => openProject(p.id)}
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-slate-100 group-hover:text-zinc-300 transition-colors">{p.name}</h3>
+                  <h3 className="font-medium text-primary group-hover:text-accent transition-colors">{p.name}</h3>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => handleBackup(p)} title="백업" className="p-1 text-slate-400 hover:text-slate-200 rounded">
+                    <button onClick={() => handleBackup(p)} title="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">
                       <Download size={14} />
                     </button>
-                    <button onClick={() => setEditing(p)} title="수정" className="p-1 text-slate-400 hover:text-slate-200 rounded">
+                    <button onClick={() => setEditing(p)} title="수정" className="p-1 text-muted hover:text-primary rounded transition-colors">
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(p.id)} title="삭제" className="p-1 text-red-400 hover:text-red-300 rounded">
+                    <button onClick={() => handleDelete(p.id)} title="삭제" className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
                       <X size={14} />
                     </button>
                   </div>
@@ -236,33 +222,36 @@ export function ProjectList() {
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   <ProjectStatusBadge status={p.status} />
                   {showDaysLeft && (
-                    <span className={`text-xs ${daysLeft < 0 ? 'text-red-400' : daysLeft < 7 ? 'text-amber-400' : 'text-slate-400'}`}>
+                    <Badge
+                      size="sm"
+                      variant={daysLeft < 0 ? 'danger' : daysLeft < 7 ? 'warning' : 'neutral'}
+                    >
                       {daysLeft < 0 ? `${Math.abs(daysLeft)}일 초과` : `${daysLeft}일 남음`}
-                    </span>
+                    </Badge>
                   )}
                   {p.status === 'Done' && daysLeft !== null && (
-                    <span className="text-xs text-emerald-400">완료</span>
+                    <Badge size="sm" variant="success">완료</Badge>
                   )}
                 </div>
 
-                {p.goal && <p className="text-sm text-slate-300 line-clamp-2 mb-1">{p.goal}</p>}
-                {p.description && <p className="text-sm text-slate-400 line-clamp-2 mb-3">{p.description}</p>}
+                {p.goal && <p className="text-sm text-secondary line-clamp-2 mb-1">{p.goal}</p>}
+                {p.description && <p className="text-sm text-muted line-clamp-2 mb-3">{p.description}</p>}
 
-                <div className="flex flex-wrap gap-3 text-xs text-slate-500 mt-3 pt-3 border-t border-[#2a2a2a]">
+                <div className="flex flex-wrap gap-3 text-xs text-muted mt-3 pt-3 border-t border-default">
                   {(p.startDate || p.endDate) && (
                     <span className="flex items-center gap-1">
-                      <Calendar size={12} />
+                      <Calendar size={14} />
                       {p.startDate?.slice(0, 10) ?? '-'} ~ {p.endDate?.slice(0, 10) ?? '-'}
                     </span>
                   )}
                   {p.participants && (
                     <span className="flex items-center gap-1">
-                      <Users size={12} />
+                      <Users size={14} />
                       {p.participants}
                     </span>
                   )}
                 </div>
-              </div>
+              </Card>
             );
           })}
         </div>
