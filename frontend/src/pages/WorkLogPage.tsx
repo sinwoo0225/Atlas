@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
+import { Button, Card, Spinner } from '../components/ui';
 import type { WorkLog } from '../types';
 
 const DAY_LABELS = ['월', '화', '수', '목', '금'];
@@ -100,21 +101,15 @@ export function WorkLogPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <header className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold text-primary flex items-center gap-2">
-          <CalendarDays size={20} className="text-accent" />
+      <header className="flex items-center gap-3 flex-wrap">
+        <h1 className="h-page flex items-center gap-2">
+          <CalendarDays size={18} className="text-muted" />
           업무 일지
         </h1>
         <div className="ml-4 flex items-center gap-2">
-          <button onClick={goPrev} className="p-1.5 rounded-md bg-surface-2 hover:bg-surface-3 text-secondary" title="이전 주">
-            <ChevronLeft size={16} />
-          </button>
-          <button onClick={goThis} className="px-3 py-1.5 text-sm rounded-md bg-surface-2 hover:bg-surface-3 text-secondary">
-            이번 주
-          </button>
-          <button onClick={goNext} className="p-1.5 rounded-md bg-surface-2 hover:bg-surface-3 text-secondary" title="다음 주">
-            <ChevronRight size={16} />
-          </button>
+          <Button variant="secondary" size="sm" onClick={goPrev} title="이전 주" leadingIcon={<ChevronLeft size={16} />} />
+          <Button variant="secondary" size="sm" onClick={goThis}>이번 주</Button>
+          <Button variant="secondary" size="sm" onClick={goNext} title="다음 주" leadingIcon={<ChevronRight size={16} />} />
           <span className="ml-2 text-sm text-muted">
             {isoDate(weekStart)} (월) ~ {isoDate(weekEnd)} (금)
           </span>
@@ -122,7 +117,7 @@ export function WorkLogPage() {
       </header>
 
       {loading ? (
-        <div className="text-sm text-muted">로딩중…</div>
+        <Spinner label="로딩중…" />
       ) : (
         <>
           <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
@@ -213,7 +208,7 @@ function DayEditor({
 }) {
   const isToday = isoDate(date) === isoDate(new Date());
   return (
-    <div className="bg-surface border border-default rounded-lg overflow-hidden">
+    <Card padding="none" className="overflow-hidden">
       <div className={`px-4 py-2 border-b border-default flex items-baseline gap-2 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
         <span className="text-xs text-muted">{fmtMD(date)}</span>
@@ -234,7 +229,7 @@ function DayEditor({
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 

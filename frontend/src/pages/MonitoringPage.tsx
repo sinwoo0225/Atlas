@@ -4,6 +4,8 @@ import { Activity, RefreshCw, Calendar, NotebookPen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
+import { Button, Card, Badge, EmptyState, Spinner } from '../components/ui';
+import { wbsStatusBadge } from '../utils/statusMaps';
 import type { TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject } from '../types';
 
 type WorkLogField = 'done' | 'plan' | 'issues';
@@ -12,13 +14,6 @@ const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
   { key: 'plan',   label: '계획' },
   { key: 'issues', label: '이슈' },
 ];
-
-const statusLabel = { Planned: '예정', InProgress: '진행', Done: '완료' };
-const statusBadge = {
-  Planned: 'bg-zinc-700/40 text-slate-300',
-  InProgress: 'bg-amber-500/15 text-amber-300',
-  Done: 'bg-emerald-500/15 text-emerald-300',
-};
 
 function startOfWeek(d: Date): Date {
   const date = new Date(d);
@@ -84,22 +79,20 @@ export function MonitoringPage() {
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-primary flex items-center gap-2">
-          <Activity size={18} className="text-accent" />
+        <h1 className="h-page flex items-center gap-2">
+          <Activity size={18} className="text-muted" />
           통합 모니터링
         </h1>
-        <button onClick={load} className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-2 hover:bg-surface-3 text-secondary rounded-md text-sm">
-          <RefreshCw size={14} /> 새로고침
-        </button>
+        <Button variant="secondary" onClick={load} leadingIcon={<RefreshCw size={16} />}>새로고침</Button>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-900/40 border border-red-700/50 rounded-md text-red-300 text-sm">{error}</div>
+        <div className="p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
 
       {/* === 오늘 진행 중 WBS === */}
       <section className="space-y-3">
-        <div className="bg-surface border border-default rounded-lg p-4">
+        <Card padding="normal">
           <p className="text-xs text-muted flex items-center gap-2">
             <Calendar size={12} />
             {today} 기준 진행 중인 작업
@@ -107,24 +100,24 @@ export function MonitoringPage() {
           <p className="text-2xl font-semibold text-primary mt-1">
             총 {items.length}건 / {grouped.length}개 프로젝트
           </p>
-        </div>
+        </Card>
 
         {loading ? (
-          <p className="text-sm text-muted">불러오는 중...</p>
+          <Spinner label="불러오는 중..." />
         ) : grouped.length === 0 ? (
-          <div className="text-center py-12 text-muted">
-            <Activity size={32} className="mx-auto mb-2 opacity-50" />
-            <p className="text-sm">오늘 진행 중인 작업이 없습니다.</p>
-          </div>
+          <EmptyState
+            icon={<Activity size={32} />}
+            title="오늘 진행 중인 작업이 없습니다."
+          />
         ) : (
           <div className="space-y-3">
             {grouped.map((g) => (
-              <div key={g.projectId} className="bg-surface border border-default rounded-lg overflow-hidden">
+              <Card key={g.projectId} padding="none" className="overflow-hidden">
                 <div
-                  className="px-4 py-3 bg-surface-2 border-b border-default flex items-center justify-between cursor-pointer hover:bg-surface-3"
+                  className="px-4 py-3 bg-surface-2 border-b border-default flex items-center justify-between cursor-pointer hover:bg-surface-3 transition-colors"
                   onClick={() => navigate(`/projects/${g.projectId}/wbs`)}
                 >
-                  <h2 className="text-sm font-semibold text-primary">{g.projectName}</h2>
+                  <h2 className="h-card">{g.projectName}</h2>
                   <span className="text-xs text-muted">{g.items.length}건</span>
                 </div>
                 <table className="w-full">
@@ -137,27 +130,28 @@ export function MonitoringPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {g.items.map((it) => (
-                      <tr
-                        key={it.wbsItemId}
-                        className="border-b border-default last:border-0 hover:bg-surface-2 cursor-pointer"
-                        onClick={() => navigate(`/projects/${it.projectId}/wbs`)}
-                      >
-                        <td className="py-2 px-4 text-sm text-primary">{it.wbsItemName}</td>
-                        <td className="py-2 px-3 text-sm text-secondary">{it.assignee || '-'}</td>
-                        <td className="py-2 px-3 text-xs text-muted">
-                          {it.startDate?.slice(0, 10) ?? '-'} ~ {it.endDate?.slice(0, 10) ?? '-'}
-                        </td>
-                        <td className="py-2 px-3">
-                          <span className={`text-xs px-2 py-0.5 rounded ${statusBadge[it.status]}`}>
-                            {statusLabel[it.status]}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {g.items.map((it) => {
+                      const status = wbsStatusBadge[it.status];
+                      return (
+                        <tr
+                          key={it.wbsItemId}
+                          className="border-b border-default last:border-0 hover:bg-surface-2 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/projects/${it.projectId}/wbs`)}
+                        >
+                          <td className="py-2 px-4 text-sm text-primary">{it.wbsItemName}</td>
+                          <td className="py-2 px-3 text-sm text-secondary">{it.assignee || '-'}</td>
+                          <td className="py-2 px-3 text-xs text-muted">
+                            {it.startDate?.slice(0, 10) ?? '-'} ~ {it.endDate?.slice(0, 10) ?? '-'}
+                          </td>
+                          <td className="py-2 px-3">
+                            <Badge variant={status.variant} size="sm">{status.label}</Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -197,12 +191,9 @@ function WeeklySection({
   const muted = variant === 'muted';
   const titleCls = muted ? 'text-secondary' : 'text-primary';
   const iconCls = muted ? 'text-muted' : 'text-accent';
-  const emptyCls = muted
-    ? 'bg-surface-2/40 border border-default/60 rounded-lg p-6 text-center text-muted text-sm'
-    : 'bg-surface border border-default rounded-lg p-6 text-center text-muted text-sm';
   return (
     <section className="space-y-3">
-      <h2 className={`text-base font-semibold flex items-center gap-2 ${titleCls}`}>
+      <h2 className={`h-section flex items-center gap-2 ${titleCls}`}>
         <NotebookPen size={16} className={iconCls} />
         {title}
         {data && (
@@ -212,11 +203,11 @@ function WeeklySection({
         )}
       </h2>
       {loading ? (
-        <p className="text-sm text-muted">불러오는 중...</p>
+        <Spinner label="불러오는 중..." />
       ) : !data || data.projects.length === 0 ? (
-        <div className={emptyCls}>
+        <Card padding="spacious" variant={muted ? 'subtle' : 'default'} className="text-center text-muted text-sm">
           기록 없음
-        </div>
+        </Card>
       ) : (
         <div className="space-y-3">
           {data.projects.map((p) => (
@@ -235,11 +226,8 @@ function ProjectWeekCard({
   onProjectClick: (id: number) => void;
   variant?: WeeklyVariant;
 }) {
-  const cardCls = variant === 'muted'
-    ? 'bg-surface-2/40 border border-default/60 rounded-lg p-4 opacity-90'
-    : 'bg-surface border border-default rounded-lg p-4';
   return (
-    <div className={cardCls}>
+    <Card padding="normal" variant={variant === 'muted' ? 'subtle' : 'default'} className={variant === 'muted' ? 'opacity-90' : ''}>
       <button
         onClick={() => onProjectClick(project.projectId)}
         className="text-base font-bold text-primary hover:text-accent transition-colors"
@@ -262,7 +250,7 @@ function ProjectWeekCard({
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }
 

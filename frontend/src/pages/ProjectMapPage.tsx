@@ -5,6 +5,7 @@ import cytoscape from 'cytoscape';
 import dagre from 'cytoscape-dagre';
 import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
 import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Minus, Network, Plus, Search, X } from 'lucide-react';
+import { Spinner } from '../components/ui';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
@@ -641,19 +642,19 @@ export function ProjectMapPage() {
     { key: 'issues',   label: '이슈',       color: PALETTE.issueHub.stroke },
   ], [PALETTE]);
 
-  if (error) return <div className="p-6 text-sm text-red-400">{error}</div>;
-  if (!data) return <div className="p-6 text-sm text-muted">로딩 중...</div>;
+  if (error) return <div className="p-6 text-sm text-on-danger">{error}</div>;
+  if (!data) return <div className="p-6"><Spinner label="로딩 중..." /></div>;
 
   const btnClass = (active: boolean) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border ${
       active
-        ? 'bg-indigo-600 text-white border-indigo-500'
+        ? 'bg-[#5b7299] text-white border-[#6b82a8]'
         : 'bg-surface-2 text-secondary border-default hover:bg-surface-3'
     }`;
 
   const modeBtnClass = (active: boolean) =>
     `px-3 py-1.5 text-sm transition-colors ${
-      active ? 'bg-indigo-600 text-white' : 'text-secondary hover:bg-surface-3'
+      active ? 'bg-[#5b7299] text-white' : 'text-secondary hover:bg-surface-3'
     }`;
 
   const showTimelineEmpty = mode === 'timeline' && (!dateRange || elementCountInWindow(data, filter, effectiveWindow) === 0);
@@ -661,8 +662,8 @@ export function ProjectMapPage() {
   return (
     <div className="p-6 h-full flex flex-col gap-3">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="text-lg font-semibold text-primary flex items-center gap-2">
-          <Network size={18} className="text-accent" />
+        <h1 className="h-page flex items-center gap-2">
+          <Network size={18} className="text-muted" />
           프로젝트 맵
         </h1>
         <div className="flex gap-2 flex-wrap items-center">

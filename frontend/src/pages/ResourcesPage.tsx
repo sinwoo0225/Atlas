@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
+import { Button, Card, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
+import { wbsStatusBadge } from '../utils/statusMaps';
 import type { Resource, ResourceType, ResourceAssignment } from '../types';
-
-const wbsStatusLabel = { Planned: '예정', InProgress: '진행', Done: '완료' };
 
 function ResourceForm({ initial, onSave, onCancel }: {
   initial?: Resource;
@@ -20,73 +20,61 @@ function ResourceForm({ initial, onSave, onCancel }: {
   });
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const inputClass =
-    'w-full bg-zinc-800/60 border border-zinc-700 rounded-md px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-zinc-500';
-
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-lg border border-[#2a2a2a] my-4 space-y-3">
-        <h2 className="text-base font-medium text-slate-100 mb-2">
+      <Card padding="spacious" className="w-full max-w-lg my-4 space-y-3">
+        <h2 className="h-section mb-2">
           {initial?.id ? '리소스 수정' : '리소스 등록'}
         </h2>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">이름 *</label>
+        <FormField label="이름" required>
           <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
-        </div>
+        </FormField>
+
         <div>
-          <label className="block text-xs text-slate-400 mb-1">타입</label>
+          <label className="block text-xs text-muted font-medium mb-1">타입</label>
           <div className="flex gap-2">
             {(['Person', 'Equipment'] as ResourceType[]).map((t) => (
-              <button
+              <Button
                 key={t}
+                variant={form.type === t ? 'primary' : 'secondary'}
+                size="md"
                 onClick={() => set('type', t)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                  form.type === t ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-                }`}
+                leadingIcon={t === 'Person' ? <User size={14} /> : <Wrench size={14} />}
               >
-                {t === 'Person' ? <User size={14} /> : <Wrench size={14} />}
                 {t === 'Person' ? '인원' : '장비'}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">부서 / 그룹</label>
+
+        <FormField label="부서 / 그룹">
           <input value={form.department} onChange={(e) => set('department', e.target.value)} className={inputClass} />
-        </div>
+        </FormField>
+
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">이메일</label>
+          <FormField label="이메일">
             <input value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">연락처</label>
+          </FormField>
+          <FormField label="연락처">
             <input value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputClass} />
-          </div>
+          </FormField>
         </div>
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">비고</label>
+
+        <FormField label="비고">
           <textarea
             value={form.notes}
             onChange={(e) => set('notes', e.target.value)}
             rows={3}
             className={`${inputClass} resize-none`}
           />
-        </div>
+        </FormField>
 
-        <div className="flex gap-2 justify-end pt-3 border-t border-[#2a2a2a]">
-          <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-zinc-800 hover:bg-zinc-700 text-slate-200 transition-colors">
-            <X size={14} /> 취소
-          </button>
-          <button
-            onClick={() => onSave(form)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
-          >
-            <Save size={14} /> 저장
-          </button>
+        <div className="flex gap-2 justify-end pt-3 border-t border-default">
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={() => onSave(form)} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
@@ -105,47 +93,44 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-[#1f1f1f] rounded-lg p-6 w-full max-w-2xl border border-[#2a2a2a] my-4">
+      <Card padding="spacious" className="w-full max-w-2xl my-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base font-medium text-slate-100">
-            {resource.name} - 할당된 작업
+          <h2 className="h-section">
+            {resource.name} — 할당된 작업
           </h2>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-200">
+          <button onClick={onClose} className="p-1 text-muted hover:text-primary transition-colors">
             <X size={18} />
           </button>
         </div>
 
         {loading ? (
-          <p className="text-sm text-slate-400 py-6 text-center">불러오는 중...</p>
+          <div className="py-6 flex justify-center"><Spinner label="불러오는 중..." /></div>
         ) : error ? (
-          <p className="text-sm text-red-400 py-6 text-center">{error}</p>
+          <p className="text-sm text-on-danger py-6 text-center">{error}</p>
         ) : items.length === 0 ? (
-          <p className="text-sm text-slate-500 py-6 text-center">할당된 작업이 없습니다.</p>
+          <p className="text-sm text-muted py-6 text-center">할당된 작업이 없습니다.</p>
         ) : (
           <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {items.map((a) => (
-              <div key={a.wbsItemId} className="bg-zinc-800/40 border border-zinc-700 rounded-md p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-400 mb-1">{a.projectName}</p>
-                    <p className="text-sm text-slate-100 font-medium">{a.wbsItemName}</p>
-                    <div className="flex gap-3 mt-1 text-xs text-slate-400">
-                      <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
+            {items.map((a) => {
+              const status = wbsStatusBadge[a.status];
+              return (
+                <Card key={a.wbsItemId} padding="tight" variant="subtle">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted mb-1">{a.projectName}</p>
+                      <p className="text-sm text-primary font-medium">{a.wbsItemName}</p>
+                      <div className="flex gap-3 mt-1 text-xs text-muted">
+                        <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
+                      </div>
                     </div>
+                    <Badge variant={status.variant} size="sm">{status.label}</Badge>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${
-                    a.status === 'InProgress' ? 'bg-amber-500/15 text-amber-300'
-                    : a.status === 'Done' ? 'bg-emerald-500/15 text-emerald-300'
-                    : 'bg-zinc-700/50 text-slate-300'
-                  }`}>
-                    {wbsStatusLabel[a.status]}
-                  </span>
-                </div>
-              </div>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }
@@ -190,70 +175,74 @@ export function ResourcesPage() {
 
   const filtered = filter === 'All' ? resources : resources.filter((r) => r.type === filter);
 
-  const filterBtn = (active: boolean) =>
-    `px-3 py-1.5 rounded-md text-sm transition-colors ${
-      active ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-slate-300 hover:bg-zinc-700'
-    }`;
-
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-          <Users size={18} className="text-slate-400" />
+        <h1 className="h-page flex items-center gap-2">
+          <Users size={18} className="text-muted" />
           리소스 관리
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-sm font-medium transition-colors"
-        >
-          <Plus size={14} /> 리소스 등록
-        </button>
+        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+          리소스 등록
+        </Button>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-900/40 border border-red-700/50 rounded-md text-red-300 text-sm">{error}</div>
+        <div className="p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
 
-      <div className="flex gap-2">
-        <button onClick={() => setFilter('All')} className={filterBtn(filter === 'All')}>전체</button>
-        <button onClick={() => setFilter('Person')} className={filterBtn(filter === 'Person')}>
-          <span className="flex items-center gap-1.5"><User size={14} /> 인원</span>
-        </button>
-        <button onClick={() => setFilter('Equipment')} className={filterBtn(filter === 'Equipment')}>
-          <span className="flex items-center gap-1.5"><Wrench size={14} /> 장비</span>
-        </button>
+      <div className="flex gap-2 flex-wrap">
+        <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>전체</Button>
+        <Button
+          variant={filter === 'Person' ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={() => setFilter('Person')}
+          leadingIcon={<User size={14} />}
+        >
+          인원
+        </Button>
+        <Button
+          variant={filter === 'Equipment' ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={() => setFilter('Equipment')}
+          leadingIcon={<Wrench size={14} />}
+        >
+          장비
+        </Button>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-slate-500">
-          <Users size={36} className="mx-auto mb-2 text-slate-600" />
-          <p className="text-sm">등록된 리소스가 없습니다.</p>
-        </div>
+        <EmptyState
+          icon={<Users size={36} />}
+          title="등록된 리소스가 없습니다."
+          description={filter === 'All' ? '우측 상단 \'리소스 등록\' 버튼으로 시작해보세요.' : '해당 타입의 리소스가 없습니다.'}
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {filtered.map((r) => (
-            <div
+            <Card
               key={r.id}
+              padding="normal"
               onClick={() => setViewing(r)}
-              className="bg-[#1f1f1f] border border-[#2a2a2a] rounded-lg p-4 cursor-pointer hover:border-zinc-500 transition-colors group"
+              className="cursor-pointer hover:border-strong transition-colors group"
             >
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   {r.type === 'Person'
-                    ? <User size={16} className="text-zinc-300" />
-                    : <Wrench size={16} className="text-amber-300" />}
-                  <h3 className="font-medium text-slate-100">{r.name}</h3>
+                    ? <User size={16} className="text-accent" />
+                    : <Wrench size={16} className="text-on-warning" />}
+                  <h3 className="font-medium text-primary">{r.name}</h3>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setEditing(r)} className="p-1 text-slate-400 hover:text-slate-200">
+                  <button onClick={() => setEditing(r)} className="p-1 text-muted hover:text-primary transition-colors">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={(e) => handleDelete(r.id, e)} className="p-1 text-red-400 hover:text-red-300">
+                  <button onClick={(e) => handleDelete(r.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
                     <X size={14} />
                   </button>
                 </div>
               </div>
-              <div className="space-y-1 text-xs text-slate-400">
+              <div className="space-y-1 text-xs text-muted">
                 {r.department && (
                   <p className="flex items-center gap-1.5"><Building size={11} /> {r.department}</p>
                 )}
@@ -264,11 +253,11 @@ export function ResourcesPage() {
                   <p className="flex items-center gap-1.5"><Phone size={11} /> {r.phone}</p>
                 )}
               </div>
-              {r.notes && <p className="text-xs text-slate-500 mt-2 line-clamp-2">{r.notes}</p>}
-              <p className="text-xs text-zinc-400 mt-3 pt-2 border-t border-[#2a2a2a]">
+              {r.notes && <p className="text-xs text-muted mt-2 line-clamp-2">{r.notes}</p>}
+              <p className="text-xs text-muted mt-3 pt-2 border-t border-default">
                 클릭하여 할당된 작업 보기
               </p>
-            </div>
+            </Card>
           ))}
         </div>
       )}
