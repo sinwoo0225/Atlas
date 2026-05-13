@@ -120,8 +120,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, [selectedProjectId]);
 
   const linkClass = (active: boolean) =>
-    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
-      active ? 'bg-accent-soft text-accent font-medium' : 'text-secondary hover:bg-surface-2'
+    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border-l-2 ${
+      active
+        ? 'bg-accent-soft text-accent font-medium border-accent'
+        : 'text-secondary hover:bg-surface-2 border-transparent'
     }`;
 
   return (

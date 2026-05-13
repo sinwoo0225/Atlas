@@ -4,7 +4,7 @@ import { Activity, RefreshCw, Calendar, NotebookPen } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
-import { Button, Card, Badge, EmptyState, Spinner } from '../components/ui';
+import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import type { TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject } from '../types';
 
@@ -103,7 +103,18 @@ export function MonitoringPage() {
         </Card>
 
         {loading ? (
-          <Spinner label="불러오는 중..." />
+          <div className="space-y-3">
+            {[0, 1].map((i) => (
+              <Card key={i} padding="none" className="overflow-hidden">
+                <div className="px-4 py-3 bg-surface-2 border-b border-default">
+                  <Skeleton height={16} width="30%" />
+                </div>
+                <div className="p-4 space-y-2">
+                  {[0, 1, 2].map((j) => <Skeleton key={j} height={14} />)}
+                </div>
+              </Card>
+            ))}
+          </div>
         ) : grouped.length === 0 ? (
           <EmptyState
             icon={<Activity size={32} />}

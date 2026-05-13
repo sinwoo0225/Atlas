@@ -36,7 +36,7 @@ function IssueForm({ projectId, initial, resources, onSave, onCancel }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card padding="spacious" className="w-full max-w-2xl my-4 space-y-3">
         <h2 className="h-section">{initial ? '이슈 수정' : '이슈 등록'}</h2>
         <FormField label="제목" required>

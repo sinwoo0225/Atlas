@@ -142,7 +142,7 @@ function WbsItemForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card padding="spacious" className="w-full max-w-3xl my-4">
         <h2 className="h-section mb-4">{initial ? '작업 수정' : '작업 추가'}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -249,7 +249,7 @@ function DateEditModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <Card padding="spacious" className="w-full max-w-md space-y-3">
         <h2 className="h-section">날짜 수정 — {item.name}</h2>
         <FormField label="시작일">

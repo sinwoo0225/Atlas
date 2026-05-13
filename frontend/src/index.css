@@ -155,6 +155,22 @@ body {
 .group:hover .group-hover\:border-strong  { border-color: var(--border-strong); }
 .group:hover .group-hover\:border-accent  { border-color: var(--accent); }
 
+/* ========== Modal entrance animation ========== */
+.modal-overlay {
+  animation: modal-fade-in 150ms ease-out;
+}
+.modal-overlay > * {
+  animation: modal-slide-up 180ms ease-out;
+}
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-slide-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ========== Heading hierarchy =========
    페이지 위계: h-page > h-section > h-card. 각 페이지가 직접 text-lg/text-base 를 박지 않고
    이 유틸을 쓰면 위계 통일.

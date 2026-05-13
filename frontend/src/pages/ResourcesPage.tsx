@@ -21,7 +21,7 @@ function ResourceForm({ initial, onSave, onCancel }: {
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card padding="spacious" className="w-full max-w-lg my-4 space-y-3">
         <h2 className="h-section mb-2">
           {initial?.id ? '리소스 수정' : '리소스 등록'}
@@ -92,7 +92,7 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
   }, [resource.id]);
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card padding="spacious" className="w-full max-w-2xl my-4">
         <div className="flex items-center justify-between mb-4">
           <h2 className="h-section">

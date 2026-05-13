@@ -77,7 +77,7 @@ function DevInfoForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <Card padding="spacious" className="w-full max-w-2xl space-y-4 my-4">
         <h2 className="h-section">{initial ? '정보 수정' : '개발 정보 추가'}</h2>
 

@@ -4,7 +4,7 @@ import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIco
 import { projectsApi } from '../api/projects';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { attendeesToDisplay } from '../utils/meetingHelpers';
-import { Button, Card, Badge, Spinner } from '../components/ui';
+import { Button, Card, Badge, Skeleton } from '../components/ui';
 import { wbsStatusBadge, impactBadge } from '../utils/statusMaps';
 import type { ProjectDashboard } from '../types';
 
@@ -22,7 +22,25 @@ export function Dashboard() {
   }, [projectId]);
 
   if (error) return <div className="p-6 text-sm text-on-danger">{error}</div>;
-  if (!data) return <div className="p-6"><Spinner label="로딩 중..." /></div>;
+  if (!data) return (
+    <div className="p-6 space-y-6">
+      <Card padding="spacious">
+        <Skeleton height={28} width="40%" />
+        <Skeleton height={12} width="60%" className="mt-3" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+          {[0, 1, 2, 3].map((i) => <Skeleton key={i} height={48} />)}
+        </div>
+      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Card key={i} padding="spacious">
+            <Skeleton height={18} width="35%" />
+            <div className="mt-3"><Skeleton height={12} count={3} /></div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 
   const { project: p, upcomingMilestones, recentChanges, recentMeetings, recentDevInfo } = data;
   const pid = p.id;
