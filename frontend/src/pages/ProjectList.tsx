@@ -204,34 +204,32 @@ export function ProjectList() {
                 className="hover:border-strong transition-colors cursor-pointer group"
                 onClick={() => openProject(p.id)}
               >
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-primary group-hover:text-accent transition-colors">{p.name}</h3>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => handleBackup(p)} title="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">
-                      <Download size={14} />
-                    </button>
-                    <button onClick={() => setEditing(p)} title="수정" className="p-1 text-muted hover:text-primary rounded transition-colors">
-                      <Pencil size={14} />
-                    </button>
-                    <button onClick={() => handleDelete(p.id)} title="삭제" className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
-                      <X size={14} />
-                    </button>
+                <div className="flex items-start justify-between mb-2 gap-2">
+                  <h3 className="font-medium text-primary group-hover:text-accent transition-colors min-w-0 truncate">{p.name}</h3>
+                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => handleBackup(p)} title="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">
+                        <Download size={14} />
+                      </button>
+                      <button onClick={() => setEditing(p)} title="수정" className="p-1 text-muted hover:text-primary rounded transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => handleDelete(p.id)} title="삭제" className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <ProjectStatusBadge status={p.status} />
+                      {showDaysLeft && (
+                        <Badge
+                          size="sm"
+                          variant={daysLeft < 0 ? 'danger' : daysLeft < 7 ? 'warning' : 'neutral'}
+                        >
+                          {daysLeft < 0 ? `${Math.abs(daysLeft)}일 초과` : `D-${daysLeft}`}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <ProjectStatusBadge status={p.status} />
-                  {showDaysLeft && (
-                    <Badge
-                      size="sm"
-                      variant={daysLeft < 0 ? 'danger' : daysLeft < 7 ? 'warning' : 'neutral'}
-                    >
-                      {daysLeft < 0 ? `${Math.abs(daysLeft)}일 초과` : `${daysLeft}일 남음`}
-                    </Badge>
-                  )}
-                  {p.status === 'Done' && daysLeft !== null && (
-                    <Badge size="sm" variant="success">완료</Badge>
-                  )}
                 </div>
 
                 {p.goal && <p className="text-sm text-secondary line-clamp-2 mb-1">{p.goal}</p>}

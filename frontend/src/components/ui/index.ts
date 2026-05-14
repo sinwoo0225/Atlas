@@ -2,6 +2,8 @@ export { Button } from './Button';
 export { Card } from './Card';
 export { Badge } from './Badge';
 export type { BadgeVariant } from './Badge';
+export { BadgeMenu } from './BadgeMenu';
+export type { BadgeMenuOption } from './BadgeMenu';
 export { FormField, inputClass } from './FormField';
 export { EmptyState } from './EmptyState';
 export { Spinner } from './Spinner';

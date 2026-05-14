@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { Plus, Pencil, X, Save, GitBranch } from 'lucide-react';
+import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
@@ -96,6 +96,20 @@ function extractOtherLinks(raw: string): string[] {
     .split('\n')
     .map((s) => s.trim())
     .filter((s) => s && !s.startsWith('meeting:'));
+}
+
+// 카드 메타 영역에서 링크를 한 줄에 더 많이 보여주기 위해 짧은 라벨로 축약.
+// URL 이면 호스트 + 마지막 세그먼트, 평문 파일경로면 마지막 세그먼트만.
+function formatLinkLabel(raw: string): string {
+  const s = raw.trim();
+  try {
+    const u = new URL(s);
+    const lastSeg = u.pathname.split('/').filter(Boolean).pop();
+    return lastSeg ? `${u.hostname}/${lastSeg}` : u.hostname;
+  } catch {
+    const seg = s.split(/[\\/]/).filter(Boolean).pop();
+    return seg ?? s;
+  }
 }
 
 function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
@@ -314,31 +328,33 @@ export function ChangeLogsPage() {
               <p className="text-sm text-secondary mt-2 line-clamp-2">{log.content}</p>
 
               {(otherLinks.length > 0 || linkedMeetings.length > 0) && (
-                <div className="mt-3 pt-3 border-t border-default space-y-1" onClick={(e) => e.stopPropagation()}>
+                <div
+                  className="mt-2 pt-2 border-t border-default flex flex-wrap items-center gap-x-3 gap-y-1"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {linkedMeetings.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted mb-1">관련 회의록:</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {linkedMeetings.map((m) => (
-                          <Badge key={m.id} variant="neutral" size="sm">
-                            {m.date.slice(0, 10)} {m.topic}
-                          </Badge>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Paperclip size={12} className="text-muted shrink-0" />
+                      {linkedMeetings.map((m) => (
+                        <Badge key={m.id} variant="neutral" size="sm">
+                          {m.date.slice(0, 10)} {m.topic}
+                        </Badge>
+                      ))}
                     </div>
                   )}
                   {otherLinks.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted mb-1">관련 문서:</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <LinkIcon size={12} className="text-muted shrink-0" />
                       {otherLinks.map((link, i) => (
                         <a
                           key={i}
                           href={link}
                           target="_blank"
                           rel="noreferrer"
-                          className="block text-xs text-secondary hover:text-primary hover:underline transition-colors"
+                          title={link}
+                          className="text-xs text-secondary hover:text-primary hover:underline transition-colors max-w-[16rem] truncate"
                         >
-                          {link}
+                          {formatLinkLabel(link)}
                         </a>
                       ))}
                     </div>

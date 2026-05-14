@@ -253,6 +253,19 @@ textarea:focus-visible {
   border-color: var(--accent);
 }
 
+/* date / time picker indicator — color-scheme 이 색을 자동 처리하므로
+   여기서는 가시성·hover 상호작용만 보강 */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="time"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
+
 /* ========== Markdown rendering ========== */
 .markdown-body {
   font-size: var(--md-font-size, 14px);

@@ -5,8 +5,9 @@ import ReactMarkdown from 'react-markdown';
 import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
-import { wbsStatusBadge, wbsImportanceBadge } from '../utils/statusMaps';
+import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
+import { applyTextareaTab } from '../utils/textareaTab';
+import { wbsImportanceBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import type { WbsItem, WbsVersion, Resource, WbsStatus } from '../types';
 
@@ -207,6 +208,7 @@ function WbsItemForm({
               <textarea
                 value={form.notes}
                 onChange={(e) => set('notes', e.target.value)}
+                onKeyDown={(e) => applyTextareaTab(e, (next) => set('notes', next))}
                 onFocus={() => setNotesEditing(true)}
                 onBlur={() => setNotesEditing(false)}
                 rows={18}
@@ -284,7 +286,6 @@ function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild, onSt
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.order);
-  const status = wbsStatusBadge[item.status];
 
   return (
     <>
@@ -317,19 +318,16 @@ function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild, onSt
           <Badge variant={importance.variant} size="sm">{importance.label}</Badge>
         </td>
         <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-          <label className="relative inline-flex cursor-pointer" title="상태 변경">
-            <Badge variant={status.variant} size="sm">{status.label}</Badge>
-            <select
-              value={item.status}
-              onChange={(e) => onStatusChange(item, e.target.value as WbsStatus)}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full"
-            >
-              <option value="Planned">예정</option>
-              <option value="InProgress">진행</option>
-              <option value="Done">완료</option>
-            </select>
-          </label>
+          <BadgeMenu<WbsStatus>
+            value={item.status}
+            options={[
+              { value: 'Planned',    label: '예정', variant: 'neutral' },
+              { value: 'InProgress', label: '진행', variant: 'warning' },
+              { value: 'Done',       label: '완료', variant: 'success' },
+            ]}
+            onChange={(next) => onStatusChange(item, next)}
+            title="상태 변경"
+          />
         </td>
         <td className="py-2 px-3">
           <div className="flex items-center gap-1">

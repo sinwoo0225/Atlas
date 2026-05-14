@@ -7,6 +7,7 @@ import type { DevInfoItem, DevInfoType, Project } from '../types';
 import { projectsApi } from '../api/projects';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
+import { applyTextareaTab } from '../utils/textareaTab';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
@@ -110,6 +111,7 @@ function DevInfoForm({
             <textarea
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
+              onKeyDown={(e) => applyTextareaTab(e, (next) => set('content', next))}
               rows={10}
               className={`${inputClass} resize-none font-mono`}
             />

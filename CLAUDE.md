@@ -80,6 +80,12 @@ DesktopApp     ← WPF 셸. 솔루션 내부 다른 프로젝트를 참조하지
 
 쉬는 상태에서는 마크다운으로 렌더된 미리보기를 보여주고, 클릭하면 `<textarea>` 로 전환되며, blur 시 저장하고 다시 미리보기로 돌아오는 패턴. `pages/WorkLogPage.tsx` 의 `EditablePreviewField` 가 표준 구현이고, WBS 등록 폼의 노트 필드(`WbsItemForm` 의 `notesEditing` state) 도 동일한 토글 방식을 쓴다. 새 텍스트 필드에 마크다운을 도입할 때는 이 패턴을 재사용한다.
 
+textarea 의 Tab 키 기본 동작이 포커스 이동이라 마크다운 들여쓰기가 어렵다. `utils/textareaTab.ts` 의 `applyTextareaTab(e, setValue)` 를 `onKeyDown` 에 연결하면 Tab → 2-space 삽입, Shift+Tab → 라인 앞 제거. 마크다운 textarea 를 새로 추가하면 같이 붙인다.
+
+### 표·카드 안 인라인 상태 변경 (BadgeMenu)
+
+WBS·이슈처럼 행에서 status·priority 를 폼 열지 않고 바꾸려면 `components/ui/BadgeMenu.tsx`. Badge 형 트리거 클릭 → 다크 톤 dropdown 메뉴. 부모에 `overflow-hidden` 이 있어도 잘리지 않게 `createPortal` 로 body 에 mount + 트리거 rect 기준 fixed 위치. 스크롤·리사이즈 시 자동 닫힘. 옵션 라벨/variant 는 `utils/statusMaps.ts` 매핑을 `BadgeMenuOption<T>` 로 그대로 변환해 쓴다.
+
 ## 알아둘 함정
 
 ### Meeting JSON-in-TEXT 컬럼
@@ -93,6 +99,10 @@ WebService · DesktopApp 둘 다 `PublishSingleFile=true`. WebView2 의 native l
 DesktopApp 의 실행파일명은 `<AssemblyName>Atlas</AssemblyName>` 로 `Atlas.exe`. WebService 어셈블리 이름은 `MainWindow.xaml.cs` 의 spawn 코드와 `Documents/ProjectManager/` 경로 결정 때문에 **변경하지 말 것**.
 
 single-file 환경에서 `AppContext.BaseDirectory` 는 임시 추출 폴더가 되므로, 실제 exe 가 있는 폴더를 구할 때는 `Environment.ProcessPath` 의 디렉토리를 쓴다. WebView2 사용자 데이터 폴더도 `CoreWebView2Environment.CreateAsync` 로 `Documents/ProjectManager/WebView2` 에 명시 고정 — 그렇지 않으면 임시 추출 폴더에 잡혀 세션이 매번 초기화된다.
+
+### Chromium time picker 의 step 한계
+
+`<input type="time" step={1800}>` 는 키보드 ↑↓ 와 spinner 단위에만 30분이 적용된다 — picker dropdown 의 분 spinner 는 여전히 0~59 전부 노출. 30분 단위만 선택지로 노출하려면 `<select>` + 48개 슬롯으로 대체한다 (회의록 폼의 시작/종료 시간이 예시). 데이터 모델은 그대로 `"HH:mm"` 문자열.
 
 ### wwwroot 는 빌드 산출물
 

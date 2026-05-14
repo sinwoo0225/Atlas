@@ -12,7 +12,16 @@ import {
   type ActionItem,
 } from '../utils/meetingHelpers';
 import { Button, Card, EmptyState, FormField, inputClass } from '../components/ui';
+import { applyTextareaTab } from '../utils/textareaTab';
 import type { Meeting } from '../types';
+
+// 회의록 시간은 30분 단위만 — Chromium native time picker 는 분 spinner 에
+// step 옵션을 반영하지 않으므로 <select> 로 대체한다.
+const HALF_HOUR_SLOTS: string[] = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+});
 
 function MeetingForm({ projectId, initial, onSave, onCancel }: {
   projectId: number; initial?: Meeting;
@@ -113,14 +122,33 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
           {/* 좌측 */}
           <div className="space-y-3">
             <div className="grid grid-cols-12 gap-3">
-              <FormField label="날짜" className="col-span-4">
+              <FormField label="날짜" className="col-span-3">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="시작" className="col-span-2">
-                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputClass} />
-              </FormField>
-              <FormField label="종료" className="col-span-2">
-                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputClass} />
+              <FormField label="시간 (시작 ~ 종료, 30분 단위)" className="col-span-5">
+                <div className="flex items-center gap-2">
+                  <select
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className={`${inputClass} flex-1`}
+                  >
+                    <option value="">--:--</option>
+                    {HALF_HOUR_SLOTS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <span className="text-muted text-xs shrink-0">~</span>
+                  <select
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className={`${inputClass} flex-1`}
+                  >
+                    <option value="">--:--</option>
+                    {HALF_HOUR_SLOTS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
               </FormField>
               <FormField label="주제" required className="col-span-4">
                 <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} />
@@ -247,6 +275,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
               <textarea
                 value={discussion}
                 onChange={(e) => setDiscussion(e.target.value)}
+                onKeyDown={(e) => applyTextareaTab(e, setDiscussion)}
                 onFocus={() => setDiscussionEditing(true)}
                 onBlur={() => setDiscussionEditing(false)}
                 rows={28}

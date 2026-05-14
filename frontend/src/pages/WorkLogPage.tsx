@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
 import { Button, Card, Spinner } from '../components/ui';
+import { applyTextareaTab } from '../utils/textareaTab';
 import type { WorkLog } from '../types';
 
 const DAY_LABELS = ['월', '화', '수', '목', '금'];
@@ -165,14 +166,14 @@ function PreviewCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`text-left bg-surface border rounded-lg overflow-hidden transition-colors ${borderCls}`}
+      className={`text-left bg-surface border rounded-lg overflow-hidden transition-colors flex flex-col h-full ${borderCls}`}
     >
-      <div className={`px-3 py-2 border-b border-default flex items-baseline gap-2 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
+      <div className={`px-3 py-2 border-b border-default flex items-baseline gap-2 shrink-0 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
         <span className="text-xs text-muted">{fmtMD(date)}</span>
         {isToday && <span className="text-[10px] text-accent uppercase tracking-wider ml-auto">Today</span>}
       </div>
-      <div className="p-2 space-y-1.5">
+      <div className="p-2 space-y-1.5 flex-1">
         {FIELDS.map((f) => (
           <PreviewField key={f.key} label={f.label} value={entry[f.key]} />
         ))}
@@ -259,6 +260,7 @@ function EditablePreviewField({
         ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => applyTextareaTab(e, onChange)}
         onBlur={() => {
           onBlur();
           setEditing(false);
