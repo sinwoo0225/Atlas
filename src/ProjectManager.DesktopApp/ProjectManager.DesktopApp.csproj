@@ -10,10 +10,38 @@
     <ApplicationIcon>Resources\atlas.ico</ApplicationIcon>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishDir>$(MSBuildThisFileDirectory)..\..\publish\</PublishDir>
+  </PropertyGroup>
+
   <ItemGroup>
     <Resource Include="Resources\atlas.ico" Condition="Exists('Resources\atlas.ico')" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2651.64" />
+    <PackageReference Include="Microsoft.AspNetCore.TestHost" Version="8.0.16" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProjectManager.AppHost\ProjectManager.AppHost.csproj" />
+  </ItemGroup>
+
+  <Target Name="PublishFrontend" AfterTargets="Publish">
+    <Message Text="Building React frontend..." Importance="high" />
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildThisFileDirectory)..\..\frontend" />
+    <ItemGroup>
+      <FrontendDist Include="$(MSBuildThisFileDirectory)..\..\frontend\dist\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FrontendDist)"
+          DestinationFolder="$(PublishDir)wwwroot\%(RecursiveDir)"
+          SkipUnchangedFiles="true" />
+    <Message Text="Frontend build copied to $(PublishDir)wwwroot." Importance="high" />
+  </Target>
 </Project>

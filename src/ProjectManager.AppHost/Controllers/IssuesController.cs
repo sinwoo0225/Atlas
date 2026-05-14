@@ -2,29 +2,29 @@ using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.DTOs;
 
-namespace ProjectManager.WebService.Controllers;
+namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
-[Route("api/projects/{projectId:int}/meetings")]
-public class MeetingsController(MeetingService svc) : ControllerBase
+[Route("api/projects/{projectId:int}/issues")]
+public class IssuesController(IssueService svc) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll(int projectId, [FromQuery] string? keyword) =>
-        Ok(await svc.GetByProjectAsync(projectId, keyword));
+    public async Task<IActionResult> GetAll(int projectId) =>
+        Ok(await svc.GetByProjectAsync(projectId));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int projectId, int id) =>
         await svc.GetByIdAsync(id) is { } dto ? Ok(dto) : NotFound();
 
     [HttpPost]
-    public async Task<IActionResult> Create(int projectId, [FromBody] CreateMeetingDto dto)
+    public async Task<IActionResult> Create(int projectId, [FromBody] CreateIssueDto dto)
     {
         var created = await svc.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { projectId, id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int projectId, int id, [FromBody] UpdateMeetingDto dto) =>
+    public async Task<IActionResult> Update(int projectId, int id, [FromBody] UpdateIssueDto dto) =>
         await svc.UpdateAsync(id, dto) is { } updated ? Ok(updated) : NotFound();
 
     [HttpDelete("{id:int}")]

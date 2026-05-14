@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.DTOs;
 
-namespace ProjectManager.WebService.Controllers;
+namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId:int}/wbs")]

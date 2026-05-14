@@ -1,5 +1,3 @@
-using System.Windows;
-
 namespace ProjectManager.DesktopApp;
 
-public partial class App : Application { }
+public partial class App : System.Windows.Application { }

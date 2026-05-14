@@ -2,11 +2,11 @@ using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.DTOs;
 
-namespace ProjectManager.WebService.Controllers;
+namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
-[Route("api/projects/{projectId:int}/issues")]
-public class IssuesController(IssueService svc) : ControllerBase
+[Route("api/projects/{projectId:int}/changelogs")]
+public class ChangeLogsController(ChangeLogService svc) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(int projectId) =>
@@ -17,14 +17,14 @@ public class IssuesController(IssueService svc) : ControllerBase
         await svc.GetByIdAsync(id) is { } dto ? Ok(dto) : NotFound();
 
     [HttpPost]
-    public async Task<IActionResult> Create(int projectId, [FromBody] CreateIssueDto dto)
+    public async Task<IActionResult> Create(int projectId, [FromBody] CreateChangeLogDto dto)
     {
         var created = await svc.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { projectId, id = created.Id }, created);
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int projectId, int id, [FromBody] UpdateIssueDto dto) =>
+    public async Task<IActionResult> Update(int projectId, int id, [FromBody] UpdateChangeLogDto dto) =>
         await svc.UpdateAsync(id, dto) is { } updated ? Ok(updated) : NotFound();
 
     [HttpDelete("{id:int}")]

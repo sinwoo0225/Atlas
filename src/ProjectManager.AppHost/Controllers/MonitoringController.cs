@@ -2,7 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
 
-namespace ProjectManager.WebService.Controllers;
+namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
 [Route("api/monitoring")]

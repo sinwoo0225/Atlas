@@ -1,18 +1,42 @@
-using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Interop;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Web.WebView2.Core;
 
 namespace ProjectManager.DesktopApp;
 
 public partial class MainWindow : Window
 {
-    private Process? _backendProcess;
-    private const int BackendPort = 5200;
-    private static readonly string BackendUrl = $"http://localhost:{BackendPort}";
+    private InProcessHost? _host;
+    private string _wwwroot = "";
+    private const string VirtualHost = "atlas.local";
+    private static readonly string AppUrl = $"https://{VirtualHost}/index.html";
+
+    private static readonly Dictionary<string, string> MimeMap = new(StringComparer.OrdinalIgnoreCase)
+    {
+        [".html"] = "text/html; charset=utf-8",
+        [".htm"] = "text/html; charset=utf-8",
+        [".js"] = "application/javascript; charset=utf-8",
+        [".mjs"] = "application/javascript; charset=utf-8",
+        [".css"] = "text/css; charset=utf-8",
+        [".json"] = "application/json; charset=utf-8",
+        [".svg"] = "image/svg+xml",
+        [".png"] = "image/png",
+        [".jpg"] = "image/jpeg",
+        [".jpeg"] = "image/jpeg",
+        [".gif"] = "image/gif",
+        [".webp"] = "image/webp",
+        [".ico"] = "image/x-icon",
+        [".woff"] = "font/woff",
+        [".woff2"] = "font/woff2",
+        [".ttf"] = "font/ttf",
+        [".map"] = "application/json; charset=utf-8",
+        [".txt"] = "text/plain; charset=utf-8",
+    };
 
     public MainWindow()
     {
@@ -30,52 +54,17 @@ public partial class MainWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        StartBackend();
-        if (await WaitForBackendAsync())
+        try
+        {
+            _host = new InProcessHost();
+            await _host.StartAsync();
             await InitializeWebViewAsync();
-    }
-
-    private void StartBackend()
-    {
-        // single-file publish 에서는 AppContext.BaseDirectory 가 임시 추출 폴더이므로
-        // 실제 exe 가 놓인 폴더는 Environment.ProcessPath 로부터 구한다.
-        var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
-        var backendExe = Path.Combine(exeDir, "ProjectManager.WebService.exe");
-
-        if (!File.Exists(backendExe))
-        {
-            StatusText.Text = $"백엔드를 찾을 수 없습니다:\n{backendExe}";
-            return;
         }
-
-        _backendProcess = new Process
+        catch (System.Exception ex)
         {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = backendExe,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = exeDir,
-            }
-        };
-        _backendProcess.Start();
-    }
-
-    private async Task<bool> WaitForBackendAsync()
-    {
-        using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-        for (var i = 0; i < 40; i++)
-        {
-            try
-            {
-                var resp = await http.GetAsync($"{BackendUrl}/api/health");
-                if (resp.IsSuccessStatusCode) return true;
-            }
-            catch { }
-            await Task.Delay(500);
+            StatusText.Text = $"앱 시작 실패:\n{ex.Message}";
+            MessageBox.Show(ex.ToString(), "오류", MessageBoxButton.OK, MessageBoxImage.Error);
         }
-        MessageBox.Show("백엔드 서버 시작에 실패했습니다.", "오류", MessageBoxButton.OK, MessageBoxImage.Error);
-        return false;
     }
 
     private async Task InitializeWebViewAsync()
@@ -88,13 +77,167 @@ public partial class MainWindow : Window
         Directory.CreateDirectory(userDataFolder);
         var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
-        WebView.CoreWebView2.Navigate(BackendUrl);
+
+        // single-file 환경에서 실제 exe 옆 폴더(= wwwroot) 를 정적파일 소스로 잡는다.
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
+        _wwwroot = Path.Combine(exeDir, "wwwroot");
+
+        // SetVirtualHostNameToFolderMapping 와 WebResourceRequested 가 같은 호스트에 공존하면
+        // 가상호스트가 우선되어 핸들러가 발화하지 않는다. 따라서 가상호스트는 쓰지 않고
+        // 모든 요청을 WebResourceRequested 로 가로채서 처리한다.
+        WebView.CoreWebView2.AddWebResourceRequestedFilter(
+            $"*://{VirtualHost}/*", CoreWebView2WebResourceContext.All);
+        WebView.CoreWebView2.WebResourceRequested += OnApiRequested;
+
+        WebView.CoreWebView2.Navigate(AppUrl);
         LoadingOverlay.Visibility = Visibility.Collapsed;
     }
 
-    private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    private async void OnApiRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
-        try { _backendProcess?.Kill(entireProcessTree: true); } catch { }
+        var deferral = e.GetDeferral();
+        string path = "?";
+        try
+        {
+            var src = e.Request;
+            var uri = new Uri(src.Uri);
+            path = uri.PathAndQuery;
+
+            // 정적파일 처리 (api 가 아닌 모든 요청)
+            if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
+            {
+                e.Response = BuildStaticResponse(path);
+                return;
+            }
+
+            var req = new HttpRequestMessage(new HttpMethod(src.Method), path);
+
+            // GET/HEAD 가 아닌데 src.Content 가 있다면 body 를 모두 읽어서 byte[] 로 buffer.
+            // CoreWebView2 가 주는 stream 은 한 번만 읽을 수 있고, lifecycle 도 짧다.
+            byte[]? bodyBytes = null;
+            string? incomingContentType = null;
+            if (src.Content is not null
+                && !HttpMethods.IsGet(src.Method)
+                && !HttpMethods.IsHead(src.Method))
+            {
+                using var ms = new MemoryStream();
+                await src.Content.CopyToAsync(ms);
+                bodyBytes = ms.ToArray();
+            }
+
+            // 헤더 분리: Content-* 류는 content 헤더로, 나머지는 request 헤더로.
+            // Content-Type 을 별도로 캐치해서 ByteArrayContent.Headers.ContentType 으로 명시 설정.
+            foreach (var h in src.Headers)
+            {
+                if (string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
+                {
+                    incomingContentType = h.Value;
+                    continue;
+                }
+                if (!req.Headers.TryAddWithoutValidation(h.Key, h.Value))
+                {
+                    // request 헤더로 못 들어가는 건 보통 content 헤더 (Content-Length, Content-Disposition 등)
+                }
+            }
+
+            if (bodyBytes is not null)
+            {
+                var content = new ByteArrayContent(bodyBytes);
+                if (!string.IsNullOrEmpty(incomingContentType)
+                    && System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(incomingContentType, out var mt))
+                {
+                    content.Headers.ContentType = mt;
+                }
+                req.Content = content;
+            }
+
+            using var resp = await _host!.Client.SendAsync(req);
+            var bytes = await resp.Content.ReadAsByteArrayAsync();
+            var statusCode = (int)resp.StatusCode;
+            if (statusCode >= 400)
+            {
+                var preview = bytes.Length > 0
+                    ? Encoding.UTF8.GetString(bytes, 0, Math.Min(bytes.Length, 400))
+                    : "(empty)";
+                TryLog($"[api-err] {src.Method} {path} -> {statusCode}: {preview}");
+            }
+
+            var sb = new StringBuilder();
+            foreach (var h in resp.Headers.Concat(resp.Content.Headers))
+                foreach (var v in h.Value)
+                    sb.AppendLine($"{h.Key}: {v}");
+
+            e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                new MemoryStream(bytes), (int)resp.StatusCode, resp.ReasonPhrase ?? "OK",
+                sb.ToString().TrimEnd());
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[api-error] {path}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            var msg = Encoding.UTF8.GetBytes(
+                $"{{\"error\":\"{ex.GetType().Name}: {ex.Message.Replace("\"", "\\\"")}\"}}");
+            e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                new MemoryStream(msg), 500, "Internal Server Error",
+                "Content-Type: application/json; charset=utf-8");
+        }
+        finally
+        {
+            deferral.Complete();
+        }
+    }
+
+    private CoreWebView2WebResourceResponse BuildStaticResponse(string pathAndQuery)
+    {
+        // query string 제거, 선행 / 제거.
+        var qIdx = pathAndQuery.IndexOf('?');
+        var path = (qIdx >= 0 ? pathAndQuery[..qIdx] : pathAndQuery).TrimStart('/');
+        if (string.IsNullOrEmpty(path)) path = "index.html";
+
+        var full = Path.GetFullPath(Path.Combine(_wwwroot, path.Replace('/', Path.DirectorySeparatorChar)));
+        // 디렉토리 탈출 방지
+        var rootFull = Path.GetFullPath(_wwwroot) + Path.DirectorySeparatorChar;
+        if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
+            full = Path.Combine(_wwwroot, "index.html");
+
+        // 정적파일이 없으면 SPA fallback → index.html (React Router 지원)
+        if (!File.Exists(full))
+            full = Path.Combine(_wwwroot, "index.html");
+
+        try
+        {
+            var bytes = File.ReadAllBytes(full);
+            var ext = Path.GetExtension(full);
+            var mime = MimeMap.TryGetValue(ext, out var m) ? m : "application/octet-stream";
+            return WebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                new MemoryStream(bytes), 200, "OK", $"Content-Type: {mime}");
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[static-error] {path}: {ex.Message}");
+            var msg = Encoding.UTF8.GetBytes($"Not Found: {path}");
+            return WebView.CoreWebView2.Environment.CreateWebResourceResponse(
+                new MemoryStream(msg), 404, "Not Found", "Content-Type: text/plain; charset=utf-8");
+        }
+    }
+
+    private static void TryLog(string line)
+    {
+        try
+        {
+            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+            var path = Path.Combine(docs, "ProjectManager", "atlas-debug.log");
+            File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {line}\n");
+        }
+        catch { }
+    }
+
+    private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        if (_host is not null)
+        {
+            await _host.DisposeAsync();
+            _host = null;
+        }
     }
 
     private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

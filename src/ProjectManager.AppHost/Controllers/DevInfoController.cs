@@ -1,9 +1,10 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.DTOs;
 using ProjectManager.Infrastructure.FileStorage;
 
-namespace ProjectManager.WebService.Controllers;
+namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId:int}/devinfo")]
