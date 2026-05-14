@@ -478,6 +478,11 @@ export function ProjectMapPage() {
       ],
       layout: getLayoutForMode(mode) as any,
       wheelSensitivity: 0.2,
+      // 타임라인 뷰는 노드가 듬성듬성하게 분포할 때 fit() 이 매우 큰 줌으로 맞춰
+      // 노드가 거대해지는 문제를 막기 위해 최대 줌을 1.0 으로 캡한다.
+      // 다른 모드는 영향 받지 않도록 넉넉히.
+      maxZoom: mode === 'timeline' ? 1.0 : 4.0,
+      minZoom: 0.1,
     });
 
     cy.on('mouseover', 'node', (evt) => {
@@ -536,6 +541,15 @@ export function ProjectMapPage() {
     });
 
     cy.fit(undefined, 60);
+    if (mode === 'timeline') {
+      // fit() 결과 줌이 1.0 을 넘으면(노드 적을 때) 타임라인 노드가 거대해 보이므로
+      // 1.0 으로 캡하고 좌상단 padding 만 유지하도록 재배치한다.
+      if (cy.zoom() >= 1.0) {
+        cy.zoom(1.0);
+        const bb = cy.elements().boundingBox({});
+        cy.pan({ x: 60 - bb.x1, y: 60 - bb.y1 });
+      }
+    }
     cyRef.current = cy;
     // Notify overlays (TimelineGuides, MiniMap) that cy was rebuilt so they can re-subscribe.
     setCyVersion((v) => v + 1);

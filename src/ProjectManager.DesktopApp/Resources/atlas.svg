@@ -1,17 +1,25 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Background plate: rounded square in Atlas dark surface -->
   <rect x="0" y="0" width="256" height="256" rx="48" ry="48" fill="#141414"/>
+
+  <!-- Connecting edges: small nodes to hub.
+       Drawn before nodes so circles sit on top. -->
   <g stroke="#5b6a8a" stroke-width="6" stroke-linecap="round" fill="none">
     <line x1="76"  y1="74"  x2="128" y2="128"/>
     <line x1="196" y1="80"  x2="128" y2="128"/>
     <line x1="72"  y1="190" x2="128" y2="128"/>
     <line x1="200" y1="196" x2="128" y2="128"/>
   </g>
+
+  <!-- Small blue satellite nodes (#7c8db5) -->
   <g fill="#7c8db5" stroke="#3f3f46" stroke-width="2">
     <circle cx="76"  cy="74"  r="20"/>
     <circle cx="196" cy="80"  r="20"/>
     <circle cx="72"  cy="190" r="20"/>
     <circle cx="200" cy="196" r="20"/>
   </g>
+
+  <!-- Central golden hub (#c9a96b), slightly larger with soft inner highlight -->
   <circle cx="128" cy="128" r="38" fill="#c9a96b" stroke="#3f3f46" stroke-width="3"/>
   <circle cx="118" cy="118" r="10" fill="#dec38d" opacity="0.7"/>
 </svg>

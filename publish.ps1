@@ -28,13 +28,13 @@ dotnet publish (Join-Path $root 'src/ProjectManager.DesktopApp/ProjectManager.De
 if ($LASTEXITCODE -ne 0) { throw "DesktopApp publish 실패" }
 
 Write-Host "==> 결과 확인" -ForegroundColor Cyan
-$desktop = Join-Path $publishDir 'ProjectManager.DesktopApp.exe'
+$desktop = Join-Path $publishDir 'Atlas.exe'
 $web     = Join-Path $publishDir 'ProjectManager.WebService.exe'
 $www     = Join-Path $publishDir 'wwwroot/index.html'
 foreach ($f in @($desktop, $web, $www)) {
     if (-not (Test-Path $f)) { throw "필수 파일 누락: $f" }
 }
-Write-Host "  - DesktopApp.exe  : OK" -ForegroundColor Green
+Write-Host "  - Atlas.exe       : OK" -ForegroundColor Green
 Write-Host "  - WebService.exe  : OK" -ForegroundColor Green
 Write-Host "  - wwwroot/index   : OK" -ForegroundColor Green
 

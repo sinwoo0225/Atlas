@@ -19,6 +19,8 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   onSave: () => void; onCancel: () => void;
 }) {
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
+  const [startTime, setStartTime] = useState(initial?.startTime ?? '');
+  const [endTime, setEndTime] = useState(initial?.endTime ?? '');
   const [topic, setTopic] = useState(initial?.topic ?? '');
   const [discussion, setDiscussion] = useState(initial?.discussion ?? '');
   const [discussionEditing, setDiscussionEditing] = useState(false);
@@ -88,6 +90,8 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
     const payload = {
       projectId,
       date,
+      startTime: startTime || undefined,
+      endTime: endTime || undefined,
       attendees: attendeesPayload,
       topic,
       decisions: decisions.length > 0 ? JSON.stringify(decisions) : '',
@@ -102,17 +106,23 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
 
   return (
     <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-7xl my-4">
+      <Card padding="spacious" className="w-full max-w-[95vw] my-4">
         <h2 className="h-section mb-5">{initial ? '회의록 수정' : '회의록 작성'}</h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4">
           {/* 좌측 */}
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label="날짜">
+            <div className="grid grid-cols-12 gap-3">
+              <FormField label="날짜" className="col-span-4">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="주제" required>
+              <FormField label="시작" className="col-span-2">
+                <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputClass} />
+              </FormField>
+              <FormField label="종료" className="col-span-2">
+                <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputClass} />
+              </FormField>
+              <FormField label="주제" required className="col-span-4">
                 <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} />
               </FormField>
             </div>
@@ -246,7 +256,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
             ) : (
               <div
                 onClick={() => setDiscussionEditing(true)}
-                className="markdown-body min-h-[400px] cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+                className="markdown-body min-h-[400px] max-h-[65vh] overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
                 <ReactMarkdown>{discussion}</ReactMarkdown>
               </div>
@@ -384,6 +394,11 @@ export function MeetingsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-sm text-secondary font-medium">{m.date.slice(0, 10)}</span>
+                  {(m.startTime || m.endTime) && (
+                    <span className="text-xs text-muted">
+                      {m.startTime ?? ''}{m.startTime && m.endTime ? '–' : ''}{m.endTime ?? ''}
+                    </span>
+                  )}
                   <span className="text-xs text-muted">|</span>
                   <span className="text-xs text-muted truncate">{attendeesToDisplay(m.attendees)}</span>
                 </div>

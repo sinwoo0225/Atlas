@@ -255,8 +255,8 @@ textarea:focus-visible {
 
 /* ========== Markdown rendering ========== */
 .markdown-body {
-  font-size: 14px;
-  line-height: 1.7;
+  font-size: var(--md-font-size, 14px);
+  line-height: var(--md-line-height, 1.7);
   color: var(--text-secondary);
 }
 .markdown-body h1 { font-size: 1.5rem; font-weight: 600; margin: 1rem 0 0.5rem; color: var(--text-primary); border-bottom: 1px solid var(--border-default); padding-bottom: 0.25rem; }

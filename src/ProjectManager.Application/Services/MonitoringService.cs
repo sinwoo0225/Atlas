@@ -76,9 +76,10 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
                     projectNames.TryGetValue(g.Key, out var n) ? n : $"Project #{g.Key}",
                     days);
             })
+            // 통합 모니터링은 '한 일'·'이슈' 만 노출하므로, 둘 다 비어 있고 계획만 있는
+            // 프로젝트는 카드 자체를 띄우지 않는다.
             .Where(p => p.Days.Any(d =>
                 !string.IsNullOrWhiteSpace(d.Done)
-                || !string.IsNullOrWhiteSpace(d.Plan)
                 || !string.IsNullOrWhiteSpace(d.Issues)))
             .OrderBy(p => p.ProjectName)
             .ToList();

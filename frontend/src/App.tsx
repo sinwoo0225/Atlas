@@ -13,11 +13,13 @@ import { ResourcesPage } from './pages/ResourcesPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
-import { applyTheme, loadSettings } from './store/settings';
+import { applyTheme, applyMarkdownStyle, loadSettings } from './store/settings';
 
 export default function App() {
   useEffect(() => {
-    applyTheme(loadSettings().theme);
+    const s = loadSettings();
+    applyTheme(s.theme);
+    applyMarkdownStyle(s.markdownFontSize, s.markdownLineHeight);
   }, []);
 
   return (

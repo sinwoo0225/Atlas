@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Save, Settings as SettingsIcon } from 'lucide-react';
 import {
   loadSettings,
   saveSettings,
   applyTheme,
+  applyMarkdownStyle,
+  MARKDOWN_FONT_SIZE_RANGE,
+  MARKDOWN_LINE_HEIGHT_RANGE,
   type AppSettings,
   type ThemeMode,
 } from '../store/settings';
@@ -18,6 +22,10 @@ export function SettingsPage() {
   useEffect(() => {
     applyTheme(settings.theme);
   }, [settings.theme]);
+
+  useEffect(() => {
+    applyMarkdownStyle(settings.markdownFontSize, settings.markdownLineHeight);
+  }, [settings.markdownFontSize, settings.markdownLineHeight]);
 
   const update = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [k]: v }));
@@ -35,6 +43,7 @@ export function SettingsPage() {
     const fresh = loadSettings();
     setSettings(fresh);
     applyTheme(fresh.theme);
+    applyMarkdownStyle(fresh.markdownFontSize, fresh.markdownLineHeight);
   };
 
   const lastProject = projects.find((p) => p.id === settings.lastProjectId);
@@ -70,6 +79,47 @@ export function SettingsPage() {
                 {t === 'dark' ? '다크' : '라이트'}
               </Button>
             ))}
+          </div>
+        </FormField>
+      </Section>
+
+      <Section title="마크다운 뷰어">
+        <FormField
+          label={`글자 크기 — ${settings.markdownFontSize}px`}
+          hint="회의록·일지·WBS 상세 등 마크다운 렌더링에 즉시 반영됩니다."
+        >
+          <input
+            type="range"
+            min={MARKDOWN_FONT_SIZE_RANGE.min}
+            max={MARKDOWN_FONT_SIZE_RANGE.max}
+            step={MARKDOWN_FONT_SIZE_RANGE.step}
+            value={settings.markdownFontSize}
+            onChange={(e) => update('markdownFontSize', Number(e.target.value))}
+            className="w-full accent-current"
+          />
+        </FormField>
+        <FormField label={`줄간격 — ${settings.markdownLineHeight.toFixed(2)}`}>
+          <input
+            type="range"
+            min={MARKDOWN_LINE_HEIGHT_RANGE.min}
+            max={MARKDOWN_LINE_HEIGHT_RANGE.max}
+            step={MARKDOWN_LINE_HEIGHT_RANGE.step}
+            value={settings.markdownLineHeight}
+            onChange={(e) => update('markdownLineHeight', Number(e.target.value))}
+            className="w-full accent-current"
+          />
+        </FormField>
+        <FormField label="미리보기">
+          <div className="markdown-body bg-surface-2 border border-default rounded-md px-3 py-2">
+            <ReactMarkdown>{
+`# 회의록 샘플
+
+이 문단은 **현재 글자 크기**와 *줄간격*을 미리 보여줍니다. 본문 가독성이 화면 거리·해상도에 맞는지 슬라이더로 조정해보세요.
+
+- 한 항목 — 결정 사항 또는 메모.
+- 두 번째 항목 — \`코드 인라인\` 도 포함.
+`
+            }</ReactMarkdown>
           </div>
         </FormField>
       </Section>

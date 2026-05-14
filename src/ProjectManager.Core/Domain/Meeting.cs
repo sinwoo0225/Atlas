@@ -5,6 +5,8 @@ public class Meeting
     public int Id { get; set; }
     public int ProjectId { get; set; }
     public DateTime Date { get; set; }
+    public string? StartTime { get; set; }
+    public string? EndTime { get; set; }
     public string Attendees { get; set; } = string.Empty;
     public string Topic { get; set; } = string.Empty;
     public string Decisions { get; set; } = string.Empty;

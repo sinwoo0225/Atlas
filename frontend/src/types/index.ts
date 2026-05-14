@@ -71,6 +71,8 @@ export interface Meeting {
   id: number;
   projectId: number;
   date: string;
+  startTime?: string;
+  endTime?: string;
   attendees: string;
   topic: string;
   decisions: string;

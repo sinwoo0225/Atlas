@@ -20,6 +20,7 @@ public class MeetingService(IMeetingRepository repo)
         var meeting = new Meeting
         {
             ProjectId = dto.ProjectId, Date = dto.Date,
+            StartTime = dto.StartTime, EndTime = dto.EndTime,
             Attendees = dto.Attendees, Topic = dto.Topic,
             Decisions = dto.Decisions, Discussion = dto.Discussion,
             ActionItems = dto.ActionItems
@@ -31,7 +32,9 @@ public class MeetingService(IMeetingRepository repo)
     {
         var meeting = await repo.GetByIdAsync(id);
         if (meeting is null) return null;
-        meeting.Date = dto.Date; meeting.Attendees = dto.Attendees;
+        meeting.Date = dto.Date;
+        meeting.StartTime = dto.StartTime; meeting.EndTime = dto.EndTime;
+        meeting.Attendees = dto.Attendees;
         meeting.Topic = dto.Topic; meeting.Decisions = dto.Decisions;
         meeting.Discussion = dto.Discussion; meeting.ActionItems = dto.ActionItems;
         return ToDto(await repo.UpdateAsync(meeting));
@@ -45,6 +48,7 @@ public class MeetingService(IMeetingRepository repo)
     }
 
     private static MeetingDto ToDto(Meeting m) => new(
-        m.Id, m.ProjectId, m.Date, m.Attendees, m.Topic,
+        m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime,
+        m.Attendees, m.Topic,
         m.Decisions, m.Discussion, m.ActionItems, m.CreatedAt, m.UpdatedAt);
 }

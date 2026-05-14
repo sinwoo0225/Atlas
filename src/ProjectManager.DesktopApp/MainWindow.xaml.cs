@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
+using Microsoft.Web.WebView2.Core;
 
 namespace ProjectManager.DesktopApp;
 
@@ -36,7 +37,9 @@ public partial class MainWindow : Window
 
     private void StartBackend()
     {
-        var exeDir = AppContext.BaseDirectory;
+        // single-file publish 에서는 AppContext.BaseDirectory 가 임시 추출 폴더이므로
+        // 실제 exe 가 놓인 폴더는 Environment.ProcessPath 로부터 구한다.
+        var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
         var backendExe = Path.Combine(exeDir, "ProjectManager.WebService.exe");
 
         if (!File.Exists(backendExe))
@@ -63,7 +66,6 @@ public partial class MainWindow : Window
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
         for (var i = 0; i < 40; i++)
         {
-            StatusText.Text = $"서버 시작 중... ({i + 1})";
             try
             {
                 var resp = await http.GetAsync($"{BackendUrl}/api/health");
@@ -78,7 +80,14 @@ public partial class MainWindow : Window
 
     private async Task InitializeWebViewAsync()
     {
-        await WebView.EnsureCoreWebView2Async();
+        // single-file publish 시 AppContext.BaseDirectory 가 임시 추출 폴더가 되므로
+        // WebView2 사용자 데이터는 Documents/ProjectManager/WebView2 에 고정해서
+        // 캐시·세션이 사라지지 않게 한다.
+        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        var userDataFolder = Path.Combine(docs, "ProjectManager", "WebView2");
+        Directory.CreateDirectory(userDataFolder);
+        var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
+        await WebView.EnsureCoreWebView2Async(env);
         WebView.CoreWebView2.Navigate(BackendUrl);
         LoadingOverlay.Visibility = Visibility.Collapsed;
     }

@@ -8,10 +8,18 @@ import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { wbsStatusBadge, wbsImportanceBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
-import type { WbsItem, WbsVersion, Resource } from '../types';
+import type { WbsItem, WbsVersion, Resource, WbsStatus } from '../types';
 
 function flattenItems(items: WbsItem[]): WbsItem[] {
   return items.flatMap((item) => [item, ...flattenItems(item.children ?? [])]);
+}
+
+function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
+  return items.map((it) => {
+    if (it.id === id) return { ...it, status };
+    if (it.children?.length) return { ...it, children: patchStatus(it.children, id, status) };
+    return it;
+  });
 }
 
 function GanttChart({ items, onDoubleClick }: { items: WbsItem[]; onDoubleClick: (item: WbsItem) => void }) {
@@ -267,9 +275,11 @@ function DateEditModal({
   );
 }
 
-function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild }: {
+function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild, onStatusChange }: {
   item: WbsItem; projectId: number; depth?: number;
-  onEdit: (item: WbsItem) => void; onDelete: (id: number) => void; onAddChild: (parentId: number) => void;
+  onEdit: (item: WbsItem) => void; onDelete: (id: number) => void;
+  onAddChild: (parentId: number) => void;
+  onStatusChange: (item: WbsItem, status: WbsStatus) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
@@ -306,8 +316,20 @@ function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild }: {
         <td className="py-2 px-3">
           <Badge variant={importance.variant} size="sm">{importance.label}</Badge>
         </td>
-        <td className="py-2 px-3">
-          <Badge variant={status.variant} size="sm">{status.label}</Badge>
+        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+          <label className="relative inline-flex cursor-pointer" title="상태 변경">
+            <Badge variant={status.variant} size="sm">{status.label}</Badge>
+            <select
+              value={item.status}
+              onChange={(e) => onStatusChange(item, e.target.value as WbsStatus)}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full"
+            >
+              <option value="Planned">예정</option>
+              <option value="InProgress">진행</option>
+              <option value="Done">완료</option>
+            </select>
+          </label>
         </td>
         <td className="py-2 px-3">
           <div className="flex items-center gap-1">
@@ -337,7 +359,7 @@ function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild }: {
       </tr>
       {expanded && item.children?.map((child) => (
         <WbsRow key={child.id} item={child} projectId={projectId} depth={depth + 1}
-          onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} />
+          onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onStatusChange={onStatusChange} />
       ))}
     </>
   );
@@ -371,6 +393,14 @@ export function WbsPage() {
   const handleDelete = async (id: number) => {
     if (!confirm('삭제하시겠습니까?')) return;
     await wbsApi.delete(pid, id);
+    load();
+  };
+
+  const handleStatusChange = async (item: WbsItem, status: WbsStatus) => {
+    if (item.status === status) return;
+    setItems((prev) => patchStatus(prev, item.id, status));
+    const { children: _children, ...rest } = item;
+    await wbsApi.update(pid, item.id, { ...rest, status });
     load();
   };
 
@@ -474,6 +504,7 @@ export function WbsPage() {
                   onEdit={setEditing}
                   onDelete={handleDelete}
                   onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}
+                  onStatusChange={handleStatusChange}
                 />
               ))}
             </tbody>

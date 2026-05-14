@@ -8,10 +8,10 @@ import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../component
 import { wbsStatusBadge } from '../utils/statusMaps';
 import type { TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject } from '../types';
 
-type WorkLogField = 'done' | 'plan' | 'issues';
+// 통합 모니터링에는 '한 일'·'이슈'만 노출한다. '계획' 은 프로젝트별 업무일지에서 본다.
+type WorkLogField = 'done' | 'issues';
 const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
   { key: 'done',   label: '한 일' },
-  { key: 'plan',   label: '계획' },
   { key: 'issues', label: '이슈' },
 ];
 

@@ -4,6 +4,7 @@
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="Atlas" Height="900" Width="1400"
+        Icon="pack://application:,,,/Resources/atlas.ico"
         WindowStartupLocation="CenterScreen"
         WindowState="Maximized"
         WindowStyle="None"
@@ -58,9 +59,35 @@
                 </TextBlock>
                 <TextBlock Text="The map of your projects" Foreground="#a1a1aa" FontSize="13"
                            HorizontalAlignment="Center" Margin="0,4,0,0" FontFamily="Segoe UI"/>
-                <TextBlock x:Name="StatusText" Text="서버 시작 중..."
+
+                <!-- Spinner: golden arc rotating over a faint blue ring -->
+                <Grid Width="56" Height="56" HorizontalAlignment="Center" Margin="0,28,0,0">
+                    <Ellipse Width="48" Height="48" Stroke="#27314a" StrokeThickness="4"/>
+                    <Ellipse Width="48" Height="48" Stroke="#c9a96b" StrokeThickness="4"
+                             StrokeDashArray="35 200" StrokeDashCap="Round"
+                             RenderTransformOrigin="0.5,0.5">
+                        <Ellipse.RenderTransform>
+                            <RotateTransform x:Name="SpinnerRotate" Angle="0"/>
+                        </Ellipse.RenderTransform>
+                        <Ellipse.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation
+                                            Storyboard.TargetName="SpinnerRotate"
+                                            Storyboard.TargetProperty="Angle"
+                                            From="0" To="360" Duration="0:0:1.1"
+                                            RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Ellipse.Triggers>
+                    </Ellipse>
+                </Grid>
+
+                <TextBlock x:Name="StatusText" Text="서버를 시작하고 있습니다"
                            Foreground="#9ca3af" FontSize="13"
-                           HorizontalAlignment="Center" Margin="0,18,0,0"
+                           HorizontalAlignment="Center" Margin="0,16,0,0"
                            FontFamily="Segoe UI"/>
             </StackPanel>
         </Border>

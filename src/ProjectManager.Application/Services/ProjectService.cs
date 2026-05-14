@@ -179,7 +179,8 @@ public class ProjectService(
         c.RelatedDocLinks, c.Author, c.CreatedAt, c.UpdatedAt);
 
     internal static MeetingDto MeetingToDto(Meeting m) => new(
-        m.Id, m.ProjectId, m.Date, m.Attendees, m.Topic,
+        m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime,
+        m.Attendees, m.Topic,
         m.Decisions, m.Discussion, m.ActionItems, m.CreatedAt, m.UpdatedAt);
 
     internal static DevInfoItemDto DevInfoToDto(DevInfoItem d) => new(

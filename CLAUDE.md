@@ -86,9 +86,13 @@ DesktopApp     ← WPF 셸. 솔루션 내부 다른 프로젝트를 참조하지
 
 `Meeting.Attendees`, `Decisions`, `ActionItems` 는 TEXT 컬럼에 JSON 문자열로 저장돼 있고, 프론트 `utils/meetingHelpers.ts` 에서 파싱한다. 레거시 plain-text fallback 파싱 로직이 살아 있으므로, 미팅 코드를 만질 때 함께 보존할 것.
 
-### Publish 단일파일 분리
+### Publish 단일파일 + WebView2 추출 경로
 
-DesktopApp 의 `Release.pubxml` 은 의도적으로 `PublishSingleFile=false` 다 — WebView2 가 단일파일 패키징과 충돌하기 때문. WebService 의 프로파일은 single-file. 두 프로젝트 모두 같은 `publish/` 디렉토리에 게시돼 데스크톱 exe 가 옆의 백엔드 exe 를 찾을 수 있게 돼 있다.
+WebService · DesktopApp 둘 다 `PublishSingleFile=true`. WebView2 의 native loader 만 추출되도록 `IncludeNativeLibrariesForSelfExtract=true` 를 켜둔다. 두 프로젝트가 같은 `publish/` 디렉토리에 게시되므로 데스크톱 exe 가 옆의 백엔드 exe (`ProjectManager.WebService.exe`) 를 찾을 수 있다.
+
+DesktopApp 의 실행파일명은 `<AssemblyName>Atlas</AssemblyName>` 로 `Atlas.exe`. WebService 어셈블리 이름은 `MainWindow.xaml.cs` 의 spawn 코드와 `Documents/ProjectManager/` 경로 결정 때문에 **변경하지 말 것**.
+
+single-file 환경에서 `AppContext.BaseDirectory` 는 임시 추출 폴더가 되므로, 실제 exe 가 있는 폴더를 구할 때는 `Environment.ProcessPath` 의 디렉토리를 쓴다. WebView2 사용자 데이터 폴더도 `CoreWebView2Environment.CreateAsync` 로 `Documents/ProjectManager/WebView2` 에 명시 고정 — 그렇지 않으면 임시 추출 폴더에 잡혀 세션이 매번 초기화된다.
 
 ### wwwroot 는 빌드 산출물
 
