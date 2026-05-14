@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import ReactECharts from 'echarts-for-react';
 import ReactMarkdown from 'react-markdown';
 import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
@@ -8,12 +7,8 @@ import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { wbsImportanceBadge } from '../utils/statusMaps';
-import { useThemeMode, getChartColors } from '../utils/themeColors';
+import { GanttChart } from './wbs/GanttChart';
 import type { WbsItem, WbsVersion, Resource, WbsStatus } from '../types';
-
-function flattenItems(items: WbsItem[]): WbsItem[] {
-  return items.flatMap((item) => [item, ...flattenItems(item.children ?? [])]);
-}
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
   return items.map((it) => {
@@ -21,95 +16,6 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
     if (it.children?.length) return { ...it, children: patchStatus(it.children, id, status) };
     return it;
   });
-}
-
-function GanttChart({ items, onDoubleClick }: { items: WbsItem[]; onDoubleClick: (item: WbsItem) => void }) {
-  const theme = useThemeMode();
-  const colors = getChartColors(theme);
-
-  const flat = flattenItems(items)
-    .filter((i) => i.startDate && i.endDate)
-    .sort((a, b) => new Date(a.startDate!).getTime() - new Date(b.startDate!).getTime());
-
-  if (flat.length === 0) return <p className="text-muted text-sm py-4">간트 차트 표시 가능한 작업이 없습니다.</p>;
-
-  const dates = flat.flatMap((i) => [new Date(i.startDate!).getTime(), new Date(i.endDate!).getTime()]);
-  const minDate = Math.min(...dates);
-  const maxDate = Math.max(...dates);
-
-  const option = {
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'item',
-      backgroundColor: colors.tooltipBg,
-      borderColor: colors.tooltipBorder,
-      textStyle: { color: colors.tooltipText },
-      formatter: (p: any) => {
-        const v = p.data?.value;
-        if (!v) return p.name;
-        const start = new Date(v[1]).toISOString().slice(0, 10);
-        const end = new Date(v[2]).toISOString().slice(0, 10);
-        return `${p.name}<br>${start} ~ ${end}`;
-      },
-    },
-    grid: { left: 180, right: 30, top: 20, bottom: 30 },
-    xAxis: {
-      type: 'time',
-      min: minDate,
-      max: maxDate,
-      axisLabel: { color: colors.axisText, fontSize: 11 },
-      axisLine: { lineStyle: { color: colors.axisLine } },
-      splitLine: { lineStyle: { color: colors.splitLine } },
-    },
-    yAxis: {
-      data: flat.map((i) => i.name),
-      axisLabel: { color: colors.axisText, fontSize: 11 },
-      axisLine: { lineStyle: { color: colors.axisLine } },
-    },
-    series: [{
-      type: 'custom',
-      renderItem: (_: any, api: any) => {
-        const y = api.coord([0, api.value(0)])[1];
-        const x0 = api.coord([api.value(1), 0])[0];
-        const x1 = api.coord([api.value(2), 0])[0];
-        const h = 18;
-        return {
-          type: 'rect',
-          shape: { x: x0, y: y - h / 2, width: Math.max(x1 - x0, 2), height: h, r: 3 },
-          style: { fill: api.value(3), opacity: 0.95 },
-        };
-      },
-      dimensions: ['y', 'start', 'end', 'color'],
-      encode: { x: [1, 2], y: 0 },
-      data: flat.map((item, idx) => ({
-        name: item.name,
-        itemId: item.id,
-        value: [
-          idx,
-          new Date(item.startDate!).getTime(),
-          new Date(item.endDate!).getTime(),
-          item.parentId == null ? colors.accentBar : colors.mutedBar,
-        ],
-      })),
-    }],
-  };
-
-  const onEvents = {
-    dblclick: (params: any) => {
-      const id = params?.data?.itemId;
-      if (id == null) return;
-      const target = flat.find((i) => i.id === id);
-      if (target) onDoubleClick(target);
-    },
-  };
-
-  return (
-    <ReactECharts
-      option={option}
-      style={{ height: Math.max(220, flat.length * 36 + 80) }}
-      onEvents={onEvents}
-    />
-  );
 }
 
 type WbsFormData = {
@@ -468,8 +374,12 @@ export function WbsPage() {
 
       {view === 'gantt' ? (
         <Card padding="normal">
-          <GanttChart items={items} onDoubleClick={(it) => setDateEditing(it)} />
-          <p className="text-xs text-muted mt-2">바를 더블클릭하면 날짜를 수정할 수 있습니다.</p>
+          <GanttChart
+            items={items}
+            projectId={pid}
+            onDoubleClick={(it) => setDateEditing(it)}
+            onItemsChanged={load}
+          />
         </Card>
       ) : items.length === 0 ? (
         <Card padding="none">

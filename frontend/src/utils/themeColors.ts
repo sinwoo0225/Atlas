@@ -37,6 +37,16 @@ export interface ChartColors {
   accent: string;
   accentBar: string;
   mutedBar: string;
+  /* Gantt 전용 — 상태별 막대, 마일스톤, 주말 음영, 오늘 표시선, hover 강조.
+     index.css 의 success/warning/neutral 토큰을 미러링. */
+  ganttBarPlanned: string;
+  ganttBarInProgress: string;
+  ganttBarDone: string;
+  ganttBarParent: string;       // 펼친 부모(자식 합산 범위) — 반투명 얇은 음영
+  ganttMilestone: string;       // 마일스톤 다이아몬드
+  ganttToday: string;           // 오늘 표시선
+  ganttWeekend: string;         // 토/일 음영
+  ganttRowHover: string;        // 호버 행 좌측 라벨 배경
 }
 
 const DARK_CHART_COLORS: ChartColors = {
@@ -49,6 +59,14 @@ const DARK_CHART_COLORS: ChartColors = {
   accent:        '#9eb2ce',
   accentBar:     '#9eb2ce',
   mutedBar:      '#6b7280',
+  ganttBarPlanned:    '#6b7280',
+  ganttBarInProgress: '#f59e0b',
+  ganttBarDone:       '#34d399',
+  ganttBarParent:     'rgba(158, 178, 206, 0.35)',
+  ganttMilestone:     '#fbbf24',
+  ganttToday:         '#f87171',
+  ganttWeekend:       'rgba(255, 255, 255, 0.03)',
+  ganttRowHover:      'rgba(158, 178, 206, 0.12)',
 };
 
 const LIGHT_CHART_COLORS: ChartColors = {
@@ -61,6 +79,14 @@ const LIGHT_CHART_COLORS: ChartColors = {
   accent:        '#5b7299',
   accentBar:     '#5b7299',
   mutedBar:      '#9ca3af',
+  ganttBarPlanned:    '#9ca3af',
+  ganttBarInProgress: '#d97706',
+  ganttBarDone:       '#059669',
+  ganttBarParent:     'rgba(91, 114, 153, 0.30)',
+  ganttMilestone:     '#d97706',
+  ganttToday:         '#dc2626',
+  ganttWeekend:       'rgba(0, 0, 0, 0.035)',
+  ganttRowHover:      'rgba(91, 114, 153, 0.10)',
 };
 
 export function getChartColors(theme: ThemeMode): ChartColors {
