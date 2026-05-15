@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon } from 'lucide-react';
+import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { attendeesToDisplay } from '../utils/meetingHelpers';
 import { Button, Card, Badge, Skeleton } from '../components/ui';
-import { wbsStatusBadge, impactBadge } from '../utils/statusMaps';
+import { wbsStatusBadge, impactBadge, issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import type { ProjectDashboard } from '../types';
 
 export function Dashboard() {
@@ -42,7 +42,7 @@ export function Dashboard() {
     </div>
   );
 
-  const { project: p, upcomingMilestones, recentChanges, recentMeetings, recentDevInfo } = data;
+  const { project: p, upcomingMilestones, recentChanges, recentMeetings, recentDevInfo, recentIssues, thisWeekWorkLog } = data;
   const pid = p.id;
 
   const daysLeft = p.endDate
@@ -181,6 +181,51 @@ export function Dashboard() {
                 <span className="text-sm text-secondary line-clamp-1">{d.title}</span>
               </div>
             ))
+          )}
+        </Section>
+
+        <Section title="이슈" Icon={AlertTriangle}>
+          {recentIssues.length === 0 ? (
+            <Empty text="등록된 이슈 없음" />
+          ) : (
+            recentIssues.map((i) => (
+              <div
+                key={i.id}
+                onClick={() => navigate(`/projects/${pid}/issues`)}
+                className="py-2 border-b border-default last:border-0 cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant={issueStatusBadge[i.status].variant} size="sm">{issueStatusBadge[i.status].label}</Badge>
+                  <Badge variant={issuePriorityBadge[i.priority].variant} size="sm">{issuePriorityBadge[i.priority].label}</Badge>
+                  {i.dueDate && <span className="text-xs text-muted">~ {i.dueDate.slice(0, 10)}</span>}
+                </div>
+                <p className="text-sm text-secondary mt-0.5 line-clamp-1">{i.title}</p>
+                {i.assigneeName && <p className="text-xs text-muted mt-0.5">담당: {i.assigneeName}</p>}
+              </div>
+            ))
+          )}
+        </Section>
+
+        <Section title="이번 주 업무일지" Icon={NotebookPen}>
+          {!thisWeekWorkLog || thisWeekWorkLog.days.every((d) => !d.done && !d.plan && !d.issues) ? (
+            <Empty text="이번 주 기록 없음" />
+          ) : (
+            <div
+              className="cursor-pointer hover:bg-surface-2 px-2 -mx-2 py-1 rounded transition-colors"
+              onClick={() => navigate(`/projects/${pid}/worklog`)}
+            >
+              {thisWeekWorkLog.days
+                .filter((d) => d.done || d.plan || d.issues)
+                .map((d) => {
+                  const firstLine = (d.done || d.plan || d.issues).split('\n').find((l) => l.trim()) ?? '';
+                  return (
+                    <div key={d.dayIndex} className="flex items-baseline gap-2 py-1 border-b border-default last:border-0">
+                      <span className="text-xs text-muted font-medium shrink-0 w-12">{d.dayLabel} {d.date.slice(5).replace('-', '/')}</span>
+                      <span className="text-sm text-secondary line-clamp-1 flex-1 min-w-0">{firstLine || '_(빈 항목)_'}</span>
+                    </div>
+                  );
+                })}
+            </div>
           )}
         </Section>
       </div>

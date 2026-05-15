@@ -43,6 +43,69 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
         return new MonitoringDto(dtos);
     }
 
+    public async Task<MonitoringChartsDto> GetChartsAsync(int upcomingDays = 30)
+    {
+        var today = DateTime.Today;
+        var horizon = today.AddDays(upcomingDays);
+
+        // 1) 프로젝트 상태 분포
+        var statusRaw = await db.Projects
+            .GroupBy(p => p.Status)
+            .Select(g => new { Status = g.Key, Count = g.Count() })
+            .ToListAsync();
+        int CountOf(ProjectStatus s) => statusRaw.FirstOrDefault(x => x.Status == s)?.Count ?? 0;
+        var projectStatus = new ProjectStatusBreakdownDto(
+            CountOf(ProjectStatus.Planned),
+            CountOf(ProjectStatus.Waiting),
+            CountOf(ProjectStatus.InProgress),
+            CountOf(ProjectStatus.Done));
+
+        // 2) 이슈 상태×우선순위 매트릭스 (전 상태 포함; Closed 도 시각화로 의미 있음)
+        var issueMatrix = (await db.Issues
+                .GroupBy(i => new { i.Status, i.Priority })
+                .Select(g => new { g.Key.Status, g.Key.Priority, Count = g.Count() })
+                .ToListAsync())
+            .Select(x => new IssueMatrixCellDto(x.Status, x.Priority, x.Count))
+            .ToList();
+
+        // 3) 다가오는 마일스톤 (오늘부터 N일, 미완료, 종료일 오름차순)
+        var milestones = await db.WbsItems
+            .Where(w => w.IsMilestone
+                && w.EndDate.HasValue
+                && w.EndDate.Value.Date >= today
+                && w.EndDate.Value.Date <= horizon
+                && w.Status != WbsStatus.Done)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .OrderBy(x => x.w.EndDate)
+            .Select(x => new UpcomingMilestoneDto(
+                x.w.Id, x.w.ProjectId, x.p.Name,
+                x.w.Name, x.w.EndDate!.Value, x.w.Status))
+            .ToListAsync();
+
+        // 4) 프로젝트별 WBS 진행률 (마일스톤 제외, 실제 작업만)
+        var wbsRaw = await db.WbsItems
+            .Where(w => !w.IsMilestone)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+        var wbsProgress = wbsRaw
+            .GroupBy(x => new { x.p.Id, x.p.Name, x.p.Status })
+            .Select(g =>
+            {
+                var total = g.Count();
+                var done = g.Count(x => x.w.Status == WbsStatus.Done);
+                var pct = total == 0 ? 0.0 : Math.Round((double)done * 100.0 / total, 1);
+                return new WbsProgressDto(g.Key.Id, g.Key.Name, g.Key.Status, total, done, pct);
+            })
+            // InProgress 먼저, 그 안에서 진행률 높은 순.
+            .OrderBy(x => x.ProjectStatus == ProjectStatus.InProgress ? 0
+                : x.ProjectStatus == ProjectStatus.Planned    ? 1
+                : x.ProjectStatus == ProjectStatus.Waiting    ? 2 : 3)
+            .ThenByDescending(x => x.ProgressPercent)
+            .ToList();
+
+        return new MonitoringChartsDto(projectStatus, issueMatrix, milestones, wbsProgress);
+    }
+
     public async Task<WeeklyWorkLogDto> GetWeeklyWorkLogsAsync(DateTime weekStart)
     {
         var start = WorkLogService.StartOfWeek(weekStart);

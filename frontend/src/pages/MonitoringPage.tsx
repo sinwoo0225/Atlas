@@ -6,7 +6,11 @@ import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
 import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
-import type { TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject } from '../types';
+import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
+import type {
+  MonitoringCharts as MonitoringChartsData,
+  TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
+} from '../types';
 
 // 통합 모니터링에는 '한 일'·'이슈'만 노출한다. '계획' 은 프로젝트별 업무일지에서 본다.
 type WorkLogField = 'done' | 'issues';
@@ -41,6 +45,7 @@ export function MonitoringPage() {
   const [error, setError] = useState('');
   const [thisWeek, setThisWeek] = useState<WeeklyWorkLog | null>(null);
   const [lastWeek, setLastWeek] = useState<WeeklyWorkLog | null>(null);
+  const [charts, setCharts] = useState<MonitoringChartsData | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -50,11 +55,13 @@ export function MonitoringPage() {
       monitoringApi.getToday(),
       worklogApi.weeklyMonitoring(isoDate(thisMon)),
       worklogApi.weeklyMonitoring(isoDate(lastMon)),
+      monitoringApi.getCharts(),
     ])
-      .then(([today, thisW, lastW]) => {
+      .then(([today, thisW, lastW, ch]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
+        setCharts(ch);
       })
       .catch(() => setError('모니터링 데이터를 불러올 수 없습니다.'))
       .finally(() => setLoading(false));
@@ -89,6 +96,9 @@ export function MonitoringPage() {
       {error && (
         <div className="p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
+
+      {/* === 종합 시각화 (4 차트) === */}
+      <MonitoringChartGrid data={charts} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)} />
 
       {/* === 오늘 진행 중 WBS === */}
       <section className="space-y-3">

@@ -26,6 +26,8 @@ export interface ProjectDashboard {
   recentChanges: ChangeLog[];
   recentMeetings: Meeting[];
   recentDevInfo: DevInfoItem[];
+  recentIssues: Issue[];
+  thisWeekWorkLog: WeeklyWorkLogProject | null;
 }
 
 export interface WbsItem {
@@ -190,4 +192,42 @@ export interface WeeklyWorkLogProject {
 export interface WeeklyWorkLog {
   weekStart: string;
   projects: WeeklyWorkLogProject[];
+}
+
+export interface ProjectStatusBreakdown {
+  planned: number;
+  waiting: number;
+  inProgress: number;
+  done: number;
+}
+
+export interface IssueMatrixCell {
+  status: IssueStatus;
+  priority: IssuePriority;
+  count: number;
+}
+
+export interface UpcomingMilestone {
+  wbsItemId: number;
+  projectId: number;
+  projectName: string;
+  name: string;
+  endDate: string;
+  status: WbsStatus;
+}
+
+export interface WbsProgress {
+  projectId: number;
+  projectName: string;
+  projectStatus: ProjectStatus;
+  total: number;
+  done: number;
+  progressPercent: number;
+}
+
+export interface MonitoringCharts {
+  projectStatus: ProjectStatusBreakdown;
+  issueMatrix: IssueMatrixCell[];
+  upcomingMilestones: UpcomingMilestone[];
+  wbsProgress: WbsProgress[];
 }

@@ -11,6 +11,9 @@ public class MonitoringController(MonitoringService svc) : ControllerBase
     [HttpGet("today")]
     public async Task<IActionResult> Today() => Ok(await svc.GetTodayAsync());
 
+    [HttpGet("charts")]
+    public async Task<IActionResult> Charts() => Ok(await svc.GetChartsAsync());
+
     [HttpGet("worklogs/weekly")]
     public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart)
     {

@@ -12,8 +12,11 @@ public class ProjectService(
     IChangeLogRepository changeLogRepo,
     IMeetingRepository meetingRepo,
     IDevInfoRepository devInfoRepo,
+    IIssueRepository issueRepo,
+    IWorkLogRepository workLogRepo,
     PathResolver pathResolver)
 {
+    private static readonly string[] WeekdayLabels = { "월", "화", "수", "목", "금" };
     public async Task<IEnumerable<ProjectDto>> GetAllAsync() =>
         (await projectRepo.GetAllAsync()).Select(ToDto);
 
@@ -47,7 +50,34 @@ public class ProjectService(
             .Take(5)
             .Select(DevInfoToDto);
 
-        return new ProjectDashboardDto(ToDto(project), milestones, recentChanges, recentMeetings, recentDev);
+        // 이슈: 미완료(Open/InProgress) 먼저, 그 안에서 최신순. 5건.
+        var recentIssues = (await issueRepo.GetByProjectAsync(id))
+            .OrderBy(i => i.Status == IssueStatus.Resolved || i.Status == IssueStatus.Closed ? 1 : 0)
+            .ThenByDescending(i => i.CreatedAt)
+            .Take(5)
+            .Select(IssueToDto)
+            .ToList();
+
+        // 이번 주(월~금) 본 프로젝트 업무일지 5일치
+        var weekStart = WorkLogService.StartOfWeek(DateTime.Today);
+        var weekLogs = (await workLogRepo.GetByProjectWeekAsync(id, weekStart)).ToList();
+        var byDayIndex = weekLogs.ToDictionary(l => (l.Date.Date - weekStart).Days, l => l);
+        var days = new List<WeeklyWorkLogDayDto>(5);
+        for (var i = 0; i < 5; i++)
+        {
+            byDayIndex.TryGetValue(i, out var log);
+            days.Add(new WeeklyWorkLogDayDto(
+                i, WeekdayLabels[i],
+                weekStart.AddDays(i).ToString("yyyy-MM-dd"),
+                log?.Done ?? string.Empty,
+                log?.Plan ?? string.Empty,
+                log?.Issues ?? string.Empty));
+        }
+        var thisWeek = new WeeklyWorkLogProjectDto(id, project.Name, days);
+
+        return new ProjectDashboardDto(
+            ToDto(project), milestones, recentChanges, recentMeetings, recentDev,
+            recentIssues, thisWeek);
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto dto)
@@ -188,4 +218,10 @@ public class ProjectService(
     internal static DevInfoItemDto DevInfoToDto(DevInfoItem d) => new(
         d.Id, d.ProjectId, d.Title, d.Type, d.StorageMode, d.Content,
         d.FilePath, d.Url, d.Tags, d.CreatedAt, d.UpdatedAt);
+
+    internal static IssueDto IssueToDto(Issue i) => new(
+        i.Id, i.ProjectId, i.Title, i.Description,
+        i.Status, i.Priority,
+        i.AssigneeResourceId, i.AssigneeResource?.Name,
+        i.DueDate, i.CreatedAt, i.UpdatedAt);
 }

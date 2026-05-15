@@ -26,4 +26,6 @@ public record ProjectDashboardDto(
     IEnumerable<WbsItemDto> UpcomingMilestones,
     IEnumerable<ChangeLogDto> RecentChanges,
     IEnumerable<MeetingDto> RecentMeetings,
-    IEnumerable<DevInfoItemDto> RecentDevInfo);
+    IEnumerable<DevInfoItemDto> RecentDevInfo,
+    IEnumerable<IssueDto> RecentIssues,
+    WeeklyWorkLogProjectDto? ThisWeekWorkLog);

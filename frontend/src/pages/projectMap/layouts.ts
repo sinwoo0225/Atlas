@@ -51,90 +51,69 @@ export function computeDateRange(data: MapData): DateRange | null {
   return { min: all[0], max: all[all.length - 1] };
 }
 
-// ===== Radial (current layout) =====
+// ===== Radial layout =====
+//
+// 5 카테고리(WBS / 변경 / 이슈 / 회의 / 개발) hub 를 정오각형 정점에 둔다.
+// 각 hub 의 자식들은 그 hub 방향(catAngle ± SLICE_HALF) 안에서 부채꼴 분산.
+// SLICE_HALF=30° → 슬라이스 폭 60°. 펜타곤 슬라이스가 72° 라 ±36° 까지 가능하지만
+// 옆 카테고리와의 시각적 여백을 위해 약간 좁힌다. 자식이 한 줄(MAX_PER_ROW)
+// 을 넘으면 더 바깥 반지름의 추가 줄에 같은 각도 분포로 쌓는다.
 const HUB_DIST = 280;
-const NODE_SPACING = 80;
-const COL_OFFSET = 170;
-// Issue 카테고리는 5번째 → 4 cardinal 외 NE 대각선에 배치 (기존 십자 그리드는 보존).
-const DIAG = HUB_DIST * Math.SQRT1_2;
+const CHILD_RADIUS_BASE = HUB_DIST + 110;
+const CHILD_RADIUS_STEP = 90;
+const SLICE_HALF_DEG = 30;
+const MAX_PER_ROW = 7;
 
-function gridCols(n: number): number {
-  return Math.max(3, Math.ceil(Math.sqrt(n)));
-}
+const CATEGORY_ANGLES_DEG: Record<string, number> = {
+  // 화면 좌표계는 y 가 아래 양수 → -90° 가 위(↑).
+  // 시계 방향으로 72° 씩: WBS(위) → 변경(우상) → 이슈(우하) → 회의(좌하) → 개발(좌상).
+  'cat-wbs':      -90,
+  'cat-changes':  -18,
+  'cat-issues':    54,
+  'cat-meetings': 126,
+  'cat-dev':      198,
+};
+
+function degToRad(deg: number): number { return (deg * Math.PI) / 180; }
 
 export function buildRadialPositions(data: MapData, filter: FilterState): Record<string, Position> {
   const cx = 0, cy = 0;
   const positions: Record<string, Position> = {
     project: { x: cx, y: cy },
-    'cat-wbs': { x: cx, y: cy - HUB_DIST },
-    'cat-changes': { x: cx + HUB_DIST, y: cy },
-    'cat-meetings': { x: cx, y: cy + HUB_DIST },
-    'cat-dev': { x: cx - HUB_DIST, y: cy },
-    'cat-issues': { x: cx + DIAG, y: cy - DIAG },
   };
 
-  if (filter.wbs) {
-    const items = flattenWbs(data.wbs);
-    const cols = gridCols(items.length);
+  // hub (카테고리) 노드 — 정오각형 정점.
+  for (const [id, deg] of Object.entries(CATEGORY_ANGLES_DEG)) {
+    const a = degToRad(deg);
+    positions[id] = { x: cx + Math.cos(a) * HUB_DIST, y: cy + Math.sin(a) * HUB_DIST };
+  }
+
+  const placeChildren = <T extends { id: number }>(
+    catKey: keyof typeof CATEGORY_ANGLES_DEG,
+    items: T[],
+    makeNodeId: (id: number) => string,
+  ) => {
+    const catAngle = CATEGORY_ANGLES_DEG[catKey];
+    const sliceSpan = 2 * SLICE_HALF_DEG;
     items.forEach((item, idx) => {
-      const col = idx % cols, row = Math.floor(idx / cols);
-      positions[`wbs-${item.id}`] = {
-        x: cx + (col - (cols - 1) / 2) * COL_OFFSET,
-        y: cy - HUB_DIST - (row + 1) * NODE_SPACING - 40,
-      };
+      const rowIdx = Math.floor(idx / MAX_PER_ROW);
+      const colIdx = idx % MAX_PER_ROW;
+      const inThisRow = Math.min(items.length - rowIdx * MAX_PER_ROW, MAX_PER_ROW);
+      const angleDeg = inThisRow === 1
+        ? catAngle
+        : catAngle - SLICE_HALF_DEG + (sliceSpan / (inThisRow - 1)) * colIdx;
+      const r = CHILD_RADIUS_BASE + rowIdx * CHILD_RADIUS_STEP;
+      const a = degToRad(angleDeg);
+      positions[makeNodeId(item.id)] = { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
     });
-  }
-  if (filter.changes) {
-    const items = data.changeLogs;
-    const cols = gridCols(items.length);
-    items.forEach((c, idx) => {
-      const col = idx % cols, row = Math.floor(idx / cols);
-      positions[`change-${c.id}`] = {
-        x: cx + HUB_DIST + (col + 1) * COL_OFFSET + 30,
-        y: cy + (row - (cols - 1) / 2) * NODE_SPACING * 0.8,
-      };
-    });
-  }
-  if (filter.meetings) {
-    const items = data.meetings;
-    const cols = gridCols(items.length);
-    items.forEach((m, idx) => {
-      const col = idx % cols, row = Math.floor(idx / cols);
-      positions[`meeting-${m.id}`] = {
-        x: cx + (col - (cols - 1) / 2) * COL_OFFSET,
-        y: cy + HUB_DIST + (row + 1) * NODE_SPACING + 40,
-      };
-    });
-  }
-  if (filter.dev) {
-    const items = data.devInfo;
-    const cols = gridCols(items.length);
-    items.forEach((d, idx) => {
-      const col = idx % cols, row = Math.floor(idx / cols);
-      positions[`dev-${d.id}`] = {
-        x: cx - HUB_DIST - (col + 1) * COL_OFFSET - 30,
-        y: cy + (row - (cols - 1) / 2) * NODE_SPACING * 0.8,
-      };
-    });
-  }
-  if (filter.issues) {
-    const items = data.issues;
-    const cols = gridCols(items.length);
-    // NE 대각선 방향 — 각 노드는 (col, row) 를 대각선 회전해 배치
-    const dx = Math.SQRT1_2, dy = -Math.SQRT1_2;
-    items.forEach((i, idx) => {
-      const col = idx % cols, row = Math.floor(idx / cols);
-      const radialOffset = (row + 1) * NODE_SPACING + 40;       // hub 외측 방향
-      const lateralOffset = (col - (cols - 1) / 2) * COL_OFFSET; // hub 수직 방향
-      // perpendicular = (-dy, dx) = (Math.SQRT1_2, Math.SQRT1_2) → SE 방향
-      const px = dx, py = dy;
-      const qx = -dy, qy = dx;
-      positions[`issue-${i.id}`] = {
-        x: cx + DIAG + radialOffset * px + lateralOffset * qx,
-        y: cy - DIAG + radialOffset * py + lateralOffset * qy,
-      };
-    });
-  }
+  };
+
+  if (filter.wbs)      placeChildren('cat-wbs',      flattenWbs(data.wbs), (id) => `wbs-${id}`);
+  if (filter.changes)  placeChildren('cat-changes',  data.changeLogs,       (id) => `change-${id}`);
+  if (filter.meetings) placeChildren('cat-meetings', data.meetings,          (id) => `meeting-${id}`);
+  if (filter.dev)      placeChildren('cat-dev',      data.devInfo,           (id) => `dev-${id}`);
+  if (filter.issues)   placeChildren('cat-issues',   data.issues,            (id) => `issue-${id}`);
+
   return positions;
 }
 
