@@ -41,3 +41,6 @@ publish/
 
 # Claude Code (machine-local settings)
 .claude/
+
+# Local-only dev notes
+docs/
