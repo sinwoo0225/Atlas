@@ -7,15 +7,15 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 ## 주요 기능
 
 - **프로젝트 단위 관리** — 프로젝트 카드 목록, 대시보드 (개요·예산·인원·D-day·최근 활동 위젯), 프로젝트 단위 zip 백업.
-- **WBS + 간트차트** — 계층 작업 트리, 마일스톤, 상태 (예정/진행/완료), 중요도, 버전 관리, 마크다운 노트.
-- **업무 일지** — 주 단위로 "한 일 / 계획 / 이슈" 3 필드를 일별로 마크다운 기록.
+- **WBS + 간트차트** — 계층 작업 트리, 마일스톤, 상태 (예정/진행/완료), 중요도, 멀티 담당자 칩 입력(Enter/콤마 단위), 버전 관리, 마크다운 노트.
+- **업무 일지** — 주 단위로 "한 일 / 계획 / 이슈" 3 필드를 일별로 마크다운 기록. 통합 모니터링에서 주간 md 파일 내보내기.
 - **이슈 관리** — Open / InProgress / Resolved / Closed × Low / Medium / High, 표 위에서 BadgeMenu 로 인라인 상태 변경.
 - **변경 이력** — 영향도 (Low ~ Critical), 일자별 스택 바 차트, 관련 문서·회의록 링크.
-- **회의록** — 30 분 단위 시작/종료, 참석자, 논의 내용, 의사 결정, 액션 아이템 (담당자·마감일).
-- **개발 정보** — 마크다운 / 파일 (이미지·텍스트 미리보기) / 외부 링크 3 가지 타입 + 태그.
-- **프로젝트 맵** — Cytoscape + dagre 그래프로 WBS·이슈·회의·변경·개발 정보 간 관계를 시각화 (방사형/타임라인 레이아웃, 미니맵).
-- **모니터링** — 전 프로젝트 통합 뷰: 오늘 예정 마일스톤, 금주·지난주 업무 일지.
-- **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용.
+- **회의록** — 30 분 단위 시작/종료, 참석자, 논의 내용, 의사 결정, 액션 아이템 (담당자·마감일). 데이터 폴더의 `Meetings/` 에 사람이 읽기 좋은 md 로 자동 export (Obsidian 등 외부 리더 호환).
+- **개발 정보** — 마크다운 (frontmatter + `DevInfo/` 폴더에 자동 export) / 파일 (Copy: 데이터 폴더 카피 / Reference: 원위치 경로만 저장) / 외부 링크 3 가지 타입 + 태그.
+- **프로젝트 맵** — Cytoscape + dagre 그래프로 WBS·이슈·회의·변경·개발 정보 간 관계를 시각화 (정오각형 5 hub 방사형 / 타임라인 레이아웃, 미니맵).
+- **모니터링** — 전 프로젝트 통합 뷰: 종합 시각화 4종 (프로젝트 상태 분포 / 이슈 상태×우선순위 매트릭스 / 다가오는 30일 마일스톤 / 프로젝트별 WBS 진행률), 오늘 예정 마일스톤, 금주·지난주 업무 일지.
+- **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용. 한 작업에 여러 담당자가 있어도 정확히 매칭.
 - **설정** — 다크/라이트 테마, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그).
 
 ## 스크린샷
@@ -115,15 +115,15 @@ Atlas is a Windows desktop application that lets one person manage schedules, is
 ### Features
 
 - **Project hub** — Project card list, dashboard (overview, budget, members, D-day, recent activity widgets), per-project zip backup.
-- **WBS + Gantt chart** — Hierarchical task tree, milestones, status (Planned / InProgress / Done), priority, version management, Markdown notes.
-- **Worklog** — Weekly journal with three Markdown fields per day: Done / Plan / Issues.
+- **WBS + Gantt chart** — Hierarchical task tree, milestones, status (Planned / InProgress / Done), priority, multi-assignee chip input (commit per Enter / comma), version management, Markdown notes.
+- **Worklog** — Weekly journal with three Markdown fields per day: Done / Plan / Issues. Export the week as a Markdown file from the monitoring page.
 - **Issues** — Open / InProgress / Resolved / Closed × Low / Medium / High, with inline status edits via a portal-based BadgeMenu.
 - **Change log** — Impact level (Low ~ Critical), stacked daily bar chart, links to related documents and meetings.
-- **Meetings** — 30-minute time slots, attendees, discussion, decisions, action items (assignee, due date).
-- **Dev info** — Three item types (Markdown, file with image/text preview, external link) plus tagging.
-- **Project map** — Cytoscape + dagre graph visualising relationships between WBS items, issues, meetings, change logs, and dev info (radial / timeline layouts, minimap).
-- **Monitoring** — Cross-project view of today's milestones and this week / last week's worklogs.
-- **Resources** — People and equipment, used as the autocomplete source for WBS assignees.
+- **Meetings** — 30-minute time slots, attendees, discussion, decisions, action items (assignee, due date). Auto-exported as a human-readable Markdown file under `Meetings/` (compatible with Obsidian and other external readers).
+- **Dev info** — Three item types (Markdown — auto-exported with frontmatter to `DevInfo/` / File — choose between Copy: copied into the data folder, or Reference: only the original absolute path is stored / external Link) plus tagging.
+- **Project map** — Cytoscape + dagre graph visualising relationships between WBS items, issues, meetings, change logs, and dev info (regular-pentagon 5-hub radial / timeline layouts, minimap).
+- **Monitoring** — Cross-project view: four summary charts (project-status breakdown / issue status×priority matrix / upcoming-30-day milestones / per-project WBS progress), today's milestones, and this/last week's worklogs.
+- **Resources** — People and equipment, used as the autocomplete source for WBS assignees. Matches correctly even when a task has multiple assignees.
 - **Settings** — Dark / light theme, Markdown font size and line height, remember last project, change data folder location (native folder picker dialog).
 
 ### Screenshots
