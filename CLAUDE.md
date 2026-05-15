@@ -4,10 +4,10 @@
 
 ## 한눈에 보기
 
-**Atlas** — *The map of your projects.* 단일 사용자, 로컬 우선 프로젝트 관리 앱. UI 언어는 한국어.
+**Atlas** — *The map of your projects.* 로컬 우선 프로젝트 관리 앱. 기본은 단일 사용자지만 데이터 폴더를 공유 위치로 옮기면 소수 팀이 비동기로 공유할 수도 있다 (락은 아직 없음 — "다중 사용자" 함정 메모 참고). UI 언어는 한국어.
 
-- 데이터: `%USERPROFILE%/Documents/ProjectManager/` 아래 SQLite DB + 프로젝트별 파일 폴더. 원격 백엔드 없음.
-- 셸: WPF + WebView2 데스크톱 앱이 ASP.NET Core WebService 를 자식 프로세스로 띄우고 React SPA 를 표시.
+- 데이터: 기본 `%USERPROFILE%/Documents/ProjectManager/` 아래 SQLite DB + 프로젝트별 파일 폴더. 설정 화면에서 다른 폴더(예: 사내 SMB 공유, 외부 드라이브)로 변경 가능. 부트스트랩 설정 파일은 `%LOCALAPPDATA%\Atlas\config.json`. 원격 백엔드 없음.
+- 셸: WPF + WebView2 데스크톱 앱이 ASP.NET Core 를 **인프로세스로 호스팅** (`InProcessHost` + ASP.NET Core TestServer) 하고 React SPA 를 표시. 외부 listen 포트 없음.
 - 변경 로그: `docs/개발로그.md` 가 canonical 작업 기록. 세션 작업 결과를 날짜별 섹션으로 append 한다.
 
 ### 네이밍 호환성 (변경 금지)
@@ -32,8 +32,8 @@
 - **백엔드만**: `dotnet run --project src/ProjectManager.WebService` (포트는 `appsettings.json` 에 하드코드).
 - **프론트만**: `cd frontend; npm run dev` (Vite 가 `/api` → `http://localhost:5200` 프록시).
 - **프론트 빌드 / 린트**: `cd frontend; npm run build` / `npm run lint`.
-- **배포용 패키징**: `./publish.ps1` — `publish/` 비우고 WebService + DesktopApp 을 win-x64 self-contained 로 같은 폴더에 게시한 뒤 zip. `-SkipZip` 으로 압축 생략. WebService csproj 의 `PublishFrontend` MSBuild target 이 `npm run build` 와 `frontend/dist/**` → `wwwroot/` 복사를 자동 처리하므로 따로 빌드를 또 돌리지 말 것.
-- **EF 마이그레이션**: 반드시 **로컬 도구** 사용. 필요하면 `dotnet tool restore` 후 `dotnet ef migrations add <Name> --project src/ProjectManager.Infrastructure --startup-project src/ProjectManager.WebService`. 앱 시작 시 `Program.cs` 의 `db.Database.MigrateAsync()` 가 자동 적용한다.
+- **배포용 패키징**: `./publish.ps1` — `publish/` 비우고 DesktopApp 을 win-x64 self-contained single-file 로 게시한 뒤 zip. `-SkipZip` 으로 압축 생략. DesktopApp csproj 의 `PublishFrontend` MSBuild target 이 `npm run build` 와 `frontend/dist/**` → `publish/wwwroot/` 복사를 자동 처리하므로 따로 빌드를 또 돌리지 말 것. 인프로세스 호스팅이라 별도 백엔드 exe 는 게시되지 않는다.
+- **EF 마이그레이션**: 반드시 **로컬 도구** 사용. 필요하면 `dotnet tool restore` 후 `dotnet ef migrations add <Name> --project src/ProjectManager.Infrastructure --startup-project src/ProjectManager.WebService`. 앱 시작 시 `AppHostFactory.Build` 안의 `db.Database.Migrate()` 가 자동 적용한다.
 
 ### EF 도구 버전 함정
 
@@ -43,33 +43,44 @@
 
 ### 프로세스 구조
 
-- **DesktopApp** (`ProjectManager.DesktopApp`, WPF + WebView2, net8.0-windows) 가 사용자 셸. 시작 시 `AppContext.BaseDirectory` 에서 `ProjectManager.WebService.exe` 를 자식 프로세스로 spawn 하고 `GET /api/health` 를 500ms × 최대 40회 폴링한 뒤, 임베디드 WebView2 를 `http://localhost:5200` 으로 향한다. 종료 시 백엔드 프로세스 트리를 kill 한다.
-- **WebService** (`ProjectManager.WebService`, ASP.NET Core 8) 가 REST API (`/api/*`) 와 빌드된 React SPA (`wwwroot/`) 를 동시에 서빙한다 (`UseDefaultFiles` + `MapFallbackToFile("index.html")` 로 클라이언트 라우팅 지원).
-- dev 에서는 두 서버가 분리돼 있고 Vite 가 `/api` 를 백엔드로 프록시한다. publish 에서는 React `dist/` 가 `wwwroot/` 로 복사돼 동일 origin 에서 서빙되므로 프록시가 없다.
+publish 모드 (단일 `Atlas.exe`):
+- **DesktopApp** (`ProjectManager.DesktopApp`, WPF + WebView2, net8.0-windows) 가 사용자 셸. 시작 시 `InProcessHost.StartAsync` 가 `Microsoft.AspNetCore.TestHost.TestServer` 위에 `AppHostFactory.Build` 로 ASP.NET Core 를 띄우고 `TestServer.CreateClient()` 를 얻는다. Kestrel 미부팅 → 외부 listen 포트 없음 → 방화벽 알림·포트 충돌·보안 정책 위반 위험 없음.
+- WebView2 는 `https://atlas.local/...` 가상 URL 로 navigate. `CoreWebView2.WebResourceRequested` 핸들러가 모든 요청을 가로채서 `/api/*` 는 위 in-process `HttpClient` 로 프록시하고, 그 외는 `Environment.ProcessPath` 옆 폴더의 `wwwroot/` 에서 정적 파일을 직접 read + MIME 매핑 + SPA fallback (`index.html`) 로 응답한다. 종료 시 `_host.DisposeAsync` 로 정리.
+- `SetVirtualHostNameToFolderMapping` 와 `WebResourceRequested` 가 같은 호스트에 공존하면 가상호스트가 우선되어 핸들러가 발화하지 않는다 — 가상호스트는 쓰지 않고 핸들러 하나로 통일했다.
 
-### 백엔드 레이어링 (Clean Architecture, 5 프로젝트)
+dev 모드 (`./start.ps1`):
+- **WebService** 가 별도 Kestrel 프로세스 (`http://localhost:5200`) 로 떠서 `/api/*` REST 와 `wwwroot/` SPA 를 서빙. Vite dev 서버 (`http://localhost:5173`) 가 `/api` 를 백엔드로 프록시.
+- 즉 인프로세스 호스팅은 publish 산출물에만 적용되고, 개발 흐름은 그대로다.
+
+### 백엔드 레이어링 (Clean Architecture, 6 프로젝트)
 
 ```
 Core           ← Domain 엔티티 (Project, WbsItem, WbsVersion, ChangeLog, Meeting,
                  DevInfoItem, Resource, Issue, WorkLog), DTO, 레포지토리 인터페이스, enum
-Infrastructure ← EF Core AppDbContext, 레포지토리, Migrations/, PathResolver
-                 (Documents/ProjectManager/ 경로 결정), DevFilesStorage
+Infrastructure ← EF Core AppDbContext, 레포지토리, Migrations/, PathResolver,
+                 BootstrapConfig (데이터 폴더 위치 결정), DevFilesStorage
 Application    ← 서비스 (aggregate 단위). ProjectService 는 백업 zip 도 담당.
                  MonitoringService 는 프로젝트 간 집계.
-WebService     ← Controllers (얇게), Program.cs DI 와이어링, JsonStringEnumConverter
-DesktopApp     ← WPF 셸. 솔루션 내부 다른 프로젝트를 참조하지 않음.
-                 런타임에 WebService.exe 를 spawn 할 뿐.
+AppHost        ← Controllers (`Controllers/`) + DI 와이어링 (`AppHostFactory.Build`)
+                 + JsonStringEnumConverter. `Microsoft.NET.Sdk` 일반 라이브러리
+                 (Web SDK 아님) + `<FrameworkReference Include="Microsoft.AspNetCore.App" />`.
+                 WebService 와 DesktopApp 양쪽에서 참조한다.
+WebService     ← `Microsoft.NET.Sdk.Web`. dev 용 Kestrel 진입점. Program.cs 는
+                 4줄짜리 — `AppHostFactory.Build(WebApplication.CreateBuilder(args)).Run()`.
+DesktopApp     ← WPF 셸 (`net8.0-windows`). AppHost 를 직접 참조해 `InProcessHost`
+                 로 호스팅. publish 산출물의 단일 `Atlas.exe`.
 ```
 
-의존성은 안쪽으로만 흐른다 (WebService → Application → Core; Infrastructure → Core).
+의존성은 안쪽으로만 흐른다 (AppHost/WebService/DesktopApp → Application → Core; Infrastructure → Core). AppHost 는 일반 SDK 라서 `Microsoft.AspNetCore.Http` 같은 implicit using 이 빠진다 — `IFormFile` 등은 명시적 `using` 필요.
 
 ### 영속성 & 파일 경로
 
-`PathResolver` 가 디스크 경로의 단일 진실 소스.
+`PathResolver` (`src/ProjectManager.Infrastructure/Config/PathResolver.cs`) 가 디스크 경로의 단일 진실 소스. 그 `_basePath` 는 `AppHostFactory` 에서 `BootstrapConfig.Load().ResolveDataFolder()` 로 주입된다.
 
-- DB: `%USERPROFILE%/Documents/ProjectManager/projectmanager.db` (SQLite).
-- 프로젝트별 파일: `%USERPROFILE%/Documents/ProjectManager/<sanitized-project-name>/DevFiles/...`. `Project.FolderPath` 는 생성 시 `GetProjectFolder(name)` 으로 세팅.
-- 프로젝트 백업 (`ProjectService.CreateBackupAsync`) 은 DB + 프로젝트 폴더를 zip 으로 묶는다. SQLite 파일은 `FileShare.ReadWrite | FileShare.Delete` 로 오픈한다 — EF 연결이 여전히 잡고 있을 수 있기 때문.
+- **부트스트랩 설정**: `%LOCALAPPDATA%\Atlas\config.json` 의 `dataFolder` 필드. 머신·계정별이며 절대 공유/네트워크 폴더에 두지 않는다 — 데이터 폴더 결정 *이전에* 읽혀야 해서 자기참조 불가. 없거나 비어 있으면 기본값 `Documents\ProjectManager\` 로 폴백.
+- **데이터 폴더 (사용자 선택)**: DB `<dataFolder>\projectmanager.db`, 프로젝트별 파일 `<dataFolder>\<sanitized-project-name>\DevFiles\...`. `Project.FolderPath` 는 생성 시 `PathResolver.GetProjectFolder(name)` 으로 세팅. 사용자가 설정에서 변경하면 `BootstrapConfig.Save` 로 기록되고, **Atlas 재시작 후** 적용된다.
+- **WebView2 사용자 데이터 + 디버그 로그**: 데이터 폴더와 무관하게 항상 `%LOCALAPPDATA%\Atlas\` 아래. WebView2 안에는 머신·계정별 상태 (쿠키, `pm-hub-settings` localStorage = 테마·마지막 프로젝트·기본 작성자) 가 들어 있어 공유 폴더에 넣으면 동료끼리 충돌하기 때문. 과거에 `Documents\ProjectManager\WebView2\` 를 쓰던 사용자는 첫 실행 시 자동 이주된다.
+- **프로젝트 백업** (`ProjectService.CreateBackupAsync`) 은 DB + 프로젝트 폴더를 zip 으로 묶는다. SQLite 파일은 `FileShare.ReadWrite | FileShare.Delete` 로 오픈한다 — EF 연결이 여전히 잡고 있을 수 있기 때문.
 
 ### Enum 직렬화
 
@@ -104,11 +115,11 @@ WBS·이슈처럼 행에서 status·priority 를 폼 열지 않고 바꾸려면 
 
 ### Publish 단일파일 + WebView2 추출 경로
 
-WebService · DesktopApp 둘 다 `PublishSingleFile=true`. WebView2 의 native loader 만 추출되도록 `IncludeNativeLibrariesForSelfExtract=true` 를 켜둔다. 두 프로젝트가 같은 `publish/` 디렉토리에 게시되므로 데스크톱 exe 가 옆의 백엔드 exe (`ProjectManager.WebService.exe`) 를 찾을 수 있다.
+DesktopApp 만 `PublishSingleFile=true` 로 단일 `Atlas.exe` 산출. 인프로세스 호스팅이라 별도 백엔드 exe 가 게시되지 않는다. WebView2 의 native loader 만 추출되도록 `IncludeNativeLibrariesForSelfExtract=true` 를 켜둔다. `publish/` 안에 `Atlas.exe` 와 `wwwroot/` (`PublishFrontend` MSBuild target 이 채움) 만 있다.
 
-DesktopApp 의 실행파일명은 `<AssemblyName>Atlas</AssemblyName>` 로 `Atlas.exe`. WebService 어셈블리 이름은 `MainWindow.xaml.cs` 의 spawn 코드와 `Documents/ProjectManager/` 경로 결정 때문에 **변경하지 말 것**.
+DesktopApp 의 실행파일명은 `<AssemblyName>Atlas</AssemblyName>` 로 `Atlas.exe`. 어셈블리·폴더 이름 (`ProjectManager.*`, 기본 데이터 폴더 `Documents/ProjectManager/`, localStorage 키 `pm-hub-settings`) 호환성은 기존 사용자의 데이터·설정 호환성 때문에 **변경하지 말 것**.
 
-single-file 환경에서 `AppContext.BaseDirectory` 는 임시 추출 폴더가 되므로, 실제 exe 가 있는 폴더를 구할 때는 `Environment.ProcessPath` 의 디렉토리를 쓴다. WebView2 사용자 데이터 폴더도 `CoreWebView2Environment.CreateAsync` 로 `Documents/ProjectManager/WebView2` 에 명시 고정 — 그렇지 않으면 임시 추출 폴더에 잡혀 세션이 매번 초기화된다.
+single-file 환경에서 `AppContext.BaseDirectory` 는 임시 추출 폴더가 되므로, 실제 exe 가 있는 폴더 (`wwwroot/` 가 옆에 있는 곳) 를 구할 때는 `Environment.ProcessPath` 의 디렉토리를 쓴다. WebView2 사용자 데이터 폴더는 `CoreWebView2Environment.CreateAsync` 로 `%LOCALAPPDATA%\Atlas\WebView2` 에 명시 고정 — 그렇지 않으면 임시 추출 폴더에 잡혀 세션이 매번 초기화된다. 과거 위치 (`Documents\ProjectManager\WebView2`) 에서 첫 실행 시 자동 이주.
 
 ### Chromium time picker 의 step 한계
 
@@ -116,4 +127,19 @@ single-file 환경에서 `AppContext.BaseDirectory` 는 임시 추출 폴더가 
 
 ### wwwroot 는 빌드 산출물
 
-`src/ProjectManager.WebService/wwwroot/` 는 `.gitignore` 됨. `npm run build` 또는 `./publish.ps1` 의 `PublishFrontend` MSBuild target 이 자동으로 채워주므로 직접 손대지 말 것. dev 에서는 Vite dev 서버가 직접 서빙하므로 비어 있어도 무방하다.
+`src/ProjectManager.WebService/wwwroot/` 는 `.gitignore` 됨. `npm run build` 또는 `./publish.ps1` 의 `PublishFrontend` MSBuild target (현재는 `DesktopApp.csproj` 에 있음) 이 자동으로 채워주므로 직접 손대지 말 것. dev 에서는 Vite dev 서버가 직접 서빙하므로 비어 있어도 무방하다.
+
+### WebView2 사용자 데이터는 데이터 폴더와 분리
+
+데이터 폴더를 사내 공유 폴더로 옮길 때 "전부 같이" 옮기고 싶어지는데, **WebView2 사용자 데이터 (`%LOCALAPPDATA%\Atlas\WebView2`) 는 절대 같이 옮기지 말 것**. 그 안에는 머신·계정별 브라우저 상태 — 쿠키, 세션, `pm-hub-settings` localStorage (= 테마, 마지막 프로젝트, 기본 작성자) — 가 들어 있어, 두 사람이 같은 폴더를 가리키면 한쪽 설정이 다른쪽을 덮어쓰고 세션이 매번 초기화된다. 디버그 로그도 같은 이유로 `%LOCALAPPDATA%\Atlas\` 에 고정. `MainWindow.xaml.cs:InitializeWebViewAsync` 와 `TryLog` 가 데이터 폴더 변경과 무관하게 항상 LOCALAPPDATA 를 쓰는 이유.
+
+### 다중 사용자 공유 폴더 사용 시 — 락 없음
+
+데이터 폴더를 SMB 같은 공유 위치에 두면 둘 이상이 동시에 Atlas 를 열 수 있다 — 그런데 **현재 단일 라이터 락이 없어** 다음 시나리오들이 무방비다:
+
+- **같은 항목 동시 편집**: A 가 WBS X 수정 → 5초 뒤 B 가 같은 X 수정. 충돌 감지 없이 B 의 저장이 A 의 변경을 덮는다 ("last write wins"). UI 가 "다른 사람이 방금 바꿨습니다" 같은 알림을 안 주므로 양쪽 다 자기 입력이 살아남았다고 믿는다 — **가장 위험한 케이스**.
+- **같은 시각 다른 쓰기**: SQLite write lock 충돌 → 한쪽에 `SQLite Error 5: 'database is locked'` 로 500 응답. 프론트는 그냥 토스트만 띄움, retry 없음. 사용자가 재시도하면 보통 성공.
+- **백업 zip 중 편집**: `ProjectService.CreateBackupAsync` 가 차단 안 하므로 zip 내용에 부분 트랜잭션이 섞일 수 있음.
+- **DB 손상 위험**: 현재 SQLite `journal_mode` 가 기본 `DELETE` 라 SMB 환경에서 상대적으로 안전. **WAL 로 바꾸지 말 것** — SMB 가 mmap shared memory 를 잘 못 다뤄서 DB 손상 위험이 커진다. OneDrive/Dropbox/SharePoint 매핑 드라이브 같은 백그라운드 sync 폴더는 모드와 무관하게 위험하니 추천하지 않는다.
+
+Phase 2 (단일 라이터 락 + 작성자 추적 확장 등) 작업이 들어오기 전까지는 "여러 명이 다른 프로젝트 중심으로 작업하고 같은 항목 동시 편집은 피하는" 패턴으로 운용한다. 백로그는 `docs/TASKS.md`.

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Save, Settings as SettingsIcon } from 'lucide-react';
+import { Save, Settings as SettingsIcon, FolderOpen } from 'lucide-react';
 import {
   loadSettings,
   saveSettings,
@@ -13,6 +13,8 @@ import {
 } from '../store/settings';
 import { useProjectStore } from '../store/useProjectStore';
 import { Button, Card, FormField, inputClass } from '../components/ui';
+import { systemApi, type DataFolderInfo, type DataFolderPreview } from '../api/system';
+import { pickFolder, isHostBridgeAvailable } from '../utils/hostBridge';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings());
@@ -149,16 +151,7 @@ export function SettingsPage() {
         </FormField>
       </Section>
 
-      <Section title="데이터">
-        <FormField
-          label="저장 위치"
-          hint="프로젝트 백업은 프로젝트 목록 또는 대시보드에서 수행할 수 있습니다."
-        >
-          <p className="text-sm text-secondary">
-            데이터베이스 및 프로젝트 파일은 <code className="bg-surface-2 px-1 py-0.5 rounded">{'%USERPROFILE%/Documents/ProjectManager'}</code> 폴더에 저장됩니다.
-          </p>
-        </FormField>
-      </Section>
+      <DataFolderSection />
 
       <Section title="초기화">
         <FormField
@@ -178,5 +171,173 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="h-card mb-4">{title}</h2>
       <div className="space-y-4">{children}</div>
     </Card>
+  );
+}
+
+function DataFolderSection() {
+  const [info, setInfo] = useState<DataFolderInfo | null>(null);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+  const [preview, setPreview] = useState<DataFolderPreview | null>(null);
+  const [savedPath, setSavedPath] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const bridgeAvailable = isHostBridgeAvailable();
+
+  useEffect(() => {
+    systemApi.getDataFolder().then(setInfo).catch((e) => setError((e as Error).message));
+  }, []);
+
+  const handleBrowse = async () => {
+    setError(null);
+    const picked = await pickFolder(info?.current);
+    if (!picked) return;
+    setBusy(true);
+    try {
+      const p = await systemApi.previewDataFolder(picked);
+      setPendingPath(picked);
+      setPreview(p);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!pendingPath) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await systemApi.setDataFolder(pendingPath);
+      setSavedPath(res.saved);
+      setPendingPath(null);
+      setPreview(null);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setPendingPath(null);
+    setPreview(null);
+  };
+
+  const currentDisplay = savedPath ?? info?.current ?? '불러오는 중...';
+
+  return (
+    <>
+      <Section title="데이터">
+        <FormField
+          label="저장 위치"
+          hint="데이터베이스(projectmanager.db)와 프로젝트별 첨부 파일이 저장되는 폴더입니다. 변경 사항은 Atlas 재시작 후 적용됩니다."
+        >
+          <div className="space-y-2">
+            <code className="block bg-surface-2 px-2 py-1.5 rounded text-xs break-all">
+              {currentDisplay}
+            </code>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={handleBrowse}
+                disabled={busy || !bridgeAvailable}
+                leadingIcon={<FolderOpen size={14} />}
+              >
+                변경
+              </Button>
+              {!bridgeAvailable && (
+                <span className="text-xs text-muted">데스크톱 앱에서만 변경 가능</span>
+              )}
+              {savedPath && (
+                <span className="text-xs text-on-warning">변경됨 — Atlas 를 재시작해주세요</span>
+              )}
+            </div>
+            {error && <p className="text-xs text-on-danger">{error}</p>}
+          </div>
+        </FormField>
+      </Section>
+
+      {pendingPath && preview && (
+        <DataFolderConfirmModal
+          path={pendingPath}
+          preview={preview}
+          busy={busy}
+          onConfirm={handleConfirm}
+          onCancel={handleCancel}
+        />
+      )}
+    </>
+  );
+}
+
+function DataFolderConfirmModal({
+  path,
+  preview,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  path: string;
+  preview: DataFolderPreview;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const blocked = !preview.isWritable;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={onCancel}
+    >
+      <div
+        className="bg-surface border border-default rounded-lg p-6 max-w-lg w-full m-4 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-semibold">데이터 폴더 변경</h3>
+        <code className="block bg-surface-2 px-2 py-1.5 rounded text-xs break-all">{path}</code>
+
+        <div className="space-y-2 text-sm text-secondary">
+          {!preview.exists && (
+            <p>이 폴더는 아직 존재하지 않습니다. 저장 시 자동으로 생성됩니다.</p>
+          )}
+          {preview.exists && !preview.hasExistingDb && (
+            <p>
+              이 폴더에는 기존 Atlas 데이터가 없습니다. 그대로 진행하면 <strong>새 빈 데이터베이스</strong>로 시작됩니다.
+              <br />
+              기존 데이터를 옮기려면 먼저 현재 폴더의 <code>projectmanager.db</code> 와 프로젝트 하위 폴더들을 이 위치로 복사한 뒤 변경하세요.
+            </p>
+          )}
+          {preview.hasExistingDb && (
+            <p>
+              이 폴더에서 기존 Atlas 데이터를 발견했습니다
+              {preview.projectCount !== null && <> (프로젝트 {preview.projectCount}개)</>}.
+              이 데이터를 사용하도록 전환합니다.
+            </p>
+          )}
+          {preview.warnings.length > 0 && (
+            <ul className="list-disc list-inside text-on-warning text-xs space-y-1">
+              {preview.warnings.map((w, i) => (
+                <li key={i}>{w}</li>
+              ))}
+            </ul>
+          )}
+          {blocked && (
+            <p className="text-on-danger text-xs">쓰기 권한이 없어 이 폴더를 사용할 수 없습니다.</p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={onCancel} disabled={busy}>
+            취소
+          </Button>
+          <Button variant="primary" onClick={onConfirm} disabled={busy || blocked}>
+            {busy ? '저장 중...' : '변경'}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

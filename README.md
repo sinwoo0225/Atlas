@@ -2,7 +2,7 @@
 
 > *The map of your projects.* — 단일 사용자를 위한 로컬 우선 프로젝트 관리 데스크톱 앱.
 
-Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 이력·자료를 한 곳에서 관리하기 위한 Windows 데스크톱 앱입니다. 모든 데이터는 `%USERPROFILE%\Documents\ProjectManager\` 아래 SQLite DB 와 프로젝트별 파일 폴더로 로컬에 저장되며, 원격 백엔드나 계정 가입이 없습니다. WPF + WebView2 셸 안에서 ASP.NET Core 가 인프로세스로 실행되고 그 위에 React SPA UI 가 올라가는 구조입니다. UI 언어는 한국어.
+Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 이력·자료를 한 곳에서 관리하기 위한 Windows 데스크톱 앱입니다. 모든 데이터는 SQLite DB 와 프로젝트별 파일 폴더로 로컬에 저장됩니다 — 기본 위치는 `%USERPROFILE%\Documents\ProjectManager\` 이며, 설정에서 다른 폴더(예: 본인 멀티 디바이스용 외부 드라이브, 사내 SMB 공유 폴더)로 변경할 수 있습니다. 원격 백엔드나 계정 가입은 없습니다. WPF + WebView2 셸 안에서 ASP.NET Core 가 인프로세스로 실행되고 그 위에 React SPA UI 가 올라가는 구조입니다. UI 언어는 한국어.
 
 ## 주요 기능
 
@@ -16,7 +16,7 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **프로젝트 맵** — Cytoscape + dagre 그래프로 WBS·이슈·회의·변경·개발 정보 간 관계를 시각화 (방사형/타임라인 레이아웃, 미니맵).
 - **모니터링** — 전 프로젝트 통합 뷰: 오늘 예정 마일스톤, 금주·지난주 업무 일지.
 - **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용.
-- **설정** — 다크/라이트 테마, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억.
+- **설정** — 다크/라이트 테마, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그).
 
 ## 스크린샷
 
@@ -38,7 +38,8 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 
 데이터 위치:
 
-- `%USERPROFILE%\Documents\ProjectManager\` — SQLite DB (`projectmanager.db`) + 프로젝트별 파일 폴더.
+- 기본값: `%USERPROFILE%\Documents\ProjectManager\` — SQLite DB (`projectmanager.db`) + 프로젝트별 파일 폴더.
+- 설정 > 데이터 > 저장 위치 에서 다른 폴더로 변경 가능 (예: 본인 멀티 디바이스용 외부 드라이브, 사내 SMB 공유 폴더). 변경 후에는 Atlas 재시작이 필요합니다.
 - 백업: 폴더 전체를 복사하거나, 앱 대시보드의 "백업" 버튼으로 프로젝트 단위 zip 생성.
 
 ## 개발 환경
@@ -109,7 +110,7 @@ MIT — 자세한 내용은 [`LICENSE`](./LICENSE) 참고. Copyright (c) 2026 Sl
 
 > *The map of your projects.* — A local-first project management desktop app for a single user.
 
-Atlas is a Windows desktop application that lets one person manage schedules, issues, meetings, change logs, and notes across multiple projects in one place. All data is stored locally as a SQLite database and per-project file folders under `%USERPROFILE%\Documents\ProjectManager\` — no remote backend, no account. The shell is WPF + WebView2 hosting ASP.NET Core in-process, with a React SPA on top. The UI is in Korean.
+Atlas is a Windows desktop application that lets one person manage schedules, issues, meetings, change logs, and notes across multiple projects in one place. All data is stored locally as a SQLite database and per-project file folders — the default location is `%USERPROFILE%\Documents\ProjectManager\`, but you can change it from Settings to any other folder (e.g. an external drive for multi-device use, or a corporate SMB share). No remote backend, no account. The shell is WPF + WebView2 hosting ASP.NET Core in-process, with a React SPA on top. The UI is in Korean.
 
 ### Features
 
@@ -123,7 +124,7 @@ Atlas is a Windows desktop application that lets one person manage schedules, is
 - **Project map** — Cytoscape + dagre graph visualising relationships between WBS items, issues, meetings, change logs, and dev info (radial / timeline layouts, minimap).
 - **Monitoring** — Cross-project view of today's milestones and this week / last week's worklogs.
 - **Resources** — People and equipment, used as the autocomplete source for WBS assignees.
-- **Settings** — Dark / light theme, Markdown font size and line height, remember last project.
+- **Settings** — Dark / light theme, Markdown font size and line height, remember last project, change data folder location (native folder picker dialog).
 
 ### Screenshots
 
@@ -145,7 +146,8 @@ Requirements:
 
 Data location:
 
-- `%USERPROFILE%\Documents\ProjectManager\` — SQLite DB (`projectmanager.db`) plus per-project file folders.
+- Default: `%USERPROFILE%\Documents\ProjectManager\` — SQLite DB (`projectmanager.db`) plus per-project file folders.
+- You can point this to a different folder (e.g. an external drive, a corporate SMB share) from Settings > Data > Storage location. A restart is required after changing it.
 - Backup: copy the entire folder, or use the dashboard's "Backup" button to produce a per-project zip.
 
 ### Development

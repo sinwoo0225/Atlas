@@ -2,10 +2,12 @@ using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Win32;
 
 namespace ProjectManager.DesktopApp;
 
@@ -69,11 +71,29 @@ public partial class MainWindow : Window
 
     private async Task InitializeWebViewAsync()
     {
-        // single-file publish 시 AppContext.BaseDirectory 가 임시 추출 폴더가 되므로
-        // WebView2 사용자 데이터는 Documents/ProjectManager/WebView2 에 고정해서
-        // 캐시·세션이 사라지지 않게 한다.
-        var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-        var userDataFolder = Path.Combine(docs, "ProjectManager", "WebView2");
+        // WebView2 사용자 데이터(쿠키·세션·pm-hub-settings localStorage 포함)는 머신·계정별 상태라
+        // 데이터 폴더가 공유 위치로 옮겨가도 같이 옮기면 동료 간 설정이 충돌한다.
+        // 따라서 데이터 폴더 설정과 무관하게 %LOCALAPPDATA%\Atlas\WebView2 에 고정.
+        var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        var userDataFolder = Path.Combine(local, "Atlas", "WebView2");
+
+        // 과거에 Documents\ProjectManager\WebView2 에 두던 사용자라면 한 번만 자동 이주.
+        var legacy = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "ProjectManager", "WebView2");
+        if (!Directory.Exists(userDataFolder) && Directory.Exists(legacy))
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(userDataFolder)!);
+                Directory.Move(legacy, userDataFolder);
+            }
+            catch
+            {
+                // 이주 실패해도 신규 폴더로 그냥 진행 (기존 다크모드·마지막 프로젝트 정도가 초기화).
+            }
+        }
+
         Directory.CreateDirectory(userDataFolder);
         var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
         await WebView.EnsureCoreWebView2Async(env);
@@ -89,8 +109,50 @@ public partial class MainWindow : Window
             $"*://{VirtualHost}/*", CoreWebView2WebResourceContext.All);
         WebView.CoreWebView2.WebResourceRequested += OnApiRequested;
 
+        // 프론트엔드 ↔ WPF 호스트 메시지 브릿지. 현재는 네이티브 폴더 다이얼로그용.
+        WebView.CoreWebView2.WebMessageReceived += OnHostMessageReceived;
+
         WebView.CoreWebView2.Navigate(AppUrl);
         LoadingOverlay.Visibility = Visibility.Collapsed;
+    }
+
+    private void OnHostMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(e.WebMessageAsJson);
+            if (!doc.RootElement.TryGetProperty("type", out var typeEl)) return;
+            var type = typeEl.GetString();
+
+            if (type == "pickFolder")
+            {
+                var requestId = doc.RootElement.TryGetProperty("requestId", out var rid) ? rid.GetString() : null;
+                var initialPath = doc.RootElement.TryGetProperty("initialPath", out var ip) ? ip.GetString() : null;
+
+                var dlg = new OpenFolderDialog
+                {
+                    Title = "데이터 폴더 선택",
+                    Multiselect = false,
+                };
+                if (!string.IsNullOrEmpty(initialPath) && Directory.Exists(initialPath))
+                    dlg.InitialDirectory = initialPath;
+
+                var ok = dlg.ShowDialog(this) == true;
+                var picked = ok ? dlg.FolderName : null;
+
+                var response = JsonSerializer.Serialize(new
+                {
+                    type = "pickFolderResult",
+                    requestId,
+                    path = picked,
+                });
+                WebView.CoreWebView2.PostWebMessageAsJson(response);
+            }
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[host-bridge-err] {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     private async void OnApiRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
@@ -224,8 +286,10 @@ public partial class MainWindow : Window
     {
         try
         {
-            var docs = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
-            var path = Path.Combine(docs, "ProjectManager", "atlas-debug.log");
+            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var dir = Path.Combine(local, "Atlas");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, "atlas-debug.log");
             File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {line}\n");
         }
         catch { }

@@ -29,7 +29,9 @@ public static class AppHostFactory
             o.MultipartHeadersLengthLimit = int.MaxValue;
         });
 
-        var pathResolver = new PathResolver();
+        var bootstrap = BootstrapConfig.Load();
+        var pathResolver = new PathResolver(bootstrap.ResolveDataFolder());
+        builder.Services.AddSingleton(bootstrap);
         builder.Services.AddSingleton(pathResolver);
         builder.Services.AddSingleton<DevFilesStorage>();
 
