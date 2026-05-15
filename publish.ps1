@@ -5,14 +5,17 @@
     - 기본: DesktopApp 단일 in-process exe (Atlas.exe + wwwroot) 를 publish/ 폴더에 빌드하고 zip 생성.
     - -Server: ProjectManager.WebService 를 standalone Atlas-Server.exe 로 publish/server/ 에 빌드하고 별도 zip 생성.
       (Client 모드 클라이언트들이 붙는 원격 서버. wwwroot 는 클라가 자체 보유하므로 서버에는 미포함.)
+    - -Version <ver>: zip 이름의 stamp 대신 명시한 버전을 사용. 릴리즈 자산용.
 .EXAMPLE
-    .\publish.ps1                # DesktopApp (Local 모드 사용자용)
-    .\publish.ps1 -Server        # WebService (Server 모드 운영자용)
-    .\publish.ps1 -SkipZip       # zip 생략
+    .\publish.ps1                       # Atlas-YYYYMMDD_HHMMSS.zip
+    .\publish.ps1 -Version 1.4.0        # Atlas-1.4.0.zip
+    .\publish.ps1 -Server -Version 1.4.0  # Atlas-Server-1.4.0.zip
+    .\publish.ps1 -SkipZip              # zip 생략
 #>
 param(
     [switch]$SkipZip,
-    [switch]$Server
+    [switch]$Server,
+    [string]$Version
 )
 
 $ErrorActionPreference = 'Stop'
@@ -95,8 +98,8 @@ Atlas-Server.exe
     Write-Host "  - run-server.cmd   : OK" -ForegroundColor Green
 
     if (-not $SkipZip) {
-        $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-        $zipPath = Join-Path $root "Atlas-Server-$stamp.zip"
+        $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
+        $zipPath = Join-Path $root "Atlas-Server-$tag.zip"
         Write-Host "==> 압축 생성: $zipPath" -ForegroundColor Cyan
         if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
         Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath
@@ -129,8 +132,8 @@ Write-Host "  - Atlas.exe       : OK" -ForegroundColor Green
 Write-Host "  - wwwroot/index   : OK" -ForegroundColor Green
 
 if (-not $SkipZip) {
-    $stamp = Get-Date -Format 'yyyyMMdd_HHmmss'
-    $zipPath = Join-Path $root "Atlas-$stamp.zip"
+    $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
+    $zipPath = Join-Path $root "Atlas-$tag.zip"
     Write-Host "==> 압축 생성: $zipPath" -ForegroundColor Cyan
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath
