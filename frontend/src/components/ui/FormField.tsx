@@ -29,3 +29,8 @@ export function FormField({ label, hint, error, required, className = '', childr
  */
 export const inputClass =
   'w-full px-3 py-2 text-sm rounded-md transition-colors';
+
+/** inputClass 와 동일하지만 `w-full` 을 빼서, 호출 측에서 `w-32` / `w-36` 등 고정 너비를 지정할 때
+ *  뒤에 붙인 너비 유틸이 묻히지 않게 한다 (둘 다 utility 라 specificity 가 같아 CSS 출력 순서가 결정 — w-full 이 보통 이긴다). */
+export const inputClassNoW =
+  'px-3 py-2 text-sm rounded-md transition-colors';

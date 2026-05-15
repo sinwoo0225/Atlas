@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Check,
   NotebookPen,
+  Search,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadSettings, patchSettings } from '../store/settings';
@@ -35,6 +36,28 @@ const projectNavItems = [
   { path: 'devinfo', label: '개발 정보', Icon: Code2 },
   { path: 'map', label: '프로젝트 맵', Icon: Network },
 ];
+
+// 사이드바의 검색 트리거. 실제 검색 UI 는 CommandPalette (App 최상위 mount) — 이 버튼은
+// Ctrl+K 단축키와 동일하게 팔레트를 연다. 클릭 시 keydown 이벤트를 직접 dispatch.
+function SearchTrigger() {
+  const handleClick = () => {
+    // useGlobalShortcut 가 keydown 으로 토글하므로 같은 이벤트를 합성해 보낸다.
+    const ev = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
+    window.dispatchEvent(ev);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title="검색 (Ctrl+K)"
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 hover:bg-surface-3 border border-default text-sm text-muted hover:text-secondary"
+    >
+      <Search size={14} />
+      <span className="flex-1 text-left">검색</span>
+      <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-default bg-surface-3 text-muted">Ctrl K</kbd>
+    </button>
+  );
+}
 
 function ProjectSwitcher() {
   const projects = useProjectStore((s) => s.projects);
@@ -137,6 +160,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="px-3 pt-3">
+          <SearchTrigger />
+        </div>
+
+        <div className="px-3 pt-2">
           <ProjectSwitcher />
         </div>
 

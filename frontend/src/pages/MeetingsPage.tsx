@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { Plus, Pencil, X, Save, FileText, Building2, UserPlus } from 'lucide-react';
+import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search } from 'lucide-react';
 import { meetingsApi } from '../api/meetings';
 import {
   parseAttendees,
@@ -11,8 +11,9 @@ import {
   type AttendeeOrg,
   type ActionItem,
 } from '../utils/meetingHelpers';
-import { Button, Card, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
+import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import type { Meeting } from '../types';
 
 // 회의록 시간은 30분 단위만 — Chromium native time picker 는 분 spinner 에
@@ -373,17 +374,37 @@ export function MeetingsPage() {
   const pid = parseInt(projectId!);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Meeting | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
 
-  const load = (kw?: string) => meetingsApi.getByProject(pid, kw).then(setMeetings);
+  // 전체 회의록을 한 번에 가져오고 클라이언트사이드에서 필터링. 본문(Discussion / Decisions / ActionItems)
+  // 검색을 위해 백엔드 검색 대신 클라이언트 필터로 통합.
+  const load = () => meetingsApi.getByProject(pid).then(setMeetings);
   useEffect(() => { load(); }, [pid]);
+
+  useHighlightFromQuery([meetings.length]);
+
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    return meetings.filter((m) => {
+      if (kw) {
+        const hay = `${m.topic} ${m.discussion ?? ''} ${m.decisions ?? ''} ${m.actionItems ?? ''} ${m.attendees ?? ''}`.toLowerCase();
+        if (!hay.includes(kw)) return false;
+      }
+      const d = m.date.slice(0, 10);
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo && d > dateTo) return false;
+      return true;
+    });
+  }, [meetings, keyword, dateFrom, dateTo]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('삭제하시겠습니까?')) return;
     await meetingsApi.delete(pid, id);
-    load(keyword || undefined);
+    load();
   };
 
   return (
@@ -398,27 +419,42 @@ export function MeetingsPage() {
         </Button>
       </div>
 
-      <div className="flex gap-2">
-        <input
-          value={keyword}
-          onChange={(e) => setKeyword(e.target.value)}
-          placeholder="키워드 검색..."
-          onKeyDown={(e) => e.key === 'Enter' && load(keyword || undefined)}
-          className={`${inputClass} flex-1`}
-        />
-        <Button variant="secondary" onClick={() => load(keyword || undefined)}>검색</Button>
-        <Button variant="ghost" onClick={() => { setKeyword(''); load(); }}>초기화</Button>
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="relative w-72">
+          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+          <input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="주제·논의·결정사항·참석자 검색…"
+            className={`${inputClass} pl-7 py-1.5 text-sm`}
+          />
+        </div>
+        <div className="flex items-center gap-1 text-sm">
+          <span className="text-muted text-xs">날짜</span>
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={`${inputClassNoW} py-1.5 text-sm w-36`} />
+          <span className="text-muted">~</span>
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={`${inputClassNoW} py-1.5 text-sm w-36`} />
+        </div>
+        {(keyword || dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setDateFrom(''); setDateTo(''); }}>
+            초기화
+          </Button>
+        )}
+        <span className="text-xs text-muted ml-auto">{filtered.length} / {meetings.length}</span>
       </div>
 
       <div className="space-y-3">
-        {meetings.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={<FileText size={36} />}
-            title="회의록이 없습니다."
-            description="우측 상단 '회의록 작성' 버튼으로 새 회의록을 만들어보세요."
+            title={meetings.length === 0 ? '회의록이 없습니다.' : '조건에 맞는 회의록이 없습니다.'}
+            description={meetings.length === 0
+              ? "우측 상단 '회의록 작성' 버튼으로 새 회의록을 만들어보세요."
+              : '검색어나 날짜 범위를 조정해 보세요.'}
           />
-        ) : meetings.map((m) => (
-          <Card key={m.id} padding="spacious">
+        ) : filtered.map((m) => (
+          <Card key={m.id} padding="spacious" data-highlight-id={m.id}>
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">

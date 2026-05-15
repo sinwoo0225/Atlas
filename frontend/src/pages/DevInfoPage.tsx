@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen } from 'lucide-react';
+import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
@@ -9,6 +9,7 @@ import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../compo
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
+import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
@@ -317,12 +318,15 @@ export function DevInfoPage() {
   const [editing, setEditing] = useState<DevInfoItem | null>(null);
   const [selected, setSelected] = useState<DevInfoItem | null>(null);
   const [filterType, setFilterType] = useState<DevInfoType | ''>('');
+  const [keyword, setKeyword] = useState('');
 
   const load = () => devInfoApi.getByProject(pid).then(setItems);
   useEffect(() => {
     load();
     projectsApi.getById(pid).then(setProject).catch(() => setProject(null));
   }, [pid]);
+
+  useHighlightFromQuery([items.length]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('삭제하시겠습니까?')) return;
@@ -346,7 +350,17 @@ export function DevInfoPage() {
     }
   };
 
-  const filtered = filterType ? items.filter((i) => i.type === filterType) : items;
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    return items.filter((i) => {
+      if (filterType && i.type !== filterType) return false;
+      if (kw) {
+        const hay = `${i.title} ${i.tags ?? ''} ${i.content ?? ''} ${i.url ?? ''}`.toLowerCase();
+        if (!hay.includes(kw)) return false;
+      }
+      return true;
+    });
+  }, [items, filterType, keyword]);
 
   return (
     <div className="p-6 h-full flex flex-col gap-4">
@@ -360,7 +374,7 @@ export function DevInfoPage() {
         </Button>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap items-center">
         <Button
           variant={!filterType ? 'primary' : 'secondary'}
           size="sm"
@@ -382,6 +396,16 @@ export function DevInfoPage() {
             </Button>
           );
         })}
+        <div className="relative ml-auto w-72">
+          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+          <input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="제목·태그·본문 검색…"
+            className={`${inputClass} pl-7 py-1.5 text-sm`}
+          />
+        </div>
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
@@ -389,8 +413,10 @@ export function DevInfoPage() {
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Code2 size={36} />}
-              title="개발 정보가 없습니다."
-              description={filterType ? '해당 타입의 항목이 없습니다.' : '우측 상단 \'정보 추가\' 버튼으로 시작해보세요.'}
+              title={items.length === 0 ? '개발 정보가 없습니다.' : '조건에 맞는 항목이 없습니다.'}
+              description={items.length === 0
+                ? "우측 상단 '정보 추가' 버튼으로 시작해보세요."
+                : (filterType || keyword) ? '필터·검색어를 조정해 보세요.' : '항목이 없습니다.'}
             />
           ) : filtered.map((item) => {
             const Icon = typeIcon[item.type];
@@ -398,6 +424,7 @@ export function DevInfoPage() {
             return (
               <Card
                 key={item.id}
+                data-highlight-id={item.id}
                 padding="normal"
                 className={`cursor-pointer transition-colors ${isSelected ? 'border-accent ring-1 ring-accent' : 'hover:border-strong'}`}
                 onClick={() => setSelected(isSelected ? null : item)}

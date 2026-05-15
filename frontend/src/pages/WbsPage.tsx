@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays } from 'lucide-react';
+import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
@@ -9,6 +9,7 @@ import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { wbsImportanceBadge } from '../utils/statusMaps';
 import { GanttChart } from './wbs/GanttChart';
+import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import type { WbsItem, WbsVersion, Resource, WbsStatus } from '../types';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
@@ -17,6 +18,53 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
     if (it.children?.length) return { ...it, children: patchStatus(it.children, id, status) };
     return it;
   });
+}
+
+// 필터 조건. 빈 키워드/필터는 통과.
+interface WbsFilterOpts {
+  kw: string;            // lowercase, trimmed
+  unassigned: boolean;
+  late: boolean;
+  todayMs: number;       // Date.now() 기준 자정 ms (지연 비교용)
+}
+
+function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
+  if (o.kw) {
+    const hay = `${item.name} ${item.assignee} ${item.notes ?? ''}`.toLowerCase();
+    if (!hay.includes(o.kw)) return false;
+  }
+  if (o.unassigned && item.assignee.trim()) return false;
+  if (o.late) {
+    if (!item.endDate) return false;
+    if (item.status === 'Done') return false;
+    if (new Date(item.endDate).getTime() >= o.todayMs) return false;
+  }
+  return true;
+}
+
+function collectMatchedIds(items: WbsItem[], o: WbsFilterOpts, acc: Set<number> = new Set()): Set<number> {
+  for (const item of items) {
+    if (matchWbsItem(item, o)) acc.add(item.id);
+    if (item.children?.length) collectMatchedIds(item.children, o, acc);
+  }
+  return acc;
+}
+
+// matchOnly=true 일 때 매칭 안 한 가지 제거. 조상은 후손이 매칭이면 살아남는다.
+function filterWbsTree(items: WbsItem[], o: WbsFilterOpts): WbsItem[] {
+  const out: WbsItem[] = [];
+  for (const item of items) {
+    const children = item.children?.length ? filterWbsTree(item.children, o) : [];
+    const self = matchWbsItem(item, o);
+    if (self || children.length > 0) {
+      out.push({ ...item, children });
+    }
+  }
+  return out;
+}
+
+function hasAnyFilter(o: WbsFilterOpts): boolean {
+  return !!o.kw || o.unassigned || o.late;
 }
 
 type WbsFormData = {
@@ -178,8 +226,9 @@ function DateEditModal({
   );
 }
 
-function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild, onStatusChange }: {
+function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAddChild, onStatusChange }: {
   item: WbsItem; projectId: number; depth?: number;
+  matchedIds?: Set<number>;
   onEdit: (item: WbsItem) => void; onDelete: (id: number) => void;
   onAddChild: (parentId: number) => void;
   onStatusChange: (item: WbsItem, status: WbsStatus) => void;
@@ -187,11 +236,14 @@ function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild, onSt
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.order);
+  // matchedIds 가 비어 있으면 (필터 없음) 강조 안 함. 있으면 매칭 행만 accent-soft 배경.
+  const isMatched = matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
 
   return (
     <>
       <tr
-        className="border-b border-default hover:bg-surface-2 transition-colors"
+        data-highlight-id={item.id}
+        className={`border-b border-default hover:bg-surface-2 transition-colors ${isMatched ? 'bg-accent-soft' : ''}`}
         onDoubleClick={() => onEdit(item)}
       >
         <td className="py-2 px-4">
@@ -258,6 +310,7 @@ function WbsRow({ item, projectId, depth = 0, onEdit, onDelete, onAddChild, onSt
       </tr>
       {expanded && item.children?.map((child) => (
         <WbsRow key={child.id} item={child} projectId={projectId} depth={depth + 1}
+          matchedIds={matchedIds}
           onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onStatusChange={onStatusChange} />
       ))}
     </>
@@ -278,6 +331,26 @@ export function WbsPage() {
   const [addingChildOf, setAddingChildOf] = useState<number | undefined>();
   const [showVersionForm, setShowVersionForm] = useState(false);
   const [newVersionName, setNewVersionName] = useState('');
+  const [keyword, setKeyword] = useState('');
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
+  const [lateOnly, setLateOnly] = useState(false);
+  const [matchOnly, setMatchOnly] = useState(false);
+
+  const filterOpts: WbsFilterOpts = useMemo(() => {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return { kw: keyword.trim().toLowerCase(), unassigned: unassignedOnly, late: lateOnly, todayMs: t.getTime() };
+  }, [keyword, unassignedOnly, lateOnly]);
+
+  const matchedIds = useMemo(
+    () => hasAnyFilter(filterOpts) ? collectMatchedIds(items, filterOpts) : new Set<number>(),
+    [items, filterOpts],
+  );
+
+  const visibleItems = useMemo(
+    () => (matchOnly && hasAnyFilter(filterOpts)) ? filterWbsTree(items, filterOpts) : items,
+    [items, filterOpts, matchOnly],
+  );
 
   const load = () => {
     wbsApi.getByProject(pid, currentVersion).then(setItems);
@@ -288,6 +361,8 @@ export function WbsPage() {
   useEffect(() => {
     resourcesApi.getAll().then(setResources).catch(() => setResources([]));
   }, []);
+
+  useHighlightFromQuery([items.length]);
 
   const handleDelete = async (id: number) => {
     if (!confirm('삭제하시겠습니까?')) return;
@@ -365,6 +440,40 @@ export function WbsPage() {
             <Button variant="primary" size="sm" onClick={handleCreateVersion}>확인</Button>
           </div>
         )}
+
+        <div className="ml-auto flex items-center gap-2 flex-wrap">
+          <div className="relative">
+            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              type="search"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="작업명·담당자·노트…"
+              className={`${inputClass} pl-7 py-1.5 text-sm w-48`}
+            />
+          </div>
+          <Button variant={unassignedOnly ? 'primary' : 'secondary'} size="sm" onClick={() => setUnassignedOnly((v) => !v)}>
+            미할당
+          </Button>
+          <Button variant={lateOnly ? 'primary' : 'secondary'} size="sm" onClick={() => setLateOnly((v) => !v)}>
+            지연
+          </Button>
+          {hasAnyFilter(filterOpts) && (
+            <>
+              <label className="text-xs text-muted flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
+                매칭만 보기
+              </label>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setKeyword(''); setUnassignedOnly(false); setLateOnly(false); setMatchOnly(false); }}
+              >
+                초기화
+              </Button>
+            </>
+          )}
+        </div>
       </Card>
 
       {view === 'gantt' ? (
@@ -399,11 +508,22 @@ export function WbsPage() {
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {visibleItems.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState
+                      icon={<Search size={32} />}
+                      title="조건에 맞는 작업이 없습니다."
+                      description="필터를 초기화해 보세요."
+                    />
+                  </td>
+                </tr>
+              ) : visibleItems.map((item) => (
                 <WbsRow
                   key={item.id}
                   item={item}
                   projectId={pid}
+                  matchedIds={matchedIds}
                   onEdit={setEditing}
                   onDelete={handleDelete}
                   onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}

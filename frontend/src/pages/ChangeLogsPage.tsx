@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon } from 'lucide-react';
+import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
-import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
+import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import type { ChangeLog, ImpactLevel, Meeting } from '../types';
 
 const impactColor: Record<ImpactLevel, string> = {
@@ -256,12 +257,28 @@ export function ChangeLogsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<ChangeLog | null>(null);
+  const [keyword, setKeyword] = useState('');
+  const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
 
   const load = () => changeLogsApi.getByProject(pid).then(setLogs);
   useEffect(() => {
     load();
     meetingsApi.getByProject(pid).then(setMeetings).catch(() => setMeetings([]));
   }, [pid]);
+
+  useHighlightFromQuery([logs.length]);
+
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    return logs.filter((l) => {
+      if (impactFilter !== 'All' && l.impact !== impactFilter) return false;
+      if (kw) {
+        const hay = `${l.content} ${l.author ?? ''} ${l.relatedDocLinks ?? ''}`.toLowerCase();
+        if (!hay.includes(kw)) return false;
+      }
+      return true;
+    });
+  }, [logs, keyword, impactFilter]);
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -289,14 +306,47 @@ export function ChangeLogsPage() {
         </Card>
       )}
 
+      {logs.length > 0 && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative w-64">
+            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              type="search"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="내용·작성자·문서 링크 검색…"
+              className={`${inputClass} pl-7 py-1.5 text-sm`}
+            />
+          </div>
+          <select
+            value={impactFilter}
+            onChange={(e) => setImpactFilter(e.target.value as ImpactLevel | 'All')}
+            className={`${inputClassNoW} py-1.5 text-sm w-36`}
+          >
+            <option value="All">영향도 전체</option>
+            {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+          {(keyword || impactFilter !== 'All') && (
+            <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setImpactFilter('All'); }}>
+              초기화
+            </Button>
+          )}
+          <span className="text-xs text-muted ml-auto">{filtered.length} / {logs.length}</span>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {logs.length === 0 ? (
+        {filtered.length === 0 ? (
           <EmptyState
             icon={<GitBranch size={36} />}
-            title="변경 이력이 없습니다."
-            description="우측 상단 '변경 이력 추가' 버튼으로 시작해보세요."
+            title={logs.length === 0 ? '변경 이력이 없습니다.' : '조건에 맞는 변경 이력이 없습니다.'}
+            description={logs.length === 0
+              ? "우측 상단 '변경 이력 추가' 버튼으로 시작해보세요."
+              : '검색어나 영향도 필터를 조정해 보세요.'}
           />
-        ) : logs.map((log) => {
+        ) : filtered.map((log) => {
           const meetingIds = extractMeetingIds(log.relatedDocLinks);
           const otherLinks = extractOtherLinks(log.relatedDocLinks);
           const linkedMeetings = meetingIds
@@ -306,6 +356,7 @@ export function ChangeLogsPage() {
           return (
             <Card
               key={log.id}
+              data-highlight-id={log.id}
               padding="normal"
               className="cursor-pointer hover:border-strong transition-colors"
               onClick={() => setEditing(log)}

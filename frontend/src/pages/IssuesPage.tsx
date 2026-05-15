@@ -1,12 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { AlertTriangle, ChevronDown, ChevronRight, Plus, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, BadgeMenu, EmptyState, inputClass, type BadgeMenuOption } from '../components/ui';
+import { Button, Card, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
+import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import type { Issue, IssueStatus, IssuePriority, Resource } from '../types';
 
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
@@ -25,6 +26,9 @@ export function IssuesPage() {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [filter, setFilter] = useState<IssueStatus | 'All'>('All');
+  const [priorityFilter, setPriorityFilter] = useState<IssuePriority | 'All'>('All');
+  const [assigneeFilter, setAssigneeFilter] = useState<number | 'All' | 'Unassigned'>('All');
+  const [keyword, setKeyword] = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
 
@@ -34,6 +38,8 @@ export function IssuesPage() {
     load();
     resourcesApi.getAll().then(setResources).catch(() => setResources([]));
   }, [pid]);
+
+  useHighlightFromQuery([issues.length]);
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -70,7 +76,20 @@ export function IssuesPage() {
     load();
   };
 
-  const filtered = filter === 'All' ? issues : issues.filter((i) => i.status === filter);
+  const filtered = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    return issues.filter((i) => {
+      if (filter !== 'All' && i.status !== filter) return false;
+      if (priorityFilter !== 'All' && i.priority !== priorityFilter) return false;
+      if (assigneeFilter === 'Unassigned' && i.assigneeResourceId != null) return false;
+      if (typeof assigneeFilter === 'number' && i.assigneeResourceId !== assigneeFilter) return false;
+      if (kw) {
+        const hay = `${i.title} ${i.description ?? ''}`.toLowerCase();
+        if (!hay.includes(kw)) return false;
+      }
+      return true;
+    });
+  }, [issues, filter, priorityFilter, assigneeFilter, keyword]);
 
   return (
     <div className="p-6 space-y-4">
@@ -81,23 +100,77 @@ export function IssuesPage() {
         </h1>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
-        <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>
-          전체 ({issues.length})
-        </Button>
-        {(['Open', 'InProgress', 'Resolved', 'Closed'] as IssueStatus[]).map((s) => {
-          const count = issues.filter((i) => i.status === s).length;
-          return (
+      <div className="space-y-2">
+        <div className="flex gap-2 flex-wrap items-center">
+          <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>
+            전체 ({issues.length})
+          </Button>
+          {(['Open', 'InProgress', 'Resolved', 'Closed'] as IssueStatus[]).map((s) => {
+            const count = issues.filter((i) => i.status === s).length;
+            return (
+              <Button
+                key={s}
+                variant={filter === s ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() => setFilter(s)}
+              >
+                {issueStatusBadge[s].label} ({count})
+              </Button>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2 flex-wrap items-center">
+          <div className="relative w-56">
+            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+            <input
+              type="search"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="제목·설명 검색…"
+              className={`${inputClass} pl-7 py-1.5 text-sm`}
+            />
+          </div>
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value as IssuePriority | 'All')}
+            className={`${inputClassNoW} py-1.5 text-sm w-32`}
+          >
+            <option value="All">우선순위 전체</option>
+            {PRIORITY_VALUES.map((p) => (
+              <option key={p} value={p}>{issuePriorityBadge[p].label}</option>
+            ))}
+          </select>
+          <select
+            value={String(assigneeFilter)}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === 'All' || v === 'Unassigned') setAssigneeFilter(v);
+              else setAssigneeFilter(Number(v));
+            }}
+            className={`${inputClassNoW} py-1.5 text-sm w-40`}
+          >
+            <option value="All">담당자 전체</option>
+            <option value="Unassigned">미지정만</option>
+            {resources.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+          {(keyword || priorityFilter !== 'All' || assigneeFilter !== 'All' || filter !== 'All') && (
             <Button
-              key={s}
-              variant={filter === s ? 'primary' : 'secondary'}
+              variant="ghost"
               size="sm"
-              onClick={() => setFilter(s)}
+              onClick={() => {
+                setKeyword('');
+                setPriorityFilter('All');
+                setAssigneeFilter('All');
+                setFilter('All');
+              }}
             >
-              {issueStatusBadge[s].label} ({count})
+              필터 초기화
             </Button>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       <Card padding="none" className="overflow-hidden">
@@ -120,7 +193,11 @@ export function IssuesPage() {
                   <EmptyState
                     icon={<AlertTriangle size={36} />}
                     title="이슈가 없습니다."
-                    description={filter === 'All' ? '아래 빈 행에서 제목을 입력해 빠르게 추가할 수 있습니다.' : '해당 상태의 이슈가 없습니다.'}
+                    description={
+                      filter === 'All' && priorityFilter === 'All' && assigneeFilter === 'All' && !keyword
+                        ? '아래 빈 행에서 제목을 입력해 빠르게 추가할 수 있습니다.'
+                        : '조건에 맞는 이슈가 없습니다. 필터를 초기화해 보세요.'
+                    }
                   />
                 </td>
               </tr>
@@ -182,7 +259,7 @@ function IssueRow({
 
   return (
     <>
-      <tr className="border-b border-default last:border-0 hover:bg-surface-2 transition-colors">
+      <tr data-highlight-id={issue.id} className="border-b border-default last:border-0 hover:bg-surface-2 transition-colors">
         <td className="py-2 px-4">
           <button
             type="button"

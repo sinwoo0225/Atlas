@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Search;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;
@@ -41,8 +42,12 @@ public static class AppHostFactory
 
         // Default Timeout=30 — 동시 라이터 충돌 시 즉시 'database is locked' 가 아니라 최대 30초 busy wait.
         // 사용자 입력 수준의 동시성(드물게 겹치는 PUT/POST)은 이 한 줄로 거의 다 흡수된다.
-        builder.Services.AddDbContext<AppDbContext>(opt =>
-            opt.UseSqlite($"Data Source={pathResolver.GetDatabasePath()};Default Timeout=30"));
+        builder.Services.AddScoped<SearchService>();
+        builder.Services.AddScoped<SearchSaveChangesInterceptor>();
+        builder.Services.AddDbContext<AppDbContext>((sp, opt) =>
+            opt
+                .UseSqlite($"Data Source={pathResolver.GetDatabasePath()};Default Timeout=30")
+                .AddInterceptors(sp.GetRequiredService<SearchSaveChangesInterceptor>()));
 
         builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
         builder.Services.AddScoped<IWbsRepository, WbsRepository>();
@@ -73,6 +78,29 @@ public static class AppHostFactory
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.Migrate();
         }
+
+        // 검색 인덱스 (FTS5) 가 비어 있으면 백그라운드로 한 번 빌드.
+        // 신규 설치/마이그레이션 직후 또는 데이터 폴더 교체 직후에 자동 복구.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = app.Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                var search = scope.ServiceProvider.GetRequiredService<SearchService>();
+                var hasAny = await db.Projects.AsNoTracking().AnyAsync();
+                var indexed = await search.CountAsync(db);
+                if (hasAny && indexed == 0)
+                {
+                    var built = await search.RebuildAllAsync(db);
+                    Console.WriteLine($"[search-index] auto-rebuilt {built} rows.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine("[search-index] auto-rebuild failed: " + ex.Message);
+            }
+        });
 
         var inProcess = Environment.GetEnvironmentVariable(InProcessEnvVar) == "1";
         var serverMode = Environment.GetEnvironmentVariable(ServerEnvVar) == "1";

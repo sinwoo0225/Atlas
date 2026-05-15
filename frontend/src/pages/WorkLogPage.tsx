@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
-import { Button, Card, Spinner } from '../components/ui';
+import { Button, Card, Spinner, inputClass } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
 import type { WorkLog } from '../types';
 
@@ -42,10 +42,30 @@ type FieldKey = 'done' | 'plan' | 'issues';
 export function WorkLogPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number(projectId);
-  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
+  const [searchParams, setSearchParams] = useSearchParams();
+  // 검색 결과에서 ?date=YYYY-MM-DD 로 들어오면 해당 주를 초기 weekStart 로.
+  const initialWeekStart = useMemo(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      const parsed = new Date(dateParam + 'T00:00:00');
+      if (!Number.isNaN(parsed.getTime())) return startOfWeek(parsed);
+    }
+    return startOfWeek(new Date());
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps -- 의도적으로 mount 시점만 사용
+  const [weekStart, setWeekStart] = useState<Date>(initialWeekStart);
+
+  // mount 직후 ?date 쿼리는 제거 — 한 번만 의미가 있고 새로고침 시 잔존하면 혼란.
+  useEffect(() => {
+    if (searchParams.get('date')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('date');
+      setSearchParams(next, { replace: true });
+    }
+  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
   const [entries, setEntries] = useState<DayEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState<number>(0);
+  const [keyword, setKeyword] = useState('');
 
   const weekDates = useMemo(() => Array.from({ length: 5 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const weekStartIso = isoDate(weekStart);
@@ -96,6 +116,26 @@ export function WorkLogPage() {
   const goNext = () => setWeekStart((w) => addDays(w, 7));
   const goThis = () => setWeekStart(startOfWeek(new Date()));
 
+  // 키워드 매칭 day index 집합. 빈 키워드면 빈 Set (강조 안 함).
+  const matchedDays = useMemo(() => {
+    const kw = keyword.trim().toLowerCase();
+    if (!kw) return new Set<number>();
+    const acc = new Set<number>();
+    entries.forEach((e, i) => {
+      if (`${e.done} ${e.plan} ${e.issues}`.toLowerCase().includes(kw)) acc.add(i);
+    });
+    return acc;
+  }, [entries, keyword]);
+
+  // 키워드 입력 시 첫 매칭 day 로 자동 이동.
+  useEffect(() => {
+    if (matchedDays.size > 0 && !matchedDays.has(selectedIdx)) {
+      const first = Math.min(...matchedDays);
+      setSelectedIdx(first);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [keyword]);
+
   const weekEnd = addDays(weekStart, 4);
   const selectedEntry = entries[selectedIdx];
   const selectedDate = weekDates[selectedIdx];
@@ -115,6 +155,21 @@ export function WorkLogPage() {
             {isoDate(weekStart)} (월) ~ {isoDate(weekEnd)} (금)
           </span>
         </div>
+        <div className="ml-auto relative w-64">
+          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+          <input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="이번 주 본문 검색…"
+            className={`${inputClass} pl-7 py-1.5 text-sm`}
+          />
+          {keyword && (
+            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-muted">
+              {matchedDays.size}/5
+            </span>
+          )}
+        </div>
       </header>
 
       {loading ? (
@@ -129,6 +184,8 @@ export function WorkLogPage() {
                 date={weekDates[idx]}
                 entry={entry}
                 selected={idx === selectedIdx}
+                matched={matchedDays.has(idx)}
+                dimmed={keyword.trim() !== '' && !matchedDays.has(idx)}
                 onSelect={() => setSelectedIdx(idx)}
               />
             ))}
@@ -150,23 +207,27 @@ export function WorkLogPage() {
 }
 
 function PreviewCard({
-  dayLabel, date, entry, selected, onSelect,
+  dayLabel, date, entry, selected, matched, dimmed, onSelect,
 }: {
   dayLabel: string;
   date: Date;
   entry: DayEntry;
   selected: boolean;
+  matched?: boolean;
+  dimmed?: boolean;
   onSelect: () => void;
 }) {
   const isToday = isoDate(date) === isoDate(new Date());
   const borderCls = selected
     ? 'border-accent ring-1 ring-accent'
-    : 'border-default hover:border-strong';
+    : matched
+      ? 'border-accent-2 ring-1 ring-accent-2/40'
+      : 'border-default hover:border-strong';
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`text-left bg-surface border rounded-lg overflow-hidden transition-colors flex flex-col h-full ${borderCls}`}
+      className={`text-left bg-surface border rounded-lg overflow-hidden transition-all flex flex-col h-full ${borderCls} ${dimmed ? 'opacity-50' : ''}`}
     >
       <div className={`px-3 py-2 border-b border-default flex items-baseline gap-2 shrink-0 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>

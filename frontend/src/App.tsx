@@ -13,6 +13,7 @@ import { ResourcesPage } from './pages/ResourcesPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
+import { CommandPalette } from './components/CommandPalette';
 import { applyTheme, applyMarkdownStyle, loadSettings } from './store/settings';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <CommandPalette />
       <Layout>
         <Routes>
           <Route path="/" element={<ProjectList />} />
