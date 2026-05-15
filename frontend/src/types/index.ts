@@ -78,15 +78,19 @@ export interface Meeting {
   decisions: string;
   discussion: string;
   actionItems: string;
+  markdownPath?: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type DevInfoStorageMode = 'Copy' | 'Reference';
 
 export interface DevInfoItem {
   id: number;
   projectId: number;
   title: string;
   type: DevInfoType;
+  storageMode: DevInfoStorageMode;
   content: string;
   filePath: string;
   url: string;

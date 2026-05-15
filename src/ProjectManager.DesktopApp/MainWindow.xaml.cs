@@ -148,6 +148,32 @@ public partial class MainWindow : Window
                 });
                 WebView.CoreWebView2.PostWebMessageAsJson(response);
             }
+            else if (type == "pickFile")
+            {
+                var requestId = doc.RootElement.TryGetProperty("requestId", out var rid) ? rid.GetString() : null;
+                var initialDir = doc.RootElement.TryGetProperty("initialDir", out var idEl) ? idEl.GetString() : null;
+                var title = doc.RootElement.TryGetProperty("title", out var tEl) ? tEl.GetString() : null;
+
+                var dlg = new OpenFileDialog
+                {
+                    Title = string.IsNullOrEmpty(title) ? "파일 선택" : title,
+                    Multiselect = false,
+                    CheckFileExists = true,
+                };
+                if (!string.IsNullOrEmpty(initialDir) && Directory.Exists(initialDir))
+                    dlg.InitialDirectory = initialDir;
+
+                var ok = dlg.ShowDialog(this) == true;
+                var picked = ok ? dlg.FileName : null;
+
+                var response = JsonSerializer.Serialize(new
+                {
+                    type = "pickFileResult",
+                    requestId,
+                    path = picked,
+                });
+                WebView.CoreWebView2.PostWebMessageAsJson(response);
+            }
         }
         catch (System.Exception ex)
         {

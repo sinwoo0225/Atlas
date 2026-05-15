@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, RefreshCw, Calendar, NotebookPen } from 'lucide-react';
+import { Activity, RefreshCw, Calendar, NotebookPen, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
@@ -175,6 +175,7 @@ export function MonitoringPage() {
           loading={loading}
           onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
           variant="muted"
+          exportable
         />
         <WeeklySection
           title="이번 주 업무일지"
@@ -182,37 +183,111 @@ export function MonitoringPage() {
           loading={loading}
           onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
           variant="current"
+          exportable
         />
       </div>
     </div>
   );
 }
 
+function buildWeeklyMarkdown(data: WeeklyWorkLog): string {
+  const weekStart = data.weekStart.slice(0, 10);
+  // 종료일 = 주 시작 + 4일 (월~금)
+  const start = new Date(weekStart);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 4);
+  const endIso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+
+  const fields: { key: 'done' | 'plan' | 'issues'; label: string }[] = [
+    { key: 'done',   label: '한 일' },
+    { key: 'plan',   label: '계획' },
+    { key: 'issues', label: '이슈' },
+  ];
+
+  const lines: string[] = [];
+  lines.push(`# 업무일지 (${weekStart} ~ ${endIso})`);
+  lines.push('');
+
+  if (data.projects.length === 0) {
+    lines.push('_(기록 없음)_');
+    return lines.join('\n');
+  }
+
+  for (const p of data.projects) {
+    lines.push(`## ${p.projectName}`);
+    lines.push('');
+    for (const d of p.days) {
+      const hasAny = fields.some((f) => (d[f.key] ?? '').trim() !== '');
+      if (!hasAny) continue;
+      const dateShort = d.date.slice(5, 10).replace('-', '/');
+      lines.push(`### ${d.dayLabel} (${dateShort})`);
+      for (const f of fields) {
+        const val = (d[f.key] ?? '').trim();
+        if (!val) continue;
+        lines.push(`**${f.label}**:`);
+        lines.push('');
+        lines.push(val);
+        lines.push('');
+      }
+    }
+  }
+  return lines.join('\n');
+}
+
+function downloadWeeklyMarkdown(data: WeeklyWorkLog) {
+  const md = buildWeeklyMarkdown(data);
+  const weekStart = data.weekStart.slice(0, 10);
+  const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `worklog-${weekStart}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 type WeeklyVariant = 'current' | 'muted';
 
 function WeeklySection({
-  title, data, loading, onProjectClick, variant = 'current',
+  title, data, loading, onProjectClick, variant = 'current', exportable = false,
 }: {
   title: string;
   data: WeeklyWorkLog | null;
   loading: boolean;
   onProjectClick: (id: number) => void;
   variant?: WeeklyVariant;
+  exportable?: boolean;
 }) {
   const muted = variant === 'muted';
   const titleCls = muted ? 'text-secondary' : 'text-primary';
   const iconCls = muted ? 'text-muted' : 'text-accent';
+  const canExport = exportable && data && data.projects.length > 0;
   return (
     <section className="space-y-3">
-      <h2 className={`h-section flex items-center gap-2 ${titleCls}`}>
-        <NotebookPen size={16} className={iconCls} />
-        {title}
-        {data && (
-          <span className="text-xs text-muted font-normal">
-            ({data.weekStart.slice(0, 10)} 주)
-          </span>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className={`h-section flex items-center gap-2 ${titleCls}`}>
+          <NotebookPen size={16} className={iconCls} />
+          {title}
+          {data && (
+            <span className="text-xs text-muted font-normal">
+              ({data.weekStart.slice(0, 10)} 주)
+            </span>
+          )}
+        </h2>
+        {canExport && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => downloadWeeklyMarkdown(data!)}
+            leadingIcon={<Download size={14} />}
+            title="md 파일로 내보내기"
+          >
+            md 내보내기
+          </Button>
         )}
-      </h2>
+      </div>
       {loading ? (
         <Spinner label="불러오는 중..." />
       ) : !data || data.projects.length === 0 ? (

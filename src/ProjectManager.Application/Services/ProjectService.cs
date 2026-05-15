@@ -181,9 +181,11 @@ public class ProjectService(
     internal static MeetingDto MeetingToDto(Meeting m) => new(
         m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime,
         m.Attendees, m.Topic,
-        m.Decisions, m.Discussion, m.ActionItems, m.CreatedAt, m.UpdatedAt);
+        m.Decisions, m.Discussion, m.ActionItems,
+        m.MarkdownPath,
+        m.CreatedAt, m.UpdatedAt);
 
     internal static DevInfoItemDto DevInfoToDto(DevInfoItem d) => new(
-        d.Id, d.ProjectId, d.Title, d.Type, d.Content,
+        d.Id, d.ProjectId, d.Title, d.Type, d.StorageMode, d.Content,
         d.FilePath, d.Url, d.Tags, d.CreatedAt, d.UpdatedAt);
 }

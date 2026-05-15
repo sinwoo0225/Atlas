@@ -12,6 +12,8 @@ public class Meeting
     public string Decisions { get; set; } = string.Empty;
     public string Discussion { get; set; } = string.Empty;
     public string ActionItems { get; set; } = string.Empty;
+    // 저장 시 자동 export 된 md 파일의 절대경로 (없으면 null).
+    public string? MarkdownPath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

@@ -28,5 +28,19 @@ public class PathResolver
         return folder;
     }
 
+    public string GetMeetingsFolder(string projectFolder)
+    {
+        var folder = Path.Combine(projectFolder, "Meetings");
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+
+    public string GetDevInfoFolder(string projectFolder)
+    {
+        var folder = Path.Combine(projectFolder, "DevInfo");
+        Directory.CreateDirectory(folder);
+        return folder;
+    }
+
     public string GetDatabasePath() => Path.Combine(_basePath, "projectmanager.db");
 }

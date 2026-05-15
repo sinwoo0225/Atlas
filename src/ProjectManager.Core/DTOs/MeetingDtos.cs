@@ -5,6 +5,7 @@ public record MeetingDto(
     string? StartTime, string? EndTime,
     string Attendees, string Topic, string Decisions,
     string Discussion, string ActionItems,
+    string? MarkdownPath,
     DateTime CreatedAt, DateTime UpdatedAt);
 
 public record CreateMeetingDto(

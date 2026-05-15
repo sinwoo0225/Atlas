@@ -20,7 +20,7 @@ export function isHostBridgeAvailable(): boolean {
 
 let counter = 0;
 
-interface PickFolderResult {
+interface PickResult {
   type?: string;
   requestId?: string;
   path?: string | null;
@@ -39,7 +39,7 @@ export function pickFolder(initialPath?: string): Promise<string | null> {
     const requestId = `pickFolder-${++counter}-${Date.now()}`;
 
     const onMessage = (e: MessageEvent) => {
-      const data = e.data as PickFolderResult | null | undefined;
+      const data = e.data as PickResult | null | undefined;
       if (!data || typeof data !== 'object') return;
       if (data.type !== 'pickFolderResult' || data.requestId !== requestId) return;
       bridge.removeEventListener('message', onMessage);
@@ -48,5 +48,33 @@ export function pickFolder(initialPath?: string): Promise<string | null> {
     bridge.addEventListener('message', onMessage);
 
     bridge.postMessage({ type: 'pickFolder', requestId, initialPath });
+  });
+}
+
+export function pickFile(opts?: { initialDir?: string; title?: string }): Promise<string | null> {
+  return new Promise((resolve) => {
+    const bridge = window.chrome?.webview;
+    if (!bridge) {
+      resolve(null);
+      return;
+    }
+
+    const requestId = `pickFile-${++counter}-${Date.now()}`;
+
+    const onMessage = (e: MessageEvent) => {
+      const data = e.data as PickResult | null | undefined;
+      if (!data || typeof data !== 'object') return;
+      if (data.type !== 'pickFileResult' || data.requestId !== requestId) return;
+      bridge.removeEventListener('message', onMessage);
+      resolve(data.path ?? null);
+    };
+    bridge.addEventListener('message', onMessage);
+
+    bridge.postMessage({
+      type: 'pickFile',
+      requestId,
+      initialDir: opts?.initialDir,
+      title: opts?.title,
+    });
   });
 }

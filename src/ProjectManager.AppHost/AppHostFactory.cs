@@ -34,6 +34,7 @@ public static class AppHostFactory
         builder.Services.AddSingleton(bootstrap);
         builder.Services.AddSingleton(pathResolver);
         builder.Services.AddSingleton<DevFilesStorage>();
+        builder.Services.AddSingleton<MeetingMarkdownExporter>();
 
         builder.Services.AddDbContext<AppDbContext>(opt =>
             opt.UseSqlite($"Data Source={pathResolver.GetDatabasePath()}"));

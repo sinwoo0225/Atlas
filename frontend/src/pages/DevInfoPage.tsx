@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload } from 'lucide-react';
+import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
-import type { DevInfoItem, DevInfoType, Project } from '../types';
+import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
+import { isHostBridgeAvailable, pickFile } from '../utils/hostBridge';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
@@ -39,6 +40,7 @@ function DevInfoForm({
   const [form, setForm] = useState({
     title: initial?.title ?? '',
     type: initial?.type ?? 'Markdown' as DevInfoType,
+    storageMode: initial?.storageMode ?? 'Copy' as DevInfoStorageMode,
     content: initial?.content ?? '',
     filePath: initial?.filePath ?? '',
     url: initial?.url ?? '',
@@ -46,7 +48,9 @@ function DevInfoForm({
   });
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const bridgeAvailable = isHostBridgeAvailable();
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
 
   const handleSubmit = async () => {
     const payload = { projectId, ...form };
@@ -119,33 +123,85 @@ function DevInfoForm({
         )}
 
         {form.type === 'File' && (
-          <FormField label="파일 경로">
-            <div className="flex gap-2">
+          <>
+            <FormField label="저장 방식">
+              <div className="flex flex-col gap-2">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="storageMode"
+                    checked={form.storageMode === 'Copy'}
+                    onChange={() => { set('storageMode', 'Copy'); set('filePath', ''); }}
+                    className="mt-1"
+                  />
+                  <span className="text-sm">
+                    <span className="text-primary font-medium">데이터 폴더로 카피</span>
+                    <span className="text-xs text-muted ml-2">(권장 — 백업 zip 에 포함됨)</span>
+                    <span className="block text-xs text-muted">선택한 파일을 프로젝트 폴더의 DevFiles 로 복사합니다.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="storageMode"
+                    checked={form.storageMode === 'Reference'}
+                    onChange={() => { set('storageMode', 'Reference'); set('filePath', ''); }}
+                    className="mt-1"
+                  />
+                  <span className="text-sm">
+                    <span className="text-primary font-medium">원위치 경로만 저장</span>
+                    <span className="block text-xs text-muted">파일을 옮기지 않고 절대경로만 저장합니다. 백업 zip 에 포함되지 않으며, 원본이 이동/삭제되면 열 수 없습니다.</span>
+                  </span>
+                </label>
+              </div>
+            </FormField>
+
+            <FormField label="파일 경로">
+              <div className="flex gap-2">
+                <input
+                  value={form.filePath}
+                  onChange={(e) => set('filePath', e.target.value)}
+                  placeholder={form.storageMode === 'Reference' ? 'C:\\... (절대경로)' : '파일 찾기 후 자동 표시'}
+                  className={inputClass}
+                  readOnly={form.storageMode === 'Copy'}
+                />
+                {form.storageMode === 'Copy' ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    leadingIcon={<Upload size={16} />}
+                  >
+                    {uploading ? '업로드 중...' : '파일 찾기'}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      const path = await pickFile({ title: '원본 파일 선택' });
+                      if (path) set('filePath', path);
+                    }}
+                    disabled={!bridgeAvailable}
+                    leadingIcon={<FolderOpen size={16} />}
+                  >
+                    파일 선택
+                  </Button>
+                )}
+              </div>
+              {form.storageMode === 'Reference' && !bridgeAvailable && (
+                <p className="text-xs text-muted mt-1">데스크톱 앱에서만 네이티브 다이얼로그를 쓸 수 있어요. 브라우저에서는 경로를 직접 입력하세요.</p>
+              )}
               <input
-                value={form.filePath}
-                onChange={(e) => set('filePath', e.target.value)}
-                placeholder="C:\..."
-                className={inputClass}
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFileChosen(f);
+                }}
               />
-              <Button
-                variant="secondary"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                leadingIcon={<Upload size={16} />}
-              >
-                {uploading ? '업로드 중...' : '파일 찾기'}
-              </Button>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleFileChosen(f);
-              }}
-            />
-          </FormField>
+            </FormField>
+          </>
         )}
 
         {form.type === 'Link' && (
