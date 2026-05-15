@@ -10,6 +10,18 @@ public sealed class BootstrapConfig
     [JsonPropertyName("dataFolder")]
     public string? DataFolder { get; set; }
 
+    // "Local" (기본, InProcessHost) | "Client" (원격 Atlas-Server 에 붙음)
+    [JsonPropertyName("mode")]
+    public string Mode { get; set; } = "Local";
+
+    // Client 모드에서만 의미. 예: "http://atlas.intranet:5200"
+    [JsonPropertyName("serverUrl")]
+    public string? ServerUrl { get; set; }
+
+    // Client 모드에서 X-Atlas-Key 헤더로 전송. 서버가 ATLAS_API_KEY 와 비교.
+    [JsonPropertyName("apiKey")]
+    public string? ApiKey { get; set; }
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,

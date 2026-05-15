@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.HasMany(x => x.WbsItems).WithOne(x => x.Project).HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.WbsVersions).WithOne(x => x.Project).HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.ChangeLogs).WithOne(x => x.Project).HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
@@ -32,6 +33,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).IsRequired().HasMaxLength(300);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne(x => x.Version).WithMany(x => x.WbsItems).HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.SetNull);
         });
@@ -40,30 +42,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Content).IsRequired();
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Meeting>(e =>
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Topic).IsRequired().HasMaxLength(300);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<DevInfoItem>(e =>
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Resource>(e =>
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
         });
 
         modelBuilder.Entity<Issue>(e =>
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.HasOne(x => x.Project).WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.AssigneeResource).WithMany().HasForeignKey(x => x.AssigneeResourceId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => x.ProjectId);
@@ -73,6 +80,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<WorkLog>(e =>
         {
             e.HasKey(x => x.Id);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.HasOne(x => x.Project).WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.ProjectId, x.Date }).IsUnique();
         });

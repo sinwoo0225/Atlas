@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Save, Settings as SettingsIcon, FolderOpen } from 'lucide-react';
+import { Save, Settings as SettingsIcon, FolderOpen, Server, Plug } from 'lucide-react';
 import {
   loadSettings,
   saveSettings,
@@ -14,12 +14,29 @@ import {
 import { useProjectStore } from '../store/useProjectStore';
 import { Button, Card, FormField, inputClass } from '../components/ui';
 import { systemApi, type DataFolderInfo, type DataFolderPreview } from '../api/system';
-import { pickFolder, isHostBridgeAvailable } from '../utils/hostBridge';
+import {
+  pickFolder,
+  isHostBridgeAvailable,
+  getConnectionConfig,
+  setConnectionConfig,
+  testServerConnection,
+  type ConnectionConfig,
+  type ConnectionMode,
+} from '../utils/hostBridge';
 
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings());
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
   const { projects } = useProjectStore();
+
+  useEffect(() => {
+    // 페이지 진입 시 현재 연결 모드 로드 — DataFolderSection 가시성 결정에도 사용.
+    getConnectionConfig().then((c) => {
+      if (c) setConnectionMode(c.mode);
+      else setConnectionMode('Local'); // 브릿지 미가용 환경(dev) 은 Local 로 가정
+    });
+  }, []);
 
   useEffect(() => {
     applyTheme(settings.theme);
@@ -151,7 +168,17 @@ export function SettingsPage() {
         </FormField>
       </Section>
 
-      <DataFolderSection />
+      <ConnectionModeSection onModeChanged={setConnectionMode} />
+
+      {connectionMode === 'Local' && <DataFolderSection />}
+      {connectionMode === 'Client' && (
+        <Section title="데이터">
+          <p className="text-sm text-secondary">
+            Client 모드에서는 데이터 폴더를 서버가 관리합니다. 서버 측 <code>%LOCALAPPDATA%\Atlas\config.json</code> 의
+            <code> dataFolder </code> 를 편집해 변경하세요.
+          </p>
+        </Section>
+      )}
 
       <Section title="초기화">
         <FormField
@@ -171,6 +198,171 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="h-card mb-4">{title}</h2>
       <div className="space-y-4">{children}</div>
     </Card>
+  );
+}
+
+function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: ConnectionMode) => void }) {
+  const bridgeAvailable = isHostBridgeAvailable();
+  // 브릿지 미가용 환경은 진입 시점에 이미 로드 완료로 간주 — 비동기 작업이 없음.
+  const [loaded, setLoaded] = useState(() => !bridgeAvailable);
+  const [draft, setDraft] = useState<ConnectionConfig>({ mode: 'Local', serverUrl: '', apiKey: '' });
+  const [savedConfig, setSavedConfig] = useState<ConnectionConfig | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (!bridgeAvailable) return;
+    getConnectionConfig().then((c) => {
+      if (c) {
+        const initial: ConnectionConfig = {
+          mode: c.mode,
+          serverUrl: c.serverUrl ?? '',
+          apiKey: c.apiKey ?? '',
+        };
+        setDraft(initial);
+        setSavedConfig(initial);
+      }
+      setLoaded(true);
+    });
+  }, [bridgeAvailable]);
+
+  const isDirty = savedConfig !== null && (
+    draft.mode !== savedConfig.mode ||
+    (draft.serverUrl ?? '') !== (savedConfig.serverUrl ?? '') ||
+    (draft.apiKey ?? '') !== (savedConfig.apiKey ?? '')
+  );
+
+  const handleTest = async () => {
+    if (!draft.serverUrl) return;
+    setTesting(true);
+    setTestResult(null);
+    const r = await testServerConnection(draft.serverUrl, draft.apiKey || null);
+    setTesting(false);
+    if (!r) {
+      setTestResult({ ok: false, message: '호스트 브릿지를 사용할 수 없습니다 (데스크톱 앱에서만 가능)' });
+      return;
+    }
+    if (r.ok) setTestResult({ ok: true, message: '연결 성공' });
+    else if (r.status === 401) setTestResult({ ok: false, message: 'API 키가 일치하지 않습니다 (HTTP 401)' });
+    else if (r.status > 0) setTestResult({ ok: false, message: `서버 응답 오류: HTTP ${r.status}` });
+    else setTestResult({ ok: false, message: r.error ?? '연결 실패 (네트워크 오류)' });
+  };
+
+  const handleSave = async () => {
+    setBusy(true);
+    const res = await setConnectionConfig({
+      mode: draft.mode,
+      serverUrl: draft.serverUrl?.trim() || null,
+      apiKey: draft.apiKey?.trim() || null,
+    });
+    setBusy(false);
+    if (res?.saved) {
+      setSavedConfig(draft);
+      setSavedAt(Date.now());
+      onModeChanged(draft.mode);
+      setTimeout(() => setSavedAt(null), 4000);
+    }
+  };
+
+  return (
+    <Section title="연결 방식">
+      {!bridgeAvailable && (
+        <p className="text-sm text-muted">
+          데스크톱 앱에서만 변경할 수 있습니다. 브라우저(dev) 에서는 Local 모드로 동작합니다.
+        </p>
+      )}
+      {bridgeAvailable && loaded && (
+        <>
+          <FormField label="모드" hint="Local 은 Atlas.exe 안에서 인프로세스로 동작. Client 는 원격 Atlas-Server 에 붙습니다.">
+            <div className="flex flex-col gap-2">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="connMode"
+                  checked={draft.mode === 'Local'}
+                  onChange={() => setDraft((d) => ({ ...d, mode: 'Local' }))}
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="text-primary font-medium inline-flex items-center gap-1.5">
+                    <Server size={14} /> Local (기본)
+                  </span>
+                  <span className="block text-xs text-muted">이 머신의 SQLite 파일에 직접 저장. 단일 사용자.</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="connMode"
+                  checked={draft.mode === 'Client'}
+                  onChange={() => setDraft((d) => ({ ...d, mode: 'Client' }))}
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="text-primary font-medium inline-flex items-center gap-1.5">
+                    <Plug size={14} /> Client (원격 서버 연결)
+                  </span>
+                  <span className="block text-xs text-muted">팀원과 공유. 서버 머신에서 Atlas-Server 가 떠 있어야 합니다.</span>
+                </span>
+              </label>
+            </div>
+          </FormField>
+
+          {draft.mode === 'Client' && (
+            <>
+              <FormField label="서버 URL" hint="예: http://atlas.intranet:5200 (사내 LAN 평문 HTTP 가정)">
+                <input
+                  value={draft.serverUrl ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, serverUrl: e.target.value }))}
+                  placeholder="http://host:5200"
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label="API 키" hint="서버 운영자가 공유한 공용 시크릿 (X-Atlas-Key 헤더). 비워두면 보내지 않습니다.">
+                <input
+                  type="password"
+                  value={draft.apiKey ?? ''}
+                  onChange={(e) => setDraft((d) => ({ ...d, apiKey: e.target.value }))}
+                  placeholder="(선택)"
+                  className={inputClass}
+                />
+              </FormField>
+              <FormField label="연결 테스트">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    onClick={handleTest}
+                    disabled={testing || !draft.serverUrl}
+                  >
+                    {testing ? '테스트 중...' : '테스트'}
+                  </Button>
+                  {testResult && (
+                    <span className={`text-xs ${testResult.ok ? 'text-on-success' : 'text-on-danger'}`}>
+                      {testResult.message}
+                    </span>
+                  )}
+                </div>
+              </FormField>
+            </>
+          )}
+
+          <div className="flex items-center gap-2">
+            <Button variant="primary" onClick={handleSave} disabled={busy || !isDirty}>
+              {busy ? '저장 중...' : '저장'}
+            </Button>
+            {savedAt && (
+              <span className="text-xs text-on-warning">저장됨 — Atlas 를 재시작해야 적용됩니다.</span>
+            )}
+            {isDirty && !savedAt && (
+              <span className="text-xs text-muted">변경 사항 있음</span>
+            )}
+          </div>
+        </>
+      )}
+    </Section>
   );
 }
 

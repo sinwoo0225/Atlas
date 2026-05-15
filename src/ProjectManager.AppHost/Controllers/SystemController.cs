@@ -10,6 +10,11 @@ public class SystemController : ControllerBase
 {
     public record SetDataFolderRequest(string Path);
 
+    // 클라이언트 연결 테스트용 — Phase B 의 API 키 미들웨어가 가로채면 401 로 변환되어
+    // 클라가 "키 불일치" 를 구분할 수 있다. Local InProcessHost 에서는 미들웨어 없으므로 그냥 200.
+    [HttpGet("ping")]
+    public IActionResult Ping() => Ok(new { ok = true, server = "atlas", apiVersion = 1 });
+
     [HttpGet("data-folder")]
     public IActionResult GetDataFolder()
     {

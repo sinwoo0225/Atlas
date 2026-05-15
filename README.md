@@ -39,8 +39,17 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 데이터 위치:
 
 - 기본값: `%USERPROFILE%\Documents\ProjectManager\` — SQLite DB (`projectmanager.db`) + 프로젝트별 파일 폴더.
-- 설정 > 데이터 > 저장 위치 에서 다른 폴더로 변경 가능 (예: 본인 멀티 디바이스용 외부 드라이브, 사내 SMB 공유 폴더). 변경 후에는 Atlas 재시작이 필요합니다.
+- 설정 > 데이터 > 저장 위치 에서 다른 폴더로 변경 가능 (예: 본인 멀티 디바이스용 외부 드라이브). 변경 후에는 Atlas 재시작이 필요합니다.
 - 백업: 폴더 전체를 복사하거나, 앱 대시보드의 "백업" 버튼으로 프로젝트 단위 zip 생성.
+
+다중 사용자 (Client 모드):
+
+같은 데이터를 팀이 같이 보려면 한 머신에서 `Atlas-Server.exe` 를 띄우고 다른 머신의 `Atlas.exe` 들이 그 서버에 붙는 방식입니다.
+
+- **서버**: 릴리스의 `Atlas-Server-*.zip` 을 풀고 `run-server.cmd` 의 `ATLAS_API_KEY` 를 팀 공유 시크릿으로 바꾼 뒤 실행. 기본 5200 포트로 listen. 5200 인바운드 방화벽 허용 필요. 서버 머신의 `%LOCALAPPDATA%\Atlas\config.json` 의 `dataFolder` 가 진실 — 운영자가 직접 편집.
+- **클라이언트**: `Atlas.exe` 실행 후 설정 > 연결 방식 → Client 선택 → 서버 URL (예: `http://atlas.intranet:5200`) + API 키 입력 → "테스트" → 저장 → Atlas 재시작.
+- 같은 항목을 두 사람이 거의 동시에 편집하면 한쪽이 409 응답을 받습니다 (낙관적 동시성 토큰). 새로고침 후 재시도.
+- TLS 는 평문 HTTP (사내 LAN 가정). 인터넷 노출이 필요하면 외부 reverse proxy + TLS 권장.
 
 ## 개발 환경
 
@@ -81,9 +90,10 @@ npm run lint
 ```powershell
 ./publish.ps1            # publish/Atlas.exe + publish/wwwroot + Atlas-YYYYMMDD_HHMMSS.zip
 ./publish.ps1 -SkipZip   # zip 생성 생략
+./publish.ps1 -Server    # publish/server/Atlas-Server.exe (Client 모드 서버용) + Atlas-Server-YYYYMMDD_HHMMSS.zip
 ```
 
-산출물은 단일 self-contained `Atlas.exe` 입니다 — WebService 가 인프로세스 AppHost 로 통합되어 별도 백엔드 exe 가 필요 없습니다.
+기본 산출물은 단일 self-contained `Atlas.exe` 입니다 — WebService 가 인프로세스 AppHost 로 통합되어 별도 백엔드 exe 가 필요 없습니다. `-Server` 옵션은 별도로 standalone `Atlas-Server.exe` 를 만들어 다중 사용자 환경의 서버 머신에 배포합니다.
 
 ## 아키텍처
 
@@ -147,8 +157,17 @@ Requirements:
 Data location:
 
 - Default: `%USERPROFILE%\Documents\ProjectManager\` — SQLite DB (`projectmanager.db`) plus per-project file folders.
-- You can point this to a different folder (e.g. an external drive, a corporate SMB share) from Settings > Data > Storage location. A restart is required after changing it.
+- You can point this to a different folder (e.g. an external drive) from Settings > Data > Storage location. A restart is required after changing it.
 - Backup: copy the entire folder, or use the dashboard's "Backup" button to produce a per-project zip.
+
+Multi-user (Client mode):
+
+To let a team share the same data, run `Atlas-Server.exe` on one machine and have other machines' `Atlas.exe` connect to it.
+
+- **Server**: extract `Atlas-Server-*.zip` from the release, edit `ATLAS_API_KEY` in `run-server.cmd` to a shared team secret, run it. Listens on port 5200; allow inbound. The server's `%LOCALAPPDATA%\Atlas\config.json` (`dataFolder` field) is authoritative — edit it directly to relocate.
+- **Client**: launch `Atlas.exe`, go to Settings > Connection mode → Client, enter the server URL (e.g. `http://atlas.intranet:5200`) and API key, "Test", Save, restart Atlas.
+- Two people editing the same item nearly simultaneously will see one of them get a 409 response (optimistic concurrency token). Refresh and retry.
+- TLS is plain HTTP (corporate LAN assumed). For internet exposure, put a reverse proxy with TLS in front.
 
 ### Development
 
@@ -185,9 +204,10 @@ npm run lint
 ```powershell
 ./publish.ps1            # publish/Atlas.exe + publish/wwwroot + Atlas-YYYYMMDD_HHMMSS.zip
 ./publish.ps1 -SkipZip   # skip the zip step
+./publish.ps1 -Server    # publish/server/Atlas-Server.exe (Client-mode server) + Atlas-Server-YYYYMMDD_HHMMSS.zip
 ```
 
-The output is a single self-contained `Atlas.exe` — the WebService is folded into an in-process AppHost, so there is no separate backend executable.
+The default output is a single self-contained `Atlas.exe` — the WebService is folded into an in-process AppHost, so there is no separate backend executable. The `-Server` switch additionally builds a standalone `Atlas-Server.exe` for deployment to the server machine in multi-user setups.
 
 ### Architecture
 

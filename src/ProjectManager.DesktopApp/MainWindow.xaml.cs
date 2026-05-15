@@ -8,12 +8,16 @@ using System.Windows.Interop;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Win32;
+using ProjectManager.Infrastructure.Config;
 
 namespace ProjectManager.DesktopApp;
 
 public partial class MainWindow : Window
 {
     private InProcessHost? _host;
+    // 두 모드 공통: /api/* 요청을 어디로 보낼지. Local 모드는 _host.Client, Client 모드는 원격 Atlas-Server.
+    private HttpClient? _apiClient;
+    private bool _ownsApiClient; // Client 모드에서 우리가 직접 만든 HttpClient 면 Dispose 해야 함.
     private string _wwwroot = "";
     private const string VirtualHost = "atlas.local";
     private static readonly string AppUrl = $"https://{VirtualHost}/index.html";
@@ -58,8 +62,22 @@ public partial class MainWindow : Window
     {
         try
         {
-            _host = new InProcessHost();
-            await _host.StartAsync();
+            var bootstrap = BootstrapConfig.Load();
+            if (string.Equals(bootstrap.Mode, "Client", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(bootstrap.ServerUrl))
+            {
+                // Client 모드: 인프로세스 호스팅 없음. 원격 서버로만 프록시.
+                _apiClient = BuildRemoteClient(bootstrap.ServerUrl!, bootstrap.ApiKey);
+                _ownsApiClient = true;
+            }
+            else
+            {
+                // Local 모드 (기본): TestServer 기반 인프로세스 호스팅.
+                _host = new InProcessHost();
+                await _host.StartAsync();
+                _apiClient = _host.Client;
+                _ownsApiClient = false;
+            }
             await InitializeWebViewAsync();
         }
         catch (System.Exception ex)
@@ -67,6 +85,19 @@ public partial class MainWindow : Window
             StatusText.Text = $"앱 시작 실패:\n{ex.Message}";
             MessageBox.Show(ex.ToString(), "오류", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private static HttpClient BuildRemoteClient(string serverUrl, string? apiKey)
+    {
+        var client = new HttpClient
+        {
+            BaseAddress = new Uri(serverUrl.TrimEnd('/') + "/"),
+            // 일부 요청(백업 zip 다운로드 등)이 길어질 수 있으니 넉넉하게.
+            Timeout = TimeSpan.FromMinutes(10),
+        };
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            client.DefaultRequestHeaders.Add("X-Atlas-Key", apiKey);
+        return client;
     }
 
     private async Task InitializeWebViewAsync()
@@ -174,11 +205,104 @@ public partial class MainWindow : Window
                 });
                 WebView.CoreWebView2.PostWebMessageAsJson(response);
             }
+            else if (type == "getConnectionConfig")
+            {
+                // 로컬 머신의 BootstrapConfig 를 그대로 반환. SettingsPage 가 API 가 아닌
+                // 호스트 브릿지를 거쳐야 하는 이유: Client 모드에서 SettingsPage 의 일반 API 호출은
+                // 원격 서버로 라우팅되어 서버 측 config 를 건드리게 된다. 연결 설정은 항상 클라 로컬.
+                var requestId = doc.RootElement.TryGetProperty("requestId", out var rid) ? rid.GetString() : null;
+                var cfg = BootstrapConfig.Load();
+                var response = JsonSerializer.Serialize(new
+                {
+                    type = "getConnectionConfigResult",
+                    requestId,
+                    mode = cfg.Mode,
+                    serverUrl = cfg.ServerUrl,
+                    apiKey = cfg.ApiKey,
+                });
+                WebView.CoreWebView2.PostWebMessageAsJson(response);
+            }
+            else if (type == "setConnectionConfig")
+            {
+                var requestId = doc.RootElement.TryGetProperty("requestId", out var rid) ? rid.GetString() : null;
+                var newMode = doc.RootElement.TryGetProperty("mode", out var mEl) ? mEl.GetString() : "Local";
+                var newUrl = doc.RootElement.TryGetProperty("serverUrl", out var uEl) ? uEl.GetString() : null;
+                var newKey = doc.RootElement.TryGetProperty("apiKey", out var kEl) ? kEl.GetString() : null;
+
+                var cfg = BootstrapConfig.Load();
+                cfg.Mode = string.Equals(newMode, "Client", StringComparison.OrdinalIgnoreCase) ? "Client" : "Local";
+                cfg.ServerUrl = string.IsNullOrWhiteSpace(newUrl) ? null : newUrl!.Trim().TrimEnd('/');
+                cfg.ApiKey = string.IsNullOrEmpty(newKey) ? null : newKey;
+                BootstrapConfig.Save(cfg);
+
+                var response = JsonSerializer.Serialize(new
+                {
+                    type = "setConnectionConfigResult",
+                    requestId,
+                    saved = true,
+                    requiresRestart = true,
+                });
+                WebView.CoreWebView2.PostWebMessageAsJson(response);
+            }
+            else if (type == "testServerConnection")
+            {
+                var requestId = doc.RootElement.TryGetProperty("requestId", out var rid) ? rid.GetString() : null;
+                var url = doc.RootElement.TryGetProperty("url", out var uEl) ? uEl.GetString() : null;
+                var key = doc.RootElement.TryGetProperty("apiKey", out var kEl) ? kEl.GetString() : null;
+
+                // fire-and-forget: 결과는 PostWebMessageAsJson 으로 회신.
+                _ = TestServerConnectionAsync(requestId, url, key);
+            }
         }
         catch (System.Exception ex)
         {
             TryLog($"[host-bridge-err] {ex.GetType().Name}: {ex.Message}");
         }
+    }
+
+    private async Task TestServerConnectionAsync(string? requestId, string? url, string? apiKey)
+    {
+        bool ok = false;
+        int status = 0;
+        string? error = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                error = "서버 URL 이 비어 있습니다.";
+            }
+            else
+            {
+                using var client = new HttpClient
+                {
+                    BaseAddress = new Uri(url!.TrimEnd('/') + "/"),
+                    Timeout = TimeSpan.FromSeconds(5),
+                };
+                var req = new HttpRequestMessage(HttpMethod.Get, "api/system/ping");
+                if (!string.IsNullOrWhiteSpace(apiKey))
+                    req.Headers.Add("X-Atlas-Key", apiKey);
+                using var resp = await client.SendAsync(req);
+                status = (int)resp.StatusCode;
+                ok = resp.IsSuccessStatusCode;
+                if (!ok) error = $"HTTP {status} {resp.ReasonPhrase}";
+            }
+        }
+        catch (System.Exception ex)
+        {
+            error = ex.Message;
+        }
+
+        var response = JsonSerializer.Serialize(new
+        {
+            type = "testServerConnectionResult",
+            requestId,
+            ok,
+            status,
+            error,
+        });
+        // UI 스레드로 돌아와 PostWebMessageAsJson 호출 — 핸들러는 STA 라 직접 호출 가능.
+        try { Dispatcher.Invoke(() => WebView.CoreWebView2.PostWebMessageAsJson(response)); }
+        catch { /* 셔다운 등으로 dispatcher 없으면 무시 */ }
     }
 
     private async void OnApiRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
@@ -239,7 +363,7 @@ public partial class MainWindow : Window
                 req.Content = content;
             }
 
-            using var resp = await _host!.Client.SendAsync(req);
+            using var resp = await _apiClient!.SendAsync(req);
             var bytes = await resp.Content.ReadAsByteArrayAsync();
             var statusCode = (int)resp.StatusCode;
             if (statusCode >= 400)
@@ -323,6 +447,11 @@ public partial class MainWindow : Window
 
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        if (_ownsApiClient)
+        {
+            _apiClient?.Dispose();
+            _apiClient = null;
+        }
         if (_host is not null)
         {
             await _host.DisposeAsync();

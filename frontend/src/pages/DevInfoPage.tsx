@@ -8,7 +8,7 @@ import { projectsApi } from '../api/projects';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
-import { isHostBridgeAvailable, pickFile } from '../utils/hostBridge';
+import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
@@ -49,6 +49,14 @@ function DevInfoForm({
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bridgeAvailable = isHostBridgeAvailable();
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('Local');
+  useEffect(() => {
+    getConnectionConfig().then((c) => { if (c) setConnectionMode(c.mode); });
+  }, []);
+  // Client 모드에서는 Reference 모드 비활성: 클라이언트가 고른 경로를 서버가 열 수 없음.
+  // 기존 Reference 항목을 편집 중이면 그대로 두되, 새로 만들 때는 Copy 만 선택지.
+  const isClientMode = connectionMode === 'Client';
+  const referenceForbidden = isClientMode && !(initial && initial.storageMode === 'Reference');
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
@@ -140,17 +148,21 @@ function DevInfoForm({
                     <span className="block text-xs text-muted">선택한 파일을 프로젝트 폴더의 DevFiles 로 복사합니다.</span>
                   </span>
                 </label>
-                <label className="flex items-start gap-2 cursor-pointer">
+                <label className={`flex items-start gap-2 ${referenceForbidden ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
                   <input
                     type="radio"
                     name="storageMode"
                     checked={form.storageMode === 'Reference'}
+                    disabled={referenceForbidden}
                     onChange={() => { set('storageMode', 'Reference'); set('filePath', ''); }}
                     className="mt-1"
                   />
                   <span className="text-sm">
                     <span className="text-primary font-medium">원위치 경로만 저장</span>
                     <span className="block text-xs text-muted">파일을 옮기지 않고 절대경로만 저장합니다. 백업 zip 에 포함되지 않으며, 원본이 이동/삭제되면 열 수 없습니다.</span>
+                    {referenceForbidden && (
+                      <span className="block text-xs text-on-warning mt-1">Client 모드에서는 사용할 수 없습니다 — 클라이언트가 고른 경로를 서버가 열 수 없기 때문.</span>
+                    )}
                   </span>
                 </label>
               </div>
