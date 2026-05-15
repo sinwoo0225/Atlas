@@ -1,0 +1,164 @@
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { X } from 'lucide-react';
+import type { Resource } from '../types';
+import { parseAssigneeTokens, serializeAssigneeTokens } from '../utils/assigneeTokens';
+
+interface Props {
+  value: string;
+  onChange: (next: string) => void;
+  resources: Resource[];
+  placeholder?: string;
+}
+
+export function AssigneeTagInput({ value, onChange, resources, placeholder }: Props) {
+  const tokens = useMemo(() => parseAssigneeTokens(value), [value]);
+  const [draft, setDraft] = useState('');
+  const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(-1);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = useMemo(() => {
+    const q = draft.trim().toLowerCase();
+    const taken = new Set(tokens);
+    return resources
+      .filter((r) => !taken.has(r.name))
+      .filter((r) => (q ? r.name.toLowerCase().includes(q) : true))
+      .slice(0, 8);
+  }, [draft, resources, tokens]);
+
+  // Clamp activeIdx into valid range on render (no effect needed).
+  const safeActiveIdx = activeIdx >= suggestions.length ? suggestions.length - 1 : activeIdx;
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        const d = draft.trim();
+        if (d && !tokens.includes(d)) {
+          onChange(serializeAssigneeTokens([...tokens, d]));
+        }
+        setDraft('');
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [open, draft, tokens, onChange]);
+
+  const commitToken = (name: string) => {
+    const t = name.trim();
+    if (!t) return;
+    if (tokens.includes(t)) {
+      setDraft('');
+      return;
+    }
+    onChange(serializeAssigneeTokens([...tokens, t]));
+    setDraft('');
+    setActiveIdx(-1);
+  };
+
+  const commitDraft = () => {
+    if (draft.trim()) commitToken(draft);
+  };
+
+  const removeAt = (idx: number) => {
+    const next = tokens.filter((_, i) => i !== idx);
+    onChange(serializeAssigneeTokens(next));
+    inputRef.current?.focus();
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      if (open && safeActiveIdx >= 0 && safeActiveIdx < suggestions.length) {
+        commitToken(suggestions[safeActiveIdx].name);
+      } else {
+        commitDraft();
+      }
+      return;
+    }
+    if (e.key === 'Backspace' && draft === '' && tokens.length > 0) {
+      e.preventDefault();
+      removeAt(tokens.length - 1);
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setOpen(true);
+      setActiveIdx((i) => Math.min(i + 1, suggestions.length - 1));
+      return;
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, -1));
+      return;
+    }
+    if (e.key === 'Escape') {
+      setOpen(false);
+      setActiveIdx(-1);
+    }
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <div
+        className="w-full flex flex-wrap items-center gap-1.5 px-2 py-1.5 text-sm rounded-md bg-surface-2 border border-default focus-within:border-strong transition-colors min-h-[38px]"
+        onClick={() => inputRef.current?.focus()}
+      >
+        {tokens.map((t, i) => (
+          <span
+            key={`${t}-${i}`}
+            className="inline-flex items-center gap-1 rounded bg-neutral-soft text-on-neutral px-2 py-0.5 text-xs font-medium"
+          >
+            {t}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeAt(i);
+              }}
+              className="text-muted hover:text-on-danger transition-colors"
+              aria-label={`${t} 제거`}
+            >
+              <X size={11} />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={draft}
+          onChange={(e) => {
+            setDraft(e.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          placeholder={tokens.length === 0 ? (placeholder ?? '이름 입력 후 Enter / 콤마') : ''}
+          className="flex-1 min-w-[120px] bg-transparent outline-none text-sm py-0.5"
+        />
+      </div>
+      {open && suggestions.length > 0 && (
+        <ul className="absolute left-0 right-0 top-full mt-1 z-20 max-h-56 overflow-y-auto rounded-md border border-default bg-surface shadow-lg">
+          {suggestions.map((r, i) => (
+            <li
+              key={r.id}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                commitToken(r.name);
+                inputRef.current?.focus();
+              }}
+              onMouseEnter={() => setActiveIdx(i)}
+              className={`px-3 py-1.5 text-sm cursor-pointer flex items-center justify-between ${
+                i === safeActiveIdx ? 'bg-surface-2 text-primary' : 'text-secondary hover:bg-surface-2'
+              }`}
+            >
+              <span>{r.name}</span>
+              {r.department && <span className="text-xs text-muted">{r.department}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

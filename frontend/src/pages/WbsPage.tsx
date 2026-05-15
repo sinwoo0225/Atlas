@@ -5,6 +5,7 @@ import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
+import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { wbsImportanceBadge } from '../utils/statusMaps';
 import { GanttChart } from './wbs/GanttChart';
@@ -66,19 +67,13 @@ function WbsItemForm({
             <FormField label="작업명" required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="담당자 (리소스 선택)">
-              <input
+            <FormField label="담당자 (여러 명: Enter / 콤마로 구분)">
+              <AssigneeTagInput
                 value={form.assignee}
-                onChange={(e) => set('assignee', e.target.value)}
-                list="wbs-assignee-list"
-                placeholder="이름을 직접 입력하거나 리소스에서 선택"
-                className={inputClass}
+                onChange={(v) => set('assignee', v)}
+                resources={resources}
+                placeholder="이름 입력 후 Enter / 콤마, 또는 목록에서 선택"
               />
-              <datalist id="wbs-assignee-list">
-                {resources.map((r) => (
-                  <option key={r.id} value={r.name}>{r.department ? `${r.department}` : ''}</option>
-                ))}
-              </datalist>
             </FormField>
             <div className="grid grid-cols-2 gap-3">
               <FormField label="시작일">

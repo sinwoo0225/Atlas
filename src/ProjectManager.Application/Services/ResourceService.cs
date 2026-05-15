@@ -63,13 +63,21 @@ public class ResourceService(IResourceRepository repo, AppDbContext db)
         var name = resource.Name;
         if (string.IsNullOrWhiteSpace(name)) return Enumerable.Empty<ResourceAssignmentDto>();
 
-        var items = await db.WbsItems
-            .Where(w => w.Assignee == name)
+        // Assignee 는 콤마로 여러 명을 직렬화한 단일 문자열일 수 있다 ("Alice, Bob").
+        // SQL Contains 로 후보를 추린 뒤, 메모리에서 콤마 split + 정확 일치로 false positive 제거.
+        var candidates = await db.WbsItems
+            .Where(w => w.Assignee != null && w.Assignee.Contains(name))
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .OrderByDescending(x => x.w.UpdatedAt)
             .ToListAsync();
 
-        return items.Select(x => new ResourceAssignmentDto(
+        var matched = candidates.Where(x =>
+            x.w.Assignee
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Any(part => string.Equals(part, name, StringComparison.Ordinal)));
+
+        return matched.Select(x => new ResourceAssignmentDto(
             x.w.Id, x.w.ProjectId, x.p.Name,
             x.w.Name, x.w.StartDate, x.w.EndDate, x.w.Status));
     }
