@@ -18,6 +18,7 @@
   --border-default:  #3f3f46;
   --border-strong:   #52525b;
   --accent:          #9eb2ce;   /* steel blue family — Atlas 워드마크와 톤 일치, 인디고보다 부드러움 */
+  --accent-hover:    #b2c2d8;   /* --accent 보다 살짝 밝게 — primary 버튼 hover */
   --accent-2:        #fbbf24;
   --accent-soft:     rgba(158, 178, 206, 0.18);
   --success:         #34d399;
@@ -42,6 +43,7 @@
   --text-on-danger:  #fca5a5;
   --text-on-info:    #93c5fd;
   --text-on-neutral: #d4d4d8;
+  --text-on-accent:  #0f172a;     /* 다크의 --accent (밝은 steel blue) 위 어두운 글씨 — WCAG AAA */
 
   /* Focus ring — 키보드 포커스 가시화 */
   --ring-accent:     rgba(158, 178, 206, 0.7);
@@ -60,6 +62,7 @@ html.light {
   --border-default:  #d1d5db;
   --border-strong:   #9ca3af;
   --accent:          #5b7299;   /* steel blue family (라이트 모드) */
+  --accent-hover:    #6b82a8;   /* --accent 보다 살짝 밝게 — primary 버튼 hover */
   --accent-2:        #d97706;
   --accent-soft:     rgba(91, 114, 153, 0.12);
   --success:         #059669;
@@ -82,6 +85,7 @@ html.light {
   --text-on-danger:  #b91c1c;
   --text-on-info:    #1d4ed8;
   --text-on-neutral: #374151;
+  --text-on-accent:  #ffffff;     /* 라이트의 --accent (어두운 steel blue) 위 흰 글씨 — WCAG AA */
 
   --ring-accent:     rgba(91, 114, 153, 0.5);
 }
@@ -120,6 +124,7 @@ body {
 .bg-surface    { background-color: var(--bg-surface); }
 .bg-surface-2  { background-color: var(--bg-surface-2); }
 .bg-surface-3  { background-color: var(--bg-surface-3); }
+.bg-accent      { background-color: var(--accent); }
 .bg-accent-soft { background-color: var(--accent-soft); }
 
 .text-primary   { color: var(--text-primary); }
@@ -137,6 +142,8 @@ body {
 .hover\:bg-surface:hover     { background-color: var(--bg-surface); }
 .hover\:bg-surface-2:hover   { background-color: var(--bg-surface-2); }
 .hover\:bg-surface-3:hover   { background-color: var(--bg-surface-3); }
+.hover\:bg-accent:hover         { background-color: var(--accent); }
+.hover\:bg-accent-hover:hover   { background-color: var(--accent-hover); }
 .hover\:text-primary:hover   { color: var(--text-primary); }
 .hover\:text-secondary:hover { color: var(--text-secondary); }
 .hover\:text-muted:hover     { color: var(--text-muted); }
@@ -228,6 +235,7 @@ html.light .cmd-hit mark {
 .text-on-danger  { color: var(--text-on-danger); }
 .text-on-info    { color: var(--text-on-info); }
 .text-on-neutral { color: var(--text-on-neutral); }
+.text-on-accent  { color: var(--text-on-accent); }
 
 /* Inputs/buttons inherit theme by default */
 input, select, textarea {
