@@ -184,10 +184,12 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
   const sourceWbsLabel = sourceWbsItemId != null ? findItemName(sourceWbsItemId, wbsItems) : null;
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-2xl my-4 space-y-3">
-        <h2 className="h-section">{initial ? '변경 이력 수정' : '변경 이력 추가'}</h2>
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <Card padding="spacious" className="w-full max-w-2xl h-[85vh] flex flex-col">
+        <h2 className="h-section shrink-0 mb-3">{initial ? '변경 이력 수정' : '변경 이력 추가'}</h2>
 
+        {/* 콘텐츠 영역 — picker 펼침이 모달 외관 안 흔들도록 내부 스크롤로 흡수 */}
+        <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <FormField label="날짜">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
@@ -325,7 +327,9 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
           )}
         </div>
 
-        <div className="flex gap-2 justify-end pt-2 border-t border-default">
+        </div>{/* 콘텐츠 영역 끝 */}
+
+        <div className="flex gap-2 justify-end pt-3 mt-3 border-t border-default shrink-0">
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
           <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
