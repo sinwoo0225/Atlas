@@ -12,7 +12,7 @@ import {
   type AttendeeOrg,
   type ActionItem,
 } from '../utils/meetingHelpers';
-import { Button, Card, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
@@ -118,11 +118,21 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   };
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-[95vw] my-4">
-        <h2 className="h-section mb-5">{initial ? '회의록 수정' : '회의록 작성'}</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4">
+    <Modal
+      open
+      onClose={onCancel}
+      title={initial ? '회의록 수정' : '회의록 작성'}
+      size="wide"
+      fixedHeight
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+        </>
+      }
+    >
+      <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4 min-h-full">
           {/* 좌측 */}
           <div className="space-y-3">
             <div className="grid grid-cols-12 gap-3">
@@ -293,8 +303,8 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
             </div>
           </div>
 
-          {/* 우측 - 논의 내용 (마크다운) */}
-          <FormField label="논의 내용 (마크다운 지원, 포커스 아웃 시 렌더링)">
+          {/* 우측 - 논의 내용 (마크다운). 모달 우측 공간 끝까지 채움. */}
+          <FormField label="논의 내용 (마크다운 지원, 포커스 아웃 시 렌더링)" className="flex-1 flex flex-col min-h-0">
             {discussionEditing || !discussion ? (
               <textarea
                 value={discussion}
@@ -302,27 +312,21 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                 onKeyDown={(e) => applyTextareaTab(e, setDiscussion)}
                 onFocus={() => setDiscussionEditing(true)}
                 onBlur={() => setDiscussionEditing(false)}
-                rows={28}
-                className={`${inputClass} resize-none font-mono`}
+                className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
                 autoFocus={discussionEditing}
               />
             ) : (
               <div
                 onClick={() => setDiscussionEditing(true)}
-                className="markdown-body min-h-[400px] max-h-[65vh] overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+                className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
                 <ReactMarkdown>{discussion}</ReactMarkdown>
               </div>
             )}
           </FormField>
         </div>
-
-        <div className="flex gap-2 justify-end pt-5 mt-5 border-t border-default">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }
 

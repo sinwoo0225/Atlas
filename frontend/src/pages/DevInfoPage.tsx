@@ -7,7 +7,7 @@ import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Uploa
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
-import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
@@ -97,10 +97,20 @@ function DevInfoForm({
   };
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-2xl space-y-4 my-4">
-        <h2 className="h-section">{initial ? '정보 수정' : '개발 정보 추가'}</h2>
-
+    <Modal
+      open
+      onClose={onCancel}
+      title={initial ? '정보 수정' : '개발 정보 추가'}
+      size="lg"
+      fixedHeight
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+        </>
+      }
+    >
+      <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2 space-y-4">
         <FormField label="제목" required>
           <input value={form.title} onChange={(e) => set('title', e.target.value)} className={inputClass} />
         </FormField>
@@ -242,13 +252,8 @@ function DevInfoForm({
             placeholder="API, 설계, 문서"
           />
         </FormField>
-
-        <div className="flex gap-2 justify-end pt-3 border-t border-default">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }
 

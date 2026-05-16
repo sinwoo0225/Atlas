@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -94,10 +94,20 @@ function WbsItemForm({
   };
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card padding="spacious" className="w-full max-w-3xl h-[85vh] flex flex-col">
-        <h2 className="h-section mb-4 shrink-0">{initial ? '작업 수정' : '작업 추가'}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
+    <Modal
+      open
+      onClose={onCancel}
+      title={initial ? '작업 수정' : '작업 추가'}
+      size="xl"
+      fixedHeight
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+        </>
+      }
+    >
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
           {/* 좌측 - 기본 필드. picker 펼침 시 picker 영역이 남은 공간 다 차지 (flex-1). */}
           <div className="flex flex-col gap-3 min-h-0">
             <FormField label="작업명" required>
@@ -198,12 +208,7 @@ function WbsItemForm({
             </FormField>
           </div>
         </div>
-        <div className="flex gap-2 justify-end pt-4 border-t border-default mt-4 shrink-0">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
-        </div>
-      </Card>
-    </div>
+    </Modal>
   );
 }
 
@@ -311,21 +316,27 @@ function DateEditModal({
   };
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card padding="spacious" className="w-full max-w-md space-y-3">
-        <h2 className="h-section">날짜 수정 — {item.name}</h2>
+    <Modal
+      open
+      onClose={onCancel}
+      title={`날짜 수정 — ${item.name}`}
+      size="sm"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>저장</Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
         <FormField label="시작일">
           <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className={inputClass} />
         </FormField>
         <FormField label="종료일">
           <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className={inputClass} />
         </FormField>
-        <div className="flex gap-2 justify-end pt-2 border-t border-default">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>저장</Button>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }
 

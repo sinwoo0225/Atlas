@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import type { Resource, ResourceType, ResourceAssignment } from '../types';
@@ -22,12 +22,19 @@ function ResourceForm({ initial, onSave, onCancel }: {
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-lg my-4 space-y-3">
-        <h2 className="h-section mb-2">
-          {initial?.id ? '리소스 수정' : '리소스 등록'}
-        </h2>
-
+    <Modal
+      open
+      onClose={onCancel}
+      title={initial?.id ? '리소스 수정' : '리소스 등록'}
+      size="md"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={() => onSave(form)} leadingIcon={<Save size={16} />}>저장</Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
         <FormField label="이름" required>
           <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
         </FormField>
@@ -70,13 +77,8 @@ function ResourceForm({ initial, onSave, onCancel }: {
             className={`${inputClass} resize-none`}
           />
         </FormField>
-
-        <div className="flex gap-2 justify-end pt-3 border-t border-default">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={() => onSave(form)} leadingIcon={<Save size={16} />}>저장</Button>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -93,46 +95,41 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
   }, [resource.id]);
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-2xl my-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="h-section">
-            {resource.name} — 할당된 작업
-          </h2>
-          <button onClick={onClose} className="p-1 text-muted hover:text-primary transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="py-6 flex justify-center"><Spinner label="불러오는 중..." /></div>
-        ) : error ? (
-          <p className="text-sm text-on-danger py-6 text-center">{error}</p>
-        ) : items.length === 0 ? (
-          <p className="text-sm text-muted py-6 text-center">할당된 작업이 없습니다.</p>
-        ) : (
-          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-            {items.map((a) => {
-              const status = wbsStatusBadge[a.status];
-              return (
-                <Card key={a.wbsItemId} padding="tight" variant="subtle">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted mb-1">{a.projectName}</p>
-                      <p className="text-sm text-primary font-medium">{a.wbsItemName}</p>
-                      <div className="flex gap-3 mt-1 text-xs text-muted">
-                        <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
-                      </div>
+    <Modal
+      open
+      onClose={onClose}
+      title={`${resource.name} — 할당된 작업`}
+      size="lg"
+      showCloseButton
+    >
+      {loading ? (
+        <div className="py-6 flex justify-center"><Spinner label="불러오는 중..." /></div>
+      ) : error ? (
+        <p className="text-sm text-on-danger py-6 text-center">{error}</p>
+      ) : items.length === 0 ? (
+        <p className="text-sm text-muted py-6 text-center">할당된 작업이 없습니다.</p>
+      ) : (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {items.map((a) => {
+            const status = wbsStatusBadge[a.status];
+            return (
+              <Card key={a.wbsItemId} padding="tight" variant="subtle">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted mb-1">{a.projectName}</p>
+                    <p className="text-sm text-primary font-medium">{a.wbsItemName}</p>
+                    <div className="flex gap-3 mt-1 text-xs text-muted">
+                      <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
                     </div>
-                    <Badge variant={status.variant} size="sm">{status.label}</Badge>
                   </div>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </Card>
-    </div>
+                  <Badge variant={status.variant} size="sm">{status.label}</Badge>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </Modal>
   );
 }
 

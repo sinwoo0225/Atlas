@@ -5,7 +5,7 @@ import { projectsApi } from '../api/projects';
 import { startPageApi } from '../api/startPage';
 import { useProjectStore } from '../store/useProjectStore';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
-import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { StartPageWidgets } from './projectList/StartPageWidgets';
 import { getRecent, type RecentItem } from '../utils/recentItems';
@@ -52,13 +52,25 @@ function ProjectForm({
   };
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-3xl my-4">
-        <h2 className="h-section mb-5">
-          {initial?.id ? '프로젝트 수정' : '새 프로젝트'}
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Modal
+      open
+      onClose={onCancel}
+      title={initial?.id ? '프로젝트 수정' : '새 프로젝트'}
+      size="xl"
+      fixedHeight
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>
+            취소
+          </Button>
+          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>
+            저장
+          </Button>
+        </>
+      }
+    >
+      <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-full">
           {/* 좌측 - 기본 정보 */}
           <div className="space-y-3">
             <FormField label="프로젝트명" required>
@@ -93,9 +105,9 @@ function ProjectForm({
             </FormField>
           </div>
 
-          {/* 우측 - 긴 텍스트 */}
-          <div className="space-y-3">
-            <FormField label="목표">
+          {/* 우측 - 긴 텍스트. 설명 textarea 가 남은 세로 공간 채움 */}
+          <div className="flex flex-col gap-3 min-h-0">
+            <FormField label="목표" className="shrink-0">
               <textarea
                 value={form.goal}
                 onChange={(e) => set('goal', e.target.value)}
@@ -103,27 +115,17 @@ function ProjectForm({
                 className={`${inputClass} resize-none`}
               />
             </FormField>
-            <FormField label="설명">
+            <FormField label="설명" className="flex-1 flex flex-col min-h-0">
               <textarea
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
-                rows={12}
-                className={`${inputClass} resize-none`}
+                className={`${inputClass} resize-none flex-1 min-h-0`}
               />
             </FormField>
           </div>
         </div>
-
-        <div className="flex gap-2 justify-end pt-5 mt-5 border-t border-default">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>
-            취소
-          </Button>
-          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>
-            저장
-          </Button>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }
 

@@ -46,6 +46,7 @@ export function CommandPalette() {
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const prevFocusRef = useRef<HTMLElement | null>(null);
   const navigate = useNavigate();
 
   useGlobalShortcut('mod+k', () => setOpen((v) => !v));
@@ -57,9 +58,16 @@ export function CommandPalette() {
       setActiveIndex(0);
       return;
     }
+    // 이전 focus 저장 — 닫힐 때 복원해서 위 모달의 ESC 라우팅이 자연스럽게.
+    prevFocusRef.current = document.activeElement as HTMLElement | null;
     // 패널이 막 열렸으면 input 에 포커스. 그 다음 프레임에 — autoFocus 만으로는 portal mount 타이밍 이슈.
     const id = window.setTimeout(() => inputRef.current?.focus(), 0);
-    return () => window.clearTimeout(id);
+    return () => {
+      window.clearTimeout(id);
+      // 닫힘 시 이전 포커스 복원 (열려있던 모달의 input 등). 모달 ESC 가 focus 위치로 판단하므로 핵심.
+      prevFocusRef.current?.focus?.();
+      prevFocusRef.current = null;
+    };
   }, [open]);
 
   useEffect(() => {

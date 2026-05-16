@@ -1,5 +1,6 @@
 export { Button } from './Button';
 export { Card } from './Card';
+export { Modal } from './Modal';
 export { Badge } from './Badge';
 export type { BadgeVariant } from './Badge';
 export { BadgeMenu } from './BadgeMenu';

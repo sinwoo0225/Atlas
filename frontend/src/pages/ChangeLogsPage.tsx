@@ -6,7 +6,7 @@ import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { issuesApi } from '../api/issues';
 import { wbsApi } from '../api/wbs';
-import { Button, Card, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { IssuePicker } from '../components/IssuePicker';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -184,13 +184,23 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
   const sourceWbsLabel = sourceWbsItemId != null ? findItemName(sourceWbsItemId, wbsItems) : null;
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card padding="spacious" className="w-full max-w-2xl h-[85vh] flex flex-col">
-        <h2 className="h-section shrink-0 mb-3">{initial ? '변경 이력 수정' : '변경 이력 추가'}</h2>
-
-        {/* 콘텐츠 영역 — picker 펼침이 모달 외관 안 흔들도록 내부 스크롤로 흡수 */}
-        <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+    <Modal
+      open
+      onClose={onCancel}
+      title={initial ? '변경 이력 수정' : '변경 이력 추가'}
+      size="lg"
+      fixedHeight
+      footer={
+        <>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+        </>
+      }
+    >
+      {/* 콘텐츠 영역 — flex col 로 회의록 영역이 남은 공간 채워 picker 펼침이
+          모달 전체에 스크롤 안 만들고 회의록 영역만 압축 */}
+      <div className="flex-1 min-h-0 flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3 shrink-0">
           <FormField label="날짜">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
           </FormField>
@@ -203,7 +213,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
           </FormField>
         </div>
 
-        <FormField label="변경 내용" required>
+        <FormField label="변경 내용" required className="shrink-0">
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
@@ -212,7 +222,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
           />
         </FormField>
 
-        <FormField label="관련 문서 링크 (한 줄에 하나)">
+        <FormField label="관련 문서 링크 (한 줄에 하나)" className="shrink-0">
           <textarea
             value={otherLinks}
             onChange={(e) => setOtherLinks(e.target.value)}
@@ -222,7 +232,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
         </FormField>
 
         {/* 출처 — 이 변경의 원인이 된 Issue / WBS. 둘 다 nullable 독립. */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 shrink-0">
           <FormField label="출처 Issue">
             <div className="flex items-center gap-1">
               <button
@@ -293,8 +303,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
           </FormField>
         </div>
 
-        <div>
-          <div className="flex items-center justify-between mb-1">
+        <div className="flex-1 min-h-0 flex flex-col">
+          <div className="flex items-center justify-between mb-1 shrink-0">
             <label className="block text-xs text-muted font-medium">관련 회의록</label>
             <span className="text-xs text-muted">
               {selectedMeetings.length}개 선택 / {meetings.length}개 중
@@ -304,12 +314,12 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
             value={meetingKeyword}
             onChange={(e) => setMeetingKeyword(e.target.value)}
             placeholder="회의록 검색 (주제/날짜)"
-            className={`${inputClass} mb-2`}
+            className={`${inputClass} mb-2 shrink-0`}
           />
           {meetings.length === 0 ? (
             <p className="text-xs text-muted">회의록이 없습니다.</p>
           ) : (
-            <div className="h-48 overflow-y-auto border border-default rounded-md p-2 space-y-1">
+            <div className="flex-1 min-h-0 overflow-y-auto border border-default rounded-md p-2 space-y-1">
               {filteredMeetings.length === 0 ? (
                 <p className="text-xs text-muted text-center py-2">검색 결과 없음</p>
               ) : filteredMeetings.map((m) => (
@@ -327,14 +337,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
           )}
         </div>
 
-        </div>{/* 콘텐츠 영역 끝 */}
-
-        <div className="flex gap-2 justify-end pt-3 mt-3 border-t border-default shrink-0">
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
-        </div>
-      </Card>
-    </div>
+      </div>{/* 콘텐츠 영역 끝 */}
+    </Modal>
   );
 }
 
