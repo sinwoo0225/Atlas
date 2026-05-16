@@ -83,3 +83,12 @@ public interface IActivityLogRepository
     Task<IEnumerable<ActivityLog>> GetAllAsync(int limit, int offset);
     Task<int> PruneOlderThanAsync(DateTime cutoffUtc);
 }
+
+public interface IIssueWbsLinkRepository
+{
+    Task<IEnumerable<IssueWbsLink>> GetByIssueAsync(int issueId);
+    Task<IEnumerable<IssueWbsLink>> GetByWbsItemAsync(int wbsItemId);
+    Task<IssueWbsLink?> GetAsync(int issueId, int wbsItemId);
+    Task<IssueWbsLink> CreateAsync(IssueWbsLink link);
+    Task<bool> DeleteAsync(int issueId, int wbsItemId);
+}

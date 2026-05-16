@@ -67,6 +67,7 @@ public static class AppHostFactory
         builder.Services.AddScoped<IIssueRepository, IssueRepository>();
         builder.Services.AddScoped<IWorkLogRepository, WorkLogRepository>();
         builder.Services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
+        builder.Services.AddScoped<IIssueWbsLinkRepository, IssueWbsLinkRepository>();
 
         builder.Services.AddScoped<ProjectService>();
         builder.Services.AddScoped<WbsService>();
@@ -79,6 +80,7 @@ public static class AppHostFactory
         builder.Services.AddScoped<ActivityLogService>();
         builder.Services.AddScoped<MonitoringService>();
         builder.Services.AddScoped<ActionItemPromotionService>();
+        builder.Services.AddScoped<IssueWbsLinkService>();
 
         builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
             p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));

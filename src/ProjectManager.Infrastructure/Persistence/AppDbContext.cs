@@ -18,6 +18,7 @@ public class AppDbContext(
     public DbSet<DevInfoItem> DevInfoItems => Set<DevInfoItem>();
     public DbSet<Resource> Resources => Set<Resource>();
     public DbSet<Issue> Issues => Set<Issue>();
+    public DbSet<IssueWbsLink> IssueWbsLinks => Set<IssueWbsLink>();
     public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
@@ -95,6 +96,19 @@ public class AppDbContext(
             e.HasOne(x => x.AssigneeResource).WithMany().HasForeignKey(x => x.AssigneeResourceId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => x.ProjectId);
             e.HasIndex(x => x.AssigneeResourceId);
+        });
+
+        modelBuilder.Entity<IssueWbsLink>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            e.HasOne(x => x.Issue).WithMany().HasForeignKey(x => x.IssueId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.WbsItem).WithMany().HasForeignKey(x => x.WbsItemId).OnDelete(DeleteBehavior.Cascade);
+            // 중복 링크 방지 + by-issue / by-wbs 조회 모두 인덱스 활용.
+            e.HasIndex(x => new { x.IssueId, x.WbsItemId }).IsUnique();
+            e.HasIndex(x => x.WbsItemId);
         });
 
         modelBuilder.Entity<WorkLog>(e =>

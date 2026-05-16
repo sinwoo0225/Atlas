@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search } from 'lucide-react';
+import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
@@ -15,9 +15,12 @@ import {
   hasAnyFilter, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
 import { WbsTreePicker } from '../components/WbsTreePicker';
+import { IssuePicker } from '../components/IssuePicker';
+import { issuesApi } from '../api/issues';
+import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { GanttChart } from './wbs/GanttChart';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import type { WbsItem, WbsVersion, Resource, WbsStatus } from '../types';
+import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue } from '../types';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
   return items.map((it) => {
@@ -34,10 +37,10 @@ type WbsFormData = {
 };
 
 function WbsItemForm({
-  projectId, versionId, parentId, initial, resources, allItems, onSave, onCancel
+  projectId, versionId, parentId, initial, resources, allItems, allIssues, onSave, onCancel
 }: {
   projectId: number; versionId?: number; parentId?: number;
-  initial?: WbsItem; resources: Resource[]; allItems: WbsItem[];
+  initial?: WbsItem; resources: Resource[]; allItems: WbsItem[]; allIssues: Issue[];
   onSave: () => void; onCancel: () => void;
 }) {
   const [form, setForm] = useState<WbsFormData>({
@@ -167,34 +170,119 @@ function WbsItemForm({
             )}
           </div>
 
-          {/* 우측 - 상세 정보 (마크다운). 세로 가득 — 모달 빈 공간 어색함 제거. */}
-          <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)" className="min-h-0">
-            {notesEditing || !form.notes ? (
-              <textarea
-                value={form.notes}
-                onChange={(e) => set('notes', e.target.value)}
-                onKeyDown={(e) => applyTextareaTab(e, (next) => set('notes', next))}
-                onFocus={() => setNotesEditing(true)}
-                onBlur={() => setNotesEditing(false)}
-                className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
-                placeholder="작업에 대한 상세 정보 (마크다운 지원)"
-                autoFocus={notesEditing}
-              />
-            ) : (
-              <div
-                onClick={() => setNotesEditing(true)}
-                className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
-              >
-                <ReactMarkdown>{form.notes}</ReactMarkdown>
-              </div>
+          {/* 우측 - 관련 Issue (수정 시) + 상세 정보 (마크다운). 마크다운이 세로 가득. */}
+          <div className="flex flex-col min-h-0 gap-3">
+            {initial && (
+              <RelatedIssuesSection wbsItemId={initial.id} projectId={projectId} allIssues={allIssues} />
             )}
-          </FormField>
+            <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)" className="min-h-0 flex-1">
+              {notesEditing || !form.notes ? (
+                <textarea
+                  value={form.notes}
+                  onChange={(e) => set('notes', e.target.value)}
+                  onKeyDown={(e) => applyTextareaTab(e, (next) => set('notes', next))}
+                  onFocus={() => setNotesEditing(true)}
+                  onBlur={() => setNotesEditing(false)}
+                  className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
+                  placeholder="작업에 대한 상세 정보 (마크다운 지원)"
+                  autoFocus={notesEditing}
+                />
+              ) : (
+                <div
+                  onClick={() => setNotesEditing(true)}
+                  className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+                >
+                  <ReactMarkdown>{form.notes}</ReactMarkdown>
+                </div>
+              )}
+            </FormField>
+          </div>
         </div>
         <div className="flex gap-2 justify-end pt-4 border-t border-default mt-4 shrink-0">
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
           <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
       </Card>
+    </div>
+  );
+}
+
+// WBS 항목의 관련 Issue 링크 목록 + 추가/해제. 모달 펼침 시 fetch.
+function RelatedIssuesSection({ wbsItemId, projectId, allIssues }: {
+  wbsItemId: number; projectId: number; allIssues: Issue[];
+}) {
+  const navigate = useNavigate();
+  const [links, setLinks] = useState<IssueWbsLink[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const load = () => issueWbsLinksApi.byWbs(wbsItemId).then(setLinks).catch(() => setLinks([]));
+  useEffect(() => { load(); }, [wbsItemId]);
+
+  const excludeIds = useMemo(() => new Set(links.map((l) => l.issueId)), [links]);
+
+  const handleAdd = async (issueId: number) => {
+    try {
+      await issueWbsLinksApi.create(issueId, wbsItemId);
+      setPickerOpen(false);
+      load();
+    } catch { /* api/client.ts 가 토스트 처리 */ }
+  };
+
+  const handleRemove = async (issueId: number, title: string) => {
+    if (!await confirmDialog({
+      title: '연결 해제',
+      message: `'${title}' 과(와) 의 연결을 해제하시겠습니까?`,
+      confirmLabel: '해제',
+    })) return;
+    await issueWbsLinksApi.delete(issueId, wbsItemId);
+    load();
+  };
+
+  return (
+    <div className={pickerOpen ? 'flex flex-col min-h-0 gap-1 flex-1' : 'shrink-0 flex flex-col gap-1'}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted font-medium flex items-center gap-1">
+          <ListChecks size={12} /> 관련 Issue ({links.length})
+        </p>
+        <Button variant="ghost" size="sm" onClick={() => setPickerOpen((v) => !v)} leadingIcon={<Plus size={12} />}>
+          {pickerOpen ? '닫기' : '연결 추가'}
+        </Button>
+      </div>
+      {links.length === 0 && !pickerOpen ? (
+        <p className="text-xs text-muted italic">연결된 Issue 없음</p>
+      ) : (
+        <ul className="space-y-1">
+          {links.map((l) => (
+            <li key={l.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${projectId}/issues?highlight=${l.issueId}`)}
+                className="flex-1 text-left text-primary hover:text-accent truncate transition-colors"
+              >
+                {l.issueTitle ?? `#${l.issueId}`}
+              </button>
+              <span className="text-xs text-muted shrink-0">#{l.issueId}</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(l.issueId, l.issueTitle ?? `#${l.issueId}`)}
+                className="p-0.5 text-on-danger hover:opacity-80 transition-opacity"
+                title="해제"
+              >
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {pickerOpen && (
+        <div className="mt-1 flex-1 min-h-0">
+          <IssuePicker
+            items={allIssues}
+            excludeIds={excludeIds}
+            onSelect={handleAdd}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -338,6 +426,7 @@ export function WbsPage() {
   const [items, setItems] = useState<WbsItem[]>([]);
   const [versions, setVersions] = useState<WbsVersion[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [allIssues, setAllIssues] = useState<Issue[]>([]);
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
   const [view, setView] = useState<'table' | 'gantt'>('table');
   const [showForm, setShowForm] = useState(false);
@@ -375,7 +464,9 @@ export function WbsPage() {
   useEffect(() => { load(); }, [pid, currentVersion]);
   useEffect(() => {
     resourcesApi.getAll().then(setResources).catch(() => setResources([]));
-  }, []);
+    // 관련 Issue picker 용 — 모달 열릴 때마다 다시 fetch 하지 않도록 한 번만.
+    issuesApi.getByProject(pid).then(setAllIssues).catch(() => setAllIssues([]));
+  }, [pid]);
 
   useHighlightFromQuery([items.length]);
 
@@ -562,6 +653,7 @@ export function WbsPage() {
           parentId={addingChildOf}
           resources={resources}
           allItems={items}
+          allIssues={allIssues}
           onSave={() => { setShowForm(false); setAddingChildOf(undefined); load(); }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
         />
@@ -572,6 +664,7 @@ export function WbsPage() {
           initial={editing}
           resources={resources}
           allItems={items}
+          allIssues={allIssues}
           onSave={() => { setEditing(null); load(); }}
           onCancel={() => setEditing(null)}
         />

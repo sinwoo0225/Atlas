@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { AlertTriangle, ChevronDown, ChevronRight, Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, ListTree, Plus, Search, X } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
+import { wbsApi } from '../api/wbs';
+import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { Button, Card, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
+import { WbsTreePicker } from '../components/WbsTreePicker';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import type { Issue, IssueStatus, IssuePriority, Resource } from '../types';
+import type { Issue, IssueStatus, IssuePriority, Resource, WbsItem } from '../types';
 
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
 const PRIORITY_VALUES: IssuePriority[] = ['High', 'Medium', 'Low'];
@@ -26,6 +29,7 @@ export function IssuesPage() {
   const pid = parseInt(projectId!);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
+  const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
   const [filter, setFilter] = useState<IssueStatus | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<IssuePriority | 'All'>('All');
   const [assigneeFilter, setAssigneeFilter] = useState<number | 'All' | 'Unassigned'>('All');
@@ -38,6 +42,8 @@ export function IssuesPage() {
   useEffect(() => {
     load();
     resourcesApi.getAll().then(setResources).catch(() => setResources([]));
+    // 모든 버전의 WBS 트리 로드 — 링크 picker 가 사용. 신규 링크 추가 후엔 따로 재로드 안 함 (트리는 변하지 않음).
+    wbsApi.getByProject(pid).then(setWbsItems).catch(() => setWbsItems([]));
   }, [pid]);
 
   useHighlightFromQuery([issues.length]);
@@ -213,6 +219,8 @@ export function IssuesPage() {
                 key={it.id}
                 issue={it}
                 resources={resources}
+                wbsItems={wbsItems}
+                projectId={pid}
                 expanded={expanded === it.id}
                 onToggleExpand={() => setExpanded((prev) => (prev === it.id ? null : it.id))}
                 onUpdate={updateField}
@@ -248,10 +256,12 @@ export function IssuesPage() {
 }
 
 function IssueRow({
-  issue, resources, expanded, onToggleExpand, onUpdate, onDelete,
+  issue, resources, wbsItems, projectId, expanded, onToggleExpand, onUpdate, onDelete,
 }: {
   issue: Issue;
   resources: Resource[];
+  wbsItems: WbsItem[];
+  projectId: number;
   expanded: boolean;
   onToggleExpand: () => void;
   onUpdate: <K extends keyof Issue>(id: number, key: K, value: Issue[K]) => void;
@@ -337,16 +347,103 @@ function IssueRow({
       {expanded && (
         <tr className="border-b border-default bg-surface-2/30">
           <td />
-          <td colSpan={6} className="py-3 px-3 pr-4">
-            <p className="text-xs text-muted font-medium mb-1">설명 (마크다운, 포커스 아웃 시 렌더링)</p>
-            <DescriptionField
-              value={issue.description ?? ''}
-              onSave={(next) => onUpdate(issue.id, 'description', next)}
-            />
+          <td colSpan={6} className="py-3 px-3 pr-4 space-y-3">
+            <div>
+              <p className="text-xs text-muted font-medium mb-1">설명 (마크다운, 포커스 아웃 시 렌더링)</p>
+              <DescriptionField
+                value={issue.description ?? ''}
+                onSave={(next) => onUpdate(issue.id, 'description', next)}
+              />
+            </div>
+            <RelatedWbsSection issueId={issue.id} projectId={projectId} wbsItems={wbsItems} />
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+// 한 Issue 의 관련 WBS 링크 목록 + 추가/해제. 펼침 행 안에서 항상 마운트되므로
+// 펼치는 순간 fetch.
+function RelatedWbsSection({ issueId, projectId, wbsItems }: {
+  issueId: number; projectId: number; wbsItems: WbsItem[];
+}) {
+  const navigate = useNavigate();
+  const [links, setLinks] = useState<IssueWbsLink[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const load = () => issueWbsLinksApi.byIssue(issueId).then(setLinks).catch(() => setLinks([]));
+  useEffect(() => { load(); }, [issueId]);
+
+  const excludeIds = useMemo(() => new Set(links.map((l) => l.wbsItemId)), [links]);
+
+  const handleAdd = async (wbsItemId: number) => {
+    try {
+      await issueWbsLinksApi.create(issueId, wbsItemId);
+      setPickerOpen(false);
+      load();
+    } catch { /* 토스트는 api/client.ts */ }
+  };
+
+  const handleRemove = async (wbsItemId: number, name: string) => {
+    if (!await confirmDialog({
+      title: '연결 해제',
+      message: `'${name}' 과(와) 의 연결을 해제하시겠습니까?`,
+      confirmLabel: '해제',
+      danger: false,
+    })) return;
+    await issueWbsLinksApi.delete(issueId, wbsItemId);
+    load();
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-muted font-medium flex items-center gap-1">
+          <ListTree size={12} /> 관련 WBS ({links.length})
+        </p>
+        <Button variant="ghost" size="sm" onClick={() => setPickerOpen((v) => !v)} leadingIcon={<Plus size={12} />}>
+          {pickerOpen ? '닫기' : '연결 추가'}
+        </Button>
+      </div>
+      {links.length === 0 && !pickerOpen ? (
+        <p className="text-xs text-muted italic">연결된 WBS 항목 없음</p>
+      ) : (
+        <ul className="space-y-1">
+          {links.map((l) => (
+            <li key={l.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${projectId}/wbs?highlight=${l.wbsItemId}`)}
+                className="flex-1 text-left text-primary hover:text-accent truncate transition-colors"
+              >
+                {l.wbsItemName ?? `#${l.wbsItemId}`}
+              </button>
+              <span className="text-xs text-muted shrink-0">#{l.wbsItemId}</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(l.wbsItemId, l.wbsItemName ?? `#${l.wbsItemId}`)}
+                className="p-0.5 text-on-danger hover:opacity-80 transition-opacity"
+                title="해제"
+              >
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {pickerOpen && (
+        <div className="mt-2 h-64">
+          <WbsTreePicker
+            items={wbsItems}
+            selectedId={null}
+            excludeIds={excludeIds}
+            showRoot={false}
+            onSelect={(id) => { if (id != null) handleAdd(id); }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
