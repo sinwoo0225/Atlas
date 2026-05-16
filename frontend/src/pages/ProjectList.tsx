@@ -237,14 +237,14 @@ export function ProjectList() {
                 <div className="flex items-start justify-between mb-2 gap-2">
                   <h3 className="font-medium text-primary group-hover:text-accent transition-colors min-w-0 truncate">{p.name}</h3>
                   <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleBackup(p)} title="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">
+                    <div className="flex gap-1">
+                      <button onClick={() => handleBackup(p)} title="백업" aria-label="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">
                         <Download size={14} />
                       </button>
-                      <button onClick={() => setEditing(p)} title="수정" className="p-1 text-muted hover:text-primary rounded transition-colors">
+                      <button onClick={() => setEditing(p)} title="수정" aria-label="수정" className="p-1 text-muted hover:text-primary rounded transition-colors">
                         <Pencil size={14} />
                       </button>
-                      <button onClick={() => handleDelete(p.id)} title="삭제" className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
+                      <button onClick={() => handleDelete(p.id)} title="삭제" aria-label="삭제" className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
                         <X size={14} />
                       </button>
                     </div>

@@ -236,11 +236,11 @@ export function ResourcesPage() {
                     : <Wrench size={16} className="text-on-warning" />}
                   <h3 className="font-medium text-primary">{r.name}</h3>
                 </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setEditing(r)} className="p-1 text-muted hover:text-primary transition-colors">
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button onClick={() => setEditing(r)} title="수정" aria-label="수정" className="p-1 text-muted hover:text-primary transition-colors">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={(e) => handleDelete(r.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
+                  <button onClick={(e) => handleDelete(r.id, e)} title="삭제" aria-label="삭제" className="p-1 text-on-danger hover:opacity-80 transition-opacity">
                     <X size={14} />
                   </button>
                 </div>
