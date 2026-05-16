@@ -6,7 +6,7 @@ import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
-import { Button, Card, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { Button, Card, Input, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
@@ -133,16 +133,16 @@ export function IssuesPage() {
         </div>
 
         <div className="flex gap-2 flex-wrap items-center">
-          <div className="relative w-56">
-            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input
-              type="search"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="제목·설명 검색…"
-              className={`${inputClass} pl-7 py-1.5 text-sm`}
-            />
-          </div>
+          <Input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="제목·설명 검색…"
+            leadingIcon={<Search size={14} />}
+            fullWidth={false}
+            wrapperClassName="w-56"
+            className="py-1.5 text-sm"
+          />
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as IssuePriority | 'All')}

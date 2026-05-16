@@ -7,7 +7,7 @@ import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Uploa
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
-import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
@@ -422,16 +422,16 @@ export function DevInfoPage() {
             </Button>
           );
         })}
-        <div className="relative ml-auto w-72">
-          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-          <input
-            type="search"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="제목·태그·본문 검색…"
-            className={`${inputClass} pl-7 py-1.5 text-sm`}
-          />
-        </div>
+        <Input
+          type="search"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="제목·태그·본문 검색…"
+          leadingIcon={<Search size={14} />}
+          fullWidth={false}
+          wrapperClassName="ml-auto w-72"
+          className="py-1.5 text-sm"
+        />
       </div>
 
       {availableTags.length > 0 && (

@@ -6,7 +6,7 @@ import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { issuesApi } from '../api/issues';
 import { wbsApi } from '../api/wbs';
-import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { IssuePicker } from '../components/IssuePicker';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -411,16 +411,16 @@ export function ChangeLogsPage() {
 
       {logs.length > 0 && (
         <div className="flex gap-2 flex-wrap items-center">
-          <div className="relative w-64">
-            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input
-              type="search"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="내용·작성자·문서 링크 검색…"
-              className={`${inputClass} pl-7 py-1.5 text-sm`}
-            />
-          </div>
+          <Input
+            type="search"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="내용·작성자·문서 링크 검색…"
+            leadingIcon={<Search size={14} />}
+            fullWidth={false}
+            wrapperClassName="w-64"
+            className="py-1.5 text-sm"
+          />
           <select
             value={impactFilter}
             onChange={(e) => setImpactFilter(e.target.value as ImpactLevel | 'All')}
