@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { Card } from './Card';
+import { confirmDialog } from './ConfirmDialog';
 
 type Size = 'sm' | 'md' | 'lg' | 'xl' | 'wide';
 
@@ -17,6 +18,8 @@ interface ModalProps {
   showCloseButton?: boolean;
   closeOnOverlayClick?: boolean;
   closeOnEsc?: boolean;
+  /** true 면 ESC/overlay/X 클릭 시 ConfirmDialog 로 변경사항 확인. 폼이 dirty 상태 관리해서 전달. */
+  dirty?: boolean;
   children: ReactNode;
 }
 
@@ -42,9 +45,25 @@ export function Modal({
   showCloseButton = false,
   closeOnOverlayClick = true,
   closeOnEsc = true,
+  dirty = false,
   children,
 }: ModalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // dirty 폼은 닫기 전 확인. 저장 버튼은 onClose 우회 (form 자체 onSubmit) — confirmDialog 없음.
+  const requestClose = useCallback(async () => {
+    if (!dirty) {
+      onClose();
+      return;
+    }
+    const ok = await confirmDialog({
+      title: '변경사항이 있습니다',
+      message: '저장하지 않은 변경사항이 사라집니다. 닫으시겠습니까?',
+      confirmLabel: '닫기',
+      danger: true,
+    });
+    if (ok) onClose();
+  }, [dirty, onClose]);
 
   // 초기 포커스 — ConfirmDialog 패턴 그대로. rAF 가 WebView2 의 focus race 회피.
   useEffect(() => {
@@ -76,7 +95,7 @@ export function Modal({
       if (active && active !== document.body && !root.contains(active)) return;
       e.preventDefault();
       e.stopPropagation();
-      onClose();
+      requestClose();
     };
     window.addEventListener('keydown', onEsc);
 
@@ -109,7 +128,7 @@ export function Modal({
       window.removeEventListener('keydown', onEsc);
       root.removeEventListener('keydown', onTab);
     };
-  }, [open, closeOnEsc, onClose]);
+  }, [open, closeOnEsc, requestClose]);
 
   // scroll-lock — 모달 열림 동안 배경 body 스크롤 차단. 다중 모달이 동시 열려도 카운터로 정합.
   useEffect(() => {
@@ -129,7 +148,7 @@ export function Modal({
     <div
       className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
       onMouseDown={(e) => {
-        if (closeOnOverlayClick && e.target === e.currentTarget) onClose();
+        if (closeOnOverlayClick && e.target === e.currentTarget) requestClose();
       }}
       role="dialog"
       aria-modal="true"
@@ -143,7 +162,7 @@ export function Modal({
               {showCloseButton && (
                 <button
                   type="button"
-                  onClick={onClose}
+                  onClick={() => requestClose()}
                   className="p-1 text-muted hover:text-primary transition-colors"
                   aria-label="닫기"
                 >

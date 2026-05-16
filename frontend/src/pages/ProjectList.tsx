@@ -27,7 +27,7 @@ function ProjectForm({
   onSave: (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     name: initial?.name ?? '',
     description: initial?.description ?? '',
     goal: initial?.goal ?? '',
@@ -38,7 +38,9 @@ function ProjectForm({
     participants: initial?.participants ?? '',
     deliverables: initial?.deliverables ?? '',
     relatedLinks: initial?.relatedLinks ?? '',
-  });
+  };
+  const [form, setForm] = useState(initialForm);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -58,6 +60,7 @@ function ProjectForm({
       title={initial?.id ? '프로젝트 수정' : '새 프로젝트'}
       size="xl"
       fixedHeight
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>
