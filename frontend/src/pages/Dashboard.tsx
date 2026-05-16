@@ -64,6 +64,14 @@ export function Dashboard() {
     daysLeft < 7 ? 'text-on-warning' :
     'text-on-success';
 
+  // KPI 산출
+  const workLogFilled = thisWeekWorkLog
+    ? thisWeekWorkLog.days.filter((d) => d.done || d.plan || d.issues).length
+    : 0;
+  const workLogTotal = thisWeekWorkLog?.days.length ?? 7;
+  const overdueCount = riskSignals.overdueWbs.length;
+  const dueSoonCount = riskSignals.dueSoonWbs.length;
+
   return (
     <div className="p-6 space-y-6">
       <Card padding="spacious">
@@ -75,39 +83,60 @@ export function Dashboard() {
             </div>
             {p.goal && <p className="text-sm text-secondary">{p.goal}</p>}
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Button
-              variant="secondary"
-              leadingIcon={<Download size={16} />}
-              title="프로젝트 백업"
-              onClick={async () => {
-                try { await projectsApi.backup(p.id, p.name); }
-                catch { toast.error('백업에 실패했습니다.'); }
-              }}
-            >
-              백업
-            </Button>
-            {daysLeft !== null && (
-              <div className={`text-right ${daysLeftTone}`}>
-                <p className="text-xl font-semibold">{Math.abs(daysLeft)}일</p>
-                <p className="text-xs">{daysLeft < 0 ? '초과' : '남음'}</p>
-              </div>
-            )}
+          <Button
+            variant="secondary"
+            leadingIcon={<Download size={16} />}
+            title="프로젝트 백업"
+            onClick={async () => {
+              try { await projectsApi.backup(p.id, p.name); }
+              catch { toast.error('백업에 실패했습니다.'); }
+            }}
+          >
+            백업
+          </Button>
+        </div>
+
+        {/* KPI 행 (P4-1) — D-day / 업무일지 채움 / 지연 / 임박 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+          <div className="border border-default rounded-md p-3">
+            <p className="text-xs text-muted">D-day</p>
+            <p className={`text-2xl font-semibold mt-0.5 ${daysLeftTone}`}>
+              {daysLeft === null ? '-' : `${daysLeft < 0 ? '+' : 'D-'}${Math.abs(daysLeft)}`}
+            </p>
+            <p className="text-xs text-muted">{daysLeft === null ? '종료일 미설정' : (daysLeft < 0 ? '초과' : '남음')}</p>
+          </div>
+          <div className="border border-default rounded-md p-3">
+            <p className="text-xs text-muted">이번 주 업무일지</p>
+            <p className="text-2xl font-semibold mt-0.5 text-primary">{workLogFilled}<span className="text-sm text-muted">/{workLogTotal}</span></p>
+            <p className="text-xs text-muted">채운 일수</p>
+          </div>
+          <div className="border border-default rounded-md p-3">
+            <p className="text-xs text-muted">지연된 WBS</p>
+            <p className={`text-2xl font-semibold mt-0.5 ${overdueCount > 0 ? 'text-on-danger' : 'text-muted'}`}>{overdueCount}</p>
+            <p className="text-xs text-muted">EndDate 초과</p>
+          </div>
+          <div className="border border-default rounded-md p-3">
+            <p className="text-xs text-muted">임박 마감</p>
+            <p className={`text-2xl font-semibold mt-0.5 ${dueSoonCount > 0 ? 'text-on-warning' : 'text-muted'}`}>{dueSoonCount}</p>
+            <p className="text-xs text-muted">~7일 내</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+
+        {/* 보조 정보 (시작일/종료일/예산/참여 인원) — KPI 보다 시각 약화 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-xs">
           {[
             { label: '시작일', value: p.startDate?.slice(0, 10) ?? '-' },
             { label: '종료일', value: p.endDate?.slice(0, 10) ?? '-' },
             { label: '예산', value: p.budget ? `${p.budget.toLocaleString()}원` : '-' },
             { label: '참여 인원', value: p.participants || '-' },
           ].map((item) => (
-            <div key={item.label} className="border border-default rounded-md p-3">
-              <p className="text-xs text-muted">{item.label}</p>
-              <p className="text-sm text-secondary mt-1">{item.value}</p>
+            <div key={item.label} className="flex justify-between items-baseline px-2">
+              <span className="text-muted">{item.label}</span>
+              <span className="text-secondary truncate ml-2">{item.value}</span>
             </div>
           ))}
         </div>
+
         {p.description && (
           <p className="text-sm text-secondary mt-4 border-t border-default pt-4 whitespace-pre-wrap">{p.description}</p>
         )}
