@@ -43,23 +43,21 @@ export function ConfirmDialogHost() {
   }, []);
 
   // 모달 열림 시 Cancel 버튼에 초기 포커스 — 실수로 Enter 눌러 삭제되는 사고 방지.
+  // <Button autoFocus> 가 일차 보장, rAF 가 이차 안전망 (WebView2 의 focus race 대응).
   useEffect(() => {
-    if (opts) {
-      // 다음 tick 에 포커스 — 모달 DOM 이 portal 로 mount 되고 나서.
-      const t = setTimeout(() => cancelRef.current?.focus(), 0);
-      return () => clearTimeout(t);
-    }
+    if (!opts) return;
+    const id = requestAnimationFrame(() => cancelRef.current?.focus());
+    return () => cancelAnimationFrame(id);
   }, [opts]);
 
+  // Escape 만 window 레벨로 잡음. Enter 는 포커스된 버튼의 native click 으로 자연스럽게 처리되도록 둔다 —
+  // window 핸들러로 Enter 를 항상 confirm 으로 잡으면 초기 포커스 설정이 무의미해진다.
   useEffect(() => {
     if (!opts) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         close(false);
-      } else if (e.key === 'Enter') {
-        e.preventDefault();
-        close(true);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -91,7 +89,7 @@ export function ConfirmDialogHost() {
           <p className="text-sm text-secondary mt-2 whitespace-pre-wrap">{opts.message}</p>
         )}
         <div className="flex justify-end gap-2 mt-5">
-          <Button ref={cancelRef} variant="secondary" onClick={() => close(false)}>
+          <Button ref={cancelRef} autoFocus variant="secondary" onClick={() => close(false)}>
             {opts.cancelLabel ?? '취소'}
           </Button>
           <Button variant={opts.danger ? 'danger' : 'primary'} onClick={() => close(true)}>
