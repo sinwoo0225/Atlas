@@ -652,13 +652,13 @@ export function ProjectMapPage() {
   const btnClass = (active: boolean) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border ${
       active
-        ? 'bg-[#5b7299] text-white border-[#6b82a8]'
+        ? 'bg-accent text-on-accent border-accent'
         : 'bg-surface-2 text-secondary border-default hover:bg-surface-3'
     }`;
 
   const modeBtnClass = (active: boolean) =>
     `px-3 py-1.5 text-sm transition-colors ${
-      active ? 'bg-[#5b7299] text-white' : 'text-secondary hover:bg-surface-3'
+      active ? 'bg-accent text-on-accent' : 'text-secondary hover:bg-surface-3'
     }`;
 
   const showTimelineEmpty = mode === 'timeline' && (!dateRange || elementCountInWindow(data, filter, effectiveWindow) === 0);

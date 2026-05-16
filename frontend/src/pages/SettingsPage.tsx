@@ -12,7 +12,7 @@ import {
   type ThemeMode,
 } from '../store/settings';
 import { useProjectStore } from '../store/useProjectStore';
-import { Button, Card, FormField, inputClass } from '../components/ui';
+import { Button, Card, FormField, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { systemApi, type DataFolderInfo, type DataFolderPreview } from '../api/system';
 import {
@@ -53,6 +53,8 @@ export function SettingsPage() {
 
   const handleSave = () => {
     saveSettings(settings);
+    // Toaster theme 등 동기화를 위해 App 에 알림 (P7-1)
+    window.dispatchEvent(new CustomEvent('atlas:settings-changed'));
     setSavedAt(Date.now());
     setTimeout(() => setSavedAt(null), 2000);
   };
@@ -89,10 +91,7 @@ export function SettingsPage() {
       </div>
 
       <Section title="외관">
-        <FormField
-          label="테마"
-          hint="라이트 테마는 일부 페이지에서 다크 위주로 디자인되어 있어 가독성이 떨어질 수 있습니다."
-        >
+        <FormField label="테마">
           <div className="flex gap-2">
             {(['dark', 'light'] as ThemeMode[]).map((t) => (
               <Button
@@ -356,8 +355,8 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
           )}
 
           <div className="flex items-center gap-2">
-            <Button variant="primary" onClick={handleSave} disabled={busy || !isDirty}>
-              {busy ? '저장 중...' : '저장'}
+            <Button variant="primary" onClick={handleSave} disabled={busy || !isDirty} leadingIcon={busy ? <Spinner size="sm" /> : undefined}>
+              {busy ? '저장 중' : '저장'}
             </Button>
             {savedAt && (
               <span className="text-xs text-on-warning">저장됨 — Atlas 를 재시작해야 적용됩니다.</span>
