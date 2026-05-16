@@ -17,10 +17,13 @@ import {
   Check,
   NotebookPen,
   Search,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadSettings, patchSettings } from '../store/settings';
 import { useRecentTracker } from '../hooks/useRecentTracker';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 
 const navItems = [
   { path: '/', label: '프로젝트 목록', Icon: FolderOpen },
@@ -127,7 +130,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { selectedProjectId, selectProject, projects } = useProjectStore();
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  const [collapsed, setCollapsed] = useState(() => loadSettings().sidebarCollapsed);
   useRecentTracker();
+
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      patchSettings({ sidebarCollapsed: next });
+      return next;
+    });
+  };
+  useGlobalShortcut('mod+b', toggleCollapsed);
 
   useEffect(() => {
     if (selectedProjectId !== null) return;
@@ -147,7 +160,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, [selectedProjectId]);
 
   const linkClass = (active: boolean) =>
-    `flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors border-l-2 ${
+    `flex items-center gap-2 ${collapsed ? 'px-2 justify-center' : 'px-3'} py-2 rounded-lg text-sm transition-colors border-l-2 ${
       active
         ? 'bg-accent-soft text-accent font-medium border-accent'
         : 'text-secondary hover:bg-surface-2 border-transparent'
@@ -155,47 +168,83 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-base text-primary">
-      <aside className="w-60 bg-sidebar border-r border-default flex flex-col shrink-0">
-        <div className="px-4 py-4 border-b border-default">
-          <h1 className="text-2xl leading-none tracking-tight">
-            <span className="logo-primary">At</span><span className="logo-accent">las</span>
-          </h1>
-          <p className="text-[11px] text-muted mt-1 tracking-wide">The map of your projects</p>
+      <aside className={`${collapsed ? 'w-14' : 'w-60'} bg-sidebar border-r border-default flex flex-col shrink-0 transition-all`}>
+        <div className={`${collapsed ? 'px-2' : 'px-4'} py-4 border-b border-default flex items-center justify-between gap-2`}>
+          {collapsed ? (
+            <h1 className="text-xl leading-none tracking-tight w-full text-center">
+              <span className="logo-primary">A</span><span className="logo-accent">t</span>
+            </h1>
+          ) : (
+            <div className="min-w-0">
+              <h1 className="text-2xl leading-none tracking-tight">
+                <span className="logo-primary">At</span><span className="logo-accent">las</span>
+              </h1>
+              <p className="text-[11px] text-muted mt-1 tracking-wide">The map of your projects</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            title={`사이드바 ${collapsed ? '펼치기' : '접기'} (Ctrl+B)`}
+            aria-label={`사이드바 ${collapsed ? '펼치기' : '접기'}`}
+            className="p-1 text-muted hover:text-primary transition-colors shrink-0"
+          >
+            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+          </button>
         </div>
 
-        <div className="px-3 pt-3">
-          <SearchTrigger />
-        </div>
+        {!collapsed && (
+          <>
+            <div className="px-3 pt-3">
+              <SearchTrigger />
+            </div>
 
-        <div className="px-3 pt-2">
-          <ProjectSwitcher />
-        </div>
+            <div className="px-3 pt-2">
+              <ProjectSwitcher />
+            </div>
+          </>
+        )}
 
-        <nav className="flex-1 px-3 pt-3 pb-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
           {navItems.map(({ path, label, Icon }) => {
             const active = location.pathname === path;
             return (
-              <Link key={path} to={path} className={linkClass(active)} aria-current={active ? 'page' : undefined}>
+              <Link
+                key={path}
+                to={path}
+                className={linkClass(active)}
+                aria-current={active ? 'page' : undefined}
+                title={collapsed ? label : undefined}
+              >
                 <Icon size={16} />
-                {label}
+                {!collapsed && label}
               </Link>
             );
           })}
 
           {selectedProject && (
             <>
-              <div className="pt-3 pb-1">
-                <p className="text-[10px] text-muted px-3 font-medium uppercase tracking-wider">
-                  프로젝트 메뉴
-                </p>
-              </div>
+              {!collapsed && (
+                <div className="pt-3 pb-1">
+                  <p className="text-[10px] text-muted px-3 font-medium uppercase tracking-wider">
+                    프로젝트 메뉴
+                  </p>
+                </div>
+              )}
+              {collapsed && <div className="border-t border-default mt-3 mb-1" />}
               {projectNavItems.map(({ path, label, Icon }) => {
                 const fullPath = `/projects/${selectedProjectId}/${path}`;
                 const active = location.pathname === fullPath;
                 return (
-                  <Link key={path} to={fullPath} className={linkClass(active)} aria-current={active ? 'page' : undefined}>
+                  <Link
+                    key={path}
+                    to={fullPath}
+                    className={linkClass(active)}
+                    aria-current={active ? 'page' : undefined}
+                    title={collapsed ? label : undefined}
+                  >
                     <Icon size={16} />
-                    {label}
+                    {!collapsed && label}
                   </Link>
                 );
               })}
@@ -203,13 +252,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        <div className="p-3 border-t border-default">
+        <div className={`${collapsed ? 'p-2' : 'p-3'} border-t border-default`}>
           {(() => {
             const active = location.pathname === '/settings';
             return (
-              <Link to="/settings" className={linkClass(active)} aria-current={active ? 'page' : undefined}>
+              <Link
+                to="/settings"
+                className={linkClass(active)}
+                aria-current={active ? 'page' : undefined}
+                title={collapsed ? '설정' : undefined}
+              >
                 <Settings size={16} />
-                설정
+                {!collapsed && '설정'}
               </Link>
             );
           })()}

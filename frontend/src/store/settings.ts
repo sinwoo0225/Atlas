@@ -7,6 +7,7 @@ export interface AppSettings {
   defaultAuthor: string;
   markdownFontSize: number;
   markdownLineHeight: number;
+  sidebarCollapsed: boolean;
 }
 
 const KEY = 'pm-hub-settings';
@@ -21,6 +22,7 @@ const defaults: AppSettings = {
   defaultAuthor: '',
   markdownFontSize: 14,
   markdownLineHeight: 1.7,
+  sidebarCollapsed: false,
 };
 
 export function loadSettings(): AppSettings {
