@@ -24,8 +24,11 @@ public class WbsController(WbsService svc) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int projectId, int id, [FromBody] UpdateWbsItemDto dto) =>
-        await svc.UpdateAsync(id, dto) is { } updated ? Ok(updated) : NotFound();
+    public async Task<IActionResult> Update(int projectId, int id, [FromBody] UpdateWbsItemDto dto)
+    {
+        try { return await svc.UpdateAsync(id, dto) is { } updated ? Ok(updated) : NotFound(); }
+        catch (WbsInvalidParentException ex) { return BadRequest(new { error = ex.Message }); }
+    }
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int projectId, int id) =>

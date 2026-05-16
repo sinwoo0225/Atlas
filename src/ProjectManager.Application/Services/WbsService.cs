@@ -4,6 +4,8 @@ using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Application.Services;
 
+public class WbsInvalidParentException(string message) : Exception(message);
+
 public class WbsService(IWbsRepository repo, WorkLogService workLogService)
 {
     public async Task<IEnumerable<WbsItemDto>> GetByProjectAsync(int projectId, int? versionId = null)
@@ -36,6 +38,32 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService)
     {
         var item = await repo.GetByIdAsync(id);
         if (item is null) return null;
+
+        // ParentId 가 바뀌는 경우에만 가드 — 같은 값 재저장은 통과 (서버 어쩌다 nop).
+        if (item.ParentId != dto.ParentId)
+        {
+            if (dto.ParentId == id)
+                throw new WbsInvalidParentException("자기 자신을 부모로 지정할 수 없습니다.");
+
+            if (dto.ParentId is int newParent)
+            {
+                var siblings = await repo.GetByProjectAsync(item.ProjectId, null);
+                var byId = siblings.ToDictionary(x => x.Id);
+                if (!byId.TryGetValue(newParent, out var parentNode))
+                    throw new WbsInvalidParentException("선택한 부모 작업이 존재하지 않습니다.");
+
+                // 새 부모를 따라 올라가며 자기 자신을 만나면 순환 — 자손을 부모로 지정한 경우.
+                for (var cursor = parentNode; cursor is not null; )
+                {
+                    if (cursor.Id == id)
+                        throw new WbsInvalidParentException("자신의 하위 작업을 부모로 지정할 수 없습니다.");
+                    cursor = cursor.ParentId is int pid && byId.TryGetValue(pid, out var next) ? next : null;
+                }
+            }
+
+            item.ParentId = dto.ParentId;
+        }
+
         var wasDone = item.Status == WbsStatus.Done;
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;

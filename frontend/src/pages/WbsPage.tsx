@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
@@ -9,6 +10,11 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { wbsImportanceBadge } from '../utils/statusMaps';
+import {
+  collectDescendantIds, collectMatchedIds, filterWbsTree, findItemName,
+  hasAnyFilter, type WbsFilterOpts,
+} from '../utils/wbsHelpers';
+import { WbsTreePicker } from '../components/WbsTreePicker';
 import { GanttChart } from './wbs/GanttChart';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import type { WbsItem, WbsVersion, Resource, WbsStatus } from '../types';
@@ -21,63 +27,17 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
   });
 }
 
-// 필터 조건. 빈 키워드/필터는 통과.
-interface WbsFilterOpts {
-  kw: string;            // lowercase, trimmed
-  unassigned: boolean;
-  late: boolean;
-  todayMs: number;       // Date.now() 기준 자정 ms (지연 비교용)
-}
-
-function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
-  if (o.kw) {
-    const hay = `${item.name} ${item.assignee} ${item.notes ?? ''}`.toLowerCase();
-    if (!hay.includes(o.kw)) return false;
-  }
-  if (o.unassigned && item.assignee.trim()) return false;
-  if (o.late) {
-    if (!item.endDate) return false;
-    if (item.status === 'Done') return false;
-    if (new Date(item.endDate).getTime() >= o.todayMs) return false;
-  }
-  return true;
-}
-
-function collectMatchedIds(items: WbsItem[], o: WbsFilterOpts, acc: Set<number> = new Set()): Set<number> {
-  for (const item of items) {
-    if (matchWbsItem(item, o)) acc.add(item.id);
-    if (item.children?.length) collectMatchedIds(item.children, o, acc);
-  }
-  return acc;
-}
-
-// matchOnly=true 일 때 매칭 안 한 가지 제거. 조상은 후손이 매칭이면 살아남는다.
-function filterWbsTree(items: WbsItem[], o: WbsFilterOpts): WbsItem[] {
-  const out: WbsItem[] = [];
-  for (const item of items) {
-    const children = item.children?.length ? filterWbsTree(item.children, o) : [];
-    const self = matchWbsItem(item, o);
-    if (self || children.length > 0) {
-      out.push({ ...item, children });
-    }
-  }
-  return out;
-}
-
-function hasAnyFilter(o: WbsFilterOpts): boolean {
-  return !!o.kw || o.unassigned || o.late;
-}
-
 type WbsFormData = {
   name: string; assignee: string; startDate: string; endDate: string;
   status: string; isMilestone: boolean; order: string; notes: string;
+  parentId: number | null;
 };
 
 function WbsItemForm({
-  projectId, versionId, parentId, initial, resources, onSave, onCancel
+  projectId, versionId, parentId, initial, resources, allItems, onSave, onCancel
 }: {
   projectId: number; versionId?: number; parentId?: number;
-  initial?: WbsItem; resources: Resource[];
+  initial?: WbsItem; resources: Resource[]; allItems: WbsItem[];
   onSave: () => void; onCancel: () => void;
 }) {
   const [form, setForm] = useState<WbsFormData>({
@@ -89,20 +49,44 @@ function WbsItemForm({
     isMilestone: initial?.isMilestone ?? false,
     order: (initial?.order ?? 2).toString(),
     notes: initial?.notes ?? '',
+    parentId: initial?.parentId ?? parentId ?? null,
   });
   const [notesEditing, setNotesEditing] = useState(false);
-  const set = (k: keyof WbsFormData, v: string | boolean) => setForm((f) => ({ ...f, [k]: v }));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const set = <K extends keyof WbsFormData>(k: K, v: WbsFormData[K]) => setForm((f) => ({ ...f, [k]: v }));
+
+  // 자기 자신 + 자손은 부모 picker 에서 비활성. 신규(create) 는 자기 자신이 없으므로 빈 Set.
+  const excludeIds = useMemo(
+    () => initial ? collectDescendantIds(initial.id, allItems) : new Set<number>(),
+    [initial, allItems],
+  );
+  const descendantCount = useMemo(
+    () => initial ? Math.max(0, collectDescendantIds(initial.id, allItems).size - 1) : 0,
+    [initial, allItems],
+  );
 
   const handleSubmit = async () => {
     const payload = {
-      projectId, versionId: versionId ?? null, parentId: parentId ?? null,
+      projectId, versionId: versionId ?? null, parentId: form.parentId,
       name: form.name, assignee: form.assignee,
       startDate: form.startDate || null, endDate: form.endDate || null,
       status: form.status as any, isMilestone: form.isMilestone,
       order: parseInt(form.order) || 0, notes: form.notes,
     };
-    if (initial) await wbsApi.update(projectId, initial.id, payload as any);
-    else await wbsApi.create(payload as any);
+    if (initial) {
+      const parentChanged = (initial.parentId ?? null) !== form.parentId;
+      await wbsApi.update(projectId, initial.id, payload as any);
+      if (parentChanged) {
+        const target = findItemName(form.parentId, allItems);
+        toast.success(
+          descendantCount > 0
+            ? `'${initial.name}' 을(를) '${target}' 아래로 이동 (하위 ${descendantCount}건 포함)`
+            : `'${initial.name}' 을(를) '${target}' 아래로 이동`,
+        );
+      }
+    } else {
+      await wbsApi.create(payload as any);
+    }
     onSave();
   };
 
@@ -150,6 +134,35 @@ function WbsItemForm({
               <input type="checkbox" checked={form.isMilestone} onChange={(e) => set('isMilestone', e.target.checked)} className="rounded" />
               <span className="text-sm text-secondary">마일스톤</span>
             </label>
+            {initial && (
+              <FormField label="부모 작업">
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen((v) => !v)}
+                  className={`${inputClass} text-left flex items-center justify-between`}
+                >
+                  <span className={form.parentId == null ? 'text-muted' : 'text-primary'}>
+                    {findItemName(form.parentId, allItems)}
+                  </span>
+                  {pickerOpen ? <ChevronDown size={14} className="text-muted" /> : <ChevronRight size={14} className="text-muted" />}
+                </button>
+                {pickerOpen && (
+                  <div className="mt-2">
+                    <WbsTreePicker
+                      items={allItems}
+                      selectedId={form.parentId}
+                      excludeIds={excludeIds}
+                      onSelect={(id) => { set('parentId', id); setPickerOpen(false); }}
+                    />
+                    {descendantCount > 0 && (
+                      <p className="text-xs text-muted mt-1">
+                        이 항목에는 하위 작업 {descendantCount}건이 있습니다. 부모를 변경하면 함께 이동됩니다.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </FormField>
+            )}
           </div>
 
           {/* 우측 - 상세 정보 (마크다운) */}
@@ -547,6 +560,7 @@ export function WbsPage() {
           versionId={currentVersion}
           parentId={addingChildOf}
           resources={resources}
+          allItems={items}
           onSave={() => { setShowForm(false); setAddingChildOf(undefined); load(); }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
         />
@@ -556,6 +570,7 @@ export function WbsPage() {
           projectId={pid}
           initial={editing}
           resources={resources}
+          allItems={items}
           onSave={() => { setEditing(null); load(); }}
           onCancel={() => setEditing(null)}
         />

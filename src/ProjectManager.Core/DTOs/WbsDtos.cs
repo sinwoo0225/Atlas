@@ -17,6 +17,7 @@ public record CreateWbsItemDto(
     WbsStatus Status, bool IsMilestone, int Order, string Notes);
 
 public record UpdateWbsItemDto(
+    int? ParentId,
     string Name, string Assignee,
     DateTime? StartDate, DateTime? EndDate,
     WbsStatus Status, bool IsMilestone, int Order, string Notes);
