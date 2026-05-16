@@ -32,7 +32,9 @@ public class ProjectService(
         if (project is null) return null;
 
         var now = DateTime.UtcNow;
-        var milestones = (await wbsRepo.GetByProjectAsync(id))
+        // WBS 전체 1회 조회 후 milestones + 위험 신호(overdue/dueSoon) 모두 처리 — N+1 회피.
+        var allWbs = (await wbsRepo.GetByProjectAsync(id)).ToList();
+        var milestones = allWbs
             .Where(w => w.IsMilestone && w.EndDate >= now)
             .OrderBy(w => w.EndDate)
             .Take(5)
@@ -50,13 +52,40 @@ public class ProjectService(
             .Take(5)
             .Select(DevInfoToDto);
 
-        // 이슈: 미완료(Open/InProgress) 먼저, 그 안에서 최신순. 5건.
-        var recentIssues = (await issueRepo.GetByProjectAsync(id))
+        // 이슈 전체 1회 조회 후 recent + 위험 신호(High Open) 모두 처리.
+        var allIssues = (await issueRepo.GetByProjectAsync(id)).ToList();
+        var recentIssues = allIssues
             .OrderBy(i => i.Status == IssueStatus.Resolved || i.Status == IssueStatus.Closed ? 1 : 0)
             .ThenByDescending(i => i.CreatedAt)
             .Take(5)
             .Select(IssueToDto)
             .ToList();
+
+        // 위험 신호(D-4):
+        // - overdueWbs: EndDate < now AND Status != Done — 가장 오래 지연된 순(EndDate 오름차순)
+        // - dueSoonWbs: now <= EndDate <= now+7d AND Status != Done — 가장 가까운 마감 순
+        // - highPriorityOpenIssues: Priority=High AND Status in (Open, InProgress) — dueDate 가까운 순(null 마지막)
+        // 각 list cap 10. UI 가 섹션당 5건 표시 + "외 N건" 더보기.
+        var dueSoonCutoff = now.AddDays(7);
+        var overdueWbs = allWbs
+            .Where(w => w.EndDate.HasValue && w.EndDate.Value < now && w.Status != WbsStatus.Done)
+            .OrderBy(w => w.EndDate)
+            .Take(10)
+            .Select(WbsToDto)
+            .ToList();
+        var dueSoonWbs = allWbs
+            .Where(w => w.EndDate.HasValue && w.EndDate.Value >= now && w.EndDate.Value <= dueSoonCutoff && w.Status != WbsStatus.Done)
+            .OrderBy(w => w.EndDate)
+            .Take(10)
+            .Select(WbsToDto)
+            .ToList();
+        var highPriorityOpenIssues = allIssues
+            .Where(i => i.Priority == IssuePriority.High && (i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress))
+            .OrderBy(i => i.DueDate ?? DateTime.MaxValue)
+            .Take(10)
+            .Select(IssueToDto)
+            .ToList();
+        var riskSignals = new RiskSignalsDto(overdueWbs, dueSoonWbs, highPriorityOpenIssues);
 
         // 이번 주(월~금) 본 프로젝트 업무일지 5일치
         var weekStart = WorkLogService.StartOfWeek(DateTime.Today);
@@ -77,7 +106,7 @@ public class ProjectService(
 
         return new ProjectDashboardDto(
             ToDto(project), milestones, recentChanges, recentMeetings, recentDev,
-            recentIssues, thisWeek);
+            recentIssues, thisWeek, riskSignals);
     }
 
     public async Task<ProjectDto> CreateAsync(CreateProjectDto dto)

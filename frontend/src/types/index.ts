@@ -28,6 +28,13 @@ export interface ProjectDashboard {
   recentDevInfo: DevInfoItem[];
   recentIssues: Issue[];
   thisWeekWorkLog: WeeklyWorkLogProject | null;
+  riskSignals: RiskSignals;
+}
+
+export interface RiskSignals {
+  overdueWbs: WbsItem[];
+  dueSoonWbs: WbsItem[];
+  highPriorityOpenIssues: Issue[];
 }
 
 export interface WbsItem {

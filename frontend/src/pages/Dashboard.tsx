@@ -6,6 +6,7 @@ import { projectsApi } from '../api/projects';
 import { activityApi } from '../api/activity';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { ActivityRow } from '../components/ActivityRow';
+import { RiskAlertCard } from './dashboard/RiskAlertCard';
 import { attendeesToDisplay } from '../utils/meetingHelpers';
 import { Button, Card, Badge, Skeleton } from '../components/ui';
 import { wbsStatusBadge, impactBadge, issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
@@ -50,7 +51,7 @@ export function Dashboard() {
     </div>
   );
 
-  const { project: p, upcomingMilestones, recentChanges, recentMeetings, recentDevInfo, recentIssues, thisWeekWorkLog } = data;
+  const { project: p, upcomingMilestones, recentChanges, recentMeetings, recentDevInfo, recentIssues, thisWeekWorkLog, riskSignals } = data;
   const pid = p.id;
 
   const daysLeft = p.endDate
@@ -111,6 +112,8 @@ export function Dashboard() {
           <p className="text-sm text-secondary mt-4 border-t border-default pt-4 whitespace-pre-wrap">{p.description}</p>
         )}
       </Card>
+
+      <RiskAlertCard signals={riskSignals} projectId={pid} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Section title="주요 마일스톤" Icon={Diamond}>
