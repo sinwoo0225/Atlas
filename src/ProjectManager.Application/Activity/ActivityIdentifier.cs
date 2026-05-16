@@ -12,7 +12,7 @@ public static class ActivityIdentifier
     {
         Project p => new(p.Id, "Project", p.Id, p.Name),
         WbsItem w => new(w.ProjectId, "WbsItem", w.Id, w.Name),
-        ChangeLog c => new(c.ProjectId, "ChangeLog", c.Id, Trim(c.Content, 80)),
+        ChangeLog c => new(c.ProjectId, "ChangeLog", c.Id, TrimFirstLine(c.Content, 80)),
         Meeting m => new(m.ProjectId, "Meeting", m.Id, m.Topic),
         DevInfoItem d => new(d.ProjectId, "DevInfoItem", d.Id, d.Title),
         Resource r => new(null, "Resource", r.Id, r.Name),
@@ -21,7 +21,8 @@ public static class ActivityIdentifier
         _ => null,
     };
 
-    private static string Trim(string s, int max)
+    // 첫 줄만 추출 + 길이 cap. EntityTitle 와 필드 diff 의 장문 텍스트 truncation 양쪽에서 사용.
+    public static string TrimFirstLine(string s, int max)
     {
         if (string.IsNullOrEmpty(s)) return string.Empty;
         var first = s.Split('\n', 2)[0].Trim();

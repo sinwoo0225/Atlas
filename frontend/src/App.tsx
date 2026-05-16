@@ -14,6 +14,7 @@ import { ResourcesPage } from './pages/ResourcesPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
+import { ActivityPage } from './pages/ActivityPage';
 import { CommandPalette } from './components/CommandPalette';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 import { applyTheme, applyMarkdownStyle, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/" element={<ProjectList />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/activity" element={<ActivityPage />} />
           <Route path="/projects/:projectId/dashboard" element={<Dashboard />} />
           <Route path="/projects/:projectId/wbs" element={<WbsPage />} />
           <Route path="/projects/:projectId/worklog" element={<WorkLogPage />} />

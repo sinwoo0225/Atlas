@@ -113,8 +113,12 @@ public class AppDbContext(
             e.Property(x => x.EntityType).IsRequired().HasMaxLength(50);
             e.Property(x => x.EntityTitle).HasMaxLength(300);
             e.Property(x => x.Actor).HasMaxLength(200);
+            // ChangesJson 은 TEXT (nullable). Update 의 필드 diff 만 채워짐.
+            e.Property(x => x.ChangesJson).HasColumnType("TEXT");
             // FK 없이 plain int? + 인덱스 — Project 삭제 시 ActivityLog 는 감사 로그로 그대로 보존.
             e.HasIndex(x => new { x.ProjectId, x.Timestamp });
+            // prune 쿼리(전체 across)에서 Timestamp 단독 필터에도 인덱스 사용 가능하게.
+            e.HasIndex(x => x.Timestamp);
         });
     }
 

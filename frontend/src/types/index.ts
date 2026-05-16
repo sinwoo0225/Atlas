@@ -245,6 +245,11 @@ export type ActivityEntityType =
 
 export type ActivityAction = 'Create' | 'Update' | 'Delete';
 
+export interface ActivityChangeValue {
+  old: string;
+  new: string;
+}
+
 export interface ActivityLog {
   id: number;
   projectId: number | null;
@@ -254,4 +259,7 @@ export interface ActivityLog {
   action: ActivityAction;
   actor: string;
   timestamp: string;
+  // Update 시점의 변경 필드 diff. Create/Delete 는 null.
+  // 필드명 → { old, new } 매핑. 장문 텍스트는 첫 줄 80자 + "…" 로 truncated.
+  changedFields?: Record<string, ActivityChangeValue> | null;
 }

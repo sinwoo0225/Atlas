@@ -16,4 +16,9 @@ public class ActivityLog
     public ActivityAction Action { get; set; }
     public string Actor { get; set; } = string.Empty;
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+
+    // Update 시점의 변경 필드 diff. JSON-in-TEXT (Meeting.Attendees 와 같은 패턴).
+    // 형식: { "필드명": { "old": "...", "new": "..." }, ... }. Create/Delete 는 null.
+    // 마이그레이션 이전에 만들어진 행은 null 로 자연 호환.
+    public string? ChangesJson { get; set; }
 }

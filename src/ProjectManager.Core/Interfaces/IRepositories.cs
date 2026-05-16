@@ -80,4 +80,6 @@ public interface IWorkLogRepository
 public interface IActivityLogRepository
 {
     Task<IEnumerable<ActivityLog>> GetByProjectAsync(int projectId, int limit);
+    Task<IEnumerable<ActivityLog>> GetAllAsync(int limit, int offset);
+    Task<int> PruneOlderThanAsync(DateTime cutoffUtc);
 }

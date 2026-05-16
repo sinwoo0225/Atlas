@@ -23,6 +23,7 @@ import { loadSettings, patchSettings } from '../store/settings';
 const navItems = [
   { path: '/', label: '프로젝트 목록', Icon: FolderOpen },
   { path: '/monitoring', label: '통합 모니터링', Icon: Activity },
+  { path: '/activity', label: '전체 활동', Icon: Activity },
   { path: '/resources', label: '리소스 관리', Icon: Users },
 ];
 

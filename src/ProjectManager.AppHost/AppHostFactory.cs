@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using ProjectManager.Application.Activity;
 using ProjectManager.Application.Search;
 using ProjectManager.Application.Services;
@@ -87,6 +88,25 @@ public static class AppHostFactory
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.Migrate();
+        }
+
+        // ActivityLog 보존 정책 — startup 시 1회 prune. RetentionDays <= 0 이면 비활성.
+        // 실패해도 앱 startup 은 막지 않음 (검색 인덱스 rebuild 와 동일 패턴).
+        try
+        {
+            var retention = app.Configuration.GetValue("ActivityLog:RetentionDays", 180);
+            if (retention > 0)
+            {
+                using var scope = app.Services.CreateScope();
+                var svc = scope.ServiceProvider.GetRequiredService<ActivityLogService>();
+                var removed = svc.PruneAsync(TimeSpan.FromDays(retention)).GetAwaiter().GetResult();
+                if (removed > 0)
+                    Console.WriteLine($"[activity-log] pruned {removed} rows older than {retention}d.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine("[activity-log] prune failed: " + ex.Message);
         }
 
         // 검색 인덱스 (FTS5) 가 비어 있으면 백그라운드로 한 번 빌드.

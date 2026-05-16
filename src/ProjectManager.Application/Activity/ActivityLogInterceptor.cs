@@ -1,7 +1,9 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Persistence;
 
@@ -23,7 +25,32 @@ public class ActivityLogInterceptor(IActorAccessor actorAccessor) : SaveChangesI
         ActivityIdentifier.Identity? PreResolved,
         ActivityAction Action,
         string Actor,
-        DateTime Timestamp);
+        DateTime Timestamp,
+        string? ChangesJson);
+
+    // 필드 diff 에서 제외: 자동 audit 메타 + Project.FolderPath (생성 시 자동 세팅, 사용자 의도 변경 아님).
+    private static bool IsExcludedProperty(string name) => name switch
+    {
+        "Id" or "CreatedAt" or "UpdatedAt" or "CreatedBy" or "UpdatedBy" or "FolderPath" => true,
+        _ => false,
+    };
+
+    private static string FormatValue(object? v)
+    {
+        if (v is null) return string.Empty;
+        if (v is DateTime dt) return dt.ToString("o");
+        var s = v.ToString() ?? string.Empty;
+        // 장문 텍스트 (Content/Notes/Description 등) 는 첫 줄 80자 + "…" 로 truncation.
+        // ActivityIdentifier.EntityTitle 패턴 일관.
+        if (s.Length > 200)
+            s = ActivityIdentifier.TrimFirstLine(s, 80) + "…";
+        return s;
+    }
+
+    private static readonly JsonSerializerOptions ChangesJsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+    };
 
     public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default)
@@ -93,20 +120,33 @@ public class ActivityLogInterceptor(IActorAccessor actorAccessor) : SaveChangesI
 
             if (entry.State == EntityState.Added)
             {
-                // Id 가 SavedChanges 후 채워지므로 entity ref 만 보관.
-                list.Add(new PendingActivity(entry.Entity, null, action.Value, actor, ts));
+                // Id 가 SavedChanges 후 채워지므로 entity ref 만 보관. Create 는 필드 diff 없음.
+                list.Add(new PendingActivity(entry.Entity, null, action.Value, actor, ts, null));
             }
             else if (entry.State == EntityState.Deleted)
             {
-                // Deleted entity 는 SavedChanges 후 detach 되므로 지금 Identify.
+                // Deleted entity 는 SavedChanges 후 detach 되므로 지금 Identify. Delete 도 필드 diff 없음.
                 var ident = ActivityIdentifier.Identify(entry.Entity);
                 if (ident is not null)
-                    list.Add(new PendingActivity(null, ident, action.Value, actor, ts));
+                    list.Add(new PendingActivity(null, ident, action.Value, actor, ts, null));
             }
             else
             {
-                // Modified — entity ref 도 살아있고 Id 도 유효. 둘 중 어느 쪽이든 OK.
-                list.Add(new PendingActivity(entry.Entity, null, action.Value, actor, ts));
+                // Modified — entity ref 도 살아있고 Id 도 유효. 필드 diff 도 여기서 캡처.
+                var changes = new Dictionary<string, ActivityChangeValue>();
+                foreach (var prop in entry.Properties.Where(p => p.IsModified))
+                {
+                    var name = prop.Metadata.Name;
+                    if (IsExcludedProperty(name)) continue;
+                    var oldStr = FormatValue(prop.OriginalValue);
+                    var newStr = FormatValue(prop.CurrentValue);
+                    if (oldStr == newStr) continue;
+                    changes[name] = new ActivityChangeValue(oldStr, newStr);
+                }
+                var json = changes.Count > 0
+                    ? JsonSerializer.Serialize(changes, ChangesJsonOptions)
+                    : null;
+                list.Add(new PendingActivity(entry.Entity, null, action.Value, actor, ts, json));
             }
         }
         _pending = list.Count > 0 ? list : null;
@@ -134,6 +174,7 @@ public class ActivityLogInterceptor(IActorAccessor actorAccessor) : SaveChangesI
                     Action = p.Action,
                     Actor = p.Actor,
                     Timestamp = p.Timestamp,
+                    ChangesJson = p.ChangesJson,
                 });
             }
             if (rows.Count == 0) return;

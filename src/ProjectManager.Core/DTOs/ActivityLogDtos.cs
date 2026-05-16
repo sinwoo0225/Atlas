@@ -10,4 +10,7 @@ public record ActivityLogDto(
     string EntityTitle,
     ActivityAction Action,
     string Actor,
-    DateTime Timestamp);
+    DateTime Timestamp,
+    IReadOnlyDictionary<string, ActivityChangeValue>? ChangedFields);
+
+public record ActivityChangeValue(string Old, string New);
