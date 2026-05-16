@@ -81,6 +81,7 @@ public static class AppHostFactory
         builder.Services.AddScoped<MonitoringService>();
         builder.Services.AddScoped<ActionItemPromotionService>();
         builder.Services.AddScoped<IssueWbsLinkService>();
+        builder.Services.AddScoped<StartPageService>();
 
         builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
             p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));

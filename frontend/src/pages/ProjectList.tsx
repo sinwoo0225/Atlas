@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, X, Save, Download, FolderOpen, Calendar, Users } from 'lucide-react';
 import { projectsApi } from '../api/projects';
+import { startPageApi } from '../api/startPage';
 import { useProjectStore } from '../store/useProjectStore';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import type { Project, ProjectStatus } from '../types';
+import { StartPageWidgets } from './projectList/StartPageWidgets';
+import { getRecent, type RecentItem } from '../utils/recentItems';
+import type { Project, ProjectStatus, StartPageData } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'Planned', label: '계획' },
@@ -130,10 +133,20 @@ export function ProjectList() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [error, setError] = useState('');
+  const [startPageData, setStartPageData] = useState<StartPageData>({ myOpenItems: [], dueSoonItems: [] });
+  const [recent, setRecent] = useState<RecentItem[]>(() => getRecent());
 
   useEffect(() => {
     projectsApi.getAll().then(setProjects).catch(() => setError('프로젝트 목록을 불러올 수 없습니다.'));
+    startPageApi.get().then(setStartPageData).catch(() => { /* 신규 endpoint — 구버전 서버 호환 위해 무시 */ });
   }, [setProjects]);
+
+  // useRecentTracker 가 pushRecent 후 'atlas:recent-updated' 이벤트 발화 — ProjectList 가 listening 해 즉시 갱신.
+  useEffect(() => {
+    const handler = () => setRecent(getRecent());
+    window.addEventListener('atlas:recent-updated', handler);
+    return () => window.removeEventListener('atlas:recent-updated', handler);
+  }, []);
 
   const handleCreate = async (data: any) => {
     try {
@@ -188,6 +201,12 @@ export function ProjectList() {
       {error && (
         <div className="mb-4 p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
+
+      <StartPageWidgets
+        myOpenItems={startPageData.myOpenItems}
+        dueSoonItems={startPageData.dueSoonItems}
+        recent={recent}
+      />
 
       {projects.length === 0 ? (
         <EmptyState

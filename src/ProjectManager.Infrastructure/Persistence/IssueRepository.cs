@@ -42,4 +42,11 @@ public class IssueRepository(AppDbContext db) : IIssueRepository
             await db.SaveChangesAsync();
         }
     }
+
+    public async Task<IEnumerable<Issue>> GetOpenAcrossProjectsAsync() =>
+        await db.Issues
+            .Where(x => x.Status == IssueStatus.Open || x.Status == IssueStatus.InProgress)
+            .Include(x => x.AssigneeResource)
+            .Include(x => x.Project)
+            .ToListAsync();
 }

@@ -37,6 +37,23 @@ export interface RiskSignals {
   highPriorityOpenIssues: Issue[];
 }
 
+// 시작 화면 위젯(E-2). across-project myOpenItems + dueSoonItems.
+export interface StartPageData {
+  myOpenItems: StartPageItem[];
+  dueSoonItems: StartPageItem[];
+}
+
+export interface StartPageItem {
+  kind: 'issue' | 'wbs';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  dueDate: string | null;
+}
+
 export interface WbsItem {
   id: number;
   projectId: number;

@@ -62,4 +62,10 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
             v.IsCurrent = v.Id == versionId;
         await db.SaveChangesAsync();
     }
+
+    public async Task<IEnumerable<WbsItem>> GetOpenAcrossProjectsAsync() =>
+        await db.WbsItems
+            .Where(x => x.Status != WbsStatus.Done)
+            .Include(x => x.Project)
+            .ToListAsync();
 }

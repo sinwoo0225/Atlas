@@ -22,6 +22,8 @@ public interface IWbsRepository
     Task<WbsVersion?> GetVersionByIdAsync(int id);
     Task<WbsVersion> CreateVersionAsync(WbsVersion version);
     Task SetCurrentVersionAsync(int projectId, int versionId);
+    // 시작 화면 위젯(E-2) — 모든 프로젝트의 미완(!Done) WBS, Project navigation 포함.
+    Task<IEnumerable<WbsItem>> GetOpenAcrossProjectsAsync();
 }
 
 public interface IChangeLogRepository
@@ -68,6 +70,8 @@ public interface IIssueRepository
     Task<Issue> CreateAsync(Issue issue);
     Task<Issue> UpdateAsync(Issue issue);
     Task DeleteAsync(int id);
+    // 시작 화면 위젯(E-2) — 모든 프로젝트의 미해결(Open|InProgress) Issue, Project + AssigneeResource 포함.
+    Task<IEnumerable<Issue>> GetOpenAcrossProjectsAsync();
 }
 
 public interface IWorkLogRepository

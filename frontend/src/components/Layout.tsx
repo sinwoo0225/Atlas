@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadSettings, patchSettings } from '../store/settings';
+import { useRecentTracker } from '../hooks/useRecentTracker';
 
 const navItems = [
   { path: '/', label: '프로젝트 목록', Icon: FolderOpen },
@@ -125,6 +126,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { selectedProjectId, selectProject, projects } = useProjectStore();
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
+  useRecentTracker();
 
   useEffect(() => {
     if (selectedProjectId !== null) return;
