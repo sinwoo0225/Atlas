@@ -7,6 +7,7 @@ import { meetingsApi } from '../api/meetings';
 import { issuesApi } from '../api/issues';
 import { wbsApi } from '../api/wbs';
 import { Button, Card, Modal, Input, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { IssuePicker } from '../components/IssuePicker';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -392,15 +393,15 @@ export function ChangeLogsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="h-page flex items-center gap-2">
-          <GitBranch size={18} className="text-muted" />
-          변경 이력
-        </h1>
-        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-          변경 이력 추가
-        </Button>
-      </div>
+      <PageHeader
+        icon={<GitBranch size={18} />}
+        title="변경 이력"
+        actions={
+          <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+            변경 이력 추가
+          </Button>
+        }
+      />
 
       {logs.length > 0 && (
         <Card padding="normal">

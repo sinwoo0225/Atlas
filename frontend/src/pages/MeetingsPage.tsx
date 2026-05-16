@@ -13,6 +13,7 @@ import {
   type ActionItem,
 } from '../utils/meetingHelpers';
 import { Button, Card, Modal, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
@@ -514,15 +515,15 @@ export function MeetingsPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="h-page flex items-center gap-2">
-          <FileText size={18} className="text-muted" />
-          회의록
-        </h1>
-        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-          회의록 작성
-        </Button>
-      </div>
+      <PageHeader
+        icon={<FileText size={18} />}
+        title="회의록"
+        actions={
+          <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+            회의록 작성
+          </Button>
+        }
+      />
 
       <div className="flex gap-2 flex-wrap items-center">
         <div className="relative w-72">

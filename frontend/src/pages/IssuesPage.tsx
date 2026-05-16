@@ -7,6 +7,7 @@ import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { Button, Card, Input, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
@@ -105,12 +106,7 @@ export function IssuesPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="h-page flex items-center gap-2">
-          <AlertTriangle size={18} className="text-muted" />
-          이슈 관리
-        </h1>
-      </div>
+      <PageHeader icon={<AlertTriangle size={18} />} title="이슈 관리" />
 
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap items-center">
