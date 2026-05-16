@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronDown, ChevronRight, Plus, Search, X } from 'lucid
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
@@ -43,7 +44,12 @@ export function IssuesPage() {
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('이 이슈를 삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: '이슈 삭제',
+      message: '이 이슈를 삭제하시겠습니까? 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     await issuesApi.delete(pid, id);
     if (expanded === id) setExpanded(null);
     load();

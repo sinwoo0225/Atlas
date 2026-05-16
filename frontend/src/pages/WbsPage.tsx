@@ -5,6 +5,7 @@ import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { wbsImportanceBadge } from '../utils/statusMaps';
@@ -365,7 +366,12 @@ export function WbsPage() {
   useHighlightFromQuery([items.length]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: 'WBS 항목 삭제',
+      message: '이 WBS 항목을 삭제하시겠습니까? 하위 항목도 함께 삭제되며 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     await wbsApi.delete(pid, id);
     load();
   };

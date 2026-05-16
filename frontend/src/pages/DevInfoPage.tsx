@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
@@ -70,7 +72,7 @@ function DevInfoForm({
 
   const handleFileChosen = async (file: File) => {
     if (!project?.folderPath) {
-      alert('프로젝트 폴더 정보를 알 수 없습니다.');
+      toast.warning('프로젝트 폴더 정보를 알 수 없습니다.');
       return;
     }
     setUploading(true);
@@ -83,7 +85,7 @@ function DevInfoForm({
       const data = await res.json();
       if (data?.filePath) set('filePath', data.filePath);
     } catch {
-      alert('파일 업로드 실패');
+      toast.error('파일 업로드 실패');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -329,7 +331,12 @@ export function DevInfoPage() {
   useHighlightFromQuery([items.length]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: '개발 정보 삭제',
+      message: '이 개발 정보 항목을 삭제하시겠습니까? 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     await devInfoApi.delete(pid, id);
     if (selected?.id === id) setSelected(null);
     load();
@@ -343,10 +350,10 @@ export function DevInfoPage() {
       });
       if (!res.ok) {
         const msg = await res.text().catch(() => '');
-        alert(`파일을 열 수 없습니다.${msg ? ` (${msg})` : ''}`);
+        toast.error(`파일을 열 수 없습니다.${msg ? ` (${msg})` : ''}`);
       }
     } catch (e) {
-      alert(`파일 열기 중 오류가 발생했습니다: ${(e as Error).message}`);
+      toast.error(`파일 열기 중 오류가 발생했습니다: ${(e as Error).message}`);
     }
   };
 

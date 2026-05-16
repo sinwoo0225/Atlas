@@ -5,6 +5,7 @@ import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search }
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { Button, Card, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
@@ -276,7 +277,12 @@ export function ChangeLogsPage() {
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: '변경 이력 삭제',
+      message: '이 변경 이력을 삭제하시겠습니까? 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     await changeLogsApi.delete(pid, id);
     load();
   };

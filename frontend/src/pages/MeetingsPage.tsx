@@ -12,6 +12,7 @@ import {
   type ActionItem,
 } from '../utils/meetingHelpers';
 import { Button, Card, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import type { Meeting } from '../types';
@@ -402,7 +403,12 @@ export function MeetingsPage() {
   }, [meetings, keyword, dateFrom, dateTo]);
 
   const handleDelete = async (id: number) => {
-    if (!confirm('삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: '회의록 삭제',
+      message: '이 회의록을 삭제하시겠습니까? 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     await meetingsApi.delete(pid, id);
     load();
   };

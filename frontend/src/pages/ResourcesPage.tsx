@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import type { Resource, ResourceType, ResourceAssignment } from '../types';
 
@@ -166,7 +167,12 @@ export function ResourcesPage() {
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('이 리소스를 삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: '리소스 삭제',
+      message: '이 리소스를 삭제하시겠습니까? 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     try {
       await resourcesApi.delete(id);
       load();

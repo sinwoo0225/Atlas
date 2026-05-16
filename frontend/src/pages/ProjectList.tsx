@@ -5,6 +5,7 @@ import { projectsApi } from '../api/projects';
 import { useProjectStore } from '../store/useProjectStore';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { Button, Card, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import type { Project, ProjectStatus } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
@@ -152,7 +153,12 @@ export function ProjectList() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('프로젝트를 삭제하시겠습니까?')) return;
+    if (!await confirmDialog({
+      title: '프로젝트 삭제',
+      message: '이 프로젝트를 삭제하시겠습니까? WBS, 회의록, 변경 이력 등 하위 데이터도 모두 함께 삭제되며 되돌릴 수 없습니다.',
+      confirmLabel: '삭제',
+      danger: true,
+    })) return;
     try {
       await projectsApi.delete(id);
       removeProject(id);

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { Layout } from './components/Layout';
 import { ProjectList } from './pages/ProjectList';
 import { Dashboard } from './pages/Dashboard';
@@ -14,6 +15,7 @@ import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
 import { CommandPalette } from './components/CommandPalette';
+import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 import { applyTheme, applyMarkdownStyle, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
 import { getMachineAccount } from './utils/hostBridge';
 
@@ -34,6 +36,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <Toaster position="top-right" theme="dark" richColors closeButton duration={4000} />
+      <ConfirmDialogHost />
       <CommandPalette />
       <Layout>
         <Routes>

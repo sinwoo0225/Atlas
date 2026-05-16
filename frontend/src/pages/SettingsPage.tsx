@@ -13,6 +13,7 @@ import {
 } from '../store/settings';
 import { useProjectStore } from '../store/useProjectStore';
 import { Button, Card, FormField, inputClass } from '../components/ui';
+import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { systemApi, type DataFolderInfo, type DataFolderPreview } from '../api/system';
 import {
   pickFolder,
@@ -56,8 +57,13 @@ export function SettingsPage() {
     setTimeout(() => setSavedAt(null), 2000);
   };
 
-  const handleReset = () => {
-    if (!confirm('모든 설정을 초기화하시겠습니까?')) return;
+  const handleReset = async () => {
+    if (!await confirmDialog({
+      title: '설정 초기화',
+      message: '모든 설정을 초기 상태로 되돌립니다. 테마, 작성자 이름, 마지막 프로젝트 등이 사라집니다.',
+      confirmLabel: '초기화',
+      danger: true,
+    })) return;
     localStorage.removeItem('pm-hub-settings');
     const fresh = loadSettings();
     setSettings(fresh);

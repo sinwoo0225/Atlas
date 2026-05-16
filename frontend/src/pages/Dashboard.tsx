@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity, FolderOpen, CalendarDays, User } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { activityApi } from '../api/activity';
@@ -130,7 +131,7 @@ export function Dashboard() {
               title="프로젝트 백업"
               onClick={async () => {
                 try { await projectsApi.backup(p.id, p.name); }
-                catch { alert('백업에 실패했습니다.'); }
+                catch { toast.error('백업에 실패했습니다.'); }
               }}
             >
               백업
