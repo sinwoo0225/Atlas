@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search, AlertTriangle, ListTree } from 'lucide-react';
 import { meetingsApi } from '../api/meetings';
 import {
   parseAttendees,
@@ -82,7 +83,8 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   };
   const removeDecision = (i: number) => setDecisions(decisions.filter((_, idx) => idx !== i));
 
-  const addAction = () => setActionItems([...actionItems, { content: '', assignee: '', deadline: '' }]);
+  const addAction = () =>
+    setActionItems([...actionItems, { id: crypto.randomUUID(), content: '', assignee: '', deadline: '' }]);
   const updateAction = (i: number, k: keyof ActionItem, v: string) => {
     const next = [...actionItems];
     next[i] = { ...next[i], [k]: v };
@@ -238,35 +240,55 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                 <Button variant="ghost" size="sm" onClick={addAction} leadingIcon={<Plus size={14} />}>추가</Button>
               </div>
               <div className="space-y-2">
-                {actionItems.map((a, i) => (
-                  <div key={i} className="border border-default rounded-md p-2 space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        value={a.content}
-                        onChange={(e) => updateAction(i, 'content', e.target.value)}
-                        placeholder="내용"
-                        className={inputClass}
-                      />
-                      <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
-                        <X size={14} />
-                      </button>
+                {actionItems.map((a, i) => {
+                  const promoted = a.promotedIssueId != null || a.promotedWbsItemId != null;
+                  return (
+                    <div
+                      key={a.id || i}
+                      className={`border border-default rounded-md p-2 space-y-2 ${promoted ? 'opacity-70' : ''}`}
+                    >
+                      <div className="flex gap-2">
+                        <input
+                          value={a.content}
+                          onChange={(e) => updateAction(i, 'content', e.target.value)}
+                          placeholder="내용"
+                          className={inputClass}
+                        />
+                        <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={a.assignee}
+                          onChange={(e) => updateAction(i, 'assignee', e.target.value)}
+                          placeholder="담당자"
+                          className={inputClass}
+                        />
+                        <input
+                          type="date"
+                          value={a.deadline}
+                          onChange={(e) => updateAction(i, 'deadline', e.target.value)}
+                          className={inputClass}
+                        />
+                      </div>
+                      {promoted && (
+                        <div className="flex flex-wrap gap-1 text-xs text-muted">
+                          {a.promotedIssueId != null && (
+                            <span className="bg-surface-2 border border-default rounded px-1.5 py-0.5">
+                              Issue #{a.promotedIssueId} 로 승격됨
+                            </span>
+                          )}
+                          {a.promotedWbsItemId != null && (
+                            <span className="bg-surface-2 border border-default rounded px-1.5 py-0.5">
+                              WBS #{a.promotedWbsItemId} 로 승격됨
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        value={a.assignee}
-                        onChange={(e) => updateAction(i, 'assignee', e.target.value)}
-                        placeholder="담당자"
-                        className={inputClass}
-                      />
-                      <input
-                        type="date"
-                        value={a.deadline}
-                        onChange={(e) => updateAction(i, 'deadline', e.target.value)}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -304,9 +326,39 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   );
 }
 
-function MeetingDetail({ meeting }: { meeting: Meeting }) {
+function MeetingDetail({ meeting, projectId, onChange }: {
+  meeting: Meeting; projectId: number; onChange: () => void;
+}) {
+  const navigate = useNavigate();
   const decisions = parseDecisions(meeting.decisions);
   const actions = parseActionItems(meeting.actionItems);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const promote = async (a: ActionItem, target: 'issue' | 'wbs') => {
+    if (!a.content.trim()) {
+      toast.error('내용이 비어 있는 ActionItem 은 승격할 수 없습니다.');
+      return;
+    }
+    setBusy(`${a.id}:${target}`);
+    try {
+      if (target === 'issue') {
+        const issue = await meetingsApi.promoteToIssue(projectId, meeting.id, a.id);
+        // Issue 는 Resource FK 라 ActionItem.assignee 문자열이 등록된 리소스와
+        // 일치하지 않으면 silent 하게 담당자 미지정(null)이 된다 — 한 줄 안내.
+        const unmatched = a.assignee.trim() && issue.assigneeResourceId == null;
+        if (unmatched) {
+          toast.success(`Issue #${issue.id} 생성됨 — '${a.assignee.trim()}'은 등록된 리소스가 아니라 담당자 미지정`);
+        } else {
+          toast.success(`Issue #${issue.id} 생성됨`);
+        }
+      } else {
+        const item = await meetingsApi.promoteToWbs(projectId, meeting.id, a.id);
+        toast.success(`WBS #${item.id} 생성됨`);
+      }
+      onChange();
+    } catch { /* api/client.ts 가 이미 toast 처리 */ }
+    finally { setBusy(null); }
+  };
 
   return (
     <div className="mt-4 pt-4 border-t border-default space-y-4">
@@ -335,15 +387,58 @@ function MeetingDetail({ meeting }: { meeting: Meeting }) {
               <tr className="text-xs text-muted">
                 <th className="text-left pb-1 pr-2 font-medium">내용</th>
                 <th className="text-left pb-1 pr-2 font-medium">담당자</th>
-                <th className="text-left pb-1 font-medium">기한</th>
+                <th className="text-left pb-1 pr-2 font-medium">기한</th>
+                <th className="text-right pb-1 font-medium w-48">승격</th>
               </tr>
             </thead>
             <tbody>
-              {actions.map((a, i) => (
-                <tr key={i} className="border-t border-default">
+              {actions.map((a) => (
+                <tr key={a.id} className="border-t border-default">
                   <td className="py-1 pr-2 text-secondary">{a.content}</td>
                   <td className="py-1 pr-2 text-secondary">{a.assignee}</td>
-                  <td className="py-1 text-muted">{a.deadline}</td>
+                  <td className="py-1 pr-2 text-muted">{a.deadline}</td>
+                  <td className="py-1 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      {a.promotedIssueId != null ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/projects/${projectId}/issues?highlight=${a.promotedIssueId}`)}
+                          className="text-xs bg-surface-2 border border-default rounded px-1.5 py-0.5 hover:border-strong transition-colors"
+                          title="Issue 페이지로 이동"
+                        >
+                          Issue #{a.promotedIssueId}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy === `${a.id}:issue` || !a.content.trim()}
+                          onClick={() => promote(a, 'issue')}
+                          className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded border border-default text-muted hover:text-primary hover:border-strong disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <AlertTriangle size={12} /> Issue로
+                        </button>
+                      )}
+                      {a.promotedWbsItemId != null ? (
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/projects/${projectId}/wbs?highlight=${a.promotedWbsItemId}`)}
+                          className="text-xs bg-surface-2 border border-default rounded px-1.5 py-0.5 hover:border-strong transition-colors"
+                          title="WBS 페이지로 이동"
+                        >
+                          WBS #{a.promotedWbsItemId}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy === `${a.id}:wbs` || !a.content.trim()}
+                          onClick={() => promote(a, 'wbs')}
+                          className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded border border-default text-muted hover:text-primary hover:border-strong disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                        >
+                          <ListTree size={12} /> WBS로
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -495,7 +590,7 @@ export function MeetingsPage() {
                 </button>
               </div>
             </div>
-            {expanded === m.id && <MeetingDetail meeting={m} />}
+            {expanded === m.id && <MeetingDetail meeting={m} projectId={pid} onChange={load} />}
           </Card>
         ))}
       </div>

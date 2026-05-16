@@ -6,7 +6,7 @@ namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId:int}/meetings")]
-public class MeetingsController(MeetingService svc) : ControllerBase
+public class MeetingsController(MeetingService svc, ActionItemPromotionService promote) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(int projectId, [FromQuery] string? keyword) =>
@@ -30,4 +30,20 @@ public class MeetingsController(MeetingService svc) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int projectId, int id) =>
         await svc.DeleteAsync(id) ? NoContent() : NotFound();
+
+    [HttpPost("{meetingId:int}/action-items/{actionItemId}/promote-to-issue")]
+    public async Task<IActionResult> PromoteToIssue(int projectId, int meetingId, string actionItemId)
+    {
+        try { return Ok(await promote.PromoteToIssueAsync(meetingId, actionItemId)); }
+        catch (ActionItemNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (ActionItemAlreadyPromotedException ex) { return Conflict(new { error = ex.Message }); }
+    }
+
+    [HttpPost("{meetingId:int}/action-items/{actionItemId}/promote-to-wbs")]
+    public async Task<IActionResult> PromoteToWbs(int projectId, int meetingId, string actionItemId)
+    {
+        try { return Ok(await promote.PromoteToWbsAsync(meetingId, actionItemId)); }
+        catch (ActionItemNotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (ActionItemAlreadyPromotedException ex) { return Conflict(new { error = ex.Message }); }
+    }
 }

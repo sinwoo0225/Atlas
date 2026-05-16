@@ -78,6 +78,7 @@ public static class AppHostFactory
         builder.Services.AddScoped<WorkLogService>();
         builder.Services.AddScoped<ActivityLogService>();
         builder.Services.AddScoped<MonitoringService>();
+        builder.Services.AddScoped<ActionItemPromotionService>();
 
         builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
             p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));

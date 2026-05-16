@@ -1,5 +1,5 @@
 import { api } from './client';
-import type { Meeting } from '../types';
+import type { Meeting, Issue, WbsItem } from '../types';
 
 export const meetingsApi = {
   getByProject: (projectId: number, keyword?: string) =>
@@ -10,4 +10,8 @@ export const meetingsApi = {
     api.put<Meeting>(`/projects/${projectId}/meetings/${id}`, data),
   delete: (projectId: number, id: number) =>
     api.delete(`/projects/${projectId}/meetings/${id}`),
+  promoteToIssue: (projectId: number, meetingId: number, actionItemId: string) =>
+    api.post<Issue>(`/projects/${projectId}/meetings/${meetingId}/action-items/${encodeURIComponent(actionItemId)}/promote-to-issue`, {}),
+  promoteToWbs: (projectId: number, meetingId: number, actionItemId: string) =>
+    api.post<WbsItem>(`/projects/${projectId}/meetings/${meetingId}/action-items/${encodeURIComponent(actionItemId)}/promote-to-wbs`, {}),
 };

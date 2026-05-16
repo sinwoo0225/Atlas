@@ -1,0 +1,153 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
+using ProjectManager.Core.Interfaces;
+
+namespace ProjectManager.Application.Services;
+
+// ActionItem 의 식별자는 프론트가 부여한 string id (uuid). 인덱스 기반은
+// reorder/삭제 race 위험이 있어 ActionItem JSON 에 id 를 두고 매칭한다.
+public class ActionItemNotFoundException(string message) : Exception(message);
+public class ActionItemAlreadyPromotedException(string message) : Exception(message);
+
+public class ActionItemPromotionService(
+    IMeetingRepository meetingRepo,
+    IIssueRepository issueRepo,
+    IWbsRepository wbsRepo,
+    IResourceRepository resourceRepo)
+{
+    private static readonly JsonSerializerOptions JsonOpts = new()
+    {
+        WriteIndented = false,
+    };
+
+    public async Task<IssueDto> PromoteToIssueAsync(int meetingId, string actionItemId)
+    {
+        var meeting = await meetingRepo.GetByIdAsync(meetingId)
+            ?? throw new ActionItemNotFoundException("회의록을 찾을 수 없습니다.");
+
+        var (items, target) = FindActionItem(meeting.ActionItems, actionItemId);
+
+        if (target["promotedIssueId"] is JsonValue v && v.TryGetValue<int>(out var existing))
+            throw new ActionItemAlreadyPromotedException($"이미 Issue #{existing} 으로 승격됨");
+
+        var assigneeId = await ResolveResourceIdAsync(target["assignee"]?.GetValue<string>() ?? "");
+        var dueDate = ParseDeadline(target["deadline"]?.GetValue<string>() ?? "");
+        var content = target["content"]?.GetValue<string>() ?? "";
+
+        var issue = await issueRepo.CreateAsync(new Issue
+        {
+            ProjectId = meeting.ProjectId,
+            Title = content,
+            Description = "",
+            Status = IssueStatus.Open,
+            Priority = IssuePriority.Medium,
+            AssigneeResourceId = assigneeId,
+            DueDate = dueDate,
+        });
+
+        target["promotedIssueId"] = issue.Id;
+        meeting.ActionItems = items.ToJsonString(JsonOpts);
+        await meetingRepo.UpdateAsync(meeting);
+
+        var full = await issueRepo.GetByIdAsync(issue.Id) ?? issue;
+        return new IssueDto(
+            full.Id, full.ProjectId, full.Title, full.Description,
+            full.Status, full.Priority,
+            full.AssigneeResourceId, full.AssigneeResource?.Name,
+            full.DueDate, full.CreatedAt, full.UpdatedAt);
+    }
+
+    public async Task<WbsItemDto> PromoteToWbsAsync(int meetingId, string actionItemId)
+    {
+        var meeting = await meetingRepo.GetByIdAsync(meetingId)
+            ?? throw new ActionItemNotFoundException("회의록을 찾을 수 없습니다.");
+
+        var (items, target) = FindActionItem(meeting.ActionItems, actionItemId);
+
+        if (target["promotedWbsItemId"] is JsonValue v && v.TryGetValue<int>(out var existing))
+            throw new ActionItemAlreadyPromotedException($"이미 WBS #{existing} 으로 승격됨");
+
+        var assignee = target["assignee"]?.GetValue<string>() ?? "";
+        var endDate = ParseDeadline(target["deadline"]?.GetValue<string>() ?? "");
+        var content = target["content"]?.GetValue<string>() ?? "";
+
+        var currentVersion = (await wbsRepo.GetVersionsByProjectAsync(meeting.ProjectId))
+            .FirstOrDefault(x => x.IsCurrent);
+
+        var item = await wbsRepo.CreateAsync(new WbsItem
+        {
+            ProjectId = meeting.ProjectId,
+            VersionId = currentVersion?.Id,
+            ParentId = null,
+            Name = content,
+            Assignee = assignee,
+            StartDate = null,
+            EndDate = endDate,
+            Status = WbsStatus.Planned,
+            IsMilestone = false,
+            Order = 2,
+            Notes = "",
+        });
+
+        target["promotedWbsItemId"] = item.Id;
+        meeting.ActionItems = items.ToJsonString(JsonOpts);
+        await meetingRepo.UpdateAsync(meeting);
+
+        return new WbsItemDto(
+            item.Id, item.ProjectId, item.VersionId, item.ParentId,
+            item.Name, item.Assignee, item.StartDate, item.EndDate,
+            item.Status, item.IsMilestone, item.Order, item.Notes,
+            item.CreatedAt, item.UpdatedAt, null);
+    }
+
+    private static (JsonArray Items, JsonObject Target) FindActionItem(string raw, string actionItemId)
+    {
+        JsonArray items;
+        try
+        {
+            items = (JsonNode.Parse(raw) as JsonArray)
+                ?? throw new ActionItemNotFoundException("ActionItem 목록이 비어 있습니다.");
+        }
+        catch (JsonException)
+        {
+            throw new ActionItemNotFoundException("ActionItem JSON 파싱 실패.");
+        }
+
+        foreach (var node in items)
+        {
+            if (node is JsonObject obj
+                && obj["id"] is JsonValue idVal
+                && idVal.TryGetValue<string>(out var id)
+                && id == actionItemId)
+            {
+                return (items, obj);
+            }
+        }
+        throw new ActionItemNotFoundException("ActionItem 을 찾을 수 없습니다.");
+    }
+
+    private async Task<int?> ResolveResourceIdAsync(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return null;
+        var trimmed = name.Trim();
+        var all = await resourceRepo.GetAllAsync();
+        return all
+            .FirstOrDefault(r => string.Equals(r.Name, trimmed, StringComparison.OrdinalIgnoreCase))?
+            .Id;
+    }
+
+    // ActionItem.deadline 은 프론트의 <input type="date"> 값이라 보통 "YYYY-MM-DD".
+    // 비어 있거나 파싱 실패 시 null 로 안전 fallback.
+    private static DateTime? ParseDeadline(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var dt))
+            return dt;
+        if (DateTime.TryParse(raw, out var dt2))
+            return dt2;
+        return null;
+    }
+}
