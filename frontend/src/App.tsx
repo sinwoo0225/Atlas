@@ -14,13 +14,22 @@ import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
 import { CommandPalette } from './components/CommandPalette';
-import { applyTheme, applyMarkdownStyle, loadSettings } from './store/settings';
+import { applyTheme, applyMarkdownStyle, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
+import { getMachineAccount } from './utils/hostBridge';
 
 export default function App() {
   useEffect(() => {
     const s = loadSettings();
     applyTheme(s.theme);
     applyMarkdownStyle(s.markdownFontSize, s.markdownLineHeight);
+
+    // 작성자 자동 추적의 시작점: defaultAuthor 가 비어 있으면 클라 머신 계정으로 한 번 시드.
+    // 이후 모든 API 요청의 X-Atlas-Actor 헤더로 이 값이 자동 전송된다.
+    if (s.defaultAuthor === '') {
+      getMachineAccount().then((name) => {
+        if (name) seedDefaultAuthorIfEmpty(name);
+      });
+    }
   }, []);
 
   return (

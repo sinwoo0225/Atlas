@@ -21,7 +21,7 @@ public class ChangeLogService(IChangeLogRepository repo)
         {
             ProjectId = dto.ProjectId, Date = dto.Date,
             Content = dto.Content, Impact = dto.Impact,
-            RelatedDocLinks = dto.RelatedDocLinks, Author = dto.Author
+            RelatedDocLinks = dto.RelatedDocLinks
         };
         return ToDto(await repo.CreateAsync(log));
     }
@@ -32,7 +32,6 @@ public class ChangeLogService(IChangeLogRepository repo)
         if (log is null) return null;
         log.Date = dto.Date; log.Content = dto.Content;
         log.Impact = dto.Impact; log.RelatedDocLinks = dto.RelatedDocLinks;
-        log.Author = dto.Author;
         return ToDto(await repo.UpdateAsync(log));
     }
 
@@ -45,5 +44,5 @@ public class ChangeLogService(IChangeLogRepository repo)
 
     private static ChangeLogDto ToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,
-        c.RelatedDocLinks, c.Author, c.CreatedAt, c.UpdatedAt);
+        c.RelatedDocLinks, c.CreatedBy, c.UpdatedBy, c.CreatedAt, c.UpdatedAt);
 }

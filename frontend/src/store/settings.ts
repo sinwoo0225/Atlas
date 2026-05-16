@@ -50,6 +50,15 @@ export function patchSettings(patch: Partial<AppSettings>): AppSettings {
   return next;
 }
 
+// 첫 부팅 시 머신 계정명으로 작성자를 한 번 시드. 이미 값이 있으면 건드리지 않음.
+export function seedDefaultAuthorIfEmpty(userName: string): void {
+  const trimmed = userName.trim();
+  if (!trimmed) return;
+  const current = loadSettings();
+  if (current.defaultAuthor !== '') return;
+  patchSettings({ defaultAuthor: trimmed });
+}
+
 export function applyTheme(theme: ThemeMode): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;

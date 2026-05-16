@@ -40,6 +40,10 @@ public static class AppHostFactory
         builder.Services.AddSingleton<DevFilesStorage>();
         builder.Services.AddSingleton<MeetingMarkdownExporter>();
 
+        // X-Atlas-Actor 헤더 (작성자 자동 추적) 를 AppDbContext.SaveChanges 가 읽을 수 있게 등록.
+        builder.Services.AddHttpContextAccessor();
+        builder.Services.AddScoped<IActorAccessor, HttpActorAccessor>();
+
         // Default Timeout=30 — 동시 라이터 충돌 시 즉시 'database is locked' 가 아니라 최대 30초 busy wait.
         // 사용자 입력 수준의 동시성(드물게 겹치는 PUT/POST)은 이 한 줄로 거의 다 흡수된다.
         builder.Services.AddScoped<SearchService>();

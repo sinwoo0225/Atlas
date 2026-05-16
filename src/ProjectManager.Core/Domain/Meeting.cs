@@ -1,6 +1,6 @@
 namespace ProjectManager.Core.Domain;
 
-public class Meeting
+public class Meeting : IAuditable
 {
     public int Id { get; set; }
     public int ProjectId { get; set; }
@@ -16,6 +16,8 @@ public class Meeting
     public string? MarkdownPath { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string CreatedBy { get; set; } = string.Empty;
+    public string UpdatedBy { get; set; } = string.Empty;
 
     public Project Project { get; set; } = null!;
 }

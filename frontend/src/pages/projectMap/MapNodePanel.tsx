@@ -199,7 +199,10 @@ function ChangeView({ entity }: { entity: ChangeLog }) {
         <Badge tone={impactTone(entity.impact)}>{entity.impact}</Badge>
         <span className="text-xs text-muted">{entity.date.slice(0, 10)}</span>
       </div>
-      {entity.author && <KV label="작성자" value={entity.author} />}
+      {entity.createdBy && <KV label="작성자" value={entity.createdBy} />}
+      {entity.updatedBy && entity.updatedBy !== entity.createdBy && (
+        <KV label="최근 수정자" value={entity.updatedBy} />
+      )}
       <Section label="변경 내용">
         <div className="markdown-body">
           <ReactMarkdown>{entity.content}</ReactMarkdown>

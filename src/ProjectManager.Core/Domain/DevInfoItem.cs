@@ -7,7 +7,7 @@ public enum DevInfoType { Markdown, File, Link }
 // Reference: 카피하지 않고 사용자가 지정한 원본 경로를 FilePath 에 저장. 백업 zip 에 포함 안 됨.
 public enum DevInfoStorageMode { Copy, Reference }
 
-public class DevInfoItem
+public class DevInfoItem : IAuditable
 {
     public int Id { get; set; }
     public int ProjectId { get; set; }
@@ -20,6 +20,8 @@ public class DevInfoItem
     public string Tags { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string CreatedBy { get; set; } = string.Empty;
+    public string UpdatedBy { get; set; } = string.Empty;
 
     public Project Project { get; set; } = null!;
 }

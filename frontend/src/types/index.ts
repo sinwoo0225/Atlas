@@ -64,7 +64,8 @@ export interface ChangeLog {
   content: string;
   impact: ImpactLevel;
   relatedDocLinks: string;
-  author: string;
+  createdBy: string;
+  updatedBy: string;
   createdAt: string;
   updatedAt: string;
 }

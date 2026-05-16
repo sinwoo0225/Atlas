@@ -2,7 +2,7 @@ namespace ProjectManager.Core.Domain;
 
 public enum ProjectStatus { Planned, Waiting, InProgress, Done }
 
-public class Project
+public class Project : IAuditable
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -18,6 +18,8 @@ public class Project
     public string FolderPath { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string CreatedBy { get; set; } = string.Empty;
+    public string UpdatedBy { get; set; } = string.Empty;
 
     public ICollection<WbsItem> WbsItems { get; set; } = new List<WbsItem>();
     public ICollection<ChangeLog> ChangeLogs { get; set; } = new List<ChangeLog>();

@@ -94,7 +94,7 @@ internal static class SearchIndexer
         return new IndexRow(
             TypeChangeLog, c.Id, c.ProjectId,
             Title: title,
-            Body: Combine(c.Content, c.Author, c.RelatedDocLinks),
+            Body: Combine(c.Content, c.CreatedBy, c.UpdatedBy, c.RelatedDocLinks),
             UpdatedAt: c.UpdatedAt);
     }
 

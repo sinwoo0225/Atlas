@@ -164,7 +164,8 @@ Client 모드로 옮기면 위 위험 모두 사라진다.
 
 ### Client 모드 — 알아둘 함정
 
-- **연결 설정은 host bridge 로만**. `BootstrapConfig` 의 `mode`/`serverUrl`/`apiKey` 는 항상 클라이언트 머신 로컬을 만져야 한다. Client 모드에서 `/api` 를 거치면 서버측 BootstrapConfig 를 건드리게 됨. 그래서 `getConnectionConfig` / `setConnectionConfig` / `testServerConnection` 메시지만 사용 (`MainWindow.xaml.cs:OnHostMessageReceived`).
+- **연결 설정은 host bridge 로만**. `BootstrapConfig` 의 `mode`/`serverUrl`/`apiKey` 는 항상 클라이언트 머신 로컬을 만져야 한다. Client 모드에서 `/api` 를 거치면 서버측 BootstrapConfig 를 건드리게 됨. 그래서 `getConnectionConfig` / `setConnectionConfig` / `testServerConnection` 메시지만 사용 (`MainWindow.xaml.cs:OnHostMessageReceived`). 머신 계정 시드(`getMachineAccount`) 도 같은 이유로 host bridge — 서버 머신이 아닌 *클라이언트* 머신의 `Environment.UserName` 을 가져와야 actor 가 사람별로 구분됨.
+- **`X-Atlas-Actor` 는 인증이 아님**. 모든 API 요청에 `frontend/src/api/client.ts` 가 `Settings.defaultAuthor` 를 `X-Atlas-Actor` 헤더로 자동 첨부하고, 서버 `IActorAccessor` + `AppDbContext.SaveChanges` 가 `IAuditable` 엔티티의 `CreatedBy`/`UpdatedBy` 를 자동 채움. 하지만 DevTools 로 헤더 위조 가능, SettingsPage 에서 동료 이름으로 바꿔 가장 가능. 사내 신뢰 환경 + `X-Atlas-Key` 인증 전제의 **메타데이터 마커** 일 뿐. 권한 결정에 절대 사용 금지. 한글 사용자명은 클라가 `encodeURIComponent`, 서버가 `Uri.UnescapeDataString` 으로 ISO-8859-1 헤더 제한 우회.
 - **DevInfo Reference 모드는 Client 모드에서 disable**. picker 가 클라 머신 경로를 반환하지만 서버가 그 경로를 열 수 없음. 새 항목 생성 시 라디오 비활성 (`DevInfoPage.tsx`). 기존 Reference 항목은 표시만 됨 — 다른 클라에서 열기 시도하면 실패할 수 있다는 점 인지.
 - **DataFolderSection 은 Client 모드에서 숨김**. 서버측 데이터 폴더는 운영자가 서버 머신의 `%LOCALAPPDATA%\Atlas\config.json` 을 직접 편집해 변경.
 - **자체서명 TLS 미지원**. 현재 평문 HTTP 만. 사내 LAN + API 키 가정. 인터넷 노출은 reverse proxy(nginx 등) + TLS 후 사용자 재량.

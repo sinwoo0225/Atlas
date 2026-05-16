@@ -2,7 +2,7 @@ namespace ProjectManager.Core.Domain;
 
 public enum WbsStatus { Planned, InProgress, Done }
 
-public class WbsItem
+public class WbsItem : IAuditable
 {
     public int Id { get; set; }
     public int ProjectId { get; set; }
@@ -18,6 +18,8 @@ public class WbsItem
     public string Notes { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string CreatedBy { get; set; } = string.Empty;
+    public string UpdatedBy { get; set; } = string.Empty;
 
     public Project Project { get; set; } = null!;
     public WbsVersion? Version { get; set; }

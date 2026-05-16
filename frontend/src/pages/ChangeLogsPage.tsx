@@ -120,7 +120,6 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [content, setContent] = useState(initial?.content ?? '');
   const [impact, setImpact] = useState<ImpactLevel>(initial?.impact ?? 'Low');
-  const [author, setAuthor] = useState(initial?.author ?? '');
   const [otherLinks, setOtherLinks] = useState<string>(
     initial ? extractOtherLinks(initial.relatedDocLinks).join('\n') : ''
   );
@@ -160,10 +159,9 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
       content,
       impact,
       relatedDocLinks: linkLines.join('\n'),
-      author,
     };
     if (initial) await changeLogsApi.update(projectId, initial.id, payload);
-    else await changeLogsApi.create(payload as any);
+    else await changeLogsApi.create(payload);
     onSave();
   };
 
@@ -192,10 +190,6 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
             rows={4}
             className={`${inputClass} resize-none`}
           />
-        </FormField>
-
-        <FormField label="작성자">
-          <input value={author} onChange={(e) => setAuthor(e.target.value)} className={inputClass} />
         </FormField>
 
         <FormField label="관련 문서 링크 (한 줄에 하나)">
@@ -273,7 +267,7 @@ export function ChangeLogsPage() {
     return logs.filter((l) => {
       if (impactFilter !== 'All' && l.impact !== impactFilter) return false;
       if (kw) {
-        const hay = `${l.content} ${l.author ?? ''} ${l.relatedDocLinks ?? ''}`.toLowerCase();
+        const hay = `${l.content} ${l.createdBy ?? ''} ${l.updatedBy ?? ''} ${l.relatedDocLinks ?? ''}`.toLowerCase();
         if (!hay.includes(kw)) return false;
       }
       return true;
@@ -365,7 +359,10 @@ export function ChangeLogsPage() {
                 <div className="flex items-center gap-2">
                   <Badge variant={impactBadge[log.impact].variant} size="sm">{log.impact}</Badge>
                   <span className="text-sm text-muted">{log.date.slice(0, 10)}</span>
-                  {log.author && <span className="text-xs text-muted">by {log.author}</span>}
+                  {log.createdBy && <span className="text-xs text-muted">by {log.createdBy}</span>}
+                  {log.updatedBy && log.updatedBy !== log.createdBy && (
+                    <span className="text-xs text-muted">· 수정 {log.updatedBy}</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">

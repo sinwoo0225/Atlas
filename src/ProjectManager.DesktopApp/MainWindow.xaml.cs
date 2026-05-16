@@ -253,6 +253,19 @@ public partial class MainWindow : Window
                 // fire-and-forget: 결과는 PostWebMessageAsJson 으로 회신.
                 _ = TestServerConnectionAsync(requestId, url, key);
             }
+            else if (type == "getMachineAccount")
+            {
+                // 작성자 자동 추적용: Settings.defaultAuthor 가 비어 있을 때 첫 부팅 시 한 번 시드한다.
+                // Client 모드여도 *클라이언트* 머신의 계정명을 반환 — 그래야 서버가 actor 를 구분할 수 있다.
+                var requestId = doc.RootElement.TryGetProperty("requestId", out var rid) ? rid.GetString() : null;
+                var response = JsonSerializer.Serialize(new
+                {
+                    type = "getMachineAccountResult",
+                    requestId,
+                    userName = Environment.UserName,
+                });
+                WebView.CoreWebView2.PostWebMessageAsJson(response);
+            }
         }
         catch (System.Exception ex)
         {

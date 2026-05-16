@@ -2,7 +2,7 @@ namespace ProjectManager.Core.Domain;
 
 public enum ResourceType { Person, Equipment }
 
-public class Resource
+public class Resource : IAuditable
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -13,4 +13,6 @@ public class Resource
     public string Notes { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string CreatedBy { get; set; } = string.Empty;
+    public string UpdatedBy { get; set; } = string.Empty;
 }

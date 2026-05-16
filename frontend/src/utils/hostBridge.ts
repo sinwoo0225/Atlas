@@ -166,6 +166,37 @@ interface TestResultMsg {
   error?: string | null;
 }
 
+// 첫 부팅 시 Settings.defaultAuthor 가 비어 있으면 클라 머신 사용자명으로 한 번 시드한다.
+// Client 모드에서도 서버가 아닌 *클라이언트* 머신의 계정을 반환 — actor 구분의 기본값.
+// 브릿지가 없는 dev 모드에서는 null 즉시 resolve (사용자가 SettingsPage 에서 직접 입력).
+interface MachineAccountResult {
+  type?: string;
+  requestId?: string;
+  userName?: string | null;
+}
+
+export function getMachineAccount(): Promise<string | null> {
+  return new Promise((resolve) => {
+    const bridge = window.chrome?.webview;
+    if (!bridge) {
+      resolve(null);
+      return;
+    }
+
+    const requestId = `getMachine-${++counter}-${Date.now()}`;
+    const onMessage = (e: MessageEvent) => {
+      const data = e.data as MachineAccountResult | null | undefined;
+      if (!data || typeof data !== 'object') return;
+      if (data.type !== 'getMachineAccountResult' || data.requestId !== requestId) return;
+      bridge.removeEventListener('message', onMessage);
+      const name = data.userName?.trim();
+      resolve(name ? name : null);
+    };
+    bridge.addEventListener('message', onMessage);
+    bridge.postMessage({ type: 'getMachineAccount', requestId });
+  });
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;

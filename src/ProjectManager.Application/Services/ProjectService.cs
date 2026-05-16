@@ -206,7 +206,7 @@ public class ProjectService(
 
     internal static ChangeLogDto ChangeLogToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,
-        c.RelatedDocLinks, c.Author, c.CreatedAt, c.UpdatedAt);
+        c.RelatedDocLinks, c.CreatedBy, c.UpdatedBy, c.CreatedAt, c.UpdatedAt);
 
     internal static MeetingDto MeetingToDto(Meeting m) => new(
         m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime,
