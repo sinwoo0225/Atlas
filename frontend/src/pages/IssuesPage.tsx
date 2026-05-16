@@ -62,7 +62,7 @@ export function IssuesPage() {
     load();
   };
 
-  // 옵티미스틱 업데이트 후 백엔드에 PUT 전송.
+  // 옵티미스틱 업데이트 후 백엔드에 PUT. 실패 시 원래 값으로 롤백.
   // 백엔드 PUT 은 assigneeName 을 응답으로 채우므로 페이로드에서 빼고 보낸다.
   const updateField = async <K extends keyof Issue>(id: number, key: K, value: Issue[K]) => {
     const target = issues.find((i) => i.id === id);
@@ -70,7 +70,12 @@ export function IssuesPage() {
     const next = { ...target, [key]: value };
     setIssues((prev) => prev.map((i) => (i.id === id ? next : i)));
     const { assigneeName: _ignored, ...payload } = next;
-    await issuesApi.update(pid, id, payload as Partial<Issue>);
+    try {
+      await issuesApi.update(pid, id, payload as Partial<Issue>);
+    } catch {
+      // api/client.ts 가 토스트 처리 — 여기서는 행 값만 원복.
+      setIssues((prev) => prev.map((i) => (i.id === id ? target : i)));
+    }
   };
 
   const handleQuickCreate = async () => {
@@ -181,8 +186,8 @@ export function IssuesPage() {
         </div>
       </div>
 
-      <Card padding="none" className="overflow-hidden">
-        <table className="w-full">
+      <Card padding="none" className="overflow-x-auto">
+        <table className="w-full min-w-[720px]">
           <thead>
             <tr className="text-xs text-muted border-b border-default">
               <th className="text-left py-3 px-4 font-medium w-10"></th>

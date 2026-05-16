@@ -616,8 +616,8 @@ export function WbsPage() {
           />
         </Card>
       ) : (
-        <Card padding="none" className="overflow-hidden">
-          <table className="w-full">
+        <Card padding="none" className="overflow-x-auto">
+          <table className="w-full min-w-[800px]">
             <thead>
               <tr className="border-b border-default text-xs text-muted">
                 <th className="text-left py-3 px-4 font-medium">작업명</th>

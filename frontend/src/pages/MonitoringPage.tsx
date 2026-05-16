@@ -149,7 +149,8 @@ export function MonitoringPage() {
                   <h2 className="h-card">{g.projectName}</h2>
                   <span className="text-xs text-muted">{g.items.length}건</span>
                 </div>
-                <table className="w-full">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px]">
                   <thead>
                     <tr className="text-xs text-muted border-b border-default">
                       <th className="text-left py-2 px-4 font-medium">작업명</th>
@@ -180,6 +181,7 @@ export function MonitoringPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </Card>
             ))}
           </div>
