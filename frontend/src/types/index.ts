@@ -261,6 +261,29 @@ export interface MonitoringCharts {
   wbsProgress: WbsProgress[];
 }
 
+// D-1 리소스 히트맵: 담당자 × 8주 마감 밀도.
+export interface ResourceHeatmapItem {
+  weekIndex: number;
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  dueDate: string;
+}
+
+export interface ResourceHeatmapRow {
+  assignee: string;
+  counts: number[];
+  items: ResourceHeatmapItem[];
+}
+
+export interface ResourceHeatmap {
+  weekStarts: string[];
+  rows: ResourceHeatmapRow[];
+  totalItems: number;
+}
+
 export type ActivityEntityType =
   | 'Project'
   | 'WbsItem'

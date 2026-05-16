@@ -23,3 +23,24 @@ public record MonitoringChartsDto(
     IEnumerable<IssueMatrixCellDto> IssueMatrix,
     IEnumerable<UpcomingMilestoneDto> UpcomingMilestones,
     IEnumerable<WbsProgressDto> WbsProgress);
+
+// D-1 리소스 히트맵: across-project 담당자 × 8주 마감 밀도.
+// WeekStarts 길이 8 (월요일 시작 ISO), Rows[i].Counts 길이 8.
+public record ResourceHeatmapDto(
+    IReadOnlyList<string> WeekStarts,
+    IReadOnlyList<ResourceHeatmapRow> Rows,
+    int TotalItems);
+
+public record ResourceHeatmapRow(
+    string Assignee,
+    int[] Counts,
+    IReadOnlyList<ResourceHeatmapItem> Items);
+
+public record ResourceHeatmapItem(
+    int WeekIndex,
+    string Kind, // "wbs" | "issue"
+    int Id,
+    int ProjectId,
+    string ProjectName,
+    string Title,
+    string DueDate);

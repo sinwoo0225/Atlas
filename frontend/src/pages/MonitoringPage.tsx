@@ -7,8 +7,10 @@ import { worklogApi } from '../api/worklog';
 import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
+import { ResourceHeatmapCard } from './monitoring/ResourceHeatmapCard';
 import type {
   MonitoringCharts as MonitoringChartsData,
+  ResourceHeatmap,
   TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
 } from '../types';
 
@@ -46,6 +48,7 @@ export function MonitoringPage() {
   const [thisWeek, setThisWeek] = useState<WeeklyWorkLog | null>(null);
   const [lastWeek, setLastWeek] = useState<WeeklyWorkLog | null>(null);
   const [charts, setCharts] = useState<MonitoringChartsData | null>(null);
+  const [heatmap, setHeatmap] = useState<ResourceHeatmap | null>(null);
 
   const load = () => {
     setLoading(true);
@@ -56,12 +59,14 @@ export function MonitoringPage() {
       worklogApi.weeklyMonitoring(isoDate(thisMon)),
       worklogApi.weeklyMonitoring(isoDate(lastMon)),
       monitoringApi.getCharts(),
+      monitoringApi.getResourceHeatmap(),
     ])
-      .then(([today, thisW, lastW, ch]) => {
+      .then(([today, thisW, lastW, ch, hm]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
         setCharts(ch);
+        setHeatmap(hm);
       })
       .catch(() => setError('모니터링 데이터를 불러올 수 없습니다.'))
       .finally(() => setLoading(false));
@@ -99,6 +104,9 @@ export function MonitoringPage() {
 
       {/* === 종합 시각화 (4 차트) === */}
       <MonitoringChartGrid data={charts} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)} />
+
+      {/* === D-1 리소스 히트맵 (across-project 담당자 부하) === */}
+      <ResourceHeatmapCard data={heatmap} loading={loading} />
 
       {/* === 오늘 진행 중 WBS === */}
       <section className="space-y-3">

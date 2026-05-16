@@ -106,6 +106,113 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
         return new MonitoringChartsDto(projectStatus, issueMatrix, milestones, wbsProgress);
     }
 
+    // D-1 리소스 히트맵: 이번 주 월요일부터 8주, 담당자별 미완료 항목 마감 카운트.
+    // WBS Assignee 는 콤마 분리 문자열, Issue 는 AssigneeResource FK — 같은 문자열이면 같은 행으로 합산.
+    // 담당자 미지정 항목은 "미할당" 행으로 누적. 행 정렬: 8주 총합 desc → 이름 asc, "미할당" 은 항상 마지막.
+    public async Task<ResourceHeatmapDto> GetResourceHeatmapAsync()
+    {
+        const int weeks = 8;
+        const string Unassigned = "미할당";
+
+        var weekStart0 = WorkLogService.StartOfWeek(DateTime.Today);
+        var horizon = weekStart0.AddDays(weeks * 7);
+        var weekStarts = Enumerable.Range(0, weeks)
+            .Select(i => IsoDate(weekStart0.AddDays(i * 7)))
+            .ToList();
+
+        var wbsItems = await db.WbsItems
+            .Where(w => w.EndDate.HasValue
+                && w.EndDate.Value.Date >= weekStart0
+                && w.EndDate.Value.Date < horizon
+                && w.Status != WbsStatus.Done)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+
+        var issueItems = await db.Issues
+            .Where(i => i.DueDate.HasValue
+                && i.DueDate.Value.Date >= weekStart0
+                && i.DueDate.Value.Date < horizon
+                && (i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress))
+            .Include(i => i.AssigneeResource)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+
+        var rows = new Dictionary<string, (int[] counts, List<ResourceHeatmapItem> items)>();
+        (int[] counts, List<ResourceHeatmapItem> items) RowOf(string key)
+        {
+            if (!rows.TryGetValue(key, out var row))
+            {
+                row = (new int[weeks], new List<ResourceHeatmapItem>());
+                rows[key] = row;
+            }
+            return row;
+        }
+
+        int total = 0;
+        foreach (var x in wbsItems)
+        {
+            var weekIdx = (int)((x.w.EndDate!.Value.Date - weekStart0).TotalDays / 7);
+            if (weekIdx < 0 || weekIdx >= weeks) continue;
+            var assignees = SplitAssignees(x.w.Assignee);
+            foreach (var name in assignees)
+            {
+                var row = RowOf(name);
+                row.counts[weekIdx]++;
+                row.items.Add(new ResourceHeatmapItem(
+                    weekIdx, "wbs", x.w.Id, x.w.ProjectId, x.p.Name,
+                    x.w.Name, IsoDate(x.w.EndDate.Value)));
+            }
+            total++;
+        }
+
+        foreach (var x in issueItems)
+        {
+            var weekIdx = (int)((x.i.DueDate!.Value.Date - weekStart0).TotalDays / 7);
+            if (weekIdx < 0 || weekIdx >= weeks) continue;
+            var name = string.IsNullOrWhiteSpace(x.i.AssigneeResource?.Name)
+                ? Unassigned
+                : x.i.AssigneeResource!.Name.Trim();
+            var row = RowOf(name);
+            row.counts[weekIdx]++;
+            row.items.Add(new ResourceHeatmapItem(
+                weekIdx, "issue", x.i.Id, x.i.ProjectId, x.p.Name,
+                x.i.Title, IsoDate(x.i.DueDate.Value)));
+            total++;
+        }
+
+        var ordered = rows
+            .Select(kv => new ResourceHeatmapRow(
+                kv.Key,
+                kv.Value.counts,
+                kv.Value.items
+                    .OrderBy(it => it.DueDate, StringComparer.Ordinal)
+                    .ThenBy(it => it.Kind, StringComparer.Ordinal)
+                    .ThenBy(it => it.Id)
+                    .ToList()))
+            .OrderBy(r => r.Assignee == Unassigned ? 1 : 0)
+            .ThenByDescending(r => r.Counts.Sum())
+            .ThenBy(r => r.Assignee, StringComparer.CurrentCulture)
+            .ToList();
+
+        return new ResourceHeatmapDto(weekStarts, ordered, total);
+    }
+
+    private static IEnumerable<string> SplitAssignees(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            yield return "미할당";
+            yield break;
+        }
+        var any = false;
+        foreach (var token in raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            any = true;
+            yield return token;
+        }
+        if (!any) yield return "미할당";
+    }
+
     public async Task<WeeklyWorkLogDto> GetWeeklyWorkLogsAsync(DateTime weekStart)
     {
         var start = WorkLogService.StartOfWeek(weekStart);

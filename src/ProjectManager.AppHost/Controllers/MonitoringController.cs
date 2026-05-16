@@ -14,6 +14,9 @@ public class MonitoringController(MonitoringService svc) : ControllerBase
     [HttpGet("charts")]
     public async Task<IActionResult> Charts() => Ok(await svc.GetChartsAsync());
 
+    [HttpGet("resource-heatmap")]
+    public async Task<IActionResult> ResourceHeatmap() => Ok(await svc.GetResourceHeatmapAsync());
+
     [HttpGet("worklogs/weekly")]
     public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart)
     {
