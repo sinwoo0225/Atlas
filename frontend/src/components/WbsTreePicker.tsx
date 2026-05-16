@@ -9,11 +9,11 @@ type Props = {
   selectedId: number | null;              // null = "(루트)"
   excludeIds: Set<number>;                // 자기 자신 + 모든 자손 (순환 가드)
   onSelect: (id: number | null) => void;
-  maxHeight?: string;                     // 기본 'max-h-64'
 };
 
 // WBS 트리에서 부모를 고르는 picker. 검색 + expand/collapse + 자손 비활성.
-export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, maxHeight = 'max-h-64' }: Props) {
+// 높이는 부모가 제어 (flex 컨테이너 안에서 flex-1 로 fit). 자체 max-h 없음 — 이중 스크롤 방지.
+export function WbsTreePicker({ items, selectedId, excludeIds, onSelect }: Props) {
   const [keyword, setKeyword] = useState('');
   const [manuallyExpanded, setManuallyExpanded] = useState<Set<number>>(new Set());
 
@@ -47,8 +47,8 @@ export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, maxHeig
   const visible = filterOpts.kw ? autoExpanded : null;
 
   return (
-    <div className="space-y-2">
-      <div className="relative">
+    <div className="flex flex-col gap-2 min-h-0 h-full">
+      <div className="relative shrink-0">
         <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
         <input
           type="search"
@@ -58,7 +58,7 @@ export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, maxHeig
           className={`${inputClass} pl-7 py-1.5 text-sm`}
         />
       </div>
-      <div className={`border border-default rounded-md overflow-y-auto ${maxHeight} bg-surface`}>
+      <div className="border border-default rounded-md overflow-y-auto flex-1 min-h-0 bg-surface">
         <RootRow
           selected={selectedId == null}
           onSelect={() => onSelect(null)}

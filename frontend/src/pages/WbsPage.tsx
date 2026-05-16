@@ -91,12 +91,12 @@ function WbsItemForm({
   };
 
   return (
-    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <Card padding="spacious" className="w-full max-w-3xl my-4">
-        <h2 className="h-section mb-4">{initial ? '작업 수정' : '작업 추가'}</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* 좌측 - 기본 필드 */}
-          <div className="space-y-3">
+    <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <Card padding="spacious" className="w-full max-w-3xl h-[85vh] flex flex-col">
+        <h2 className="h-section mb-4 shrink-0">{initial ? '작업 수정' : '작업 추가'}</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
+          {/* 좌측 - 기본 필드. picker 펼침 시 picker 영역이 남은 공간 다 차지 (flex-1). */}
+          <div className="flex flex-col gap-3 min-h-0">
             <FormField label="작업명" required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
@@ -135,11 +135,11 @@ function WbsItemForm({
               <span className="text-sm text-secondary">마일스톤</span>
             </label>
             {initial && (
-              <FormField label="부모 작업">
+              <FormField label="부모 작업" className={pickerOpen ? 'flex-1 min-h-0' : 'shrink-0'}>
                 <button
                   type="button"
                   onClick={() => setPickerOpen((v) => !v)}
-                  className={`${inputClass} text-left flex items-center justify-between`}
+                  className={`${inputClass} text-left flex items-center justify-between shrink-0`}
                 >
                   <span className={form.parentId == null ? 'text-muted' : 'text-primary'}>
                     {findItemName(form.parentId, allItems)}
@@ -147,15 +147,17 @@ function WbsItemForm({
                   {pickerOpen ? <ChevronDown size={14} className="text-muted" /> : <ChevronRight size={14} className="text-muted" />}
                 </button>
                 {pickerOpen && (
-                  <div className="mt-2">
-                    <WbsTreePicker
-                      items={allItems}
-                      selectedId={form.parentId}
-                      excludeIds={excludeIds}
-                      onSelect={(id) => { set('parentId', id); setPickerOpen(false); }}
-                    />
+                  <div className="mt-2 flex-1 min-h-0 flex flex-col gap-1">
+                    <div className="flex-1 min-h-0">
+                      <WbsTreePicker
+                        items={allItems}
+                        selectedId={form.parentId}
+                        excludeIds={excludeIds}
+                        onSelect={(id) => { set('parentId', id); setPickerOpen(false); }}
+                      />
+                    </div>
                     {descendantCount > 0 && (
-                      <p className="text-xs text-muted mt-1">
+                      <p className="text-xs text-muted shrink-0">
                         이 항목에는 하위 작업 {descendantCount}건이 있습니다. 부모를 변경하면 함께 이동됩니다.
                       </p>
                     )}
@@ -165,8 +167,8 @@ function WbsItemForm({
             )}
           </div>
 
-          {/* 우측 - 상세 정보 (마크다운) */}
-          <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)">
+          {/* 우측 - 상세 정보 (마크다운). 세로 가득 — 모달 빈 공간 어색함 제거. */}
+          <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)" className="min-h-0">
             {notesEditing || !form.notes ? (
               <textarea
                 value={form.notes}
@@ -174,22 +176,21 @@ function WbsItemForm({
                 onKeyDown={(e) => applyTextareaTab(e, (next) => set('notes', next))}
                 onFocus={() => setNotesEditing(true)}
                 onBlur={() => setNotesEditing(false)}
-                rows={18}
-                className={`${inputClass} resize-none font-mono`}
+                className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
                 placeholder="작업에 대한 상세 정보 (마크다운 지원)"
                 autoFocus={notesEditing}
               />
             ) : (
               <div
                 onClick={() => setNotesEditing(true)}
-                className="markdown-body min-h-[280px] cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+                className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
                 <ReactMarkdown>{form.notes}</ReactMarkdown>
               </div>
             )}
           </FormField>
         </div>
-        <div className="flex gap-2 justify-end pt-4 border-t border-default mt-4">
+        <div className="flex gap-2 justify-end pt-4 border-t border-default mt-4 shrink-0">
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
           <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
         </div>
