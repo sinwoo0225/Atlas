@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity } from 'lucide-react';
+import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity, ChevronRight } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { activityApi } from '../api/activity';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
@@ -145,7 +145,7 @@ export function Dashboard() {
       <RiskAlertCard signals={riskSignals} projectId={pid} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Section title="주요 마일스톤" Icon={Diamond}>
+        <Section title="주요 마일스톤" Icon={Diamond} to={`/projects/${pid}/wbs`} emphasis>
           {upcomingMilestones.length === 0 ? (
             <Empty text="예정된 마일스톤 없음" />
           ) : (
@@ -167,7 +167,7 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="최근 변경 이력" Icon={GitBranch}>
+        <Section title="최근 변경 이력" Icon={GitBranch} to={`/projects/${pid}/changelogs`} compact>
           {recentChanges.length === 0 ? (
             <Empty text="변경 이력 없음" />
           ) : (
@@ -187,7 +187,7 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="최근 회의록" Icon={FileText}>
+        <Section title="최근 회의록" Icon={FileText} to={`/projects/${pid}/meetings`} compact>
           {recentMeetings.length === 0 ? (
             <Empty text="회의록 없음" />
           ) : (
@@ -207,7 +207,7 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="개발 정보" Icon={Code2}>
+        <Section title="개발 정보" Icon={Code2} to={`/projects/${pid}/devinfo`} compact>
           {recentDevInfo.length === 0 ? (
             <Empty text="개발 정보 없음" />
           ) : (
@@ -224,7 +224,7 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="이슈" Icon={AlertTriangle}>
+        <Section title="이슈" Icon={AlertTriangle} to={`/projects/${pid}/issues`} emphasis>
           {recentIssues.length === 0 ? (
             <Empty text="등록된 이슈 없음" />
           ) : (
@@ -246,7 +246,7 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="이번 주 업무일지" Icon={NotebookPen}>
+        <Section title="이번 주 업무일지" Icon={NotebookPen} to={`/projects/${pid}/worklog`}>
           {!thisWeekWorkLog || thisWeekWorkLog.days.every((d) => !d.done && !d.plan && !d.issues) ? (
             <Empty text="이번 주 기록 없음" />
           ) : (
@@ -270,7 +270,7 @@ export function Dashboard() {
         </Section>
 
         <div className="lg:col-span-2">
-          <Section title="최근 활동" Icon={Activity}>
+          <Section title="최근 활동" Icon={Activity} to="/activity" compact>
             {activities.length === 0 ? (
               <Empty text="활동 기록 없음" />
             ) : (
@@ -312,17 +312,38 @@ function Section({
   title,
   Icon,
   children,
+  to,
+  compact = false,
+  emphasis = false,
 }: {
   title: string;
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   children: React.ReactNode;
+  /** 헤더 우측 chevron + click navigate (P4-4) */
+  to?: string;
+  /** 컴팩트 톤 (P4-3 부 정보) — padding/font 축소 */
+  compact?: boolean;
+  /** 강조 톤 (P4-3 핵심) — border-accent-soft */
+  emphasis?: boolean;
 }) {
+  const navigate = useNavigate();
+  const HeaderTag: any = to ? 'button' : 'div';
   return (
-    <Card padding="spacious">
-      <h2 className="h-card mb-3 flex items-center gap-2">
-        <Icon size={16} className="text-muted" />
-        {title}
-      </h2>
+    <Card
+      padding={compact ? 'normal' : 'spacious'}
+      className={emphasis ? 'border-accent' : ''}
+    >
+      <HeaderTag
+        type={to ? 'button' : undefined}
+        onClick={to ? () => navigate(to) : undefined}
+        className={`w-full ${compact ? 'mb-2' : 'mb-3'} flex items-center justify-between ${to ? 'text-left hover:text-accent transition-colors group' : ''}`}
+      >
+        <h2 className={`${compact ? 'text-xs' : 'h-card'} flex items-center gap-2`}>
+          <Icon size={compact ? 14 : 16} className="text-muted" />
+          {title}
+        </h2>
+        {to && <ChevronRight size={14} className="text-muted group-hover:text-accent transition-colors shrink-0" />}
+      </HeaderTag>
       {children}
     </Card>
   );
