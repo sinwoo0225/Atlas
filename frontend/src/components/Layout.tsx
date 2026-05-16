@@ -10,6 +10,7 @@ import {
   Network,
   Settings,
   Activity,
+  BarChart3,
   Users,
   AlertTriangle,
   ChevronDown,
@@ -23,7 +24,7 @@ import { useRecentTracker } from '../hooks/useRecentTracker';
 
 const navItems = [
   { path: '/', label: '프로젝트 목록', Icon: FolderOpen },
-  { path: '/monitoring', label: '통합 모니터링', Icon: Activity },
+  { path: '/monitoring', label: '통합 모니터링', Icon: BarChart3 },
   { path: '/activity', label: '전체 활동', Icon: Activity },
   { path: '/resources', label: '리소스 관리', Icon: Users },
 ];
@@ -171,12 +172,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex-1 px-3 pt-3 pb-3 space-y-1 overflow-y-auto">
-          {navItems.map(({ path, label, Icon }) => (
-            <Link key={path} to={path} className={linkClass(location.pathname === path)}>
-              <Icon size={16} />
-              {label}
-            </Link>
-          ))}
+          {navItems.map(({ path, label, Icon }) => {
+            const active = location.pathname === path;
+            return (
+              <Link key={path} to={path} className={linkClass(active)} aria-current={active ? 'page' : undefined}>
+                <Icon size={16} />
+                {label}
+              </Link>
+            );
+          })}
 
           {selectedProject && (
             <>
@@ -187,8 +191,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </div>
               {projectNavItems.map(({ path, label, Icon }) => {
                 const fullPath = `/projects/${selectedProjectId}/${path}`;
+                const active = location.pathname === fullPath;
                 return (
-                  <Link key={path} to={fullPath} className={linkClass(location.pathname === fullPath)}>
+                  <Link key={path} to={fullPath} className={linkClass(active)} aria-current={active ? 'page' : undefined}>
                     <Icon size={16} />
                     {label}
                   </Link>
@@ -199,10 +204,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-3 border-t border-default">
-          <Link to="/settings" className={linkClass(location.pathname === '/settings')}>
-            <Settings size={16} />
-            설정
-          </Link>
+          {(() => {
+            const active = location.pathname === '/settings';
+            return (
+              <Link to="/settings" className={linkClass(active)} aria-current={active ? 'page' : undefined}>
+                <Settings size={16} />
+                설정
+              </Link>
+            );
+          })()}
         </div>
       </aside>
 
