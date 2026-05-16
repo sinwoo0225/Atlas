@@ -49,6 +49,7 @@ public interface IDevInfoRepository
     Task<DevInfoItem> CreateAsync(DevInfoItem item);
     Task<DevInfoItem> UpdateAsync(DevInfoItem item);
     Task DeleteAsync(int id);
+    Task<IReadOnlyList<string>> GetTagsByProjectAsync(int projectId);
 }
 
 public interface IResourceRepository

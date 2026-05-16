@@ -16,6 +16,19 @@ public class DevInfoService(
     public async Task<IEnumerable<DevInfoItemDto>> GetByProjectAsync(int projectId) =>
         (await repo.GetByProjectAsync(projectId)).Select(ToDto);
 
+    // 프로젝트 안 DevInfo 의 콤마 Tags 컬럼에서 distinct 태그 list 반환.
+    // SQLite 는 string split 불가 — Tags 문자열만 가져와 메모리에서 split·distinct·정렬.
+    // 대소문자 무관 distinct (OrdinalIgnoreCase) 후, 한글·영문 mixed 정렬 (CurrentCultureIgnoreCase).
+    public async Task<IReadOnlyList<string>> GetDistinctTagsAsync(int projectId)
+    {
+        var tagsStrings = await repo.GetTagsByProjectAsync(projectId);
+        return tagsStrings
+            .SelectMany(s => s.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(t => t, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
     public async Task<DevInfoItemDto?> GetByIdAsync(int id)
     {
         var item = await repo.GetByIdAsync(id);

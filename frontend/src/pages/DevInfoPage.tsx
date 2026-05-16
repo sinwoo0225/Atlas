@@ -12,6 +12,8 @@ import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { TagSuggestionInput } from '../components/TagSuggestionInput';
+import { parseTagTokens } from '../utils/devInfoTagTokens';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
@@ -31,12 +33,14 @@ function DevInfoForm({
   projectId,
   project,
   initial,
+  availableTags,
   onSave,
   onCancel,
 }: {
   projectId: number;
   project: Project | null;
   initial?: DevInfoItem;
+  availableTags: string[];
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -230,12 +234,12 @@ function DevInfoForm({
           </FormField>
         )}
 
-        <FormField label="태그 (쉼표 구분)">
-          <input
+        <FormField label="태그" hint="Enter 또는 콤마로 추가. ↑/↓ 로 기존 태그 선택, Backspace 로 마지막 칩 제거.">
+          <TagSuggestionInput
             value={form.tags}
-            onChange={(e) => set('tags', e.target.value)}
+            onChange={(v) => set('tags', v)}
+            suggestions={availableTags}
             placeholder="API, 설계, 문서"
-            className={inputClass}
           />
         </FormField>
 
@@ -321,8 +325,13 @@ export function DevInfoPage() {
   const [selected, setSelected] = useState<DevInfoItem | null>(null);
   const [filterType, setFilterType] = useState<DevInfoType | ''>('');
   const [keyword, setKeyword] = useState('');
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const load = () => devInfoApi.getByProject(pid).then(setItems);
+  const load = () => {
+    devInfoApi.getByProject(pid).then(setItems);
+    devInfoApi.getDistinctTags(pid).then(setAvailableTags).catch(() => setAvailableTags([]));
+  };
   useEffect(() => {
     load();
     projectsApi.getById(pid).then(setProject).catch(() => setProject(null));
@@ -359,15 +368,20 @@ export function DevInfoPage() {
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
+    const selectedSet = new Set(selectedTags.map((t) => t.toLowerCase()));
     return items.filter((i) => {
       if (filterType && i.type !== filterType) return false;
+      if (selectedSet.size > 0) {
+        const itemTags = parseTagTokens(i.tags).map((t) => t.toLowerCase());
+        if (!itemTags.some((t) => selectedSet.has(t))) return false;
+      }
       if (kw) {
         const hay = `${i.title} ${i.tags ?? ''} ${i.content ?? ''} ${i.url ?? ''}`.toLowerCase();
         if (!hay.includes(kw)) return false;
       }
       return true;
     });
-  }, [items, filterType, keyword]);
+  }, [items, filterType, selectedTags, keyword]);
 
   return (
     <div className="p-6 h-full flex flex-col gap-4">
@@ -415,6 +429,34 @@ export function DevInfoPage() {
         </div>
       </div>
 
+      {availableTags.length > 0 && (
+        <div className="flex gap-2 flex-wrap items-center">
+          <span className="text-xs text-muted shrink-0 mr-1">태그:</span>
+          {availableTags.map((tag) => {
+            const active = selectedTags.includes(tag);
+            return (
+              <Button
+                key={tag}
+                variant={active ? 'primary' : 'secondary'}
+                size="sm"
+                onClick={() =>
+                  setSelectedTags((prev) =>
+                    prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+                  )
+                }
+              >
+                {tag}
+              </Button>
+            );
+          })}
+          {selectedTags.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => setSelectedTags([])}>
+              초기화
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
         <div className="lg:col-span-1 overflow-y-auto space-y-2">
           {filtered.length === 0 ? (
@@ -423,7 +465,7 @@ export function DevInfoPage() {
               title={items.length === 0 ? '개발 정보가 없습니다.' : '조건에 맞는 항목이 없습니다.'}
               description={items.length === 0
                 ? "우측 상단 '정보 추가' 버튼으로 시작해보세요."
-                : (filterType || keyword) ? '필터·검색어를 조정해 보세요.' : '항목이 없습니다.'}
+                : (filterType || keyword || selectedTags.length > 0) ? '필터·검색어를 조정해 보세요.' : '항목이 없습니다.'}
             />
           ) : filtered.map((item) => {
             const Icon = typeIcon[item.type];
@@ -529,6 +571,7 @@ export function DevInfoPage() {
         <DevInfoForm
           projectId={pid}
           project={project}
+          availableTags={availableTags}
           onSave={() => { setShowForm(false); load(); }}
           onCancel={() => setShowForm(false)}
         />
@@ -538,6 +581,7 @@ export function DevInfoPage() {
           projectId={pid}
           project={project}
           initial={editing}
+          availableTags={availableTags}
           onSave={() => { setEditing(null); load(); }}
           onCancel={() => setEditing(null)}
         />

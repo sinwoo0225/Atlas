@@ -31,4 +31,10 @@ public class DevInfoRepository(AppDbContext db) : IDevInfoRepository
         var item = await db.DevInfoItems.FindAsync(id);
         if (item != null) { db.DevInfoItems.Remove(item); await db.SaveChangesAsync(); }
     }
+
+    public async Task<IReadOnlyList<string>> GetTagsByProjectAsync(int projectId) =>
+        await db.DevInfoItems
+            .Where(x => x.ProjectId == projectId && x.Tags != "")
+            .Select(x => x.Tags)
+            .ToListAsync();
 }
