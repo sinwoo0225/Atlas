@@ -21,9 +21,13 @@ public class ChangeLogService(IChangeLogRepository repo)
         {
             ProjectId = dto.ProjectId, Date = dto.Date,
             Content = dto.Content, Impact = dto.Impact,
-            RelatedDocLinks = dto.RelatedDocLinks
+            RelatedDocLinks = dto.RelatedDocLinks,
+            SourceIssueId = dto.SourceIssueId,
+            SourceWbsItemId = dto.SourceWbsItemId,
         };
-        return ToDto(await repo.CreateAsync(log));
+        var created = await repo.CreateAsync(log);
+        // navigation 채워서 응답 — DTO 의 title/name 이 자연스럽게 보이도록.
+        return ToDto(await repo.GetByIdAsync(created.Id) ?? created);
     }
 
     public async Task<ChangeLogDto?> UpdateAsync(int id, UpdateChangeLogDto dto)
@@ -32,7 +36,10 @@ public class ChangeLogService(IChangeLogRepository repo)
         if (log is null) return null;
         log.Date = dto.Date; log.Content = dto.Content;
         log.Impact = dto.Impact; log.RelatedDocLinks = dto.RelatedDocLinks;
-        return ToDto(await repo.UpdateAsync(log));
+        log.SourceIssueId = dto.SourceIssueId;
+        log.SourceWbsItemId = dto.SourceWbsItemId;
+        var updated = await repo.UpdateAsync(log);
+        return ToDto(await repo.GetByIdAsync(updated.Id) ?? updated);
     }
 
     public async Task<bool> DeleteAsync(int id)
@@ -44,5 +51,8 @@ public class ChangeLogService(IChangeLogRepository repo)
 
     private static ChangeLogDto ToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,
-        c.RelatedDocLinks, c.CreatedBy, c.UpdatedBy, c.CreatedAt, c.UpdatedAt);
+        c.RelatedDocLinks,
+        c.SourceIssueId, c.SourceIssue?.Title,
+        c.SourceWbsItemId, c.SourceWbsItem?.Name,
+        c.CreatedBy, c.UpdatedBy, c.CreatedAt, c.UpdatedAt);
 }

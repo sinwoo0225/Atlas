@@ -64,6 +64,10 @@ export interface ChangeLog {
   content: string;
   impact: ImpactLevel;
   relatedDocLinks: string;
+  sourceIssueId?: number | null;
+  sourceIssueTitle?: string | null;
+  sourceWbsItemId?: number | null;
+  sourceWbsItemName?: string | null;
   createdBy: string;
   updatedBy: string;
   createdAt: string;

@@ -56,6 +56,11 @@ public class AppDbContext(
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 출처 FK 둘 다 SetNull — 원본 Issue/WBS 삭제 시 ChangeLog 본체는 감사 자료로 보존.
+            e.HasOne(x => x.SourceIssue).WithMany().HasForeignKey(x => x.SourceIssueId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.SourceWbsItem).WithMany().HasForeignKey(x => x.SourceWbsItemId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => x.SourceIssueId);
+            e.HasIndex(x => x.SourceWbsItemId);
         });
 
         modelBuilder.Entity<Meeting>(e =>

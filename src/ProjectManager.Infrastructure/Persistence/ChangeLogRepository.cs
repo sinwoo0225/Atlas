@@ -7,9 +7,18 @@ namespace ProjectManager.Infrastructure.Persistence;
 public class ChangeLogRepository(AppDbContext db) : IChangeLogRepository
 {
     public async Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId) =>
-        await db.ChangeLogs.Where(x => x.ProjectId == projectId).OrderByDescending(x => x.Date).ToListAsync();
+        await db.ChangeLogs
+            .Where(x => x.ProjectId == projectId)
+            .Include(x => x.SourceIssue)
+            .Include(x => x.SourceWbsItem)
+            .OrderByDescending(x => x.Date)
+            .ToListAsync();
 
-    public async Task<ChangeLog?> GetByIdAsync(int id) => await db.ChangeLogs.FindAsync(id);
+    public async Task<ChangeLog?> GetByIdAsync(int id) =>
+        await db.ChangeLogs
+            .Include(x => x.SourceIssue)
+            .Include(x => x.SourceWbsItem)
+            .FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<ChangeLog> CreateAsync(ChangeLog log)
     {

@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search } from 'lucide-react';
+import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
+import { issuesApi } from '../api/issues';
+import { wbsApi } from '../api/wbs';
 import { Button, Card, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
+import { IssuePicker } from '../components/IssuePicker';
+import { WbsTreePicker } from '../components/WbsTreePicker';
 import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import type { ChangeLog, ImpactLevel, Meeting } from '../types';
+import { findItemName } from '../utils/wbsHelpers';
+import type { ChangeLog, ImpactLevel, Meeting, Issue, WbsItem } from '../types';
 
 const impactColor: Record<ImpactLevel, string> = {
   Low: '#34d399',
@@ -114,8 +119,9 @@ function formatLinkLabel(raw: string): string {
   }
 }
 
-function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
+function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel }: {
   projectId: number; initial?: ChangeLog;
+  issues: Issue[]; wbsItems: WbsItem[];
   onSave: () => void; onCancel: () => void;
 }) {
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
@@ -129,6 +135,10 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
   );
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [meetingKeyword, setMeetingKeyword] = useState('');
+  const [sourceIssueId, setSourceIssueId] = useState<number | null>(initial?.sourceIssueId ?? null);
+  const [sourceWbsItemId, setSourceWbsItemId] = useState<number | null>(initial?.sourceWbsItemId ?? null);
+  const [issuePickerOpen, setIssuePickerOpen] = useState(false);
+  const [wbsPickerOpen, setWbsPickerOpen] = useState(false);
 
   useEffect(() => {
     meetingsApi.getByProject(projectId).then(setMeetings).catch(() => setMeetings([]));
@@ -160,11 +170,18 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
       content,
       impact,
       relatedDocLinks: linkLines.join('\n'),
+      sourceIssueId,
+      sourceWbsItemId,
     };
     if (initial) await changeLogsApi.update(projectId, initial.id, payload);
     else await changeLogsApi.create(payload);
     onSave();
   };
+
+  const sourceIssueLabel = sourceIssueId != null
+    ? (issues.find((i) => i.id === sourceIssueId)?.title ?? `#${sourceIssueId}`)
+    : null;
+  const sourceWbsLabel = sourceWbsItemId != null ? findItemName(sourceWbsItemId, wbsItems) : null;
 
   return (
     <div className="modal-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -201,6 +218,78 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
             className={`${inputClass} resize-none`}
           />
         </FormField>
+
+        {/* 출처 — 이 변경의 원인이 된 Issue / WBS. 둘 다 nullable 독립. */}
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="출처 Issue">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIssuePickerOpen((v) => !v)}
+                className={`${inputClass} text-left flex items-center justify-between flex-1`}
+              >
+                <span className={sourceIssueLabel ? 'text-primary truncate' : 'text-muted'}>
+                  {sourceIssueLabel ?? '(없음)'}
+                </span>
+                {issuePickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
+              </button>
+              {sourceIssueId != null && (
+                <button
+                  type="button"
+                  onClick={() => setSourceIssueId(null)}
+                  className="p-1 text-on-danger hover:opacity-80 transition-opacity"
+                  title="출처 해제"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            {issuePickerOpen && (
+              <div className="mt-2 h-56">
+                <IssuePicker
+                  items={issues}
+                  excludeIds={new Set()}
+                  onSelect={(id) => { setSourceIssueId(id); setIssuePickerOpen(false); }}
+                />
+              </div>
+            )}
+          </FormField>
+          <FormField label="출처 WBS 작업">
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setWbsPickerOpen((v) => !v)}
+                className={`${inputClass} text-left flex items-center justify-between flex-1`}
+              >
+                <span className={sourceWbsLabel ? 'text-primary truncate' : 'text-muted'}>
+                  {sourceWbsLabel ?? '(없음)'}
+                </span>
+                {wbsPickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
+              </button>
+              {sourceWbsItemId != null && (
+                <button
+                  type="button"
+                  onClick={() => setSourceWbsItemId(null)}
+                  className="p-1 text-on-danger hover:opacity-80 transition-opacity"
+                  title="출처 해제"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            {wbsPickerOpen && (
+              <div className="mt-2 h-56">
+                <WbsTreePicker
+                  items={wbsItems}
+                  selectedId={sourceWbsItemId}
+                  excludeIds={new Set()}
+                  showRoot={false}
+                  onSelect={(id) => { if (id != null) { setSourceWbsItemId(id); setWbsPickerOpen(false); } }}
+                />
+              </div>
+            )}
+          </FormField>
+        </div>
 
         <div>
           <div className="flex items-center justify-between mb-1">
@@ -248,8 +337,11 @@ function ChangeLogForm({ projectId, initial, onSave, onCancel }: {
 export function ChangeLogsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const navigate = useNavigate();
   const [logs, setLogs] = useState<ChangeLog[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<ChangeLog | null>(null);
   const [keyword, setKeyword] = useState('');
@@ -259,6 +351,9 @@ export function ChangeLogsPage() {
   useEffect(() => {
     load();
     meetingsApi.getByProject(pid).then(setMeetings).catch(() => setMeetings([]));
+    // 출처 picker 용 — 모달 열림과 무관하게 한 번 로드.
+    issuesApi.getByProject(pid).then(setIssues).catch(() => setIssues([]));
+    wbsApi.getByProject(pid).then(setWbsItems).catch(() => setWbsItems([]));
   }, [pid]);
 
   useHighlightFromQuery([logs.length]);
@@ -361,9 +456,31 @@ export function ChangeLogsPage() {
               className="cursor-pointer hover:border-strong transition-colors"
               onClick={() => setEditing(log)}
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
                   <Badge variant={impactBadge[log.impact].variant} size="sm">{log.impact}</Badge>
+                  {log.sourceIssueId != null && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/projects/${pid}/issues?highlight=${log.sourceIssueId}`); }}
+                      className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded border border-default bg-surface-2 text-muted hover:text-primary hover:border-strong transition-colors max-w-[16rem] truncate"
+                      title={log.sourceIssueTitle ?? `Issue #${log.sourceIssueId}`}
+                    >
+                      <AlertTriangle size={11} className="shrink-0" />
+                      <span className="truncate">{log.sourceIssueTitle ?? `Issue #${log.sourceIssueId}`}</span>
+                    </button>
+                  )}
+                  {log.sourceWbsItemId != null && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); navigate(`/projects/${pid}/wbs?highlight=${log.sourceWbsItemId}`); }}
+                      className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded border border-default bg-surface-2 text-muted hover:text-primary hover:border-strong transition-colors max-w-[16rem] truncate"
+                      title={log.sourceWbsItemName ?? `WBS #${log.sourceWbsItemId}`}
+                    >
+                      <ListTree size={11} className="shrink-0" />
+                      <span className="truncate">{log.sourceWbsItemName ?? `WBS #${log.sourceWbsItemId}`}</span>
+                    </button>
+                  )}
                   <span className="text-sm text-muted">{log.date.slice(0, 10)}</span>
                   {log.createdBy && <span className="text-xs text-muted">by {log.createdBy}</span>}
                   {log.updatedBy && log.updatedBy !== log.createdBy && (
@@ -423,6 +540,8 @@ export function ChangeLogsPage() {
       {showForm && (
         <ChangeLogForm
           projectId={pid}
+          issues={issues}
+          wbsItems={wbsItems}
           onSave={() => { setShowForm(false); load(); }}
           onCancel={() => setShowForm(false)}
         />
@@ -431,6 +550,8 @@ export function ChangeLogsPage() {
         <ChangeLogForm
           projectId={pid}
           initial={editing}
+          issues={issues}
+          wbsItems={wbsItems}
           onSave={() => { setEditing(null); load(); }}
           onCancel={() => setEditing(null)}
         />
