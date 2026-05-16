@@ -76,3 +76,8 @@ public interface IWorkLogRepository
     Task<IEnumerable<WorkLog>> GetAllInRangeAsync(DateTime fromInclusive, DateTime toExclusive);
     Task<WorkLog> UpsertAsync(WorkLog log);
 }
+
+public interface IActivityLogRepository
+{
+    Task<IEnumerable<ActivityLog>> GetByProjectAsync(int projectId, int limit);
+}

@@ -232,3 +232,26 @@ export interface MonitoringCharts {
   upcomingMilestones: UpcomingMilestone[];
   wbsProgress: WbsProgress[];
 }
+
+export type ActivityEntityType =
+  | 'Project'
+  | 'WbsItem'
+  | 'ChangeLog'
+  | 'Meeting'
+  | 'DevInfoItem'
+  | 'Resource'
+  | 'Issue'
+  | 'WorkLog';
+
+export type ActivityAction = 'Create' | 'Update' | 'Delete';
+
+export interface ActivityLog {
+  id: number;
+  projectId: number | null;
+  entityType: ActivityEntityType;
+  entityId: number;
+  entityTitle: string;
+  action: ActivityAction;
+  actor: string;
+  timestamp: string;
+}

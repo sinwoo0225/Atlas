@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Activity;
 using ProjectManager.Application.Search;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Interfaces;
@@ -48,10 +49,13 @@ public static class AppHostFactory
         // 사용자 입력 수준의 동시성(드물게 겹치는 PUT/POST)은 이 한 줄로 거의 다 흡수된다.
         builder.Services.AddScoped<SearchService>();
         builder.Services.AddScoped<SearchSaveChangesInterceptor>();
+        builder.Services.AddScoped<ActivityLogInterceptor>();
         builder.Services.AddDbContext<AppDbContext>((sp, opt) =>
             opt
                 .UseSqlite($"Data Source={pathResolver.GetDatabasePath()};Default Timeout=30")
-                .AddInterceptors(sp.GetRequiredService<SearchSaveChangesInterceptor>()));
+                .AddInterceptors(
+                    sp.GetRequiredService<SearchSaveChangesInterceptor>(),
+                    sp.GetRequiredService<ActivityLogInterceptor>()));
 
         builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
         builder.Services.AddScoped<IWbsRepository, WbsRepository>();
@@ -61,6 +65,7 @@ public static class AppHostFactory
         builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
         builder.Services.AddScoped<IIssueRepository, IssueRepository>();
         builder.Services.AddScoped<IWorkLogRepository, WorkLogRepository>();
+        builder.Services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 
         builder.Services.AddScoped<ProjectService>();
         builder.Services.AddScoped<WbsService>();
@@ -70,6 +75,7 @@ public static class AppHostFactory
         builder.Services.AddScoped<ResourceService>();
         builder.Services.AddScoped<IssueService>();
         builder.Services.AddScoped<WorkLogService>();
+        builder.Services.AddScoped<ActivityLogService>();
         builder.Services.AddScoped<MonitoringService>();
 
         builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>

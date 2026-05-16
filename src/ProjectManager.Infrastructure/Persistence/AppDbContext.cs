@@ -19,6 +19,7 @@ public class AppDbContext(
     public DbSet<Resource> Resources => Set<Resource>();
     public DbSet<Issue> Issues => Set<Issue>();
     public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -104,6 +105,16 @@ public class AppDbContext(
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
             e.HasOne(x => x.Project).WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.ProjectId, x.Date }).IsUnique();
+        });
+
+        modelBuilder.Entity<ActivityLog>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EntityType).IsRequired().HasMaxLength(50);
+            e.Property(x => x.EntityTitle).HasMaxLength(300);
+            e.Property(x => x.Actor).HasMaxLength(200);
+            // FK 없이 plain int? + 인덱스 — Project 삭제 시 ActivityLog 는 감사 로그로 그대로 보존.
+            e.HasIndex(x => new { x.ProjectId, x.Timestamp });
         });
     }
 

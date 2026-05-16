@@ -1,24 +1,81 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen } from 'lucide-react';
+import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity, FolderOpen, CalendarDays, User } from 'lucide-react';
 import { projectsApi } from '../api/projects';
+import { activityApi } from '../api/activity';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { attendeesToDisplay } from '../utils/meetingHelpers';
 import { Button, Card, Badge, Skeleton } from '../components/ui';
 import { wbsStatusBadge, impactBadge, issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
-import type { ProjectDashboard } from '../types';
+import type { ProjectDashboard, ActivityLog, ActivityEntityType, ActivityAction } from '../types';
+
+// 활동 피드의 entity 타입별 라벨/아이콘 — CommandPalette TYPE_META 와 톤 동일.
+const ACTIVITY_TYPE_META: Record<ActivityEntityType, { label: string; Icon: typeof Activity }> = {
+  Project:     { label: '프로젝트',  Icon: FolderOpen },
+  WbsItem:     { label: 'WBS',       Icon: CalendarDays },
+  Issue:       { label: '이슈',      Icon: AlertTriangle },
+  Meeting:     { label: '회의록',    Icon: FileText },
+  ChangeLog:   { label: '변경',      Icon: GitBranch },
+  DevInfoItem: { label: '개발정보',  Icon: Code2 },
+  WorkLog:     { label: '업무일지',  Icon: NotebookPen },
+  Resource:    { label: '리소스',    Icon: User },
+};
+
+const ACTION_META: Record<ActivityAction, { label: string; variant: 'success' | 'info' | 'danger' }> = {
+  Create: { label: '생성', variant: 'success' },
+  Update: { label: '수정', variant: 'info' },
+  Delete: { label: '삭제', variant: 'danger' },
+};
+
+function relativeTime(iso: string): string {
+  const t = new Date(iso).getTime();
+  const diffSec = Math.floor((Date.now() - t) / 1000);
+  if (diffSec < 60) return '방금';
+  const m = Math.floor(diffSec / 60);
+  if (m < 60) return `${m}분 전`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  if (d === 1) return '어제';
+  if (d < 7) return `${d}일 전`;
+  return iso.slice(0, 10);
+}
+
+function activityUrl(a: ActivityLog): string | null {
+  if (a.entityType === 'Resource') return '/resources';
+  const pid = a.projectId;
+  if (pid == null) return null;
+  switch (a.entityType) {
+    case 'Project':     return `/projects/${pid}/dashboard`;
+    case 'WbsItem':     return `/projects/${pid}/wbs?highlight=${a.entityId}`;
+    case 'Issue':       return `/projects/${pid}/issues?highlight=${a.entityId}`;
+    case 'Meeting':     return `/projects/${pid}/meetings?highlight=${a.entityId}`;
+    case 'ChangeLog':   return `/projects/${pid}/changelogs?highlight=${a.entityId}`;
+    case 'DevInfoItem': return `/projects/${pid}/devinfo?highlight=${a.entityId}`;
+    case 'WorkLog': {
+      const m = a.entityTitle.match(/(\d{4}-\d{2}-\d{2})/);
+      return m ? `/projects/${pid}/worklog?date=${m[1]}` : `/projects/${pid}/worklog`;
+    }
+    default: return null;
+  }
+}
 
 export function Dashboard() {
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [data, setData] = useState<ProjectDashboard | null>(null);
+  const [activities, setActivities] = useState<ActivityLog[]>([]);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!projectId) return;
-    projectsApi.getDashboard(parseInt(projectId))
+    const pid = parseInt(projectId);
+    projectsApi.getDashboard(pid)
       .then(setData)
       .catch(() => setError('대시보드를 불러올 수 없습니다.'));
+    activityApi.getByProject(pid, 20)
+      .then(setActivities)
+      .catch(() => setActivities([]));
   }, [projectId]);
 
   if (error) return <div className="p-6 text-sm text-on-danger">{error}</div>;
@@ -228,6 +285,42 @@ export function Dashboard() {
             </div>
           )}
         </Section>
+
+        <div className="lg:col-span-2">
+          <Section title="최근 활동" Icon={Activity}>
+            {activities.length === 0 ? (
+              <Empty text="활동 기록 없음" />
+            ) : (
+              activities.map((a) => {
+                const meta = ACTIVITY_TYPE_META[a.entityType];
+                const action = ACTION_META[a.action];
+                const url = activityUrl(a);
+                const Icon = meta.Icon;
+                const row = (
+                  <div className="flex items-center gap-2 py-1.5 border-b border-default last:border-0">
+                    <Icon size={14} className="text-muted shrink-0" />
+                    <span className="text-xs text-muted shrink-0 w-12">{meta.label}</span>
+                    <Badge variant={action.variant} size="sm">{action.label}</Badge>
+                    <span className="text-sm text-secondary truncate flex-1 min-w-0">{a.entityTitle || `#${a.entityId}`}</span>
+                    {a.actor && <span className="text-xs text-muted shrink-0">{a.actor}</span>}
+                    <span className="text-xs text-muted shrink-0 w-16 text-right">{relativeTime(a.timestamp)}</span>
+                  </div>
+                );
+                return url ? (
+                  <div
+                    key={a.id}
+                    onClick={() => navigate(url)}
+                    className="cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
+                  >
+                    {row}
+                  </div>
+                ) : (
+                  <div key={a.id} className="px-2 -mx-2">{row}</div>
+                );
+              })
+            )}
+          </Section>
+        </div>
       </div>
 
       {(p.deliverables || p.relatedLinks) && (
