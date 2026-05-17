@@ -1,4 +1,5 @@
 using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
 
 namespace ProjectManager.Core.Interfaces;
 
@@ -82,10 +83,15 @@ public interface IWorkLogRepository
     Task<WorkLog> UpsertAsync(WorkLog log);
 }
 
+// 활동 로그 + Project LEFT JOIN 결과: ProjectId 가 null 인 경우 (예: Resource) ProjectName 도 null.
+public record ActivityLogWithProject(ActivityLog Log, string? ProjectName);
+
 public interface IActivityLogRepository
 {
-    Task<IEnumerable<ActivityLog>> GetByProjectAsync(int projectId, int limit);
-    Task<IEnumerable<ActivityLog>> GetAllAsync(int limit, int offset);
+    Task<IEnumerable<ActivityLogWithProject>> GetByProjectAsync(int projectId, int limit);
+    Task<IEnumerable<ActivityLogWithProject>> GetAllAsync(ActivityFilter filter);
+    Task<IReadOnlyList<(int ProjectId, string ProjectName, int Count)>>
+        GetCountsByProjectAsync(DateTime sinceUtc, int top);
     Task<int> PruneOlderThanAsync(DateTime cutoffUtc);
 }
 

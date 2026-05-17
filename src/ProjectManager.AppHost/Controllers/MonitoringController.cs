@@ -17,6 +17,15 @@ public class MonitoringController(MonitoringService svc) : ControllerBase
     [HttpGet("resource-heatmap")]
     public async Task<IActionResult> ResourceHeatmap() => Ok(await svc.GetResourceHeatmapAsync());
 
+    // '프로젝트별 활동량' 위젯 — 기본 30일 / 상위 20개. days/top 은 안전 범위로 clamp.
+    [HttpGet("activity-by-project")]
+    public async Task<IActionResult> ActivityByProject([FromQuery] int days = 30, [FromQuery] int top = 20)
+    {
+        var d = Math.Clamp(days, 1, 365);
+        var t = Math.Clamp(top, 1, 50);
+        return Ok(await svc.GetActivityByProjectAsync(d, t));
+    }
+
     [HttpGet("worklogs/weekly")]
     public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart)
     {

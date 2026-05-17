@@ -19,19 +19,23 @@ public class ActivityLogService(IActivityLogRepository repo)
         return (await repo.GetByProjectAsync(projectId, bounded)).Select(ToDto);
     }
 
-    public async Task<IEnumerable<ActivityLogDto>> GetAllAsync(int limit, int offset)
+    public async Task<IEnumerable<ActivityLogDto>> GetAllAsync(ActivityFilter filter)
     {
-        var boundedLimit = Math.Clamp(limit, 1, 200);
-        var boundedOffset = Math.Max(0, offset);
-        return (await repo.GetAllAsync(boundedLimit, boundedOffset)).Select(ToDto);
+        var bounded = filter with
+        {
+            Limit = Math.Clamp(filter.Limit, 1, 200),
+            Offset = Math.Max(0, filter.Offset),
+        };
+        return (await repo.GetAllAsync(bounded)).Select(ToDto);
     }
 
     // RetentionDays > 0 일 때 AppHostFactory startup 에서 한 번 호출.
     public Task<int> PruneAsync(TimeSpan retention) =>
         repo.PruneOlderThanAsync(DateTime.UtcNow - retention);
 
-    private static ActivityLogDto ToDto(ActivityLog a)
+    private static ActivityLogDto ToDto(ActivityLogWithProject x)
     {
+        var a = x.Log;
         IReadOnlyDictionary<string, ActivityChangeValue>? changed = null;
         if (!string.IsNullOrEmpty(a.ChangesJson))
         {
@@ -45,7 +49,7 @@ public class ActivityLogService(IActivityLogRepository repo)
                 // 손상된 JSON 은 null 로 무시 — 기록 자체는 살림.
             }
         }
-        return new(a.Id, a.ProjectId, a.EntityType, a.EntityId,
+        return new(a.Id, a.ProjectId, x.ProjectName, a.EntityType, a.EntityId,
             a.EntityTitle, a.Action, a.Actor, a.Timestamp, changed);
     }
 }

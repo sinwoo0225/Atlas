@@ -13,7 +13,7 @@ public record TodayWbsDto(
 
 public record MonitoringDto(IEnumerable<TodayWbsDto> Items);
 
-public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
+public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, IActivityLogRepository activityRepo)
 {
     private static readonly string[] DayLabels = { "월", "화", "수", "목", "금" };
 
@@ -103,7 +103,38 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo)
             .ThenByDescending(x => x.ProgressPercent)
             .ToList();
 
-        return new MonitoringChartsDto(projectStatus, issueMatrix, milestones, wbsProgress);
+        // 5) 상태 분포 위젯 우측 리스트 — 전체 프로젝트 × 진행률(=WBS 진행률 재사용) + EndDate.
+        // 활성(InProgress/Waiting) 먼저, 그 안에서 마감 임박 순. WBS 가 없는 프로젝트는 진행률 0.
+        var progressById = wbsProgress.ToDictionary(p => p.ProjectId, p => p.ProgressPercent);
+        var projectList = await db.Projects
+            .Select(p => new { p.Id, p.Name, p.Status, p.EndDate })
+            .ToListAsync();
+        var projects = projectList
+            .Select(p => new ProjectStatusItemDto(
+                p.Id, p.Name, p.Status,
+                progressById.TryGetValue(p.Id, out var pct) ? pct : 0.0,
+                p.EndDate))
+            .OrderBy(x => x.Status switch
+            {
+                ProjectStatus.InProgress => 0,
+                ProjectStatus.Waiting    => 1,
+                ProjectStatus.Planned    => 2,
+                _                         => 3,
+            })
+            .ThenBy(x => x.EndDate ?? DateTime.MaxValue)
+            .ThenBy(x => x.ProjectName, StringComparer.CurrentCulture)
+            .ToList();
+
+        return new MonitoringChartsDto(projectStatus, projects, issueMatrix, milestones, wbsProgress);
+    }
+
+    // '프로젝트별 활동량' 위젯 — 최근 N일 동안 ActivityLog 카운트, top K.
+    // days 기본 30, top 기본 20. 컨트롤러에서 clamp.
+    public async Task<IEnumerable<ActivityByProjectDto>> GetActivityByProjectAsync(int days, int top)
+    {
+        var since = DateTime.UtcNow - TimeSpan.FromDays(days);
+        var rows = await activityRepo.GetCountsByProjectAsync(since, top);
+        return rows.Select(r => new ActivityByProjectDto(r.ProjectId, r.ProjectName, r.Count));
     }
 
     // D-1 리소스 히트맵: 이번 주 월요일부터 8주, 담당자별 미완료 항목 마감 카운트.

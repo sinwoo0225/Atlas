@@ -254,11 +254,28 @@ export interface WbsProgress {
   progressPercent: number;
 }
 
+// 상태 분포 위젯의 우측 리스트 — 도넛 옆에 프로젝트별 진행률·마감 표시.
+export interface ProjectStatusItem {
+  projectId: number;
+  projectName: string;
+  status: ProjectStatus;
+  progressPercent: number;
+  endDate?: string;
+}
+
 export interface MonitoringCharts {
   projectStatus: ProjectStatusBreakdown;
+  projects: ProjectStatusItem[];
   issueMatrix: IssueMatrixCell[];
   upcomingMilestones: UpcomingMilestone[];
   wbsProgress: WbsProgress[];
+}
+
+// '프로젝트별 활동량' 위젯 — 최근 N일 동안 활동 카운트, top K.
+export interface ActivityByProject {
+  projectId: number;
+  projectName: string;
+  count: number;
 }
 
 // D-1 리소스 히트맵: 담당자 × 8주 마감 밀도.
@@ -304,6 +321,8 @@ export interface ActivityChangeValue {
 export interface ActivityLog {
   id: number;
   projectId: number | null;
+  // 백엔드 LEFT JOIN 결과. projectId 가 null 이거나 프로젝트가 삭제된 orphan 인 경우 null.
+  projectName: string | null;
   entityType: ActivityEntityType;
   entityId: number;
   entityTitle: string;

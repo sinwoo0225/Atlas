@@ -7,6 +7,12 @@ namespace ProjectManager.Core.DTOs;
 public record ProjectStatusBreakdownDto(
     int Planned, int Waiting, int InProgress, int Done);
 
+// 상태 분포 위젯의 우측 리스트 — 도넛 옆에 프로젝트별 진행률·마감 표시.
+// progressPercent 는 WBS 진행률과 동일 계산 (마일스톤 제외, total 0 이면 0).
+public record ProjectStatusItemDto(
+    int ProjectId, string ProjectName, ProjectStatus Status,
+    double ProgressPercent, DateTime? EndDate);
+
 public record IssueMatrixCellDto(
     IssueStatus Status, IssuePriority Priority, int Count);
 
@@ -20,9 +26,14 @@ public record WbsProgressDto(
 
 public record MonitoringChartsDto(
     ProjectStatusBreakdownDto ProjectStatus,
+    IEnumerable<ProjectStatusItemDto> Projects,
     IEnumerable<IssueMatrixCellDto> IssueMatrix,
     IEnumerable<UpcomingMilestoneDto> UpcomingMilestones,
     IEnumerable<WbsProgressDto> WbsProgress);
+
+// '프로젝트별 활동량' 위젯 — sinceDate 이후 활동 카운트, count DESC.
+public record ActivityByProjectDto(
+    int ProjectId, string ProjectName, int Count);
 
 // D-1 리소스 히트맵: across-project 담당자 × 8주 마감 밀도.
 // WeekStarts 길이 8 (월요일 시작 ISO), Rows[i].Counts 길이 8.
