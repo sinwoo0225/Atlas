@@ -113,8 +113,12 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
       actionItems:
         actionItems.length > 0 ? JSON.stringify(actionItems.filter((a) => a.content.trim())) : '',
     };
-    if (initial) await meetingsApi.update(projectId, initial.id, payload);
-    else await meetingsApi.create(payload as any);
+    if (initial) {
+      await meetingsApi.update(projectId, initial.id, payload);
+    } else {
+      await meetingsApi.create(payload as any);
+      toast.success(topic.trim() ? `새 회의록 '${topic.trim()}' 이(가) 추가됐어요` : '새 회의록이 추가됐어요');
+    }
     onSave();
   };
 

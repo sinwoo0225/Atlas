@@ -69,8 +69,12 @@ function DevInfoForm({
 
   const handleSubmit = async () => {
     const payload = { projectId, ...form };
-    if (initial) await devInfoApi.update(projectId, initial.id, payload);
-    else await devInfoApi.create(payload as any);
+    if (initial) {
+      await devInfoApi.update(projectId, initial.id, payload);
+    } else {
+      await devInfoApi.create(payload as any);
+      toast.success(form.title.trim() ? `새 개발 정보 '${form.title.trim()}' 이(가) 추가됐어요` : '새 개발 정보가 추가됐어요');
+    }
     onSave();
   };
 

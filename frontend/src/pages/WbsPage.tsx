@@ -89,6 +89,7 @@ function WbsItemForm({
       }
     } else {
       await wbsApi.create(payload as any);
+      toast.success(`새 작업 '${form.name}' 이(가) 추가됐어요`);
     }
     onSave();
   };

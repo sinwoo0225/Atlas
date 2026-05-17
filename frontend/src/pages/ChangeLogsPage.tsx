@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 import ReactECharts from 'echarts-for-react';
 import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
@@ -174,8 +175,12 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
       sourceIssueId,
       sourceWbsItemId,
     };
-    if (initial) await changeLogsApi.update(projectId, initial.id, payload);
-    else await changeLogsApi.create(payload);
+    if (initial) {
+      await changeLogsApi.update(projectId, initial.id, payload);
+    } else {
+      await changeLogsApi.create(payload);
+      toast.success('새 변경 이력이 추가됐어요');
+    }
     onSave();
   };
 

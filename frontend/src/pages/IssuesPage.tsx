@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { toast } from 'sonner';
 import { AlertTriangle, ChevronDown, ChevronRight, ListTree, Plus, Search, X } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
@@ -111,6 +112,7 @@ export function IssuesPage() {
     });
     setNewTitle('');
     refreshIssues();
+    toast.success(`새 이슈 '${title}' 이(가) 추가됐어요`);
   };
 
   const filtered = useMemo(() => {

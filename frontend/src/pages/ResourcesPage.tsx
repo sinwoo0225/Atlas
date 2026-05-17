@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
@@ -150,6 +151,7 @@ export function ResourcesPage() {
       await resourcesApi.create(data);
       setShowForm(false);
       load();
+      toast.success(data.name ? `새 리소스 '${data.name}' 이(가) 추가됐어요` : '새 리소스가 추가됐어요');
     } catch { setError('리소스 등록 실패'); }
   };
 

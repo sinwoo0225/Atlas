@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Download, FolderOpen, Calendar, Users } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { startPageApi } from '../api/startPage';
@@ -158,6 +159,7 @@ export function ProjectList() {
       const p = await projectsApi.create(data);
       addProject(p);
       setShowForm(false);
+      toast.success(p.name ? `새 프로젝트 '${p.name}' 이(가) 추가됐어요` : '새 프로젝트가 추가됐어요');
     } catch { setError('프로젝트 생성 실패'); }
   };
 
