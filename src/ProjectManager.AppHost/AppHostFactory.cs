@@ -55,6 +55,25 @@ public static class AppHostFactory
             // WAL 전환 — Atlas.exe 가 켜진 상태에서 CLI/외부 프로세스가 같은 DB 에 쓸 때 lock 경합 회피.
             // idempotent — 이미 WAL 이면 no-op. 기존 .db 는 첫 연결에 .db-wal / .db-shm 동반 생성.
             db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
+
+            // 사이클 14 — WbsItem.SortOrder 1회 backfill (Order→Importance rename 직후).
+            // 멱등 가드: 모든 SortOrder 가 0 일 때만 (사용자가 dnd-kit 으로 한 번이라도 reorder 했으면 skip).
+            // raw SQL 이라 UpdatedAt/UpdatedBy 안 건드림 → 사이클 12 동시성 토큰 + ActivityLog 노이즈 모두 회피.
+            var allSortOrder = db.WbsItems.AsNoTracking().Select(x => x.SortOrder).ToList();
+            if (allSortOrder.Count > 0 && allSortOrder.All(v => v == 0))
+            {
+                db.Database.ExecuteSqlRaw(@"
+                    WITH ranked AS (
+                      SELECT Id, ROW_NUMBER() OVER (
+                        PARTITION BY ProjectId, COALESCE(ParentId, -1)
+                        ORDER BY COALESCE(StartDate, '9999-12-31'), Id
+                      ) - 1 AS rn
+                      FROM WbsItems
+                    )
+                    UPDATE WbsItems SET SortOrder = (SELECT rn FROM ranked WHERE ranked.Id = WbsItems.Id);
+                ");
+                Console.WriteLine($"[wbs-sortorder] backfilled {allSortOrder.Count} rows.");
+            }
         }
 
         // ActivityLog 보존은 ActivityLogCleanupService (BackgroundService) 가 시작 즉시 1회 + 주기 실행. AddHostedService 위 등록.

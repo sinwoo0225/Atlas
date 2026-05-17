@@ -18,8 +18,9 @@ import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import {
   collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName,
-  applyOrderPatchesLocal, hasAnyFilter, type WbsFilterOpts,
+  applySortOrderPatchesLocal, hasAnyFilter, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
+import { sortWbsTree } from '../utils/wbsSort';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { IssuePicker } from '../components/IssuePicker';
 import { issuesApi } from '../api/issues';
@@ -43,7 +44,7 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
 
 type WbsFormData = {
   name: string; assignee: string; startDate: string; endDate: string;
-  status: string; isMilestone: boolean; order: string; notes: string;
+  status: string; isMilestone: boolean; importance: string; notes: string;
   parentId: number | null;
 };
 
@@ -64,7 +65,7 @@ function WbsItemForm({
     endDate: initial?.endDate?.slice(0, 10) ?? '',
     status: initial?.status ?? 'Planned',
     isMilestone: initial?.isMilestone ?? false,
-    order: (initial?.order ?? 2).toString(),
+    importance: (initial?.importance ?? 2).toString(),
     notes: initial?.notes ?? '',
     parentId: initial?.parentId ?? parentId ?? null,
   });
@@ -90,8 +91,8 @@ function WbsItemForm({
       name: form.name, assignee: form.assignee,
       startDate: form.startDate || null, endDate: form.endDate || null,
       status: form.status as any, isMilestone: form.isMilestone,
-      order: parseInt(form.order) || 0, notes: form.notes,
-      ...(initial ? { updatedAt: snapshotUpdatedAt } : {}),
+      importance: parseInt(form.importance) || 2, notes: form.notes,
+      ...(initial ? { updatedAt: snapshotUpdatedAt, sortOrder: initial.sortOrder } : {}),
     };
     if (initial) {
       const parentChanged = (initial.parentId ?? null) !== form.parentId;
@@ -115,7 +116,7 @@ function WbsItemForm({
                     endDate: fresh.endDate?.slice(0, 10) ?? '',
                     status: fresh.status,
                     isMilestone: fresh.isMilestone,
-                    order: (fresh.order ?? 2).toString(),
+                    importance: (fresh.importance ?? 2).toString(),
                     notes: fresh.notes ?? '',
                     parentId: fresh.parentId ?? null,
                   });
@@ -181,7 +182,7 @@ function WbsItemForm({
               </FormField>
             </div>
             <FormField label="중요도">
-              <select value={form.order} onChange={(e) => set('order', e.target.value)} className={inputClass}>
+              <select value={form.importance} onChange={(e) => set('importance', e.target.value)} className={inputClass}>
                 <option value="3">높음</option>
                 <option value="2">중간</option>
                 <option value="1">낮음</option>
@@ -485,10 +486,10 @@ export function WbsPage() {
     [items, filterOpts],
   );
 
-  const visibleItems = useMemo(
-    () => (matchOnly && hasAnyFilter(filterOpts)) ? filterWbsTree(items, filterOpts) : items,
-    [items, filterOpts, matchOnly],
-  );
+  const visibleItems = useMemo(() => {
+    const base = (matchOnly && hasAnyFilter(filterOpts)) ? filterWbsTree(items, filterOpts) : items;
+    return sortWbsTree(base);
+  }, [items, filterOpts, matchOnly]);
 
   // 사이클 13 — dnd-kit 형제 reorder (P8-4). matchOnly 시 화면 형제 ⊂ 원본이라 reorder 비활성.
   const reorderDisabled = matchOnly && hasAnyFilter(filterOpts);
@@ -595,8 +596,8 @@ export function WbsPage() {
     const patches = computeSiblingReorder(siblings, Number(active.id), Number(over.id));
     if (patches.length === 0) return;
 
-    // optimistic — 로컬 트리에 newOrder 즉시 반영 (siblingSort 가 화면 재정렬).
-    setItems((prev) => applyOrderPatchesLocal(prev, activeData.parentId, patches));
+    // optimistic — 로컬 트리에 newSortOrder 즉시 반영 (sortWbsTree 가 화면 재정렬).
+    setItems((prev) => applySortOrderPatchesLocal(prev, activeData.parentId, patches));
 
     const results = await Promise.allSettled(
       patches.map((p) => {
@@ -605,7 +606,7 @@ export function WbsPage() {
         const { children: _c, ...rest } = target;
         return wbsApi.update(
           pid, p.id,
-          { ...rest, order: p.newOrder, updatedAt: p.updatedAt },
+          { ...rest, sortOrder: p.newSortOrder, updatedAt: p.updatedAt },
           { silent: true },
         );
       }),

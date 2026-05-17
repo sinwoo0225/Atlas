@@ -23,13 +23,22 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
 
     public async Task<WbsItemDto> CreateAsync(CreateWbsItemDto dto)
     {
+        // 사이클 14 — SortOrder 자동 부여: 같은 부모 + 같은 startDate 그룹 max+1, 그룹 없으면 전체 형제 max+1, 형제 없으면 0.
+        var allInProject = await repo.GetByProjectAsync(dto.ProjectId, null);
+        var siblings = allInProject.Where(x => x.ParentId == dto.ParentId).ToList();
+        var sameDate = siblings.Where(x => x.StartDate == dto.StartDate).ToList();
+        var nextSortOrder = sameDate.Count > 0
+            ? sameDate.Max(x => x.SortOrder) + 1
+            : (siblings.Count > 0 ? siblings.Max(x => x.SortOrder) + 1 : 0);
+
         var item = new WbsItem
         {
             ProjectId = dto.ProjectId, VersionId = dto.VersionId, ParentId = dto.ParentId,
             Name = dto.Name, Assignee = dto.Assignee,
             StartDate = dto.StartDate, EndDate = dto.EndDate,
             Status = dto.Status, IsMilestone = dto.IsMilestone,
-            Order = dto.Order, Notes = dto.Notes
+            Importance = dto.Importance, Notes = dto.Notes,
+            SortOrder = nextSortOrder,
         };
         return ToDto(await repo.CreateAsync(item), []);
     }
@@ -66,10 +75,10 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
 
             item.ParentId = dto.ParentId;
 
-            // 새 부모(또는 root) children 의 max Order + 1 을 부여 — 옮긴 항목이 새 sibling 들 맨 뒤에 오도록.
-            // 클라이언트가 보낸 dto.Order 는 옛 부모 기준이라 새 부모에서는 무의미. parentChanged 분기에서 덮어씀.
+            // 새 부모(또는 root) children 의 max SortOrder + 1 을 부여 — 옮긴 항목이 새 sibling 들 맨 뒤에 오도록.
+            // 클라이언트가 보낸 dto.SortOrder 는 옛 부모 기준이라 새 부모에서는 무의미. parentChanged 분기에서 덮어씀.
             var newSiblings = allItems.Where(x => x.ParentId == dto.ParentId && x.Id != id).ToList();
-            item.Order = newSiblings.Count > 0 ? newSiblings.Max(x => x.Order) + 1 : 0;
+            item.SortOrder = newSiblings.Count > 0 ? newSiblings.Max(x => x.SortOrder) + 1 : 0;
         }
 
         var wasDone = item.Status == WbsStatus.Done;
@@ -77,7 +86,8 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
         item.Status = dto.Status; item.IsMilestone = dto.IsMilestone;
-        if (!parentChanged) item.Order = dto.Order;
+        item.Importance = dto.Importance;
+        if (!parentChanged) item.SortOrder = dto.SortOrder;
         item.Notes = dto.Notes;
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
         if (!wasDone && updated.Status == WbsStatus.Done)
@@ -119,8 +129,9 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
     private static WbsItemDto ToDto(WbsItem item, IEnumerable<WbsItem> all) => new(
         item.Id, item.ProjectId, item.VersionId, item.ParentId,
         item.Name, item.Assignee, item.StartDate, item.EndDate,
-        item.Status, item.IsMilestone, item.Order, item.Notes,
+        item.Status, item.IsMilestone, item.Importance, item.Notes,
         item.CreatedAt, item.UpdatedAt,
+        item.SortOrder,
         item.Children?.Select(c => ToDto(c, all)));
 
     private static WbsVersionDto ToVersionDto(WbsVersion v) => new(

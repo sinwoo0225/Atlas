@@ -6,21 +6,25 @@ public record WbsItemDto(
     int Id, int ProjectId, int? VersionId, int? ParentId,
     string Name, string Assignee,
     DateTime? StartDate, DateTime? EndDate,
-    WbsStatus Status, bool IsMilestone, int Order, string Notes,
+    WbsStatus Status, bool IsMilestone, int Importance, string Notes,
     DateTime CreatedAt, DateTime UpdatedAt,
+    int SortOrder,
     IEnumerable<WbsItemDto>? Children);
 
+// SortOrder 는 생성 시 백엔드가 자동 계산 (같은 startDate 그룹 max+1) → dto 제외.
 public record CreateWbsItemDto(
     int ProjectId, int? VersionId, int? ParentId,
     string Name, string Assignee,
     DateTime? StartDate, DateTime? EndDate,
-    WbsStatus Status, bool IsMilestone, int Order, string Notes);
+    WbsStatus Status, bool IsMilestone, int Importance, string Notes);
 
+// SortOrder 는 dnd-kit reorder PUT 에서 클라가 새 값 전송. parentChanged 분기는 백엔드가 덮어씀.
 public record UpdateWbsItemDto(
     int? ParentId,
     string Name, string Assignee,
     DateTime? StartDate, DateTime? EndDate,
-    WbsStatus Status, bool IsMilestone, int Order, string Notes,
+    WbsStatus Status, bool IsMilestone, int Importance, string Notes,
+    int SortOrder,
     DateTime UpdatedAt);
 
 public record WbsVersionDto(

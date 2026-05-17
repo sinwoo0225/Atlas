@@ -37,7 +37,7 @@ export function SortableWbsRow({
   const sourceCount = sourceCountByWbs[item.id] ?? 0;
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
-  const importance = wbsImportanceBadge(item.order);
+  const importance = wbsImportanceBadge(item.importance);
   const isMatched = matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
 
   const {

@@ -11,7 +11,7 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         var query = db.WbsItems.Where(x => x.ProjectId == projectId);
         if (versionId.HasValue)
             query = query.Where(x => x.VersionId == versionId);
-        return await query.Include(x => x.Children).OrderBy(x => x.Order).ToListAsync();
+        return await query.Include(x => x.Children).OrderBy(x => x.SortOrder).ToListAsync();
     }
 
     public async Task<WbsItem?> GetByIdAsync(int id) =>

@@ -65,10 +65,12 @@ export interface WbsItem {
   endDate?: string;
   status: WbsStatus;
   isMilestone: boolean;
-  order: number;
+  // 사이클 14 — order 분리: importance = 중요도 (1/2/3), sortOrder = 정렬 위치 (단일 키, asc).
+  importance: number;
   notes: string;
   createdAt: string;
   updatedAt: string;
+  sortOrder: number;
   children?: WbsItem[];
 }
 

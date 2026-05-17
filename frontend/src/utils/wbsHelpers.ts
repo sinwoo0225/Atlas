@@ -77,19 +77,19 @@ export function findItemName(id: number | null | undefined, items: WbsItem[]): s
   return findItem(id, items)?.name ?? `#${id}`;
 }
 
-// 사이클 13 — dnd-kit reorder 의 optimistic update. 지정 부모(또는 root) children 의 order 만 patches 대로 갱신.
+// 사이클 13/14 — dnd-kit reorder 의 optimistic update. 지정 부모(또는 root) children 의 sortOrder 만 patches 대로 갱신.
 // parentId === null 이면 루트 형제, 아니면 해당 부모의 children 안에서만 적용.
-export function applyOrderPatchesLocal(
+export function applySortOrderPatchesLocal(
   items: WbsItem[],
   parentId: number | null,
-  patches: { id: number; newOrder: number }[],
+  patches: { id: number; newSortOrder: number }[],
 ): WbsItem[] {
-  const map = new Map(patches.map((p) => [p.id, p.newOrder]));
+  const map = new Map(patches.map((p) => [p.id, p.newSortOrder]));
   function walk(nodes: WbsItem[], currentParentId: number | null): WbsItem[] {
     return nodes.map((n) => {
       const next = { ...n };
       if (currentParentId === parentId && map.has(n.id)) {
-        next.order = map.get(n.id)!;
+        next.sortOrder = map.get(n.id)!;
       }
       if (n.children?.length) next.children = walk(n.children, n.id);
       return next;

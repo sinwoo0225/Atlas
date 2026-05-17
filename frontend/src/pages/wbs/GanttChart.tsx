@@ -12,6 +12,7 @@ import type { WbsItem, WbsStatus } from '../../types';
 import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
 import { wbsStatusBadge } from '../../utils/statusMaps';
+import { sortSiblings } from '../../utils/wbsSort';
 import { Button } from '../../components/ui';
 
 /* ============================================================================
@@ -28,14 +29,6 @@ interface GanttRow {
   effEnd?: number;
   /** 부모이면서 자식 합산 범위로 그리는 막대인지(=얇은 음영 표시). */
   isParentBar: boolean;
-}
-
-function siblingSort(a: WbsItem, b: WbsItem): number {
-  // order 내림차순(높음=3 먼저) → startDate 오름차순(없으면 뒤로)
-  if (a.order !== b.order) return b.order - a.order;
-  const ta = a.startDate ? new Date(a.startDate).getTime() : Number.POSITIVE_INFINITY;
-  const tb = b.startDate ? new Date(b.startDate).getTime() : Number.POSITIVE_INFINITY;
-  return ta - tb;
 }
 
 /** 노드와 모든 후손 중 startDate/endDate 가 있는 것들의 min/max. */
@@ -60,7 +53,7 @@ function spanOf(item: WbsItem): { start?: number; end?: number } {
 function flattenForGantt(items: WbsItem[], collapsed: Set<number>): GanttRow[] {
   const out: GanttRow[] = [];
   const walk = (nodes: WbsItem[], depth: number) => {
-    const sorted = [...nodes].sort(siblingSort);
+    const sorted = sortSiblings(nodes);
     for (const item of sorted) {
       const hasChildren = (item.children?.length ?? 0) > 0;
       const isCollapsed = hasChildren && collapsed.has(item.id);

@@ -83,6 +83,15 @@ public class ActionItemPromotionService(
         var currentVersion = (await wbsRepo.GetVersionsByProjectAsync(meeting.ProjectId))
             .FirstOrDefault(x => x.IsCurrent);
 
+        // 사이클 14 — promotion path 가 WbsService.CreateAsync 우회 (versionId/parentId 차이) — SortOrder 인라인 계산.
+        // 같은 부모(null=root) 형제 중 같은 startDate(null) 그룹 max+1, 없으면 전체 max+1.
+        var rootSiblings = (await wbsRepo.GetByProjectAsync(meeting.ProjectId, null))
+            .Where(x => x.ParentId == null).ToList();
+        var sameDate = rootSiblings.Where(x => x.StartDate == null).ToList();
+        var nextSortOrder = sameDate.Count > 0
+            ? sameDate.Max(x => x.SortOrder) + 1
+            : (rootSiblings.Count > 0 ? rootSiblings.Max(x => x.SortOrder) + 1 : 0);
+
         var item = await wbsRepo.CreateAsync(new WbsItem
         {
             ProjectId = meeting.ProjectId,
@@ -94,8 +103,9 @@ public class ActionItemPromotionService(
             EndDate = endDate,
             Status = WbsStatus.Planned,
             IsMilestone = false,
-            Order = 2,
+            Importance = 2,
             Notes = "",
+            SortOrder = nextSortOrder,
         });
 
         target["promotedWbsItemId"] = item.Id;
@@ -108,8 +118,8 @@ public class ActionItemPromotionService(
         return new WbsItemDto(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
-            item.Status, item.IsMilestone, item.Order, item.Notes,
-            item.CreatedAt, item.UpdatedAt, null);
+            item.Status, item.IsMilestone, item.Importance, item.Notes,
+            item.CreatedAt, item.UpdatedAt, item.SortOrder, null);
     }
 
     private static (JsonArray Items, JsonObject Target) FindActionItem(string raw, string actionItemId)

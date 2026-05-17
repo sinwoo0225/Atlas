@@ -34,10 +34,10 @@ export const issuePriorityBadge: Record<IssuePriority, { label: string; variant:
   Low:    { label: '낮음', variant: 'neutral' },
 };
 
-/** WBS 중요도(order 정수): 3=높음 / 2=중간 / 1=낮음. 0 등 미설정은 중간으로 간주. */
-export function wbsImportanceBadge(order: number): { label: string; variant: BadgeVariant } {
-  if (order >= 3) return { label: '높음', variant: 'danger' };
-  if (order === 1) return { label: '낮음', variant: 'neutral' };
+/** WBS 중요도(importance 정수): 3=높음 / 2=중간 / 1=낮음. 0 등 미설정은 중간으로 간주. */
+export function wbsImportanceBadge(importance: number): { label: string; variant: BadgeVariant } {
+  if (importance >= 3) return { label: '높음', variant: 'danger' };
+  if (importance === 1) return { label: '낮음', variant: 'neutral' };
   return { label: '중간', variant: 'warning' };
 }
 

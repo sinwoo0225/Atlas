@@ -61,11 +61,12 @@ internal static class WbsCommands
         var endOpt = new Option<DateTime?>("--end", "종료일 YYYY-MM-DD");
         var statusOpt = new Option<WbsStatus?>("--status", "Planned(기본)|InProgress|Done");
         var msOpt = new Option<bool?>("--milestone", "마일스톤 여부");
-        var orderOpt = new Option<int?>("--order", "정렬 순서 (기본 0)");
+        var importanceOpt = new Option<int?>("--importance", "중요도 1=낮음 / 2=중간 (기본) / 3=높음");
+        importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환 (옛 --order = 중요도 의미)
         var notesOpt = new Option<string?>("--notes", "메모");
 
-        var c = new Command("create", "WBS 항목 생성")
-        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, orderOpt, notesOpt };
+        var c = new Command("create", "WBS 항목 생성 (SortOrder 는 시작일 그룹 끝에 자동 추가)")
+        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -79,7 +80,7 @@ internal static class WbsCommands
                 EndDate: pr.GetValueForOption(endOpt),
                 Status: pr.GetValueForOption(statusOpt) ?? WbsStatus.Planned,
                 IsMilestone: pr.GetValueForOption(msOpt) ?? false,
-                Order: pr.GetValueForOption(orderOpt) ?? 0,
+                Importance: pr.GetValueForOption(importanceOpt) ?? 2,
                 Notes: pr.GetValueForOption(notesOpt) ?? string.Empty);
             var svc = services.GetRequiredService<WbsService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
@@ -97,11 +98,13 @@ internal static class WbsCommands
         var endOpt = new Option<DateTime?>("--end", "종료일 YYYY-MM-DD");
         var statusOpt = new Option<WbsStatus?>("--status", "Planned|InProgress|Done");
         var msOpt = new Option<bool?>("--milestone", "마일스톤 여부");
-        var orderOpt = new Option<int?>("--order", "정렬 순서");
+        var importanceOpt = new Option<int?>("--importance", "중요도 1=낮음 / 2=중간 / 3=높음");
+        importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환
+        var sortOrderOpt = new Option<int?>("--sort-order", "정렬 위치 (드물게 수동, 보통 dnd-kit reorder 사용)");
         var notesOpt = new Option<string?>("--notes", "메모");
 
         var c = new Command("update", "WBS 항목 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, orderOpt, notesOpt };
+        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -117,8 +120,9 @@ internal static class WbsCommands
                 EndDate: pr.GetValueForOption(endOpt) ?? existing.EndDate,
                 Status: pr.GetValueForOption(statusOpt) ?? existing.Status,
                 IsMilestone: pr.GetValueForOption(msOpt) ?? existing.IsMilestone,
-                Order: pr.GetValueForOption(orderOpt) ?? existing.Order,
+                Importance: pr.GetValueForOption(importanceOpt) ?? existing.Importance,
                 Notes: pr.GetValueForOption(notesOpt) ?? existing.Notes,
+                SortOrder: pr.GetValueForOption(sortOrderOpt) ?? existing.SortOrder,
                 UpdatedAt: existing.UpdatedAt);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
@@ -151,7 +155,8 @@ internal static class WbsCommands
                 Name: existing.Name, Assignee: existing.Assignee,
                 StartDate: existing.StartDate, EndDate: existing.EndDate,
                 Status: existing.Status, IsMilestone: existing.IsMilestone,
-                Order: existing.Order, Notes: existing.Notes,
+                Importance: existing.Importance, Notes: existing.Notes,
+                SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
                 UpdatedAt: existing.UpdatedAt);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));

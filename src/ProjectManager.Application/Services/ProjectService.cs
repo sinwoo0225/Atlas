@@ -230,8 +230,8 @@ public class ProjectService(
     internal static WbsItemDto WbsToDto(WbsItem w) => new(
         w.Id, w.ProjectId, w.VersionId, w.ParentId,
         w.Name, w.Assignee, w.StartDate, w.EndDate,
-        w.Status, w.IsMilestone, w.Order, w.Notes,
-        w.CreatedAt, w.UpdatedAt, null);
+        w.Status, w.IsMilestone, w.Importance, w.Notes,
+        w.CreatedAt, w.UpdatedAt, w.SortOrder, null);
 
     internal static ChangeLogDto ChangeLogToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,

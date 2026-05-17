@@ -14,7 +14,10 @@ public class WbsItem : IAuditable
     public DateTime? EndDate { get; set; }
     public WbsStatus Status { get; set; } = WbsStatus.Planned;
     public bool IsMilestone { get; set; }
-    public int Order { get; set; }
+    // 사이클 14 — Order 분리. Importance = 중요도 (1=낮음/2=중간/3=높음, 기본 2).
+    // SortOrder = 정렬 위치 (단일 키, asc, 신규 생성 시만 자동 부여, 그 후엔 사용자 reorder 만).
+    public int Importance { get; set; } = 2;
+    public int SortOrder { get; set; }
     public string Notes { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -37,7 +37,7 @@ public static class WbsTools
         DateTime? startDate = null, DateTime? endDate = null,
         [Description("Planned|InProgress|Done")] WbsStatus? status = null,
         [Description("마일스톤 여부")] bool? isMilestone = null,
-        [Description("정렬 순서")] int? order = null,
+        [Description("중요도 1=낮음 / 2=중간 (기본) / 3=높음")] int? importance = null,
         string? notes = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateWbsItemDto(
             ProjectId: projectId,
@@ -49,7 +49,7 @@ public static class WbsTools
             EndDate: endDate,
             Status: status ?? WbsStatus.Planned,
             IsMilestone: isMilestone ?? false,
-            Order: order ?? 0,
+            Importance: importance ?? 2,
             Notes: notes ?? string.Empty)));
 
     [McpServerTool(Name = "atlas_wbs_update"),
@@ -61,7 +61,9 @@ public static class WbsTools
         string? assignee = null,
         DateTime? startDate = null, DateTime? endDate = null,
         WbsStatus? status = null, bool? isMilestone = null,
-        int? order = null, string? notes = null)
+        [Description("중요도 1=낮음 / 2=중간 / 3=높음")] int? importance = null,
+        [Description("정렬 위치 — 보통 생략 (신규 시 자동 끝에 추가, reorder 는 GUI dnd 사용)")] int? sortOrder = null,
+        string? notes = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"WbsItem {id} 없음");
@@ -73,8 +75,9 @@ public static class WbsTools
             EndDate: endDate ?? existing.EndDate,
             Status: status ?? existing.Status,
             IsMilestone: isMilestone ?? existing.IsMilestone,
-            Order: order ?? existing.Order,
+            Importance: importance ?? existing.Importance,
             Notes: notes ?? existing.Notes,
+            SortOrder: sortOrder ?? existing.SortOrder,
             UpdatedAt: existing.UpdatedAt)));
     }
 
@@ -95,7 +98,8 @@ public static class WbsTools
             Name: existing.Name, Assignee: existing.Assignee,
             StartDate: existing.StartDate, EndDate: existing.EndDate,
             Status: existing.Status, IsMilestone: existing.IsMilestone,
-            Order: existing.Order, Notes: existing.Notes,
+            Importance: existing.Importance, Notes: existing.Notes,
+            SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
             UpdatedAt: existing.UpdatedAt)));
     }
 
