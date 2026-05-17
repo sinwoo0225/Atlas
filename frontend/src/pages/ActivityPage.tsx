@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, X, ChevronDown } from 'lucide-react';
 import { activityApi, type ActivityListFilter } from '../api/activity';
@@ -6,6 +6,7 @@ import { projectsApi } from '../api/projects';
 import { ActivityRow } from '../components/ActivityRow';
 import { Card, Button, Skeleton } from '../components/ui';
 import { ACTIVITY_TYPE_META, ACTION_META } from '../utils/activity';
+import { useIntersectionLoader } from '../hooks/useIntersectionLoader';
 import type {
   ActivityAction, ActivityEntityType, ActivityLog, Project,
 } from '../types';
@@ -57,6 +58,8 @@ export function ActivityPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [availableActors, setAvailableActors] = useState<string[]>([]);
+  const sentinelRef = useRef<HTMLDivElement>(null);
 
   // URL → 필터 상태
   const projectId = useMemo(() => {
@@ -73,6 +76,11 @@ export function ActivityPage() {
     if (!raw) return [];
     return raw.split(',').filter((a): a is ActivityAction => ACTION_KEYS.includes(a as ActivityAction));
   }, [searchParams]);
+  const actors = useMemo<string[]>(() => {
+    const raw = searchParams.get('actor');
+    if (!raw) return [];
+    return raw.split(',').filter(Boolean);
+  }, [searchParams]);
   const preset = (searchParams.get('range') as RangePreset) || 'all';
   const customFrom = searchParams.get('from');
   const customTo = searchParams.get('to');
@@ -83,13 +91,15 @@ export function ActivityPage() {
     projectId,
     entityTypes: entityTypes.length ? entityTypes : undefined,
     actions: actions.length ? actions : undefined,
+    actors: actors.length ? actors : undefined,
     from: range.from,
     to: range.to,
-  }), [projectId, entityTypes, actions, range]);
+  }), [projectId, entityTypes, actions, actors, range]);
 
-  // 프로젝트 목록 한 번만.
+  // 프로젝트 목록 + 액터 옵션 한 번만.
   useEffect(() => {
     projectsApi.getAll().then(setProjects).catch(() => setProjects([]));
+    activityApi.getActors().then(setAvailableActors).catch(() => setAvailableActors([]));
   }, []);
 
   // 필터 변경 시 첫 페이지부터 다시.
@@ -105,7 +115,7 @@ export function ActivityPage() {
       .finally(() => setLoading(false));
   }, [filter]);
 
-  const loadMore = async () => {
+  const loadMore = useCallback(async () => {
     setLoadingMore(true);
     try {
       const more = await activityApi.getAll({ ...filter, limit: PAGE_SIZE, offset: items.length });
@@ -116,14 +126,21 @@ export function ActivityPage() {
     } finally {
       setLoadingMore(false);
     }
-  };
+  }, [filter, items.length]);
+
+  // 무한스크롤 — sentinel 이 viewport 근처면 자동 loadMore. "더 불러오기" 버튼은 폴백.
+  useIntersectionLoader(
+    sentinelRef,
+    !loading && !loadingMore && hasMore,
+    loadMore,
+  );
 
   const updateParam = (mut: (p: URLSearchParams) => void) => {
     const next = new URLSearchParams(searchParams);
     mut(next);
     setSearchParams(next, { replace: true });
   };
-  const setMulti = (key: 'entityType' | 'action', values: string[]) => {
+  const setMulti = (key: 'entityType' | 'action' | 'actor', values: string[]) => {
     updateParam((p) => {
       if (values.length) p.set(key, values.join(','));
       else p.delete(key);
@@ -151,7 +168,7 @@ export function ActivityPage() {
   };
   const resetAll = () => setSearchParams(new URLSearchParams(), { replace: true });
 
-  const hasFilters = projectId != null || entityTypes.length > 0 || actions.length > 0 || preset !== 'all';
+  const hasFilters = projectId != null || entityTypes.length > 0 || actions.length > 0 || actors.length > 0 || preset !== 'all';
 
   return (
     <div className="p-6 space-y-4">
@@ -174,6 +191,12 @@ export function ActivityPage() {
             values={actions}
             options={ACTION_KEYS.map((a) => ({ value: a, label: ACTION_META[a].label }))}
             onChange={(v) => setMulti('action', v)}
+          />
+          <MultiSelect<string>
+            label="액터"
+            values={actors}
+            options={availableActors.map((a) => ({ value: a, label: a || '(빈 actor)' }))}
+            onChange={(v) => setMulti('actor', v)}
           />
           <RangeFilter
             preset={preset}
@@ -208,11 +231,15 @@ export function ActivityPage() {
               {items.map((a) => <ActivityRow key={a.id} activity={a} showProject />)}
             </div>
             {hasMore && (
-              <div className="mt-4 flex justify-center">
-                <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
-                  {loadingMore ? '불러오는 중…' : '더 불러오기'}
-                </Button>
-              </div>
+              <>
+                {/* sentinel — 자동 무한스크롤 트리거. 폴백 버튼은 아래 유지. */}
+                <div ref={sentinelRef} aria-hidden className="h-px" />
+                <div className="mt-4 flex justify-center">
+                  <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
+                    {loadingMore ? '불러오는 중…' : '더 불러오기'}
+                  </Button>
+                </div>
+              </>
             )}
             {!hasMore && items.length > 0 && (
               <p className="mt-4 text-center text-xs text-muted">— 끝 —</p>

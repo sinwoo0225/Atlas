@@ -35,15 +35,17 @@ public class ActivityLogInterceptor(IActorAccessor actorAccessor) : SaveChangesI
         _ => false,
     };
 
+    // 1MB 안전 상한 — DB 행 폭발 방지용. 일반 회의록/일지/이슈는 수 KB 정도라 거의 부딪힐 일 없음.
+    // 진짜 multiline diff 는 ActivityRow (프론트) 가 diffLines 로 처리.
+    private const int MaxValueLength = 1_000_000;
+
     private static string FormatValue(object? v)
     {
         if (v is null) return string.Empty;
         if (v is DateTime dt) return dt.ToString("o");
         var s = v.ToString() ?? string.Empty;
-        // 장문 텍스트 (Content/Notes/Description 등) 는 첫 줄 80자 + "…" 로 truncation.
-        // ActivityIdentifier.EntityTitle 패턴 일관.
-        if (s.Length > 200)
-            s = ActivityIdentifier.TrimFirstLine(s, 80) + "…";
+        if (s.Length > MaxValueLength)
+            s = s.Substring(0, MaxValueLength) + "...[truncated]";
         return s;
     }
 

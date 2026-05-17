@@ -36,6 +36,12 @@ public class ActivityLogRepository(AppDbContext db) : IActivityLogRepository
             q = q.Where(x => actions.Contains(x.Action));
         }
 
+        if (f.Actors is { Count: > 0 })
+        {
+            var actors = f.Actors.ToArray();
+            q = q.Where(x => actors.Contains(x.Actor));
+        }
+
         if (f.FromUtc.HasValue)
             q = q.Where(x => x.Timestamp >= f.FromUtc.Value);
 
@@ -91,6 +97,16 @@ public class ActivityLogRepository(AppDbContext db) : IActivityLogRepository
 
     public Task<int> PruneOlderThanAsync(DateTime cutoffUtc) =>
         db.ActivityLogs.Where(x => x.Timestamp < cutoffUtc).ExecuteDeleteAsync();
+
+    public async Task<IReadOnlyList<string>> GetDistinctActorsAsync()
+    {
+        // 빈도순 — 자주 등장한 actor 가 dropdown 상단. 빈 문자열도 포함 (legacy 행).
+        return await db.ActivityLogs
+            .GroupBy(x => x.Actor)
+            .OrderByDescending(g => g.Count())
+            .Select(g => g.Key)
+            .ToListAsync();
+    }
 
     public async Task<bool> RewriteLatestActionAsync(
         string entityType, int entityId, ActivityAction expected, ActivityAction next)

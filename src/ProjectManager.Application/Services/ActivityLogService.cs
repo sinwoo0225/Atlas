@@ -33,6 +33,9 @@ public class ActivityLogService(IActivityLogRepository repo)
     public Task<int> PruneAsync(TimeSpan retention) =>
         repo.PruneOlderThanAsync(DateTime.UtcNow - retention);
 
+    public Task<IReadOnlyList<string>> GetDistinctActorsAsync() =>
+        repo.GetDistinctActorsAsync();
+
     private static ActivityLogDto ToDto(ActivityLogWithProject x)
     {
         var a = x.Log;

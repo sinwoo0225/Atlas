@@ -109,6 +109,8 @@ public interface IActivityLogRepository
     // 가장 최근의 (entityType, entityId, expected) 활동 1 행의 Action 만 next 로 재기록.
     // PromotionService 가 자동 Create 직후 호출해 Promote 로 승격 표시. 없으면 false.
     Task<bool> RewriteLatestActionAsync(string entityType, int entityId, ActivityAction expected, ActivityAction next);
+    // 활동 페이지 액터 필터 dropdown 옵션 — 빈도(많이 등장한 순) 정렬.
+    Task<IReadOnlyList<string>> GetDistinctActorsAsync();
 }
 
 public interface IIssueWbsLinkRepository

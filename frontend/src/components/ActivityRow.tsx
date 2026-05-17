@@ -1,15 +1,16 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { diffLines } from 'diff';
 import { Badge } from './ui';
 import { ACTIVITY_TYPE_META, ACTION_META, relativeTime, activityUrl } from '../utils/activity';
 import { useProjectColor } from '../utils/projectColor';
 import type { ActivityLog } from '../types';
 
 // 활동 1개 행. Dashboard "최근 활동" 위젯 + 전역 /activity 페이지 양쪽에서 재사용.
-// 변경 필드 (changedFields) 가 있으면 우측에 chevron + "N개 변경" 라벨, 클릭 시 행 아래에 필드별 old→new 표.
+// 변경 필드 (changedFields) 가 있으면 우측에 chevron + "N개 변경" 라벨, 클릭 시 행 아래에 필드별 old→new.
+// 단일 라인 필드 = 기존 3열 표 (이전 / 이후). multiline 필드 (\n 포함) = diffLines git-style +/− 다이프.
 // 행 본문 클릭 = entity 페이지 이동. chevron 만 stopPropagation 으로 확장 토글.
-// showProject=true 일 때(/activity 페이지) 프로젝트명 칩을 표시 — 클릭 시 프로젝트 대시보드 이동.
 export function ActivityRow({ activity, showProject = false }: { activity: ActivityLog; showProject?: boolean }) {
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
@@ -57,28 +58,65 @@ export function ActivityRow({ activity, showProject = false }: { activity: Activ
         <span className="text-xs text-muted shrink-0 w-16 text-right">{relativeTime(activity.timestamp)}</span>
       </div>
       {expanded && hasChanges && (
-        <div className="pb-2 pl-6 pr-2 -mt-1">
-          <table className="w-full text-xs border-collapse">
-            <thead>
-              <tr className="text-muted">
-                <th className="text-left font-normal py-1 pr-3 w-32">필드</th>
-                <th className="text-left font-normal py-1 pr-3">이전</th>
-                <th className="text-left font-normal py-1">이후</th>
-              </tr>
-            </thead>
-            <tbody>
-              {changedEntries.map(([field, val]) => (
-                <tr key={field} className="align-top">
-                  <td className="py-1 pr-3 text-secondary font-medium">{field}</td>
-                  <td className="py-1 pr-3 text-muted break-all"><code className="bg-surface-3 px-1 py-0.5 rounded">{val.old || '∅'}</code></td>
-                  <td className="py-1 text-secondary break-all"><code className="bg-surface-3 px-1 py-0.5 rounded">{val.new || '∅'}</code></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="pb-2 pl-6 pr-2 -mt-1 space-y-2" onClick={(e) => e.stopPropagation()}>
+          {changedEntries.map(([field, val]) => (
+            <FieldDiff key={field} field={field} oldText={val.old} newText={val.new} />
+          ))}
         </div>
       )}
     </div>
+  );
+}
+
+function isMultiline(s: string): boolean {
+  return typeof s === 'string' && s.includes('\n');
+}
+
+function FieldDiff({ field, oldText, newText }: { field: string; oldText: string; newText: string }) {
+  const multiline = isMultiline(oldText) || isMultiline(newText);
+  if (multiline) {
+    return (
+      <div>
+        <div className="text-xs text-secondary font-medium mb-1">{field}</div>
+        <MultilineDiff oldText={oldText} newText={newText} />
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-start gap-3 text-xs">
+      <div className="text-secondary font-medium w-32 shrink-0 truncate" title={field}>{field}</div>
+      <code className="bg-surface-3 px-1 py-0.5 rounded text-muted break-all flex-1 min-w-0">{oldText || '∅'}</code>
+      <code className="bg-surface-3 px-1 py-0.5 rounded text-secondary break-all flex-1 min-w-0">{newText || '∅'}</code>
+    </div>
+  );
+}
+
+function MultilineDiff({ oldText, newText }: { oldText: string; newText: string }) {
+  const parts = useMemo(() => diffLines(oldText ?? '', newText ?? ''), [oldText, newText]);
+  return (
+    <pre className="text-xs font-mono bg-surface-3 rounded p-2 max-h-64 overflow-auto whitespace-pre-wrap break-all">
+      {parts.flatMap((part, i) => {
+        const lines = part.value.split('\n');
+        // diffLines 가 trailing newline 으로 빈 줄을 추가하기도 — 마지막 빈 줄만 제거.
+        if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+        return lines.map((line, j) => {
+          const prefix = part.added ? '+' : part.removed ? '−' : ' ';
+          const cls = part.added
+            ? 'bg-success-soft text-on-success'
+            : part.removed
+              ? 'bg-danger-soft text-on-danger'
+              : 'text-muted';
+          // 200자 초과 줄은 가독성 위해 잘라 표시. 원본 데이터는 그대로.
+          const displayLine = line.length > 200 ? line.slice(0, 200) + '…' : line;
+          return (
+            <div key={`${i}-${j}`} className={`${cls} px-1`}>
+              <span className="select-none opacity-50 mr-1">{prefix}</span>
+              {displayLine || ' '}
+            </div>
+          );
+        });
+      })}
+    </pre>
   );
 }
 

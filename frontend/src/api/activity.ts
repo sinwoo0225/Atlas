@@ -6,6 +6,7 @@ export interface ActivityListFilter {
   projectId?: number | null;
   entityTypes?: ActivityEntityType[];
   actions?: ActivityAction[];
+  actors?: string[];
   from?: string | null;  // 'yyyy-MM-dd'
   to?: string | null;    // 'yyyy-MM-dd'
   limit?: number;
@@ -17,6 +18,7 @@ function buildQuery(f: ActivityListFilter): string {
   if (f.projectId != null) params.set('projectId', String(f.projectId));
   if (f.entityTypes?.length) params.set('entityType', f.entityTypes.join(','));
   if (f.actions?.length) params.set('action', f.actions.join(','));
+  if (f.actors?.length) params.set('actor', f.actors.join(','));
   if (f.from) params.set('from', f.from);
   if (f.to) params.set('to', f.to);
   params.set('limit', String(f.limit ?? 100));
@@ -30,4 +32,6 @@ export const activityApi = {
   // 전역 활동 피드 — /activity 페이지가 호출. limit 은 서버에서 1~200 으로 clamp.
   getAll: (filter: ActivityListFilter = {}) =>
     api.get<ActivityLog[]>(`/activity?${buildQuery(filter)}`),
+  // 액터 필터 dropdown 옵션 — 빈도순 distinct actors.
+  getActors: () => api.get<string[]>(`/activity/actors`),
 };

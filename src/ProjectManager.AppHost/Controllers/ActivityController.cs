@@ -15,12 +15,13 @@ public class ActivityController(ActivityLogService svc) : ControllerBase
         Ok(await svc.GetByProjectAsync(projectId, limit));
 
     // 전역 활동 피드 — 모든 프로젝트 across, 시간순 페이지네이션. /activity 페이지가 호출.
-    // 필터: projectId 단일값, entityType/action 콤마 구분 다중값, from/to ISO 날짜.
+    // 필터: projectId 단일값, entityType/action/actor 콤마 구분 다중값, from/to ISO 날짜.
     [HttpGet("api/activity")]
     public async Task<IActionResult> GetAll(
         [FromQuery] int? projectId = null,
         [FromQuery] string? entityType = null,
         [FromQuery] string? action = null,
+        [FromQuery] string? actor = null,
         [FromQuery] string? from = null,
         [FromQuery] string? to = null,
         [FromQuery] int limit = 100,
@@ -30,12 +31,18 @@ public class ActivityController(ActivityLogService svc) : ControllerBase
             projectId,
             SplitCsv(entityType),
             ParseActions(action),
+            SplitCsv(actor),
             ParseDate(from),
             ParseDate(to),
             limit,
             offset);
         return Ok(await svc.GetAllAsync(filter));
     }
+
+    // 액터 필터 dropdown 옵션 — 빈도순 distinct actors.
+    [HttpGet("api/activity/actors")]
+    public async Task<IActionResult> GetActors() =>
+        Ok(await svc.GetDistinctActorsAsync());
 
     private static IReadOnlyList<string>? SplitCsv(string? raw)
     {
