@@ -1,10 +1,11 @@
 import { toast } from 'sonner';
 import { loadSettings } from '../store/settings';
+import { progressStart, progressEnd } from '../utils/progressEmitter';
 
 const BASE_URL = '/api';
 
 export interface RequestOptions {
-  // 4xx/5xx 자동 toast 비활성 — silent fallback 의도 (polling 등) 에 사용.
+  // 4xx/5xx 자동 toast + 글로벌 progress bar 비활성 — silent fallback 의도 (polling 등) 에 사용.
   silent?: boolean;
 }
 
@@ -16,33 +17,40 @@ async function request<T>(path: string, init?: RequestInit, opts?: RequestOption
     ...(actor ? { 'X-Atlas-Actor': encodeURIComponent(actor) } : {}),
     ...(init?.headers as Record<string, string> | undefined),
   };
-  const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
 
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    // 서버가 한국어 메시지를 JSON `error` 필드로 박아둔 경우(409 등) 우선 사용.
-    let serverMsg = '';
-    try {
-      const j = JSON.parse(body);
-      if (typeof j?.error === 'string') serverMsg = j.error;
-    } catch { /* JSON 아니면 무시 */ }
+  const trackProgress = !opts?.silent;
+  if (trackProgress) progressStart();
+  try {
+    const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
 
-    if (!opts?.silent) {
-      if (res.status === 409) {
-        // 동시 편집 충돌은 사용자 액션 (새로고침/재시도) 필요 — 더 오래 띄움.
-        toast.error(serverMsg || '다른 사용자가 방금 수정했습니다. 새로고침 후 다시 시도해 주세요.', {
-          duration: 6000,
-        });
-      } else if (res.status >= 500) {
-        toast.error(serverMsg || `서버 오류 (${res.status})`);
-      } else if (res.status >= 400) {
-        toast.error(serverMsg || `요청 처리 실패 (${res.status})`);
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      // 서버가 한국어 메시지를 JSON `error` 필드로 박아둔 경우(409 등) 우선 사용.
+      let serverMsg = '';
+      try {
+        const j = JSON.parse(body);
+        if (typeof j?.error === 'string') serverMsg = j.error;
+      } catch { /* JSON 아니면 무시 */ }
+
+      if (!opts?.silent) {
+        if (res.status === 409) {
+          // 동시 편집 충돌은 사용자 액션 (새로고침/재시도) 필요 — 더 오래 띄움.
+          toast.error(serverMsg || '다른 사용자가 방금 수정했습니다. 새로고침 후 다시 시도해 주세요.', {
+            duration: 6000,
+          });
+        } else if (res.status >= 500) {
+          toast.error(serverMsg || `서버 오류 (${res.status})`);
+        } else if (res.status >= 400) {
+          toast.error(serverMsg || `요청 처리 실패 (${res.status})`);
+        }
       }
+      throw new Error(`API error ${res.status}: ${body || res.statusText}`);
     }
-    throw new Error(`API error ${res.status}: ${body || res.statusText}`);
+    if (res.status === 204) return undefined as T;
+    return await res.json();
+  } finally {
+    if (trackProgress) progressEnd();
   }
-  if (res.status === 204) return undefined as T;
-  return res.json();
 }
 
 export const api = {

@@ -18,6 +18,7 @@ import { WorkLogPage } from './pages/WorkLogPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 import { applyTheme, applyMarkdownStyle, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
 import { getMachineAccount } from './utils/hostBridge';
@@ -48,6 +49,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" theme={theme} richColors closeButton duration={4000} />
+      <GlobalProgressBar />
       <ConfirmDialogHost />
       <CommandPalette />
       <ShortcutsModal />
