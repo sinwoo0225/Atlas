@@ -249,7 +249,7 @@ function FilterTrigger({
       className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded border transition-colors ${
         active
           ? 'border-accent bg-accent-soft text-on-accent-soft'
-          : 'border-default bg-surface-1 text-secondary hover:bg-surface-2'
+          : 'border-default bg-surface text-secondary hover:bg-surface-2'
       }`}
     >
       <span className="text-muted">{label}</span>
@@ -395,14 +395,14 @@ function RangeFilter({
                 type="date"
                 value={from ?? ''}
                 onChange={(e) => onCustom('from', e.target.value)}
-                className="text-xs px-2 py-1 bg-surface-1 border border-default rounded text-secondary"
+                className="text-xs px-2 py-1 bg-surface border border-default rounded text-secondary"
               />
               <span className="text-xs text-muted">~</span>
               <input
                 type="date"
                 value={to ?? ''}
                 onChange={(e) => onCustom('to', e.target.value)}
-                className="text-xs px-2 py-1 bg-surface-1 border border-default rounded text-secondary"
+                className="text-xs px-2 py-1 bg-surface border border-default rounded text-secondary"
               />
             </div>
           </div>

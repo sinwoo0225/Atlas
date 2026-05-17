@@ -81,7 +81,7 @@ export function ConfirmDialogHost() {
       aria-modal="true"
     >
       <div
-        className="bg-surface-1 border border-default rounded-lg p-5 max-w-sm w-full shadow-xl"
+        className="bg-surface border border-default rounded-lg p-5 max-w-sm w-full shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-primary">{opts.title}</h3>

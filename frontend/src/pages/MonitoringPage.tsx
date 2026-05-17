@@ -244,7 +244,7 @@ export function MonitoringPage() {
 
 function TabBar({ value, onChange }: { value: MonitoringTab; onChange: (next: MonitoringTab) => void }) {
   return (
-    <div role="tablist" className="inline-flex rounded-md border border-default bg-surface-1 p-0.5">
+    <div role="tablist" className="inline-flex rounded-md border border-default bg-surface p-0.5">
       {TABS.map((t) => {
         const active = t.value === value;
         return (
