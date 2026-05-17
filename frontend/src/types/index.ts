@@ -313,6 +313,9 @@ export type ActivityEntityType =
 
 export type ActivityAction = 'Create' | 'Update' | 'Delete' | 'Promote';
 
+// IssueWbsLink 관계 타입 (C-2 사이클 5). 양방향에서 같은 라벨로 표시.
+export type IssueWbsLinkType = 'RelatesTo' | 'Blocks' | 'ParentOf';
+
 export interface ActivityChangeValue {
   old: string;
   new: string;

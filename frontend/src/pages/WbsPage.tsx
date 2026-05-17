@@ -21,7 +21,8 @@ import { issuesApi } from '../api/issues';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { GanttChart } from './wbs/GanttChart';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue } from '../types';
+import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType } from '../types';
+import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
   return items.map((it) => {
@@ -240,6 +241,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
   const navigate = useNavigate();
   const [links, setLinks] = useState<IssueWbsLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerType, setPickerType] = useState<IssueWbsLinkType>('RelatesTo');
 
   const load = () => issueWbsLinksApi.byWbs(wbsItemId).then(setLinks).catch(() => setLinks([]));
   useEffect(() => { load(); }, [wbsItemId]);
@@ -256,11 +258,19 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
 
   const handleAdd = async (issueId: number) => {
     try {
-      await issueWbsLinksApi.create(issueId, wbsItemId);
+      await issueWbsLinksApi.create(issueId, wbsItemId, pickerType);
       setPickerOpen(false);
       load();
       onLinksChanged();
     } catch { /* api/client.ts 가 토스트 처리 */ }
+  };
+
+  const handleChangeType = async (link: IssueWbsLink, next: IssueWbsLinkType) => {
+    if (link.type === next) return;
+    try {
+      await issueWbsLinksApi.updateType(link.id, next);
+      load();
+    } catch { /* api/client.ts */ }
   };
 
   const handleRemove = async (issueId: number, title: string) => {
@@ -290,6 +300,12 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
         <ul className="space-y-1">
           {links.map((l) => (
             <li key={l.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
+              <BadgeMenu<IssueWbsLinkType>
+                value={l.type}
+                options={LINK_TYPE_OPTIONS}
+                onChange={(next) => handleChangeType(l, next)}
+                title="관계 타입 변경"
+              />
               <button
                 type="button"
                 onClick={() => navigate(`/projects/${projectId}/issues?highlight=${l.issueId}`)}
@@ -312,13 +328,27 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
         </ul>
       )}
       {pickerOpen && (
-        <div className="mt-1 flex-1 min-h-0">
-          <IssuePicker
-            items={allIssues}
-            excludeIds={excludeIds}
-            onSelect={handleAdd}
-          />
-        </div>
+        <>
+          <div className="flex items-center gap-2 mt-1 text-xs text-muted">
+            <span>관계 타입</span>
+            <select
+              value={pickerType}
+              onChange={(e) => setPickerType(e.target.value as IssueWbsLinkType)}
+              className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary"
+            >
+              {LINK_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{LINK_TYPE_META[o.value].label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="mt-1 flex-1 min-h-0">
+            <IssuePicker
+              items={allIssues}
+              excludeIds={excludeIds}
+              onSelect={handleAdd}
+            />
+          </div>
+        </>
       )}
     </div>
   );

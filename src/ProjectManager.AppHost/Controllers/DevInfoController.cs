@@ -18,6 +18,23 @@ public class DevInfoController(DevInfoService svc, DevFilesStorage storage) : Co
     public async Task<IActionResult> GetTags(int projectId, [FromQuery] string? sort = null) =>
         Ok(await svc.GetDistinctTagsAsync(projectId, sort));
 
+    public record RenameTagRequest(string OldName, string NewName);
+    public record MergeTagsRequest(List<string> Sources, string Target);
+
+    [HttpPost("tags/rename")]
+    public async Task<IActionResult> RenameTag(int projectId, [FromBody] RenameTagRequest req)
+    {
+        var n = await svc.RenameTagAsync(projectId, req.OldName, req.NewName);
+        return Ok(new { changed = n });
+    }
+
+    [HttpPost("tags/merge")]
+    public async Task<IActionResult> MergeTags(int projectId, [FromBody] MergeTagsRequest req)
+    {
+        var n = await svc.MergeTagsAsync(projectId, req.Sources, req.Target);
+        return Ok(new { changed = n });
+    }
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int projectId, int id) =>
         await svc.GetByIdAsync(id) is { } dto ? Ok(dto) : NotFound();

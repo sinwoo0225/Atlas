@@ -63,6 +63,9 @@ public interface IDevInfoRepository
     Task<DevInfoItem> UpdateAsync(DevInfoItem item);
     Task DeleteAsync(int id);
     Task<IReadOnlyList<string>> GetTagsByProjectAsync(int projectId);
+    // C-4 follow-up — 태그 일괄 갱신. 영향 받은 item 수 반환. OrdinalIgnoreCase 매칭.
+    Task<int> RenameTagAsync(int projectId, string oldTag, string newTag);
+    Task<int> MergeTagsAsync(int projectId, IReadOnlyList<string> sourceTags, string targetTag);
 }
 
 public interface IResourceRepository
@@ -113,7 +116,9 @@ public interface IIssueWbsLinkRepository
     Task<IEnumerable<IssueWbsLink>> GetByIssueAsync(int issueId);
     Task<IEnumerable<IssueWbsLink>> GetByWbsItemAsync(int wbsItemId);
     Task<IssueWbsLink?> GetAsync(int issueId, int wbsItemId);
+    Task<IssueWbsLink?> GetByIdAsync(int id);
     Task<IssueWbsLink> CreateAsync(IssueWbsLink link);
+    Task<IssueWbsLink> UpdateAsync(IssueWbsLink link);
     Task<bool> DeleteAsync(int issueId, int wbsItemId);
     // 프로젝트의 모든 link tuple 반환 (카운트 배지용). Issue.ProjectId 기준 — Issue/WBS 양쪽 ProjectId 는 동일하다는 서비스 가드 전제.
     Task<IReadOnlyList<(int IssueId, int WbsItemId)>> GetByProjectAsync(int projectId);

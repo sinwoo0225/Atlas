@@ -28,6 +28,13 @@ public class IssueWbsLinksController(IssueWbsLinkService svc) : ControllerBase
         catch (IssueWbsLinkConflictException ex) { return Conflict(new { error = ex.Message }); }
     }
 
+    [HttpPut("{id:int}/type")]
+    public async Task<IActionResult> UpdateType(int id, [FromBody] UpdateIssueWbsLinkTypeDto dto)
+    {
+        var updated = await svc.UpdateTypeAsync(id, dto.Type);
+        return updated is null ? NotFound() : Ok(updated);
+    }
+
     [HttpDelete("by-issue/{issueId:int}/by-wbs/{wbsItemId:int}")]
     public async Task<IActionResult> Delete(int issueId, int wbsItemId) =>
         await svc.DeleteAsync(issueId, wbsItemId) ? NoContent() : NotFound();

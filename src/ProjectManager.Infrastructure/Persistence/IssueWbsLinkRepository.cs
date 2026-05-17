@@ -23,9 +23,19 @@ public class IssueWbsLinkRepository(AppDbContext db) : IIssueWbsLinkRepository
     public async Task<IssueWbsLink?> GetAsync(int issueId, int wbsItemId) =>
         await db.IssueWbsLinks.FirstOrDefaultAsync(x => x.IssueId == issueId && x.WbsItemId == wbsItemId);
 
+    public async Task<IssueWbsLink?> GetByIdAsync(int id) => await db.IssueWbsLinks.FindAsync(id);
+
     public async Task<IssueWbsLink> CreateAsync(IssueWbsLink link)
     {
         db.IssueWbsLinks.Add(link);
+        await db.SaveChangesAsync();
+        return link;
+    }
+
+    public async Task<IssueWbsLink> UpdateAsync(IssueWbsLink link)
+    {
+        link.UpdatedAt = DateTime.UtcNow;
+        db.IssueWbsLinks.Update(link);
         await db.SaveChangesAsync();
         return link;
     }

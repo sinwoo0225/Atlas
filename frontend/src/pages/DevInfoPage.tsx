@@ -13,7 +13,9 @@ import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { TagSuggestionInput } from '../components/TagSuggestionInput';
+import { TagManageModal } from '../components/devinfo/TagManageModal';
 import { parseTagTokens } from '../utils/devInfoTagTokens';
+import { Tag as TagIcon } from 'lucide-react';
 
 const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; className?: string }>> = {
   Markdown: FileText,
@@ -330,6 +332,7 @@ export function DevInfoPage() {
   const [items, setItems] = useState<DevInfoItem[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [tagManageOpen, setTagManageOpen] = useState(false);
   const [editing, setEditing] = useState<DevInfoItem | null>(null);
   const [selected, setSelected] = useState<DevInfoItem | null>(null);
   const [filterType, setFilterType] = useState<DevInfoType | ''>('');
@@ -516,10 +519,19 @@ export function DevInfoPage() {
               초기화
             </Button>
           )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTagManageOpen(true)}
+            leadingIcon={<TagIcon size={12} />}
+            className="ml-auto"
+          >
+            태그 관리
+          </Button>
           <div
             role="group"
             aria-label="태그 정렬"
-            className="ml-auto flex items-center gap-1 text-xs text-muted shrink-0"
+            className="flex items-center gap-1 text-xs text-muted shrink-0"
           >
             <ArrowUpDown size={12} aria-hidden="true" />
             <button
@@ -673,6 +685,13 @@ export function DevInfoPage() {
           onCancel={() => setEditing(null)}
         />
       )}
+      <TagManageModal
+        open={tagManageOpen}
+        projectId={pid}
+        tags={availableTags}
+        onClose={() => setTagManageOpen(false)}
+        onChanged={refresh}
+      />
     </div>
   );
 }

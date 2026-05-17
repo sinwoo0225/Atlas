@@ -109,6 +109,8 @@ public class AppDbContext(
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 관계 타입은 string 으로 — enum 순서가 바뀌어도 안전, 사람이 SQL 봐도 식별 가능.
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(32).HasDefaultValue(IssueWbsLinkType.RelatesTo);
             e.HasOne(x => x.Issue).WithMany().HasForeignKey(x => x.IssueId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.WbsItem).WithMany().HasForeignKey(x => x.WbsItemId).OnDelete(DeleteBehavior.Cascade);
             // 중복 링크 방지 + by-issue / by-wbs 조회 모두 인덱스 활용.

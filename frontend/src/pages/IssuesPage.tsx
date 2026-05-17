@@ -15,7 +15,8 @@ import { WbsTreePicker } from '../components/WbsTreePicker';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import type { Issue, IssueStatus, IssuePriority, Resource, WbsItem } from '../types';
+import type { Issue, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
+import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
 
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
 const PRIORITY_VALUES: IssuePriority[] = ['High', 'Medium', 'Low'];
@@ -501,6 +502,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
   const navigate = useNavigate();
   const [links, setLinks] = useState<IssueWbsLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerType, setPickerType] = useState<IssueWbsLinkType>('RelatesTo');
 
   const load = () => issueWbsLinksApi.byIssue(issueId).then(setLinks).catch(() => setLinks([]));
   useEffect(() => { load(); }, [issueId]);
@@ -509,11 +511,19 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
 
   const handleAdd = async (wbsItemId: number) => {
     try {
-      await issueWbsLinksApi.create(issueId, wbsItemId);
+      await issueWbsLinksApi.create(issueId, wbsItemId, pickerType);
       setPickerOpen(false);
       load();
       onLinksChanged();
     } catch { /* 토스트는 api/client.ts */ }
+  };
+
+  const handleChangeType = async (link: IssueWbsLink, next: IssueWbsLinkType) => {
+    if (link.type === next) return;
+    try {
+      await issueWbsLinksApi.updateType(link.id, next);
+      load();
+    } catch { /* api/client.ts */ }
   };
 
   const handleRemove = async (wbsItemId: number, name: string) => {
@@ -544,6 +554,12 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
         <ul className="space-y-1">
           {links.map((l) => (
             <li key={l.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
+              <BadgeMenu<IssueWbsLinkType>
+                value={l.type}
+                options={LINK_TYPE_OPTIONS}
+                onChange={(next) => handleChangeType(l, next)}
+                title="관계 타입 변경"
+              />
               <button
                 type="button"
                 onClick={() => navigate(`/projects/${projectId}/wbs?highlight=${l.wbsItemId}`)}
@@ -565,15 +581,29 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
         </ul>
       )}
       {pickerOpen && (
-        <div className="mt-2 h-64">
-          <WbsTreePicker
-            items={wbsItems}
-            selectedId={null}
-            excludeIds={excludeIds}
-            showRoot={false}
-            onSelect={(id) => { if (id != null) handleAdd(id); }}
-          />
-        </div>
+        <>
+          <div className="flex items-center gap-2 mt-2 mb-1 text-xs text-muted">
+            <span>관계 타입</span>
+            <select
+              value={pickerType}
+              onChange={(e) => setPickerType(e.target.value as IssueWbsLinkType)}
+              className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary"
+            >
+              {LINK_TYPE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{LINK_TYPE_META[o.value].label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="h-64">
+            <WbsTreePicker
+              items={wbsItems}
+              selectedId={null}
+              excludeIds={excludeIds}
+              showRoot={false}
+              onSelect={(id) => { if (id != null) handleAdd(id); }}
+            />
+          </div>
+        </>
       )}
     </div>
   );

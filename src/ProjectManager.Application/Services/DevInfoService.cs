@@ -104,6 +104,24 @@ public class DevInfoService(
         return ToDto(updated);
     }
 
+    // C-4 follow-up — 태그 일괄 갱신.
+    public Task<int> RenameTagAsync(int projectId, string oldTag, string newTag)
+    {
+        var o = (oldTag ?? "").Trim();
+        var n = (newTag ?? "").Trim();
+        if (string.IsNullOrEmpty(o) || string.IsNullOrEmpty(n)) return Task.FromResult(0);
+        if (string.Equals(o, n, StringComparison.OrdinalIgnoreCase)) return Task.FromResult(0);
+        return repo.RenameTagAsync(projectId, o, n);
+    }
+
+    public Task<int> MergeTagsAsync(int projectId, IReadOnlyList<string> sources, string target)
+    {
+        if (sources is null || sources.Count == 0) return Task.FromResult(0);
+        var t = (target ?? "").Trim();
+        if (string.IsNullOrEmpty(t)) return Task.FromResult(0);
+        return repo.MergeTagsAsync(projectId, sources, t);
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         var item = await repo.GetByIdAsync(id);

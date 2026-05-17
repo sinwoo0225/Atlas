@@ -33,9 +33,20 @@ public class IssueWbsLinkService(
         {
             IssueId = dto.IssueId,
             WbsItemId = dto.WbsItemId,
+            Type = dto.Type,
         });
         // 응답 직렬화 위해 다시 로드 (Issue/WbsItem navigation 채워서)
         return (await GetByIssueAsync(dto.IssueId)).First(l => l.Id == created.Id);
+    }
+
+    public async Task<IssueWbsLinkDto?> UpdateTypeAsync(int id, IssueWbsLinkType type)
+    {
+        var link = await repo.GetByIdAsync(id);
+        if (link is null) return null;
+        link.Type = type;
+        await repo.UpdateAsync(link);
+        // navigation 채워서 응답 — by-issue 다시 로드
+        return (await GetByIssueAsync(link.IssueId)).FirstOrDefault(l => l.Id == id);
     }
 
     public Task<bool> DeleteAsync(int issueId, int wbsItemId) => repo.DeleteAsync(issueId, wbsItemId);
@@ -45,7 +56,7 @@ public class IssueWbsLinkService(
             .Select(t => new IssueWbsLinkLite(t.IssueId, t.WbsItemId));
 
     private static IssueWbsLinkDto ToDto(IssueWbsLink l) => new(
-        l.Id, l.IssueId, l.WbsItemId,
+        l.Id, l.IssueId, l.WbsItemId, l.Type,
         l.Issue?.Title, l.WbsItem?.Name,
         l.CreatedAt, l.CreatedBy);
 }
