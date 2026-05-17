@@ -7,43 +7,49 @@
 */
 :root {
   color-scheme: dark;
-  --bg-base:         #141414;
-  --bg-sidebar:      #1a1a1a;
-  --bg-surface:      #202022;
-  --bg-surface-2:    #2a2a2c;
-  --bg-surface-3:    #353538;
-  --text-primary:    #f4f4f5;
-  --text-secondary:  #d4d4d8;
-  --text-muted:      #b4b4bb;     /* WCAG AA: bg-surface-3 위에서 4.5:1 확보 (기존 #a1a1aa → 약간 밝힘) */
-  --border-default:  #3f3f46;
-  --border-strong:   #52525b;
-  --accent:          #9eb2ce;   /* steel blue family — Atlas 워드마크와 톤 일치, 인디고보다 부드러움 */
+  /* Surfaces — cool blue 가미된 5-stop 다크 elevation (v2) */
+  --bg-base:         #12151b;
+  --bg-sidebar:      #181b22;
+  --bg-surface:      #1f232b;
+  --bg-surface-2:    #2a2f3a;
+  --bg-surface-3:    #383d49;
+  --text-primary:    #f0f2f7;
+  --text-secondary:  #cfd3dc;
+  --text-muted:      #a8aebd;
+  --border-default:  #3a4051;
+  --border-strong:   #545b6e;
+  --accent:          #9eb2ce;   /* steel blue family — Atlas 워드마크와 톤 일치 */
   --accent-hover:    #b2c2d8;   /* --accent 보다 살짝 밝게 — primary 버튼 hover */
-  --accent-2:        #fbbf24;
+  --accent-2:        #e6b552;   /* warm gold (v2) — 다크 cool surface 와 짝 */
   --accent-soft:     rgba(158, 178, 206, 0.18);
-  --success:         #34d399;
-  --warning:         #f59e0b;
+  --success:         #4ade80;
+  --warning:         #f5b955;
   --danger:          #f87171;
-  --code-bg:         #2a2a2a;
-  --code-fg:         #fbbf24;
-  --scroll-track:    #1c1c1c;
-  --scroll-thumb:    #3a3a3a;
-  --scroll-hover:    #555555;
+  --info:            #7eb6ff;
+  --code-bg:         #1c2028;
+  --code-fg:         #f5cf61;
+  --scroll-track:    #181b22;
+  --scroll-thumb:    #3a4051;
+  --scroll-hover:    #545b6e;
 
   /* Status soft backgrounds — 배지/얇은 강조 영역 */
-  --bg-success-soft: rgba(52, 211, 153, 0.15);
-  --bg-warning-soft: rgba(245, 158, 11, 0.15);
-  --bg-danger-soft:  rgba(248, 113, 113, 0.15);
-  --bg-info-soft:    rgba(96, 165, 250, 0.15);
-  --bg-neutral-soft: rgba(161, 161, 170, 0.18);
+  --bg-success-soft: rgba(74, 222, 128, 0.16);
+  --bg-warning-soft: rgba(245, 185, 85, 0.18);
+  --bg-danger-soft:  rgba(248, 113, 113, 0.16);
+  --bg-info-soft:    rgba(126, 182, 255, 0.16);
+  --bg-neutral-soft: rgba(168, 174, 189, 0.18);
 
   /* Text on status soft — 배지 라벨 텍스트 */
-  --text-on-success: #6ee7b7;
-  --text-on-warning: #fcd34d;
+  --text-on-success: #86efac;
+  --text-on-warning: #fbd57a;
   --text-on-danger:  #fca5a5;
-  --text-on-info:    #93c5fd;
-  --text-on-neutral: #d4d4d8;
+  --text-on-info:    #a8c8ff;
+  --text-on-neutral: #cfd3dc;
   --text-on-accent:  #0f172a;     /* 다크의 --accent (밝은 steel blue) 위 어두운 글씨 — WCAG AAA */
+
+  /* Wordmark — Atlas "At" steel blue / "las" warm gold. logo 전용, 일반 색으로 재사용 금지. */
+  --logo-primary:    #7c8db5;
+  --logo-accent:     #c9a96b;
 
   /* Focus ring — 키보드 포커스 가시화 */
   --ring-accent:     rgba(158, 178, 206, 0.7);
@@ -51,43 +57,49 @@
 
 html.light {
   color-scheme: light;
-  --bg-base:         #f6f7f9;
-  --bg-sidebar:      #ffffff;
+  /* Surfaces — warm paper (v2). 다크 cool surface + warm gold 와 chromatic 페어. */
+  --bg-base:         #f6f3ec;
+  --bg-sidebar:      #fdfaf3;
   --bg-surface:      #ffffff;
-  --bg-surface-2:    #f1f3f5;
-  --bg-surface-3:    #e4e7eb;
-  --text-primary:    #111827;
-  --text-secondary:  #374151;
-  --text-muted:      #6b7280;
-  --border-default:  #d1d5db;
-  --border-strong:   #9ca3af;
-  --accent:          #5b7299;   /* steel blue family (라이트 모드) */
-  --accent-hover:    #6b82a8;   /* --accent 보다 살짝 밝게 — primary 버튼 hover */
-  --accent-2:        #d97706;
-  --accent-soft:     rgba(91, 114, 153, 0.12);
-  --success:         #059669;
-  --warning:         #d97706;
-  --danger:          #dc2626;
-  --code-bg:         #f3f4f6;
-  --code-fg:         #b45309;
-  --scroll-track:    #e5e7eb;
-  --scroll-thumb:    #9ca3af;
-  --scroll-hover:    #6b7280;
+  --bg-surface-2:    #f0ebe0;
+  --bg-surface-3:    #e3ddcb;
+  --text-primary:    #1a1d24;
+  --text-secondary:  #3d4250;
+  --text-muted:      #6e7180;
+  --border-default:  #d6d0bd;     /* warm beige */
+  --border-strong:   #a39d8a;
+  --accent:          #4a6797;     /* deep steel blue (v2) — 라이트 warm 표면 위에서 대비 강화 */
+  --accent-hover:    #5d7aa8;     /* --accent 보다 살짝 밝게 — primary 버튼 hover */
+  --accent-2:        #a3742d;     /* warm gold (v2) — 기존 #d97706 이 warning 과 충돌하던 문제 해결 */
+  --accent-soft:     rgba(74, 103, 151, 0.18);   /* 다크와 동일 alpha — warm paper 위에서 활성 표시 또렷하게 (사이드바 active 등) */
+  --success:         #047857;
+  --warning:         #b16412;     /* 진중한 brown-orange — d97706 보다 차분 */
+  --danger:          #b91c1c;
+  --info:            #1d4ed8;
+  --code-bg:         #f3eedf;     /* warm code block */
+  --code-fg:         #835a17;
+  --scroll-track:    #e3ddcb;
+  --scroll-thumb:    #a39d8a;
+  --scroll-hover:    #6e7180;
 
-  --bg-success-soft: rgba(5, 150, 105, 0.12);
-  --bg-warning-soft: rgba(217, 119, 6, 0.12);
-  --bg-danger-soft:  rgba(220, 38, 38, 0.10);
-  --bg-info-soft:    rgba(37, 99, 235, 0.10);
-  --bg-neutral-soft: rgba(107, 114, 128, 0.12);
+  --bg-success-soft: rgba(4, 120, 87, 0.12);
+  --bg-warning-soft: rgba(177, 100, 18, 0.12);
+  --bg-danger-soft:  rgba(185, 28, 28, 0.10);
+  --bg-info-soft:    rgba(29, 78, 216, 0.10);
+  --bg-neutral-soft: rgba(110, 113, 128, 0.13);
 
-  --text-on-success: #047857;
-  --text-on-warning: #b45309;
-  --text-on-danger:  #b91c1c;
-  --text-on-info:    #1d4ed8;
-  --text-on-neutral: #374151;
+  --text-on-success: #065f46;
+  --text-on-warning: #92400e;
+  --text-on-danger:  #991b1b;
+  --text-on-info:    #1e3a8a;
+  --text-on-neutral: #3d4250;
   --text-on-accent:  #ffffff;     /* 라이트의 --accent (어두운 steel blue) 위 흰 글씨 — WCAG AA */
 
-  --ring-accent:     rgba(91, 114, 153, 0.5);
+  /* Wordmark — 두 테마 동일 hex (워드마크 정체성 유지) */
+  --logo-primary:    #7c8db5;
+  --logo-accent:     #c9a96b;
+
+  --ring-accent:     rgba(74, 103, 151, 0.5);
 }
 
 /* ========== Spacing scale (사용 규칙 — 단순 참고용, CSS 미적용) ==========
@@ -366,17 +378,17 @@ input[type="time"]:hover::-webkit-calendar-picker-indicator {
 }
 .markdown-body img { max-width: 100%; border-radius: 4px; }
 
-/* ========== Logo (Atlas) ========== */
+/* ========== Logo (Atlas) — 토큰 참조. 워드마크 hex 변경은 :root/html.light 의 --logo-* 에서. */
 .logo-primary {
   font-weight: 800;
   font-style: italic;
-  color: #7c8db5;
+  color: var(--logo-primary);
   letter-spacing: -0.01em;
 }
 .logo-accent {
   font-weight: 800;
   font-style: italic;
-  color: #c9a96b;
+  color: var(--logo-accent);
   letter-spacing: -0.01em;
 }
 
