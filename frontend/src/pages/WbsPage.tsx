@@ -2,24 +2,32 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Link as LinkIcon, FileText } from 'lucide-react';
+import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
+import {
+  DndContext, DragOverlay, KeyboardSensor, PointerSensor,
+  closestCenter, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { changeLogsApi } from '../api/changelogs';
-import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
-import { wbsImportanceBadge } from '../utils/statusMaps';
 import {
-  collectDescendantIds, collectMatchedIds, filterWbsTree, findItemName,
-  hasAnyFilter, type WbsFilterOpts,
+  collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName,
+  applyOrderPatchesLocal, hasAnyFilter, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { IssuePicker } from '../components/IssuePicker';
 import { issuesApi } from '../api/issues';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { GanttChart } from './wbs/GanttChart';
+import { SortableWbsRow } from './wbs/SortableWbsRow';
+import { WbsDragOverlayRow } from './wbs/WbsDragOverlayRow';
+import { computeSiblingReorder } from './wbs/wbsReorder';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType } from '../types';
@@ -439,137 +447,6 @@ function DateEditModal({
   );
 }
 
-function WbsRow({ item, projectId, depth = 0, matchedIds, linkCountByWbs, sourceCountByWbs, onEdit, onDelete, onAddChild, onStatusChange }: {
-  item: WbsItem; projectId: number; depth?: number;
-  matchedIds?: Set<number>;
-  linkCountByWbs: Map<number, number>;
-  sourceCountByWbs: Record<number, number>;
-  onEdit: (item: WbsItem) => void; onDelete: (id: number) => void;
-  onAddChild: (parentId: number) => void;
-  onStatusChange: (item: WbsItem, status: WbsStatus) => void;
-}) {
-  const navigate = useNavigate();
-  const linkCount = linkCountByWbs.get(item.id) ?? 0;
-  const sourceCount = sourceCountByWbs[item.id] ?? 0;
-  const [expanded, setExpanded] = useState(true);
-  const hasChildren = (item.children?.length ?? 0) > 0;
-  const importance = wbsImportanceBadge(item.order);
-  // matchedIds 가 비어 있으면 (필터 없음) 강조 안 함. 있으면 매칭 행만 accent-soft 배경.
-  const isMatched = matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
-
-  return (
-    <>
-      <tr
-        data-highlight-id={item.id}
-        className={`border-b border-default hover:bg-surface-2 transition-colors ${isMatched ? 'bg-accent-soft' : ''}`}
-        onDoubleClick={() => onEdit(item)}
-      >
-        <td className="py-2 px-4">
-          <div className="flex items-center gap-1" style={{ paddingLeft: depth * 20 }}>
-            {hasChildren ? (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-muted hover:text-primary transition-colors"
-                aria-label={expanded ? `${item.name} 접기` : `${item.name} 펼치기`}
-                aria-expanded={expanded}
-              >
-                {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-              </button>
-            ) : (
-              <span className="w-4 inline-block" />
-            )}
-            {item.isMilestone && <Diamond size={12} className="text-accent" />}
-            <span
-              className="text-sm text-primary hover:text-accent cursor-pointer transition-colors"
-              onClick={() => onEdit(item)}
-            >
-              {item.name}
-            </span>
-            {linkCount > 0 && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-                className="ml-1 shrink-0"
-                title="관련 Issue 보기"
-                aria-label={`관련 Issue ${linkCount}건 보기`}
-              >
-                <Badge variant="neutral" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
-                  <LinkIcon size={10} className="mr-0.5" /> {linkCount}
-                </Badge>
-              </button>
-            )}
-            {sourceCount > 0 && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); navigate(`/projects/${projectId}/changelogs?sourceWbs=${item.id}`); }}
-                className="ml-1 shrink-0"
-                title="이 작업이 출처인 변경이력 보기"
-                aria-label={`출처 변경이력 ${sourceCount}건 보기`}
-              >
-                <Badge variant="info" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
-                  <FileText size={10} className="mr-0.5" /> {sourceCount}
-                </Badge>
-              </button>
-            )}
-          </div>
-        </td>
-        <td className="py-2 px-3 text-sm text-secondary">{item.assignee}</td>
-        <td className="py-2 px-3 text-xs text-muted">{item.startDate?.slice(0, 10)}</td>
-        <td className="py-2 px-3 text-xs text-muted">{item.endDate?.slice(0, 10)}</td>
-        <td className="py-2 px-3">
-          <Badge variant={importance.variant} size="sm">{importance.label}</Badge>
-        </td>
-        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
-          <BadgeMenu<WbsStatus>
-            value={item.status}
-            options={[
-              { value: 'Planned',    label: '예정', variant: 'neutral' },
-              { value: 'InProgress', label: '진행', variant: 'warning' },
-              { value: 'Done',       label: '완료', variant: 'success' },
-            ]}
-            onChange={(next) => onStatusChange(item, next)}
-            title="상태 변경"
-          />
-        </td>
-        <td className="py-2 px-3">
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => onAddChild(item.id)}
-              title="하위 작업 추가"
-              aria-label={`${item.name} 의 하위 작업 추가`}
-              className="p-1 text-muted hover:text-primary transition-colors"
-            >
-              <Plus size={14} />
-            </button>
-            <button
-              onClick={() => onEdit(item)}
-              title="수정"
-              aria-label={`${item.name} 수정`}
-              className="p-1 text-muted hover:text-primary transition-colors"
-            >
-              <Pencil size={14} />
-            </button>
-            <button
-              onClick={() => onDelete(item.id)}
-              title="삭제"
-              aria-label={`${item.name} 삭제`}
-              className="p-1 text-on-danger hover:opacity-80 transition-opacity"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </td>
-      </tr>
-      {expanded && item.children?.map((child) => (
-        <WbsRow key={child.id} item={child} projectId={projectId} depth={depth + 1}
-          matchedIds={matchedIds}
-          linkCountByWbs={linkCountByWbs}
-          sourceCountByWbs={sourceCountByWbs}
-          onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onStatusChange={onStatusChange} />
-      ))}
-    </>
-  );
-}
 
 export function WbsPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -611,6 +488,18 @@ export function WbsPage() {
   const visibleItems = useMemo(
     () => (matchOnly && hasAnyFilter(filterOpts)) ? filterWbsTree(items, filterOpts) : items,
     [items, filterOpts, matchOnly],
+  );
+
+  // 사이클 13 — dnd-kit 형제 reorder (P8-4). matchOnly 시 화면 형제 ⊂ 원본이라 reorder 비활성.
+  const reorderDisabled = matchOnly && hasAnyFilter(filterOpts);
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const activeItem = useMemo(
+    () => (activeId != null ? findItem(activeId, items) : null),
+    [activeId, items],
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
   // link tuple → wbsItemId 별 카운트 Map. 0 인 항목은 키 미포함.
@@ -684,6 +573,53 @@ export function WbsPage() {
     const { children: _children, ...rest } = item;
     await wbsApi.update(pid, item.id, { ...rest, status });
     refresh();
+  };
+
+  // 사이클 13 — 형제 reorder drop 처리. 같은 부모 안에서만 작동, 다른 부모로 드롭 시 무시.
+  const handleDragEnd = async (e: DragEndEvent) => {
+    setActiveId(null);
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+
+    const activeData = active.data.current as { parentId: number | null } | undefined;
+    const overData = over.data.current as { parentId: number | null } | undefined;
+    if (!activeData || !overData) return;
+    if (activeData.parentId !== overData.parentId) {
+      toast.info('드래그로 부모 변경은 지원하지 않습니다. 행을 열어 부모 picker 를 사용하세요.');
+      return;
+    }
+
+    const siblings = activeData.parentId == null
+      ? items
+      : (findItem(activeData.parentId, items)?.children ?? []);
+    const patches = computeSiblingReorder(siblings, Number(active.id), Number(over.id));
+    if (patches.length === 0) return;
+
+    // optimistic — 로컬 트리에 newOrder 즉시 반영 (siblingSort 가 화면 재정렬).
+    setItems((prev) => applyOrderPatchesLocal(prev, activeData.parentId, patches));
+
+    const results = await Promise.allSettled(
+      patches.map((p) => {
+        const target = findItem(p.id, items);
+        if (!target) return Promise.reject(new Error('not_found'));
+        const { children: _c, ...rest } = target;
+        return wbsApi.update(
+          pid, p.id,
+          { ...rest, order: p.newOrder, updatedAt: p.updatedAt },
+          { silent: true },
+        );
+      }),
+    );
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (failed.length === 0) {
+      toast.success(`순서 변경 (${patches.length}건)`);
+    } else if (failed.length === patches.length) {
+      toast.error('순서 변경 실패 — 다른 곳에서 동시 편집한 듯합니다. 최신 상태로 갱신합니다.', { duration: 6000 });
+      refresh();
+    } else {
+      toast.error(`순서 변경 중 ${failed.length}건 실패. 최신 상태로 갱신합니다.`, { duration: 6000 });
+      refresh();
+    }
   };
 
   const handleCreateVersion = async () => {
@@ -818,45 +754,62 @@ export function WbsPage() {
         </Card>
       ) : (
         <Card padding="none" className="overflow-x-auto">
-          <table className="w-full min-w-[800px]">
-            <thead>
-              <tr className="border-b border-default text-xs text-muted">
-                <th className="text-left py-3 px-4 font-medium">작업명</th>
-                <th className="text-left py-3 px-3 font-medium">담당자</th>
-                <th className="text-left py-3 px-3 font-medium">시작일</th>
-                <th className="text-left py-3 px-3 font-medium">종료일</th>
-                <th className="text-left py-3 px-3 font-medium">중요도</th>
-                <th className="text-left py-3 px-3 font-medium">상태</th>
-                <th className="text-left py-3 px-3 font-medium">작업</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visibleItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7}>
-                    <EmptyState
-                      icon={<Search size={32} />}
-                      title="조건에 맞는 작업이 없습니다."
-                      description="필터를 초기화해 보세요."
-                    />
-                  </td>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={(e) => setActiveId(Number(e.active.id))}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <table className="w-full min-w-[800px]">
+              <thead>
+                <tr className="border-b border-default text-xs text-muted">
+                  <th className="text-left py-3 px-4 font-medium">작업명</th>
+                  <th className="text-left py-3 px-3 font-medium">담당자</th>
+                  <th className="text-left py-3 px-3 font-medium">시작일</th>
+                  <th className="text-left py-3 px-3 font-medium">종료일</th>
+                  <th className="text-left py-3 px-3 font-medium">중요도</th>
+                  <th className="text-left py-3 px-3 font-medium">상태</th>
+                  <th className="text-left py-3 px-3 font-medium">작업</th>
                 </tr>
-              ) : visibleItems.map((item) => (
-                <WbsRow
-                  key={item.id}
-                  item={item}
-                  projectId={pid}
-                  matchedIds={matchedIds}
-                  linkCountByWbs={linkCountByWbs}
-                  sourceCountByWbs={sourceCountByWbs}
-                  onEdit={setEditing}
-                  onDelete={handleDelete}
-                  onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}
-                  onStatusChange={handleStatusChange}
-                />
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {visibleItems.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <EmptyState
+                        icon={<Search size={32} />}
+                        title="조건에 맞는 작업이 없습니다."
+                        description="필터를 초기화해 보세요."
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  <SortableContext
+                    items={visibleItems.map((i) => i.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {visibleItems.map((item) => (
+                      <SortableWbsRow
+                        key={item.id}
+                        item={item}
+                        projectId={pid}
+                        matchedIds={matchedIds}
+                        linkCountByWbs={linkCountByWbs}
+                        sourceCountByWbs={sourceCountByWbs}
+                        reorderDisabled={reorderDisabled}
+                        onEdit={setEditing}
+                        onDelete={handleDelete}
+                        onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}
+                        onStatusChange={handleStatusChange}
+                      />
+                    ))}
+                  </SortableContext>
+                )}
+              </tbody>
+            </table>
+            <DragOverlay>{activeItem && <WbsDragOverlayRow item={activeItem} />}</DragOverlay>
+          </DndContext>
         </Card>
       )}
 
