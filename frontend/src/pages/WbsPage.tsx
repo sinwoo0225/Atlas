@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
+import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Link as LinkIcon } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
@@ -37,10 +37,13 @@ type WbsFormData = {
 };
 
 function WbsItemForm({
-  projectId, versionId, parentId, initial, resources, allItems, allIssues, onSave, onCancel
+  projectId, versionId, parentId, initial, resources, allItems, allIssues,
+  onRefreshIssues, onLinksChanged, onSave, onCancel,
 }: {
   projectId: number; versionId?: number; parentId?: number;
   initial?: WbsItem; resources: Resource[]; allItems: WbsItem[]; allIssues: Issue[];
+  onRefreshIssues: () => void;
+  onLinksChanged: () => void;
   onSave: () => void; onCancel: () => void;
 }) {
   const [form, setForm] = useState<WbsFormData>({
@@ -184,7 +187,13 @@ function WbsItemForm({
           {/* 우측 - 관련 Issue (수정 시) + 상세 정보 (마크다운). 마크다운이 세로 가득. */}
           <div className="flex flex-col min-h-0 gap-3">
             {initial && (
-              <RelatedIssuesSection wbsItemId={initial.id} projectId={projectId} allIssues={allIssues} />
+              <RelatedIssuesSection
+                wbsItemId={initial.id}
+                projectId={projectId}
+                allIssues={allIssues}
+                onRefreshIssues={onRefreshIssues}
+                onLinksChanged={onLinksChanged}
+              />
             )}
             <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)" className="min-h-0 flex-1">
               {notesEditing || !form.notes ? (
@@ -220,8 +229,12 @@ function WbsItemForm({
 }
 
 // WBS 항목의 관련 Issue 링크 목록 + 추가/해제. 모달 펼침 시 fetch.
-function RelatedIssuesSection({ wbsItemId, projectId, allIssues }: {
+// picker 열 때마다 issues silent refetch (다른 탭에서 만든 새 Issue 즉시 반영).
+// link 변동 시 부모(WbsPage) 의 byProject 카운트도 갱신 (onLinksChanged).
+function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues, onLinksChanged }: {
   wbsItemId: number; projectId: number; allIssues: Issue[];
+  onRefreshIssues: () => void;
+  onLinksChanged: () => void;
 }) {
   const navigate = useNavigate();
   const [links, setLinks] = useState<IssueWbsLink[]>([]);
@@ -232,11 +245,20 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues }: {
 
   const excludeIds = useMemo(() => new Set(links.map((l) => l.issueId)), [links]);
 
+  const togglePicker = () => {
+    setPickerOpen((v) => {
+      const next = !v;
+      if (next) onRefreshIssues();
+      return next;
+    });
+  };
+
   const handleAdd = async (issueId: number) => {
     try {
       await issueWbsLinksApi.create(issueId, wbsItemId);
       setPickerOpen(false);
       load();
+      onLinksChanged();
     } catch { /* api/client.ts 가 토스트 처리 */ }
   };
 
@@ -248,6 +270,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues }: {
     })) return;
     await issueWbsLinksApi.delete(issueId, wbsItemId);
     load();
+    onLinksChanged();
   };
 
   return (
@@ -256,7 +279,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues }: {
         <p className="text-xs text-muted font-medium flex items-center gap-1">
           <ListChecks size={12} /> 관련 Issue ({links.length})
         </p>
-        <Button variant="ghost" size="sm" onClick={() => setPickerOpen((v) => !v)} leadingIcon={<Plus size={12} />}>
+        <Button variant="ghost" size="sm" onClick={togglePicker} leadingIcon={<Plus size={12} />}>
           {pickerOpen ? '닫기' : '연결 추가'}
         </Button>
       </div>
@@ -348,13 +371,15 @@ function DateEditModal({
   );
 }
 
-function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAddChild, onStatusChange }: {
+function WbsRow({ item, projectId, depth = 0, matchedIds, linkCountByWbs, onEdit, onDelete, onAddChild, onStatusChange }: {
   item: WbsItem; projectId: number; depth?: number;
   matchedIds?: Set<number>;
+  linkCountByWbs: Map<number, number>;
   onEdit: (item: WbsItem) => void; onDelete: (id: number) => void;
   onAddChild: (parentId: number) => void;
   onStatusChange: (item: WbsItem, status: WbsStatus) => void;
 }) {
+  const linkCount = linkCountByWbs.get(item.id) ?? 0;
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.order);
@@ -389,6 +414,19 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAd
             >
               {item.name}
             </span>
+            {linkCount > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+                className="ml-1 shrink-0"
+                title="관련 Issue 보기"
+                aria-label={`관련 Issue ${linkCount}건 보기`}
+              >
+                <Badge variant="neutral" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
+                  <LinkIcon size={10} className="mr-0.5" /> {linkCount}
+                </Badge>
+              </button>
+            )}
           </div>
         </td>
         <td className="py-2 px-3 text-sm text-secondary">{item.assignee}</td>
@@ -441,6 +479,7 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAd
       {expanded && item.children?.map((child) => (
         <WbsRow key={child.id} item={child} projectId={projectId} depth={depth + 1}
           matchedIds={matchedIds}
+          linkCountByWbs={linkCountByWbs}
           onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onStatusChange={onStatusChange} />
       ))}
     </>
@@ -454,6 +493,7 @@ export function WbsPage() {
   const [versions, setVersions] = useState<WbsVersion[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [allIssues, setAllIssues] = useState<Issue[]>([]);
+  const [linkCountByWbs, setLinkCountByWbs] = useState<Map<number, number>>(new Map());
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
   const [view, setView] = useState<'table' | 'gantt'>('table');
   const [showForm, setShowForm] = useState(false);
@@ -485,20 +525,29 @@ export function WbsPage() {
     [items, filterOpts, matchOnly],
   );
 
+  // link tuple → wbsItemId 별 카운트 Map. 0 인 항목은 키 미포함.
+  const computeLinkCountsByWbs = (links: { wbsItemId: number }[]) => {
+    const m = new Map<number, number>();
+    for (const { wbsItemId } of links) m.set(wbsItemId, (m.get(wbsItemId) ?? 0) + 1);
+    return m;
+  };
+
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
-      const [is, vs, rs, ais] = await Promise.all([
+      const [is, vs, rs, ais, lks] = await Promise.all([
         wbsApi.getByProject(pid, currentVersion),
         wbsApi.getVersions(pid),
         resourcesApi.getAll(),
         issuesApi.getByProject(pid),
+        issueWbsLinksApi.byProject(pid).catch(() => []),
       ]);
       setItems(is);
       setVersions(vs);
       setResources(rs);
       setAllIssues(ais);
+      setLinkCountByWbs(computeLinkCountsByWbs(lks));
     } catch (e) {
       setError(e);
     } finally {
@@ -506,11 +555,22 @@ export function WbsPage() {
     }
   }, [pid, currentVersion]);
 
-  // CRUD 후 items/versions 만 다시 fetch (로딩 깜빡임 없이).
+  // CRUD 후 items/versions + link 카운트 갱신 (로딩 깜빡임 없이).
   const refresh = useCallback(() => {
     wbsApi.getByProject(pid, currentVersion).then(setItems).catch(() => {});
     wbsApi.getVersions(pid).then(setVersions).catch(() => {});
+    issueWbsLinksApi.byProject(pid).then((lks) => setLinkCountByWbs(computeLinkCountsByWbs(lks))).catch(() => {});
   }, [pid, currentVersion]);
+
+  // RelatedIssuesSection 에서 link create/delete 후 카운트만 갱신 (모달 안에서 호출).
+  const refreshLinkCounts = useCallback(() => {
+    issueWbsLinksApi.byProject(pid).then((lks) => setLinkCountByWbs(computeLinkCountsByWbs(lks))).catch(() => {});
+  }, [pid]);
+
+  // picker 열 때마다 issues silent refetch — 다른 탭에서 만든 새 Issue 즉시 반영.
+  const refreshIssues = useCallback(() => {
+    issuesApi.getByProject(pid).then(setAllIssues).catch(() => {});
+  }, [pid]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -696,6 +756,7 @@ export function WbsPage() {
                   item={item}
                   projectId={pid}
                   matchedIds={matchedIds}
+                  linkCountByWbs={linkCountByWbs}
                   onEdit={setEditing}
                   onDelete={handleDelete}
                   onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}
@@ -715,6 +776,8 @@ export function WbsPage() {
           resources={resources}
           allItems={items}
           allIssues={allIssues}
+          onRefreshIssues={refreshIssues}
+          onLinksChanged={refreshLinkCounts}
           onSave={() => { setShowForm(false); setAddingChildOf(undefined); refresh(); }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
         />
@@ -726,6 +789,8 @@ export function WbsPage() {
           resources={resources}
           allItems={items}
           allIssues={allIssues}
+          onRefreshIssues={refreshIssues}
+          onLinksChanged={refreshLinkCounts}
           onSave={() => { setEditing(null); refresh(); }}
           onCancel={() => setEditing(null)}
         />

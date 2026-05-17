@@ -102,4 +102,6 @@ public interface IIssueWbsLinkRepository
     Task<IssueWbsLink?> GetAsync(int issueId, int wbsItemId);
     Task<IssueWbsLink> CreateAsync(IssueWbsLink link);
     Task<bool> DeleteAsync(int issueId, int wbsItemId);
+    // 프로젝트의 모든 link tuple 반환 (카운트 배지용). Issue.ProjectId 기준 — Issue/WBS 양쪽 ProjectId 는 동일하다는 서비스 가드 전제.
+    Task<IReadOnlyList<(int IssueId, int WbsItemId)>> GetByProjectAsync(int projectId);
 }

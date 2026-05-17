@@ -40,6 +40,10 @@ public class IssueWbsLinkService(
 
     public Task<bool> DeleteAsync(int issueId, int wbsItemId) => repo.DeleteAsync(issueId, wbsItemId);
 
+    public async Task<IEnumerable<IssueWbsLinkLite>> GetByProjectAsync(int projectId) =>
+        (await repo.GetByProjectAsync(projectId))
+            .Select(t => new IssueWbsLinkLite(t.IssueId, t.WbsItemId));
+
     private static IssueWbsLinkDto ToDto(IssueWbsLink l) => new(
         l.Id, l.IssueId, l.WbsItemId,
         l.Issue?.Title, l.WbsItem?.Name,

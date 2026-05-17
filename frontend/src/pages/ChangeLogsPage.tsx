@@ -121,9 +121,10 @@ function formatLinkLabel(raw: string): string {
   }
 }
 
-function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel }: {
+function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, onSave, onCancel }: {
   projectId: number; initial?: ChangeLog;
   issues: Issue[]; wbsItems: WbsItem[];
+  onRefreshIssues: () => void;
   onSave: () => void; onCancel: () => void;
 }) {
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
@@ -243,7 +244,13 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                onClick={() => setIssuePickerOpen((v) => !v)}
+                onClick={() => {
+                  setIssuePickerOpen((v) => {
+                    const next = !v;
+                    if (next) onRefreshIssues();
+                    return next;
+                  });
+                }}
                 className={`${inputClass} text-left flex items-center justify-between flex-1`}
               >
                 <span className={sourceIssueLabel ? 'text-primary truncate' : 'text-muted'}>
@@ -388,6 +395,11 @@ export function ChangeLogsPage() {
 
   const refreshLogs = useCallback(() => {
     changeLogsApi.getByProject(pid).then(setLogs).catch(() => {});
+  }, [pid]);
+
+  // 출처 Issue picker 열 때마다 issues silent refetch — 다른 탭에서 만든 새 Issue 즉시 반영.
+  const refreshIssues = useCallback(() => {
+    issuesApi.getByProject(pid).then(setIssues).catch(() => {});
   }, [pid]);
 
   useEffect(() => { load(); }, [load]);
@@ -595,6 +607,7 @@ export function ChangeLogsPage() {
           projectId={pid}
           issues={issues}
           wbsItems={wbsItems}
+          onRefreshIssues={refreshIssues}
           onSave={() => { setShowForm(false); refreshLogs(); }}
           onCancel={() => setShowForm(false)}
         />
@@ -605,6 +618,7 @@ export function ChangeLogsPage() {
           initial={editing}
           issues={issues}
           wbsItems={wbsItems}
+          onRefreshIssues={refreshIssues}
           onSave={() => { setEditing(null); refreshLogs(); }}
           onCancel={() => setEditing(null)}
         />

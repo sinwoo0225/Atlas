@@ -38,4 +38,14 @@ public class IssueWbsLinkRepository(AppDbContext db) : IIssueWbsLinkRepository
         await db.SaveChangesAsync();
         return true;
     }
+
+    public async Task<IReadOnlyList<(int IssueId, int WbsItemId)>> GetByProjectAsync(int projectId)
+    {
+        // Issue.ProjectId 기준 join — IssueWbsLinkService.CreateAsync 가 Issue/WBS ProjectId 동일 보장.
+        var rows = await db.IssueWbsLinks
+            .Where(l => l.Issue!.ProjectId == projectId)
+            .Select(l => new { l.IssueId, l.WbsItemId })
+            .ToListAsync();
+        return rows.Select(r => (r.IssueId, r.WbsItemId)).ToList();
+    }
 }

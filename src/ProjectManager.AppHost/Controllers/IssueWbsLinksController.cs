@@ -16,6 +16,11 @@ public class IssueWbsLinksController(IssueWbsLinkService svc) : ControllerBase
     public async Task<IActionResult> GetByWbs(int wbsItemId) =>
         Ok(await svc.GetByWbsItemAsync(wbsItemId));
 
+    // 카운트 배지용 — 프로젝트의 모든 link tuple (제목 없는 경량 DTO).
+    [HttpGet("by-project/{projectId:int}")]
+    public async Task<IActionResult> GetByProject(int projectId) =>
+        Ok(await svc.GetByProjectAsync(projectId));
+
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateIssueWbsLinkDto dto)
     {
