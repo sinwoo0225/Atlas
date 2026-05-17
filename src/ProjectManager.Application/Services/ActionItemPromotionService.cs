@@ -16,7 +16,8 @@ public class ActionItemPromotionService(
     IMeetingRepository meetingRepo,
     IIssueRepository issueRepo,
     IWbsRepository wbsRepo,
-    IResourceRepository resourceRepo)
+    IResourceRepository resourceRepo,
+    IActivityLogRepository activityLogRepo)
 {
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -51,6 +52,11 @@ public class ActionItemPromotionService(
         target["promotedIssueId"] = issue.Id;
         meeting.ActionItems = items.ToJsonString(JsonOpts);
         await meetingRepo.UpdateAsync(meeting);
+
+        // 자동 캡처된 Issue Create 행을 Promote 로 재기록 — 활동 피드에서 자연 생성과 구분.
+        // 실패는 silent (commit 은 이미 성공, 인터셉터 정책 일관).
+        try { await activityLogRepo.RewriteLatestActionAsync("Issue", issue.Id, ActivityAction.Create, ActivityAction.Promote); }
+        catch { /* swallow */ }
 
         var full = await issueRepo.GetByIdAsync(issue.Id) ?? issue;
         return new IssueDto(
@@ -95,6 +101,9 @@ public class ActionItemPromotionService(
         target["promotedWbsItemId"] = item.Id;
         meeting.ActionItems = items.ToJsonString(JsonOpts);
         await meetingRepo.UpdateAsync(meeting);
+
+        try { await activityLogRepo.RewriteLatestActionAsync("WbsItem", item.Id, ActivityAction.Create, ActivityAction.Promote); }
+        catch { /* swallow */ }
 
         return new WbsItemDto(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,

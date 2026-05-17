@@ -46,6 +46,13 @@ public interface IMeetingRepository
     Task<Meeting> CreateAsync(Meeting meeting);
     Task<Meeting> UpdateAsync(Meeting meeting);
     Task DeleteAsync(int id);
+    // C-1 승격 라이프사이클 — Issue/WBS 삭제 시 ActionItem JSON 의 promotedXxxId 키 제거.
+    // 반환: 정리된 회의록 수. 각 회의록은 인터셉터에 의해 Update 로 자동 로깅됨.
+    Task<int> ClearPromotedIssueRefsAsync(int projectId, int issueId);
+    Task<int> ClearPromotedWbsRefsAsync(int projectId, int wbsItemId);
+    // C-1 양방향 sync — Issue/WBS 의 Title/Name 변경 시 회의록 ActionItem.content 갱신 (값 같으면 skip — 루프 가드).
+    Task<int> SyncPromotedIssueContentAsync(int projectId, int issueId, string newContent);
+    Task<int> SyncPromotedWbsContentAsync(int projectId, int wbsItemId, string newContent);
 }
 
 public interface IDevInfoRepository
@@ -96,6 +103,9 @@ public interface IActivityLogRepository
     Task<IReadOnlyList<(int ProjectId, string ProjectName, int Count)>>
         GetCountsByProjectAsync(DateTime sinceUtc, int top);
     Task<int> PruneOlderThanAsync(DateTime cutoffUtc);
+    // 가장 최근의 (entityType, entityId, expected) 활동 1 행의 Action 만 next 로 재기록.
+    // PromotionService 가 자동 Create 직후 호출해 Promote 로 승격 표시. 없으면 false.
+    Task<bool> RewriteLatestActionAsync(string entityType, int entityId, ActivityAction expected, ActivityAction next);
 }
 
 public interface IIssueWbsLinkRepository

@@ -6,7 +6,7 @@ namespace ProjectManager.Application.Services;
 
 public class WbsInvalidParentException(string message) : Exception(message);
 
-public class WbsService(IWbsRepository repo, WorkLogService workLogService)
+public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMeetingRepository meetingRepo)
 {
     public async Task<IEnumerable<WbsItemDto>> GetByProjectAsync(int projectId, int? versionId = null)
     {
@@ -73,6 +73,7 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService)
         }
 
         var wasDone = item.Status == WbsStatus.Done;
+        var nameChanged = item.Name != dto.Name;
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
         item.Status = dto.Status; item.IsMilestone = dto.IsMilestone;
@@ -81,6 +82,9 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService)
         var updated = await repo.UpdateAsync(item);
         if (!wasDone && updated.Status == WbsStatus.Done)
             await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- {updated.Name}");
+        // C-1 양방향 sync (B 방향) — Name 변경 시 회의록 ActionItem.content 도 갱신.
+        if (nameChanged)
+            await meetingRepo.SyncPromotedWbsContentAsync(updated.ProjectId, updated.Id, updated.Name);
         return ToDto(updated, []);
     }
 
@@ -88,7 +92,10 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService)
     {
         var item = await repo.GetByIdAsync(id);
         if (item is null) return false;
+        var projectId = item.ProjectId;
         await repo.DeleteAsync(id);
+        // C-1 승격 취소 — 삭제된 WbsItem 을 가리키는 ActionItem.promotedWbsItemId 정리.
+        await meetingRepo.ClearPromotedWbsRefsAsync(projectId, id);
         return true;
     }
 

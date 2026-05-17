@@ -20,6 +20,7 @@ export const ACTION_META: Record<ActivityAction, { label: string; variant: 'succ
   Create: { label: '생성', variant: 'success' },
   Update: { label: '수정', variant: 'info' },
   Delete: { label: '삭제', variant: 'danger' },
+  Promote: { label: '승격', variant: 'info' },
 };
 
 export function relativeTime(iso: string): string {

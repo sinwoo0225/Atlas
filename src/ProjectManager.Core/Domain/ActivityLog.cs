@@ -1,6 +1,8 @@
 namespace ProjectManager.Core.Domain;
 
-public enum ActivityAction { Create, Update, Delete }
+// Promote: 회의록 ActionItem 이 Issue/WbsItem 으로 승격된 경우. 자연 생성과 구분.
+// 구현은 PromotionService 에서 자동 생성된 Create 행을 사후에 Promote 로 재기록 (interceptor 수정 회피).
+public enum ActivityAction { Create, Update, Delete, Promote }
 
 // 모든 IAuditable 엔티티의 Create/Update/Delete 를 SaveChangesInterceptor 가 자동 기록.
 // Dashboard 의 "최근 활동" 피드와 향후 운영자 어드민 뷰의 데이터 소스.

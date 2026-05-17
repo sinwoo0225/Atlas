@@ -91,4 +91,18 @@ public class ActivityLogRepository(AppDbContext db) : IActivityLogRepository
 
     public Task<int> PruneOlderThanAsync(DateTime cutoffUtc) =>
         db.ActivityLogs.Where(x => x.Timestamp < cutoffUtc).ExecuteDeleteAsync();
+
+    public async Task<bool> RewriteLatestActionAsync(
+        string entityType, int entityId, ActivityAction expected, ActivityAction next)
+    {
+        var row = await db.ActivityLogs
+            .Where(l => l.EntityType == entityType && l.EntityId == entityId && l.Action == expected)
+            .OrderByDescending(l => l.Id)
+            .FirstOrDefaultAsync();
+        if (row is null) return false;
+        row.Action = next;
+        // ActivityLog 자체는 IAuditable 이 아니므로 인터셉터의 IAuditable 가드(line 110)에 걸려 재로깅되지 않는다.
+        await db.SaveChangesAsync();
+        return true;
+    }
 }

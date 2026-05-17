@@ -4,7 +4,7 @@ using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Application.Services;
 
-public class IssueService(IIssueRepository repo, WorkLogService workLogService)
+public class IssueService(IIssueRepository repo, WorkLogService workLogService, IMeetingRepository meetingRepo)
 {
     private static bool IsCompleted(IssueStatus s) => s == IssueStatus.Resolved || s == IssueStatus.Closed;
 
@@ -38,6 +38,7 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService)
         var issue = await repo.GetByIdAsync(id);
         if (issue is null) return null;
         var wasCompleted = IsCompleted(issue.Status);
+        var titleChanged = issue.Title != dto.Title;
         issue.Title = dto.Title;
         issue.Description = dto.Description;
         issue.Status = dto.Status;
@@ -47,6 +48,9 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService)
         var updated = await repo.UpdateAsync(issue);
         if (!wasCompleted && IsCompleted(updated.Status))
             await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- [이슈] {updated.Title}");
+        // C-1 양방향 sync (B 방향) — Title 변경 시 회의록 ActionItem.content 도 갱신.
+        if (titleChanged)
+            await meetingRepo.SyncPromotedIssueContentAsync(updated.ProjectId, updated.Id, updated.Title);
         return ToDto((await repo.GetByIdAsync(updated.Id))!);
     }
 
@@ -54,7 +58,10 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService)
     {
         var issue = await repo.GetByIdAsync(id);
         if (issue is null) return false;
+        var projectId = issue.ProjectId;
         await repo.DeleteAsync(id);
+        // C-1 승격 취소 — 삭제된 Issue 를 가리키는 ActionItem.promotedIssueId 정리.
+        await meetingRepo.ClearPromotedIssueRefsAsync(projectId, id);
         return true;
     }
 

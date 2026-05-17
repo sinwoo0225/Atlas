@@ -311,7 +311,7 @@ export type ActivityEntityType =
   | 'Issue'
   | 'WorkLog';
 
-export type ActivityAction = 'Create' | 'Update' | 'Delete';
+export type ActivityAction = 'Create' | 'Update' | 'Delete' | 'Promote';
 
 export interface ActivityChangeValue {
   old: string;
