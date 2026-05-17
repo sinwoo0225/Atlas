@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -450,6 +450,8 @@ export function WbsPage() {
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [lateOnly, setLateOnly] = useState(false);
   const [matchOnly, setMatchOnly] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   const filterOpts: WbsFilterOpts = useMemo(() => {
     const t = new Date();
@@ -467,17 +469,34 @@ export function WbsPage() {
     [items, filterOpts, matchOnly],
   );
 
-  const load = () => {
-    wbsApi.getByProject(pid, currentVersion).then(setItems);
-    wbsApi.getVersions(pid).then(setVersions);
-  };
+  const load = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const [is, vs, rs, ais] = await Promise.all([
+        wbsApi.getByProject(pid, currentVersion),
+        wbsApi.getVersions(pid),
+        resourcesApi.getAll(),
+        issuesApi.getByProject(pid),
+      ]);
+      setItems(is);
+      setVersions(vs);
+      setResources(rs);
+      setAllIssues(ais);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [pid, currentVersion]);
 
-  useEffect(() => { load(); }, [pid, currentVersion]);
-  useEffect(() => {
-    resourcesApi.getAll().then(setResources).catch(() => setResources([]));
-    // 관련 Issue picker 용 — 모달 열릴 때마다 다시 fetch 하지 않도록 한 번만.
-    issuesApi.getByProject(pid).then(setAllIssues).catch(() => setAllIssues([]));
-  }, [pid]);
+  // CRUD 후 items/versions 만 다시 fetch (로딩 깜빡임 없이).
+  const refresh = useCallback(() => {
+    wbsApi.getByProject(pid, currentVersion).then(setItems).catch(() => {});
+    wbsApi.getVersions(pid).then(setVersions).catch(() => {});
+  }, [pid, currentVersion]);
+
+  useEffect(() => { load(); }, [load]);
 
   useHighlightFromQuery([items.length]);
 
@@ -489,7 +508,7 @@ export function WbsPage() {
       danger: true,
     })) return;
     await wbsApi.delete(pid, id);
-    load();
+    refresh();
   };
 
   const handleStatusChange = async (item: WbsItem, status: WbsStatus) => {
@@ -497,7 +516,7 @@ export function WbsPage() {
     setItems((prev) => patchStatus(prev, item.id, status));
     const { children: _children, ...rest } = item;
     await wbsApi.update(pid, item.id, { ...rest, status });
-    load();
+    refresh();
   };
 
   const handleCreateVersion = async () => {
@@ -598,13 +617,28 @@ export function WbsPage() {
         </div>
       </Card>
 
-      {view === 'gantt' ? (
+      {loading ? (
+        <Card padding="spacious">
+          <Skeleton height={18} width="30%" />
+          <div className="mt-4 space-y-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} style={{ paddingLeft: (i % 3) * 20 }}>
+                <Skeleton height={24} />
+              </div>
+            ))}
+          </div>
+        </Card>
+      ) : error ? (
+        <Card padding="spacious">
+          <EmptyState error={error} onRetry={load} />
+        </Card>
+      ) : view === 'gantt' ? (
         <Card padding="normal">
           <GanttChart
             items={items}
             projectId={pid}
             onDoubleClick={(it) => setDateEditing(it)}
-            onItemsChanged={load}
+            onItemsChanged={refresh}
           />
         </Card>
       ) : items.length === 0 ? (
@@ -665,7 +699,7 @@ export function WbsPage() {
           resources={resources}
           allItems={items}
           allIssues={allIssues}
-          onSave={() => { setShowForm(false); setAddingChildOf(undefined); load(); }}
+          onSave={() => { setShowForm(false); setAddingChildOf(undefined); refresh(); }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
         />
       )}
@@ -676,7 +710,7 @@ export function WbsPage() {
           resources={resources}
           allItems={items}
           allIssues={allIssues}
-          onSave={() => { setEditing(null); load(); }}
+          onSave={() => { setEditing(null); refresh(); }}
           onCancel={() => setEditing(null)}
         />
       )}
@@ -684,7 +718,7 @@ export function WbsPage() {
         <DateEditModal
           item={dateEditing}
           projectId={pid}
-          onSave={() => { setDateEditing(null); load(); }}
+          onSave={() => { setDateEditing(null); refresh(); }}
           onCancel={() => setDateEditing(null)}
         />
       )}

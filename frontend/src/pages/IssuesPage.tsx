@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { AlertTriangle, ChevronDown, ChevronRight, ListTree, Plus, Search, X } from 'lucide-react';
@@ -6,7 +6,7 @@ import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
-import { Button, Card, Input, BadgeMenu, EmptyState, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { Button, Card, Input, BadgeMenu, EmptyState, Skeleton, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -37,15 +37,34 @@ export function IssuesPage() {
   const [keyword, setKeyword] = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
-  const load = () => issuesApi.getByProject(pid).then(setIssues);
-
-  useEffect(() => {
-    load();
-    resourcesApi.getAll().then(setResources).catch(() => setResources([]));
-    // 모든 버전의 WBS 트리 로드 — 링크 picker 가 사용. 신규 링크 추가 후엔 따로 재로드 안 함 (트리는 변하지 않음).
-    wbsApi.getByProject(pid).then(setWbsItems).catch(() => setWbsItems([]));
+  const load = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const [is, rs, ws] = await Promise.all([
+        issuesApi.getByProject(pid),
+        resourcesApi.getAll(),
+        wbsApi.getByProject(pid),
+      ]);
+      setIssues(is);
+      setResources(rs);
+      setWbsItems(ws);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
   }, [pid]);
+
+  // CRUD 후 issues 만 다시 fetch (로딩 깜빡임 없이). 실패는 api/client 토스트 처리.
+  const refreshIssues = useCallback(() => {
+    issuesApi.getByProject(pid).then(setIssues).catch(() => {});
+  }, [pid]);
+
+  useEffect(() => { load(); }, [load]);
 
   useHighlightFromQuery([issues.length]);
 
@@ -59,7 +78,7 @@ export function IssuesPage() {
     })) return;
     await issuesApi.delete(pid, id);
     if (expanded === id) setExpanded(null);
-    load();
+    refreshIssues();
   };
 
   // 옵티미스틱 업데이트 후 백엔드에 PUT. 실패 시 원래 값으로 롤백.
@@ -91,7 +110,7 @@ export function IssuesPage() {
       dueDate: undefined,
     });
     setNewTitle('');
-    load();
+    refreshIssues();
   };
 
   const filtered = useMemo(() => {
@@ -108,6 +127,31 @@ export function IssuesPage() {
       return true;
     });
   }, [issues, filter, priorityFilter, assigneeFilter, keyword]);
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-4">
+        <PageHeader icon={<AlertTriangle size={18} />} title="이슈 관리" />
+        <Card padding="spacious">
+          <Skeleton height={18} width="30%" />
+          <div className="mt-4 space-y-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} height={28} />)}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 space-y-4">
+        <PageHeader icon={<AlertTriangle size={18} />} title="이슈 관리" />
+        <Card padding="spacious">
+          <EmptyState error={error} onRetry={load} />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-4">

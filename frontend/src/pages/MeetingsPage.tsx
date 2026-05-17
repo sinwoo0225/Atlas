@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import {
   type AttendeeOrg,
   type ActionItem,
 } from '../utils/meetingHelpers';
-import { Button, Card, Modal, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, EmptyState, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -480,11 +480,29 @@ export function MeetingsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Meeting | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   // 전체 회의록을 한 번에 가져오고 클라이언트사이드에서 필터링. 본문(Discussion / Decisions / ActionItems)
   // 검색을 위해 백엔드 검색 대신 클라이언트 필터로 통합.
-  const load = () => meetingsApi.getByProject(pid).then(setMeetings);
-  useEffect(() => { load(); }, [pid]);
+  const load = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      setMeetings(await meetingsApi.getByProject(pid));
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [pid]);
+
+  // CRUD 후 silent fetch (로딩 깜빡임 없이).
+  const refresh = useCallback(() => {
+    meetingsApi.getByProject(pid).then(setMeetings).catch(() => {});
+  }, [pid]);
+
+  useEffect(() => { load(); }, [load]);
 
   useHighlightFromQuery([meetings.length]);
 
@@ -510,7 +528,7 @@ export function MeetingsPage() {
       danger: true,
     })) return;
     await meetingsApi.delete(pid, id);
-    load();
+    refresh();
   };
 
   return (
@@ -551,7 +569,21 @@ export function MeetingsPage() {
       </div>
 
       <div className="space-y-3">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <>
+            {[0, 1, 2, 3].map((i) => (
+              <Card key={i} padding="spacious">
+                <Skeleton height={14} width="25%" />
+                <Skeleton height={18} width="60%" className="mt-2" />
+                <Skeleton height={12} count={2} className="mt-3" />
+              </Card>
+            ))}
+          </>
+        ) : error ? (
+          <Card padding="spacious">
+            <EmptyState error={error} onRetry={load} />
+          </Card>
+        ) : filtered.length === 0 ? (
           <EmptyState
             icon={<FileText size={36} />}
             title={meetings.length === 0 ? '회의록이 없습니다.' : '조건에 맞는 회의록이 없습니다.'}
@@ -595,7 +627,7 @@ export function MeetingsPage() {
                 </button>
               </div>
             </div>
-            {expanded === m.id && <MeetingDetail meeting={m} projectId={pid} onChange={load} />}
+            {expanded === m.id && <MeetingDetail meeting={m} projectId={pid} onChange={refresh} />}
           </Card>
         ))}
       </div>
@@ -603,7 +635,7 @@ export function MeetingsPage() {
       {showForm && (
         <MeetingForm
           projectId={pid}
-          onSave={() => { setShowForm(false); load(); }}
+          onSave={() => { setShowForm(false); refresh(); }}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -611,7 +643,7 @@ export function MeetingsPage() {
         <MeetingForm
           projectId={pid}
           initial={editing}
-          onSave={() => { setEditing(null); load(); }}
+          onSave={() => { setEditing(null); refresh(); }}
           onCancel={() => setEditing(null)}
         />
       )}

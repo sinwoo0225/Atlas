@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -7,7 +7,7 @@ import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Uploa
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
-import { Button, Card, Modal, Input, Badge, EmptyState, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, Skeleton, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
@@ -332,15 +332,35 @@ export function DevInfoPage() {
   const [keyword, setKeyword] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
-  const load = () => {
-    devInfoApi.getByProject(pid).then(setItems);
-    devInfoApi.getDistinctTags(pid).then(setAvailableTags).catch(() => setAvailableTags([]));
-  };
-  useEffect(() => {
-    load();
-    projectsApi.getById(pid).then(setProject).catch(() => setProject(null));
+  const load = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const [is, tags, p] = await Promise.all([
+        devInfoApi.getByProject(pid),
+        devInfoApi.getDistinctTags(pid).catch(() => [] as string[]),
+        projectsApi.getById(pid).catch(() => null),
+      ]);
+      setItems(is);
+      setAvailableTags(tags);
+      setProject(p);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
   }, [pid]);
+
+  // CRUD 후 silent refresh.
+  const refresh = useCallback(() => {
+    devInfoApi.getByProject(pid).then(setItems).catch(() => {});
+    devInfoApi.getDistinctTags(pid).then(setAvailableTags).catch(() => {});
+  }, [pid]);
+
+  useEffect(() => { load(); }, [load]);
 
   useHighlightFromQuery([items.length]);
 
@@ -353,7 +373,7 @@ export function DevInfoPage() {
     })) return;
     await devInfoApi.delete(pid, id);
     if (selected?.id === id) setSelected(null);
-    load();
+    refresh();
   };
 
   const handleOpenFile = async (item: DevInfoItem) => {
@@ -400,6 +420,27 @@ export function DevInfoPage() {
         </Button>
       </div>
 
+      {loading ? (
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
+          <div className="lg:col-span-1 space-y-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <Card key={i} padding="normal">
+                <Skeleton height={14} width="40%" />
+                <Skeleton height={16} width="80%" className="mt-2" />
+              </Card>
+            ))}
+          </div>
+          <Card padding="spacious" className="lg:col-span-2">
+            <Skeleton height={20} width="40%" />
+            <div className="mt-4"><Skeleton height={12} count={6} /></div>
+          </Card>
+        </div>
+      ) : error ? (
+        <Card padding="spacious">
+          <EmptyState error={error} onRetry={load} />
+        </Card>
+      ) : (
+      <>
       <div className="flex gap-2 flex-wrap items-center">
         <Button
           variant={!filterType ? 'primary' : 'secondary'}
@@ -571,13 +612,15 @@ export function DevInfoPage() {
           )}
         </Card>
       </div>
+      </>
+      )}
 
       {showForm && (
         <DevInfoForm
           projectId={pid}
           project={project}
           availableTags={availableTags}
-          onSave={() => { setShowForm(false); load(); }}
+          onSave={() => { setShowForm(false); refresh(); }}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -587,7 +630,7 @@ export function DevInfoPage() {
           project={project}
           initial={editing}
           availableTags={availableTags}
-          onSave={() => { setEditing(null); load(); }}
+          onSave={() => { setEditing(null); refresh(); }}
           onCancel={() => setEditing(null)}
         />
       )}

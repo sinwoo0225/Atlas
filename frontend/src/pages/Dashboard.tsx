@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity, ChevronRight } from 'lucide-react';
@@ -8,7 +8,7 @@ import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
 import { ActivityRow } from '../components/ActivityRow';
 import { RiskAlertCard } from './dashboard/RiskAlertCard';
 import { attendeesToDisplay } from '../utils/meetingHelpers';
-import { Button, Card, Badge, Skeleton } from '../components/ui';
+import { Button, Card, Badge, Skeleton, EmptyState } from '../components/ui';
 import { wbsStatusBadge, impactBadge, issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import type { ProjectDashboard, ActivityLog } from '../types';
 
@@ -17,20 +17,30 @@ export function Dashboard() {
   const { projectId } = useParams<{ projectId: string }>();
   const [data, setData] = useState<ProjectDashboard | null>(null);
   const [activities, setActivities] = useState<ActivityLog[]>([]);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<unknown>(null);
 
-  useEffect(() => {
+  const load = useCallback(() => {
     if (!projectId) return;
     const pid = parseInt(projectId);
+    setError(null);
+    setData(null);
     projectsApi.getDashboard(pid)
       .then(setData)
-      .catch(() => setError('대시보드를 불러올 수 없습니다.'));
+      .catch((e) => setError(e ?? new Error('대시보드를 불러올 수 없습니다.')));
     activityApi.getByProject(pid, 20)
       .then(setActivities)
       .catch(() => setActivities([]));
   }, [projectId]);
 
-  if (error) return <div className="p-6 text-sm text-on-danger">{error}</div>;
+  useEffect(() => { load(); }, [load]);
+
+  if (error) return (
+    <div className="p-6">
+      <Card padding="spacious">
+        <EmptyState error={error} onRetry={load} />
+      </Card>
+    </div>
+  );
   if (!data) return (
     <div className="p-6 space-y-6">
       <Card padding="spacious">
@@ -356,5 +366,5 @@ function GroupHeader({ label }: { label: string }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-sm text-muted py-2">{text}</p>;
+  return <EmptyState title={text} className="py-2" />;
 }

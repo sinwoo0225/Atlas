@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
@@ -6,7 +6,7 @@ import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { issuesApi } from '../api/issues';
 import { wbsApi } from '../api/wbs';
-import { Button, Card, Modal, Input, Badge, EmptyState, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { IssuePicker } from '../components/IssuePicker';
@@ -355,15 +355,35 @@ export function ChangeLogsPage() {
   const [editing, setEditing] = useState<ChangeLog | null>(null);
   const [keyword, setKeyword] = useState('');
   const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
-  const load = () => changeLogsApi.getByProject(pid).then(setLogs);
-  useEffect(() => {
-    load();
-    meetingsApi.getByProject(pid).then(setMeetings).catch(() => setMeetings([]));
-    // 출처 picker 용 — 모달 열림과 무관하게 한 번 로드.
-    issuesApi.getByProject(pid).then(setIssues).catch(() => setIssues([]));
-    wbsApi.getByProject(pid).then(setWbsItems).catch(() => setWbsItems([]));
+  const load = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const [ls, ms, is, ws] = await Promise.all([
+        changeLogsApi.getByProject(pid),
+        meetingsApi.getByProject(pid),
+        issuesApi.getByProject(pid),
+        wbsApi.getByProject(pid),
+      ]);
+      setLogs(ls);
+      setMeetings(ms);
+      setIssues(is);
+      setWbsItems(ws);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
   }, [pid]);
+
+  const refreshLogs = useCallback(() => {
+    changeLogsApi.getByProject(pid).then(setLogs).catch(() => {});
+  }, [pid]);
+
+  useEffect(() => { load(); }, [load]);
 
   useHighlightFromQuery([logs.length]);
 
@@ -388,7 +408,7 @@ export function ChangeLogsPage() {
       danger: true,
     })) return;
     await changeLogsApi.delete(pid, id);
-    load();
+    refreshLogs();
   };
 
   return (
@@ -403,14 +423,29 @@ export function ChangeLogsPage() {
         }
       />
 
-      {logs.length > 0 && (
+      {loading && (
+        <Card padding="spacious">
+          <Skeleton height={18} width="30%" />
+          <div className="mt-4 space-y-2">
+            {[0, 1, 2, 3, 4, 5].map((i) => <Skeleton key={i} height={36} />)}
+          </div>
+        </Card>
+      )}
+
+      {!loading && error != null && (
+        <Card padding="spacious">
+          <EmptyState error={error} onRetry={load} />
+        </Card>
+      )}
+
+      {!loading && !error && logs.length > 0 && (
         <Card padding="normal">
           <p className="text-xs text-muted mb-2">날짜별 변경 건수 (영향도별)</p>
           <ImpactBarChart logs={logs} />
         </Card>
       )}
 
-      {logs.length > 0 && (
+      {!loading && !error && logs.length > 0 && (
         <div className="flex gap-2 flex-wrap items-center">
           <Input
             type="search"
@@ -441,6 +476,7 @@ export function ChangeLogsPage() {
         </div>
       )}
 
+      {!loading && !error && (
       <div className="space-y-3">
         {filtered.length === 0 ? (
           <EmptyState
@@ -545,13 +581,14 @@ export function ChangeLogsPage() {
           );
         })}
       </div>
+      )}
 
       {showForm && (
         <ChangeLogForm
           projectId={pid}
           issues={issues}
           wbsItems={wbsItems}
-          onSave={() => { setShowForm(false); load(); }}
+          onSave={() => { setShowForm(false); refreshLogs(); }}
           onCancel={() => setShowForm(false)}
         />
       )}
@@ -561,7 +598,7 @@ export function ChangeLogsPage() {
           initial={editing}
           issues={issues}
           wbsItems={wbsItems}
-          onSave={() => { setEditing(null); load(); }}
+          onSave={() => { setEditing(null); refreshLogs(); }}
           onCancel={() => setEditing(null)}
         />
       )}
