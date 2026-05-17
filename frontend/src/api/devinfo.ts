@@ -12,6 +12,6 @@ export const devInfoApi = {
     api.delete(`/projects/${projectId}/devinfo/${id}`),
   openFile: (projectId: number, id: number) =>
     api.post<void>(`/projects/${projectId}/devinfo/${id}/open`, {}),
-  getDistinctTags: (projectId: number) =>
-    api.get<string[]>(`/projects/${projectId}/devinfo/tags`),
+  getDistinctTags: (projectId: number, sort?: 'alpha' | 'freq') =>
+    api.get<string[]>(`/projects/${projectId}/devinfo/tags${sort ? `?sort=${sort}` : ''}`),
 };

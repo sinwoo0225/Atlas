@@ -257,6 +257,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
                   onClick={() => setSourceIssueId(null)}
                   className="p-1 text-on-danger hover:opacity-80 transition-opacity"
                   title="출처 해제"
+                  aria-label="출처 이슈 해제"
                 >
                   <X size={14} />
                 </button>
@@ -290,6 +291,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onSave, onCancel 
                   onClick={() => setSourceWbsItemId(null)}
                   className="p-1 text-on-danger hover:opacity-80 transition-opacity"
                   title="출처 해제"
+                  aria-label="출처 WBS 해제"
                 >
                   <X size={14} />
                 </button>
@@ -538,10 +540,10 @@ export function ChangeLogsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
+                  <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`변경이력 수정 — ${log.date.slice(0, 10)}`}>
                     <Pencil size={14} />
                   </button>
-                  <button onClick={(e) => handleDelete(log.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
+                  <button onClick={(e) => handleDelete(log.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제" aria-label={`변경이력 삭제 — ${log.date.slice(0, 10)}`}>
                     <X size={14} />
                   </button>
                 </div>

@@ -15,8 +15,8 @@ public class DevInfoController(DevInfoService svc, DevFilesStorage storage) : Co
         Ok(await svc.GetByProjectAsync(projectId));
 
     [HttpGet("tags")]
-    public async Task<IActionResult> GetTags(int projectId) =>
-        Ok(await svc.GetDistinctTagsAsync(projectId));
+    public async Task<IActionResult> GetTags(int projectId, [FromQuery] string? sort = null) =>
+        Ok(await svc.GetDistinctTagsAsync(projectId, sort));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int projectId, int id) =>

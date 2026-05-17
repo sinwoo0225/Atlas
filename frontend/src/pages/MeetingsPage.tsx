@@ -194,7 +194,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         placeholder="소속명"
                         className={inputClass}
                       />
-                      <button onClick={() => removeOrg(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="소속 삭제">
+                      <button onClick={() => removeOrg(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="소속 삭제" aria-label="소속 삭제">
                         <X size={14} />
                       </button>
                     </div>
@@ -206,7 +206,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                           placeholder="이름"
                           className={inputClass}
                         />
-                        <button onClick={() => removeMember(i, j)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
+                        <button onClick={() => removeMember(i, j)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="인원 삭제" aria-label="인원 삭제">
                           <X size={14} />
                         </button>
                       </div>
@@ -241,7 +241,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                 {decisions.map((d, i) => (
                   <li key={i} className="flex items-center justify-between bg-surface-2 px-2 py-1 rounded">
                     <span className="text-sm text-secondary">{d}</span>
-                    <button onClick={() => removeDecision(i)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity">
+                    <button onClick={() => removeDecision(i)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity" title="결정사항 삭제" aria-label="결정사항 삭제">
                       <X size={14} />
                     </button>
                   </li>
@@ -269,7 +269,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                           placeholder="내용"
                           className={inputClass}
                         />
-                        <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
+                        <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="Action Item 삭제" aria-label="Action Item 삭제">
                           <X size={14} />
                         </button>
                       </div>
@@ -617,10 +617,10 @@ export function MeetingsPage() {
                 </h3>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => setEditing(m)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
+                <button onClick={() => setEditing(m)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`회의록 수정 — ${m.topic}`}>
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => handleDelete(m.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
+                <button onClick={() => handleDelete(m.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제" aria-label={`회의록 삭제 — ${m.topic}`}>
                   <X size={14} />
                 </button>
                 <button

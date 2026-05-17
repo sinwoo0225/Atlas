@@ -40,15 +40,18 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService)
         if (item is null) return null;
 
         // ParentId 가 바뀌는 경우에만 가드 — 같은 값 재저장은 통과 (서버 어쩌다 nop).
-        if (item.ParentId != dto.ParentId)
+        var parentChanged = item.ParentId != dto.ParentId;
+        if (parentChanged)
         {
             if (dto.ParentId == id)
                 throw new WbsInvalidParentException("자기 자신을 부모로 지정할 수 없습니다.");
 
+            // 프로젝트 전체를 한 번만 가져와 가드(순환 검사)와 Order 재계산 양쪽에서 재사용.
+            var allItems = (await repo.GetByProjectAsync(item.ProjectId, null)).ToList();
+
             if (dto.ParentId is int newParent)
             {
-                var siblings = await repo.GetByProjectAsync(item.ProjectId, null);
-                var byId = siblings.ToDictionary(x => x.Id);
+                var byId = allItems.ToDictionary(x => x.Id);
                 if (!byId.TryGetValue(newParent, out var parentNode))
                     throw new WbsInvalidParentException("선택한 부모 작업이 존재하지 않습니다.");
 
@@ -62,13 +65,19 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService)
             }
 
             item.ParentId = dto.ParentId;
+
+            // 새 부모(또는 root) children 의 max Order + 1 을 부여 — 옮긴 항목이 새 sibling 들 맨 뒤에 오도록.
+            // 클라이언트가 보낸 dto.Order 는 옛 부모 기준이라 새 부모에서는 무의미. parentChanged 분기에서 덮어씀.
+            var newSiblings = allItems.Where(x => x.ParentId == dto.ParentId && x.Id != id).ToList();
+            item.Order = newSiblings.Count > 0 ? newSiblings.Max(x => x.Order) + 1 : 0;
         }
 
         var wasDone = item.Status == WbsStatus.Done;
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
         item.Status = dto.Status; item.IsMilestone = dto.IsMilestone;
-        item.Order = dto.Order; item.Notes = dto.Notes;
+        if (!parentChanged) item.Order = dto.Order;
+        item.Notes = dto.Notes;
         var updated = await repo.UpdateAsync(item);
         if (!wasDone && updated.Status == WbsStatus.Done)
             await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- {updated.Name}");

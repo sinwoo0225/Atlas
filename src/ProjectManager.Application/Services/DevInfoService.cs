@@ -18,12 +18,27 @@ public class DevInfoService(
 
     // 프로젝트 안 DevInfo 의 콤마 Tags 컬럼에서 distinct 태그 list 반환.
     // SQLite 는 string split 불가 — Tags 문자열만 가져와 메모리에서 split·distinct·정렬.
-    // 대소문자 무관 distinct (OrdinalIgnoreCase) 후, 한글·영문 mixed 정렬 (CurrentCultureIgnoreCase).
-    public async Task<IReadOnlyList<string>> GetDistinctTagsAsync(int projectId)
+    // 대소문자 무관 distinct (OrdinalIgnoreCase). sort: "alpha"(기본, 한글·영문 mixed CurrentCultureIgnoreCase)
+    // 또는 "freq"(사용 빈도 내림차순, tie-breaker 는 alpha).
+    public async Task<IReadOnlyList<string>> GetDistinctTagsAsync(int projectId, string? sort = null)
     {
         var tagsStrings = await repo.GetTagsByProjectAsync(projectId);
-        return tagsStrings
+        var allTokens = tagsStrings
             .SelectMany(s => s.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            .ToList();
+
+        if (string.Equals(sort, "freq", StringComparison.OrdinalIgnoreCase))
+        {
+            // OrdinalIgnoreCase 로 그룹화한 뒤 첫 등장 표기 보존 — "API"/"api" 가 섞이면 첫 항목 표기.
+            return allTokens
+                .GroupBy(t => t, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.First(), StringComparer.CurrentCultureIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+        }
+
+        return allTokens
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(t => t, StringComparer.CurrentCultureIgnoreCase)
             .ToList();

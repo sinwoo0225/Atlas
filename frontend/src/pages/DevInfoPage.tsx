@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search } from 'lucide-react';
+import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
@@ -338,6 +338,12 @@ export function DevInfoPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const [tagSort, setTagSort] = useState<'alpha' | 'freq'>(
+    () => (localStorage.getItem('atlas:devInfoTagSort') as 'alpha' | 'freq') || 'alpha',
+  );
+  // tagSort 토글 시 load 의 deps 변경으로 스켈레톤이 깜빡이는 걸 막기 위해 ref 로 우회.
+  const tagSortRef = useRef(tagSort);
+  useEffect(() => { tagSortRef.current = tagSort; }, [tagSort]);
 
   const load = useCallback(async () => {
     setError(null);
@@ -345,7 +351,7 @@ export function DevInfoPage() {
     try {
       const [is, tags, p] = await Promise.all([
         devInfoApi.getByProject(pid),
-        devInfoApi.getDistinctTags(pid).catch(() => [] as string[]),
+        devInfoApi.getDistinctTags(pid, tagSortRef.current).catch(() => [] as string[]),
         projectsApi.getById(pid).catch(() => null),
       ]);
       setItems(is);
@@ -361,8 +367,14 @@ export function DevInfoPage() {
   // CRUD 후 silent refresh.
   const refresh = useCallback(() => {
     devInfoApi.getByProject(pid).then(setItems).catch(() => {});
-    devInfoApi.getDistinctTags(pid).then(setAvailableTags).catch(() => {});
+    devInfoApi.getDistinctTags(pid, tagSortRef.current).then(setAvailableTags).catch(() => {});
   }, [pid]);
+
+  const handleSortChange = (next: 'alpha' | 'freq') => {
+    setTagSort(next);
+    localStorage.setItem('atlas:devInfoTagSort', next);
+    devInfoApi.getDistinctTags(pid, next).then(setAvailableTags).catch(() => {});
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -504,6 +516,29 @@ export function DevInfoPage() {
               초기화
             </Button>
           )}
+          <div
+            role="group"
+            aria-label="태그 정렬"
+            className="ml-auto flex items-center gap-1 text-xs text-muted shrink-0"
+          >
+            <ArrowUpDown size={12} aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => handleSortChange('alpha')}
+              className={`px-2 py-0.5 rounded transition-colors ${tagSort === 'alpha' ? 'bg-surface-2 text-primary' : 'hover:text-primary'}`}
+              aria-pressed={tagSort === 'alpha'}
+            >
+              가나다
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSortChange('freq')}
+              className={`px-2 py-0.5 rounded transition-colors ${tagSort === 'freq' ? 'bg-surface-2 text-primary' : 'hover:text-primary'}`}
+              aria-pressed={tagSort === 'freq'}
+            >
+              빈도
+            </button>
+          </div>
         </div>
       )}
 
@@ -545,10 +580,10 @@ export function DevInfoPage() {
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => setEditing(item)} className="p-1 text-muted hover:text-primary transition-colors" title="수정">
+                    <button onClick={() => setEditing(item)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`개발 정보 수정 — ${item.title}`}>
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제">
+                    <button onClick={() => handleDelete(item.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제" aria-label={`개발 정보 삭제 — ${item.title}`}>
                       <X size={14} />
                     </button>
                   </div>

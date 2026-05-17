@@ -279,6 +279,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues }: {
                 onClick={() => handleRemove(l.issueId, l.issueTitle ?? `#${l.issueId}`)}
                 className="p-0.5 text-on-danger hover:opacity-80 transition-opacity"
                 title="해제"
+                aria-label={`이슈 연결 해제 — ${l.issueTitle ?? `#${l.issueId}`}`}
               >
                 <X size={12} />
               </button>
@@ -370,7 +371,12 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAd
         <td className="py-2 px-4">
           <div className="flex items-center gap-1" style={{ paddingLeft: depth * 20 }}>
             {hasChildren ? (
-              <button onClick={() => setExpanded(!expanded)} className="text-muted hover:text-primary transition-colors">
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="text-muted hover:text-primary transition-colors"
+                aria-label={expanded ? `${item.name} 접기` : `${item.name} 펼치기`}
+                aria-expanded={expanded}
+              >
                 {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
               </button>
             ) : (
@@ -408,6 +414,7 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAd
             <button
               onClick={() => onAddChild(item.id)}
               title="하위 작업 추가"
+              aria-label={`${item.name} 의 하위 작업 추가`}
               className="p-1 text-muted hover:text-primary transition-colors"
             >
               <Plus size={14} />
@@ -415,6 +422,7 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAd
             <button
               onClick={() => onEdit(item)}
               title="수정"
+              aria-label={`${item.name} 수정`}
               className="p-1 text-muted hover:text-primary transition-colors"
             >
               <Pencil size={14} />
@@ -422,6 +430,7 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, onEdit, onDelete, onAd
             <button
               onClick={() => onDelete(item.id)}
               title="삭제"
+              aria-label={`${item.name} 삭제`}
               className="p-1 text-on-danger hover:opacity-80 transition-opacity"
             >
               <X size={14} />
