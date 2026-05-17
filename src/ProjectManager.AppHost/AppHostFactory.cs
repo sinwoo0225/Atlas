@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using ProjectManager.Application.Activity;
 using ProjectManager.Application.Search;
 using ProjectManager.Application.Services;
+using ProjectManager.AppHost.Services;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;
 using ProjectManager.Infrastructure.FileStorage;
@@ -78,6 +79,8 @@ public static class AppHostFactory
         builder.Services.AddScoped<IssueService>();
         builder.Services.AddScoped<WorkLogService>();
         builder.Services.AddScoped<ActivityLogService>();
+        // 보존 정책 정기 타이머 — 시작 즉시 1회 + appsettings 의 CleanupIntervalHours 주기.
+        builder.Services.AddHostedService<ActivityLogCleanupService>();
         builder.Services.AddScoped<MonitoringService>();
         builder.Services.AddScoped<ActionItemPromotionService>();
         builder.Services.AddScoped<IssueWbsLinkService>();
@@ -94,24 +97,7 @@ public static class AppHostFactory
             db.Database.Migrate();
         }
 
-        // ActivityLog 보존 정책 — startup 시 1회 prune. RetentionDays <= 0 이면 비활성.
-        // 실패해도 앱 startup 은 막지 않음 (검색 인덱스 rebuild 와 동일 패턴).
-        try
-        {
-            var retention = app.Configuration.GetValue("ActivityLog:RetentionDays", 180);
-            if (retention > 0)
-            {
-                using var scope = app.Services.CreateScope();
-                var svc = scope.ServiceProvider.GetRequiredService<ActivityLogService>();
-                var removed = svc.PruneAsync(TimeSpan.FromDays(retention)).GetAwaiter().GetResult();
-                if (removed > 0)
-                    Console.WriteLine($"[activity-log] pruned {removed} rows older than {retention}d.");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine("[activity-log] prune failed: " + ex.Message);
-        }
+        // ActivityLog 보존은 ActivityLogCleanupService (BackgroundService) 가 시작 즉시 1회 + 주기 실행. AddHostedService 위 등록.
 
         // 검색 인덱스 (FTS5) 가 비어 있으면 백그라운드로 한 번 빌드.
         // 신규 설치/마이그레이션 직후 또는 데이터 폴더 교체 직후에 자동 복구.

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using ProjectManager.Infrastructure.Config;
@@ -10,10 +11,18 @@ public class SystemController : ControllerBase
 {
     public record SetDataFolderRequest(string Path);
 
+    // 어셈블리 informational version (Directory.Build.props 의 1.4.0 같은 semver).
+    // 한 번 캡처해서 ping 응답에 포함 — 프론트가 mismatch 안내 시 사용자에게 보여줌.
+    private static readonly string AssemblyVersion =
+        Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+        ?? "?";
+
     // 클라이언트 연결 테스트용 — Phase B 의 API 키 미들웨어가 가로채면 401 로 변환되어
     // 클라가 "키 불일치" 를 구분할 수 있다. Local InProcessHost 에서는 미들웨어 없으므로 그냥 200.
+    // apiVersion: breaking change 시 수동 +1. version: 정보 표시용 어셈블리 semver.
     [HttpGet("ping")]
-    public IActionResult Ping() => Ok(new { ok = true, server = "atlas", apiVersion = 1 });
+    public IActionResult Ping() => Ok(new { ok = true, server = "atlas", apiVersion = 1, version = AssemblyVersion });
 
     [HttpGet("data-folder")]
     public IActionResult GetDataFolder()

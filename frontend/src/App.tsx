@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 import type { ThemeMode } from './store/settings';
 import { Layout } from './components/Layout';
 import { ProjectList } from './pages/ProjectList';
@@ -22,6 +22,7 @@ import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 import { applyTheme, applyMarkdownStyle, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
 import { getMachineAccount } from './utils/hostBridge';
+import { systemApi, EXPECTED_API_VERSION } from './api/system';
 
 export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadSettings().theme);
@@ -42,6 +43,18 @@ export default function App() {
         if (name) seedDefaultAuthorIfEmpty(name);
       });
     }
+
+    // 시작 시 백엔드 ping — apiVersion 불일치 시 경고, 연결 실패 시 에러.
+    systemApi.ping().then((r) => {
+      if (r.apiVersion !== EXPECTED_API_VERSION) {
+        toast.warning(
+          `Atlas 백엔드 버전이 프론트와 일치하지 않아요 (서버 ${r.apiVersion} / 프론트 ${EXPECTED_API_VERSION}). 새로고침 또는 재시작이 필요할 수 있어요.`,
+          { duration: 8000 },
+        );
+      }
+    }).catch(() => {
+      toast.error('Atlas 백엔드에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.', { duration: 8000 });
+    });
 
     return () => window.removeEventListener('atlas:settings-changed', onSettings);
   }, []);
