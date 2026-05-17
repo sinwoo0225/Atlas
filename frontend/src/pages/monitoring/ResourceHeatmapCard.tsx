@@ -231,7 +231,8 @@ function buildOption(
       show: false,
       min: 0,
       max: Math.max(maxCount, 1),
-      inRange: { color: theme === 'light' ? ['#f3f4f6', '#5b7299'] : ['#1f2937', '#9eb2ce'] },
+      // v2: 라이트 시작 = surface-2 warm (#f0ebe0), 끝 = accent deep (#4a6797). 다크 시작 = surface-2 v2.
+      inRange: { color: theme === 'light' ? ['#f0ebe0', '#4a6797'] : ['#2a2f3a', '#9eb2ce'] },
     },
     series: [
       {

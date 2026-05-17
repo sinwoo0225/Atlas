@@ -619,7 +619,7 @@ export function GanttChart({
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     try {
       const dataUrl = await htmlToImage.toPng(wrapperRef.current, {
-        backgroundColor: theme === 'light' ? '#ffffff' : '#141414',
+        backgroundColor: theme === 'light' ? '#ffffff' : '#12151b',   // --bg-base v2
         pixelRatio: 2,
         cacheBust: true,
       });
@@ -724,7 +724,7 @@ export function GanttChart({
         end: zoomRange.end,
         textStyle: { color: colors.axisText, fontSize: 10 },
         borderColor: colors.axisLine,
-        fillerColor: theme === 'light' ? 'rgba(91,114,153,0.10)' : 'rgba(158,178,206,0.12)',
+        fillerColor: theme === 'light' ? 'rgba(74,103,151,0.10)' : 'rgba(158,178,206,0.12)',   // 라이트 accent v2 rgba
         handleStyle: { color: colors.accent },
       },
     ],

@@ -49,44 +49,46 @@ export interface ChartColors {
   ganttRowHover: string;        // 호버 행 좌측 라벨 배경
 }
 
+// v2 토큰 (index.css :root) 미러. 변경 시 index.css 와 함께 동기화.
 const DARK_CHART_COLORS: ChartColors = {
-  tooltipBg:     '#202022',
-  tooltipBorder: '#3f3f46',
-  tooltipText:   '#f4f4f5',
-  axisText:      '#b4b4bb',
-  axisLine:      '#3f3f46',
-  splitLine:     '#2a2a2c',
-  accent:        '#9eb2ce',
+  tooltipBg:     '#1f232b',                       // --bg-surface
+  tooltipBorder: '#3a4051',                       // --border-default
+  tooltipText:   '#f0f2f7',                       // --text-primary
+  axisText:      '#a8aebd',                       // --text-muted
+  axisLine:      '#3a4051',                       // --border-default
+  splitLine:     '#2a2f3a',                       // --bg-surface-2 (옅은 divider)
+  accent:        '#9eb2ce',                       // --accent
   accentBar:     '#9eb2ce',
-  mutedBar:      '#6b7280',
-  ganttBarPlanned:    '#6b7280',
-  ganttBarInProgress: '#f59e0b',
-  ganttBarDone:       '#34d399',
-  ganttBarParent:     'rgba(158, 178, 206, 0.35)',
-  ganttMilestone:     '#fbbf24',
-  ganttToday:         '#f87171',
+  mutedBar:      '#545b6e',                       // --border-strong (Planned 막대 톤)
+  ganttBarPlanned:    '#545b6e',
+  ganttBarInProgress: '#f5b955',                  // --warning
+  ganttBarDone:       '#4ade80',                  // --success
+  ganttBarParent:     'rgba(158, 178, 206, 0.35)',  // accent rgba
+  ganttMilestone:     '#e6b552',                  // --accent-2 (warm gold)
+  ganttToday:         '#f87171',                  // --danger
   ganttWeekend:       'rgba(255, 255, 255, 0.03)',
-  ganttRowHover:      'rgba(158, 178, 206, 0.12)',
+  ganttRowHover:      'rgba(158, 178, 206, 0.12)',  // accent rgba 옅게
 };
 
+// v2 토큰 (index.css html.light) 미러.
 const LIGHT_CHART_COLORS: ChartColors = {
-  tooltipBg:     '#ffffff',
-  tooltipBorder: '#d1d5db',
-  tooltipText:   '#111827',
-  axisText:      '#6b7280',
-  axisLine:      '#d1d5db',
-  splitLine:     '#e5e7eb',
-  accent:        '#5b7299',
-  accentBar:     '#5b7299',
-  mutedBar:      '#9ca3af',
-  ganttBarPlanned:    '#9ca3af',
-  ganttBarInProgress: '#d97706',
-  ganttBarDone:       '#059669',
-  ganttBarParent:     'rgba(91, 114, 153, 0.30)',
-  ganttMilestone:     '#d97706',
-  ganttToday:         '#dc2626',
+  tooltipBg:     '#ffffff',                       // --bg-surface
+  tooltipBorder: '#d6d0bd',                       // --border-default (warm beige)
+  tooltipText:   '#1a1d24',                       // --text-primary
+  axisText:      '#6e7180',                       // --text-muted
+  axisLine:      '#d6d0bd',                       // --border-default
+  splitLine:     '#e3ddcb',                       // --bg-surface-3 (warm divider)
+  accent:        '#4a6797',                       // --accent (deep)
+  accentBar:     '#4a6797',
+  mutedBar:      '#a39d8a',                       // --border-strong (warm)
+  ganttBarPlanned:    '#a39d8a',
+  ganttBarInProgress: '#b16412',                  // --warning (brown-orange)
+  ganttBarDone:       '#047857',                  // --success
+  ganttBarParent:     'rgba(74, 103, 151, 0.30)',   // accent rgba v2
+  ganttMilestone:     '#a3742d',                  // --accent-2 (warm gold, warning 과 분리)
+  ganttToday:         '#b91c1c',                  // --danger
   ganttWeekend:       'rgba(0, 0, 0, 0.035)',
-  ganttRowHover:      'rgba(91, 114, 153, 0.10)',
+  ganttRowHover:      'rgba(74, 103, 151, 0.10)',   // accent rgba v2 옅게
 };
 
 export function getChartColors(theme: ThemeMode): ChartColors {
