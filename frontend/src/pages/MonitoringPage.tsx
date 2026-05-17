@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, RefreshCw, Calendar, NotebookPen, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
@@ -7,8 +7,8 @@ import { worklogApi } from '../api/worklog';
 import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
-import { ResourceHeatmapCard } from './monitoring/ResourceHeatmapCard';
 import type {
+  ActivityByProject,
   MonitoringCharts as MonitoringChartsData,
   ResourceHeatmap,
   TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
@@ -20,6 +20,16 @@ const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
   { key: 'done',   label: '한 일' },
   { key: 'issues', label: '이슈' },
 ];
+
+type MonitoringTab = 'overview' | 'tasks' | 'logs';
+const TABS: { value: MonitoringTab; label: string }[] = [
+  { value: 'overview', label: '개요' },
+  { value: 'tasks',    label: '작업' },
+  { value: 'logs',     label: '일지' },
+];
+function isTab(v: string | null): v is MonitoringTab {
+  return v === 'overview' || v === 'tasks' || v === 'logs';
+}
 
 function startOfWeek(d: Date): Date {
   const date = new Date(d);
@@ -42,6 +52,15 @@ function isoDate(d: Date): string {
 
 export function MonitoringPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: MonitoringTab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as MonitoringTab) : 'overview';
+  const setTab = (next: MonitoringTab) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'overview') params.delete('tab');
+    else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
+
   const [items, setItems] = useState<TodayWbs[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,6 +68,7 @@ export function MonitoringPage() {
   const [lastWeek, setLastWeek] = useState<WeeklyWorkLog | null>(null);
   const [charts, setCharts] = useState<MonitoringChartsData | null>(null);
   const [heatmap, setHeatmap] = useState<ResourceHeatmap | null>(null);
+  const [activityByProject, setActivityByProject] = useState<ActivityByProject[]>([]);
 
   const load = () => {
     setLoading(true);
@@ -60,13 +80,15 @@ export function MonitoringPage() {
       worklogApi.weeklyMonitoring(isoDate(lastMon)),
       monitoringApi.getCharts(),
       monitoringApi.getResourceHeatmap(),
+      monitoringApi.getActivityByProject(30),
     ])
-      .then(([today, thisW, lastW, ch, hm]) => {
+      .then(([today, thisW, lastW, ch, hm, abp]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
         setCharts(ch);
         setHeatmap(hm);
+        setActivityByProject(abp);
       })
       .catch(() => setError('모니터링 데이터를 불러올 수 없습니다.'))
       .finally(() => setLoading(false));
@@ -89,7 +111,7 @@ export function MonitoringPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="h-page flex items-center gap-2">
           <Activity size={18} className="text-muted" />
@@ -102,110 +124,146 @@ export function MonitoringPage() {
         <div className="p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
 
-      {/* === 종합 시각화 (4 차트) === */}
-      <MonitoringChartGrid data={charts} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)} />
+      <TabBar value={tab} onChange={setTab} />
 
-      {/* === D-1 리소스 히트맵 (across-project 담당자 부하) === */}
-      <ResourceHeatmapCard data={heatmap} loading={loading} />
+      {tab === 'overview' && (
+        <MonitoringChartGrid
+          data={charts}
+          activityByProject={activityByProject}
+          heatmap={heatmap}
+          loading={loading}
+          onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)}
+          onActivityProjectClick={(id) => navigate(`/activity?projectId=${id}`)}
+        />
+      )}
 
-      {/* === 오늘 진행 중 WBS === */}
-      <section className="space-y-3">
-        <Card padding="normal">
-          <p className="text-xs text-muted flex items-center gap-2">
-            <Calendar size={12} />
-            {today} 기준 진행 중인 작업
-          </p>
-          <p className="text-2xl font-semibold text-primary mt-1">
-            총 {items.length}건 / {grouped.length}개 프로젝트
-          </p>
-        </Card>
+      {tab === 'tasks' && (
+        <section className="space-y-3">
+          <Card padding="normal">
+            <p className="text-xs text-muted flex items-center gap-2">
+              <Calendar size={12} />
+              {today} 기준 진행 중인 작업
+            </p>
+            <p className="text-2xl font-semibold text-primary mt-1">
+              총 {items.length}건 / {grouped.length}개 프로젝트
+            </p>
+          </Card>
 
-        {loading ? (
-          <div className="space-y-3">
-            {[0, 1].map((i) => (
-              <Card key={i} padding="none" className="overflow-hidden">
-                <div className="px-4 py-3 bg-surface-2 border-b border-default">
-                  <Skeleton height={16} width="30%" />
-                </div>
-                <div className="p-4 space-y-2">
-                  {[0, 1, 2].map((j) => <Skeleton key={j} height={14} />)}
-                </div>
-              </Card>
-            ))}
-          </div>
-        ) : grouped.length === 0 ? (
-          <EmptyState
-            icon={<Activity size={32} />}
-            title="오늘 진행 중인 작업이 없습니다."
+          {loading ? (
+            <div className="space-y-3">
+              {[0, 1].map((i) => (
+                <Card key={i} padding="none" className="overflow-hidden">
+                  <div className="px-4 py-3 bg-surface-2 border-b border-default">
+                    <Skeleton height={16} width="30%" />
+                  </div>
+                  <div className="p-4 space-y-2">
+                    {[0, 1, 2].map((j) => <Skeleton key={j} height={14} />)}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : grouped.length === 0 ? (
+            <EmptyState
+              icon={<Activity size={32} />}
+              title="오늘 진행 중인 작업이 없습니다."
+            />
+          ) : (
+            <div className="space-y-3">
+              {grouped.map((g) => (
+                <Card key={g.projectId} padding="none" className="overflow-hidden">
+                  <div
+                    className="px-4 py-3 bg-surface-2 border-b border-default flex items-center justify-between cursor-pointer hover:bg-surface-3 transition-colors"
+                    onClick={() => navigate(`/projects/${g.projectId}/wbs`)}
+                  >
+                    <h2 className="h-card">{g.projectName}</h2>
+                    <span className="text-xs text-muted">{g.items.length}건</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                  <table className="w-full min-w-[640px]">
+                    <thead>
+                      <tr className="text-xs text-muted border-b border-default">
+                        <th className="text-left py-2 px-4 font-medium">작업명</th>
+                        <th className="text-left py-2 px-3 font-medium">담당자</th>
+                        <th className="text-left py-2 px-3 font-medium">기간</th>
+                        <th className="text-left py-2 px-3 font-medium">상태</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.items.map((it) => {
+                        const status = wbsStatusBadge[it.status];
+                        return (
+                          <tr
+                            key={it.wbsItemId}
+                            className="border-b border-default last:border-0 hover:bg-surface-2 cursor-pointer transition-colors"
+                            onClick={() => navigate(`/projects/${it.projectId}/wbs`)}
+                          >
+                            <td className="py-2 px-4 text-sm text-primary">{it.wbsItemName}</td>
+                            <td className="py-2 px-3 text-sm text-secondary">{it.assignee || '-'}</td>
+                            <td className="py-2 px-3 text-xs text-muted">
+                              {it.startDate?.slice(0, 10) ?? '-'} ~ {it.endDate?.slice(0, 10) ?? '-'}
+                            </td>
+                            <td className="py-2 px-3">
+                              <Badge variant={status.variant} size="sm">{status.label}</Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === 'logs' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          <WeeklySection
+            title="지난 주 업무일지"
+            data={lastWeek}
+            loading={loading}
+            onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
+            variant="muted"
+            exportable
           />
-        ) : (
-          <div className="space-y-3">
-            {grouped.map((g) => (
-              <Card key={g.projectId} padding="none" className="overflow-hidden">
-                <div
-                  className="px-4 py-3 bg-surface-2 border-b border-default flex items-center justify-between cursor-pointer hover:bg-surface-3 transition-colors"
-                  onClick={() => navigate(`/projects/${g.projectId}/wbs`)}
-                >
-                  <h2 className="h-card">{g.projectName}</h2>
-                  <span className="text-xs text-muted">{g.items.length}건</span>
-                </div>
-                <div className="overflow-x-auto">
-                <table className="w-full min-w-[640px]">
-                  <thead>
-                    <tr className="text-xs text-muted border-b border-default">
-                      <th className="text-left py-2 px-4 font-medium">작업명</th>
-                      <th className="text-left py-2 px-3 font-medium">담당자</th>
-                      <th className="text-left py-2 px-3 font-medium">기간</th>
-                      <th className="text-left py-2 px-3 font-medium">상태</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.items.map((it) => {
-                      const status = wbsStatusBadge[it.status];
-                      return (
-                        <tr
-                          key={it.wbsItemId}
-                          className="border-b border-default last:border-0 hover:bg-surface-2 cursor-pointer transition-colors"
-                          onClick={() => navigate(`/projects/${it.projectId}/wbs`)}
-                        >
-                          <td className="py-2 px-4 text-sm text-primary">{it.wbsItemName}</td>
-                          <td className="py-2 px-3 text-sm text-secondary">{it.assignee || '-'}</td>
-                          <td className="py-2 px-3 text-xs text-muted">
-                            {it.startDate?.slice(0, 10) ?? '-'} ~ {it.endDate?.slice(0, 10) ?? '-'}
-                          </td>
-                          <td className="py-2 px-3">
-                            <Badge variant={status.variant} size="sm">{status.label}</Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+          <WeeklySection
+            title="이번 주 업무일지"
+            data={thisWeek}
+            loading={loading}
+            onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
+            variant="current"
+            exportable
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-        <WeeklySection
-          title="지난 주 업무일지"
-          data={lastWeek}
-          loading={loading}
-          onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
-          variant="muted"
-          exportable
-        />
-        <WeeklySection
-          title="이번 주 업무일지"
-          data={thisWeek}
-          loading={loading}
-          onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
-          variant="current"
-          exportable
-        />
-      </div>
+function TabBar({ value, onChange }: { value: MonitoringTab; onChange: (next: MonitoringTab) => void }) {
+  return (
+    <div role="tablist" className="inline-flex rounded-md border border-default bg-surface-1 p-0.5">
+      {TABS.map((t) => {
+        const active = t.value === value;
+        return (
+          <button
+            key={t.value}
+            role="tab"
+            aria-selected={active}
+            type="button"
+            onClick={() => onChange(t.value)}
+            className={`px-3 py-1.5 text-sm rounded transition-colors ${
+              active
+                ? 'bg-accent text-on-accent font-medium'
+                : 'text-secondary hover:text-primary hover:bg-surface-2'
+            }`}
+          >
+            {t.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

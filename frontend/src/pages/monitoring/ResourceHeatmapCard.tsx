@@ -5,14 +5,18 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Users, CalendarCheck } from 'lucide-react';
-import { Card, Badge, EmptyState, Skeleton } from '../../components/ui';
+import { Card, Badge, EmptyState, Skeleton, Modal } from '../../components/ui';
 import { getChartColors, useThemeMode } from '../../utils/themeColors';
-import type { ResourceHeatmap, ResourceHeatmapItem } from '../../types';
+import type { ResourceHeatmap, ResourceHeatmapItem, ResourceHeatmapRow } from '../../types';
 
 interface Props {
   data: ResourceHeatmap | null;
   loading: boolean;
+  /** 호출처가 카드 높이를 일정하게 맞출 때 사용 (예: 모니터링 3×2 그리드 220px). */
+  height?: number;
 }
+
+type SortMode = 'due' | 'name' | 'load';
 
 // ISO 8601 week number (월요일 시작 기준).
 function isoWeekNumber(iso: string): number {
@@ -30,118 +34,163 @@ function shortMd(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-export function ResourceHeatmapCard({ data, loading }: Props) {
+export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
   const theme = useThemeMode();
   const colors = getChartColors(theme);
   const navigate = useNavigate();
-  // [rowIndex, weekIndex] 로 선택한 셀. null 이면 펼침 없음.
+  // 셀 클릭 → 펼침 모달. 컴팩트 카드라 inline 펼침 대신 모달.
   const [selected, setSelected] = useState<[number, number] | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('due');
+
+  // 사이드 패널 → 헤더 셀렉트로 이동. "미할당"은 항상 마지막 고정.
+  const sortedRows = useMemo<ResourceHeatmapRow[]>(() => {
+    if (!data) return [];
+    const rows = [...data.rows];
+    const sep = (a: ResourceHeatmapRow, b: ResourceHeatmapRow) => {
+      const au = a.assignee === '미할당' ? 1 : 0;
+      const bu = b.assignee === '미할당' ? 1 : 0;
+      return au - bu;
+    };
+    if (sortMode === 'load') {
+      rows.sort((a, b) =>
+        sep(a, b) || b.counts.reduce((s, c) => s + c, 0) - a.counts.reduce((s, c) => s + c, 0));
+    } else if (sortMode === 'name') {
+      rows.sort((a, b) => sep(a, b) || a.assignee.localeCompare(b.assignee, 'ko'));
+    } else {
+      // 마감순 = 가장 이른 마감 주(counts > 0 인 weekIndex 최소) 가 위로.
+      rows.sort((a, b) => {
+        const sepR = sep(a, b);
+        if (sepR !== 0) return sepR;
+        const ea = a.counts.findIndex((c) => c > 0);
+        const eb = b.counts.findIndex((c) => c > 0);
+        const ax = ea < 0 ? Infinity : ea;
+        const bx = eb < 0 ? Infinity : eb;
+        return ax - bx;
+      });
+    }
+    return rows;
+  }, [data, sortMode]);
 
   const option = useMemo(() => {
-    if (!data) return null;
+    if (!data || sortedRows.length === 0) return null;
     const points: [number, number, number][] = [];
     let max = 0;
-    data.rows.forEach((row, ri) => {
+    sortedRows.forEach((row, ri) => {
       row.counts.forEach((c, wi) => {
         if (c > max) max = c;
         points.push([wi, ri, c]);
       });
     });
-    return buildOption(data, points, max, colors, theme);
-  }, [data, colors, theme]);
+    return buildOption(data.weekStarts, sortedRows, points, max, colors, theme);
+  }, [data, sortedRows, colors, theme]);
 
   const selectedItems = useMemo<ResourceHeatmapItem[]>(() => {
     if (!data || !selected) return [];
     const [ri, wi] = selected;
-    return data.rows[ri]?.items.filter((it) => it.weekIndex === wi) ?? [];
-  }, [data, selected]);
+    return sortedRows[ri]?.items.filter((it) => it.weekIndex === wi) ?? [];
+  }, [data, sortedRows, selected]);
 
   const selectedLabel = useMemo(() => {
     if (!data || !selected) return '';
     const [ri, wi] = selected;
-    const row = data.rows[ri];
+    const row = sortedRows[ri];
     const weekStart = data.weekStarts[wi];
     if (!row || !weekStart) return '';
     return `${row.assignee} · W${isoWeekNumber(weekStart)} (${shortMd(weekStart)} 주)`;
-  }, [data, selected]);
+  }, [data, sortedRows, selected]);
 
   return (
     <Card padding="normal">
-      <h3 className="h-card flex items-center gap-2 mb-2">
-        <Users size={16} className="text-muted" />
-        담당자 × 8주 마감 밀도
-      </h3>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <h3 className="h-card flex items-center gap-2">
+          <Users size={16} className="text-muted" />
+          담당자 × 8주
+        </h3>
+        {data && data.totalItems > 0 && (
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="text-xs px-2 py-1 bg-surface-2 border border-default rounded text-secondary"
+            title="정렬"
+          >
+            <option value="due">마감 임박순</option>
+            <option value="name">이름순</option>
+            <option value="load">부하 합계순</option>
+          </select>
+        )}
+      </div>
       {loading || !data ? (
-        <Skeleton height={280} />
+        <Skeleton height={height} />
       ) : data.totalItems === 0 ? (
         <EmptyState
-          icon={<CalendarCheck size={32} />}
+          icon={<CalendarCheck size={28} />}
           title="다가오는 마감 없음"
-          description="앞으로 8주 동안 미완료 항목의 마감이 없습니다."
+          description="앞으로 8주간 미완료 마감 없음"
         />
       ) : (
-        <>
-          <ReactECharts
-            option={option!}
-            style={{ height: Math.max(220, data.rows.length * 28 + 80) }}
-            onEvents={{
-              click: (params: any) => {
-                const v = params?.value as [number, number, number] | undefined;
-                if (!v) return;
-                const [wi, ri, c] = v;
-                if (c <= 0) {
+        <ReactECharts
+          option={option!}
+          style={{ height }}
+          onEvents={{
+            click: (params: any) => {
+              const v = params?.value as [number, number, number] | undefined;
+              if (!v) return;
+              const [wi, ri, c] = v;
+              if (c > 0) setSelected([ri, wi]);
+            },
+          }}
+        />
+      )}
+
+      {selected && selectedItems.length > 0 && (
+        <Modal
+          open
+          onClose={() => setSelected(null)}
+          title={`${selectedLabel} — ${selectedItems.length}건`}
+          showCloseButton
+          size="md"
+        >
+          <div className="space-y-1 p-4">
+            {selectedItems.map((it) => (
+              <button
+                key={`${it.kind}-${it.id}`}
+                type="button"
+                onClick={() => {
+                  navigate(
+                    it.kind === 'wbs'
+                      ? `/projects/${it.projectId}/wbs?highlight=${it.id}`
+                      : `/projects/${it.projectId}/issues?highlight=${it.id}`,
+                  );
                   setSelected(null);
-                  return;
-                }
-                setSelected((prev) =>
-                  prev && prev[0] === ri && prev[1] === wi ? null : [ri, wi]
-                );
-              },
-            }}
-          />
-          {selected && selectedItems.length > 0 && (
-            <div className="mt-3 border-t border-default pt-3">
-              <p className="text-xs text-muted mb-2">{selectedLabel} — {selectedItems.length}건</p>
-              <div className="space-y-1">
-                {selectedItems.map((it) => (
-                  <button
-                    key={`${it.kind}-${it.id}`}
-                    type="button"
-                    onClick={() =>
-                      navigate(
-                        it.kind === 'wbs'
-                          ? `/projects/${it.projectId}/wbs?highlight=${it.id}`
-                          : `/projects/${it.projectId}/issues?highlight=${it.id}`,
-                      )
-                    }
-                    className="w-full text-left flex items-center gap-2 py-1 px-2 -mx-2 rounded hover:bg-surface-2 transition-colors"
-                  >
-                    <Badge variant={it.kind === 'wbs' ? 'info' : 'warning'} size="sm">
-                      {it.kind === 'wbs' ? 'WBS' : 'Issue'}
-                    </Badge>
-                    <span className="text-sm text-secondary truncate flex-1 min-w-0">{it.title}</span>
-                    <span className="text-xs text-muted shrink-0">{it.projectName}</span>
-                    <span className="text-xs text-on-warning shrink-0">{shortMd(it.dueDate)}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </>
+                }}
+                className="w-full text-left flex items-center gap-2 py-1.5 px-2 rounded hover:bg-surface-2 transition-colors"
+              >
+                <Badge variant={it.kind === 'wbs' ? 'info' : 'warning'} size="sm">
+                  {it.kind === 'wbs' ? 'WBS' : 'Issue'}
+                </Badge>
+                <span className="text-sm text-secondary truncate flex-1 min-w-0">{it.title}</span>
+                <span className="text-xs text-muted shrink-0">{it.projectName}</span>
+                <span className="text-xs text-on-warning shrink-0">{shortMd(it.dueDate)}</span>
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
     </Card>
   );
 }
 
 function buildOption(
-  data: ResourceHeatmap,
+  weekStarts: string[],
+  rows: ResourceHeatmapRow[],
   points: [number, number, number][],
   maxCount: number,
   ch: ReturnType<typeof getChartColors>,
   theme: 'dark' | 'light',
 ) {
-  const xLabels = data.weekStarts.map((ws) => `W${isoWeekNumber(ws)}\n${shortMd(ws)}`);
-  const yLabels = data.rows.map((r) => r.assignee);
+  // 컴팩트 220px 카드: 라벨 짧게 (월/일만), 좌측 폭 줄임.
+  const xLabels = weekStarts.map((ws) => shortMd(ws));
+  const yLabels = rows.map((r) => r.assignee);
 
   return {
     backgroundColor: 'transparent',
@@ -149,21 +198,21 @@ function buildOption(
       position: 'top',
       formatter: (p: any) => {
         const [xi, yi, v] = p.value as [number, number, number];
-        const ws = data.weekStarts[xi];
-        const name = data.rows[yi]?.assignee ?? '';
+        const ws = weekStarts[xi];
+        const name = rows[yi]?.assignee ?? '';
         return `${name} · W${isoWeekNumber(ws)} (${shortMd(ws)} 주): ${v}건`;
       },
       backgroundColor: ch.tooltipBg,
       borderColor: ch.tooltipBorder,
       textStyle: { color: ch.tooltipText },
     },
-    grid: { left: 96, right: 16, top: 8, bottom: 36 },
+    grid: { left: 56, right: 8, top: 4, bottom: 20 },
     xAxis: {
       type: 'category',
       data: xLabels,
       position: 'bottom',
       axisLine: { lineStyle: { color: ch.axisLine } },
-      axisLabel: { color: ch.axisText, fontSize: 10, lineHeight: 13 },
+      axisLabel: { color: ch.axisText, fontSize: 9 },
       splitArea: { show: true },
     },
     yAxis: {
@@ -173,8 +222,8 @@ function buildOption(
       axisLine: { lineStyle: { color: ch.axisLine } },
       axisLabel: {
         color: ch.axisText,
-        fontSize: 11,
-        formatter: (v: string) => (v.length > 10 ? v.slice(0, 10) + '…' : v),
+        fontSize: 10,
+        formatter: (v: string) => (v.length > 6 ? v.slice(0, 6) + '…' : v),
       },
       splitArea: { show: true },
     },
@@ -191,7 +240,7 @@ function buildOption(
         label: {
           show: true,
           color: ch.tooltipText,
-          fontSize: 11,
+          fontSize: 10,
           formatter: (p: any) => {
             const v = (p.value as [number, number, number])[2];
             return v > 0 ? String(v) : '';
