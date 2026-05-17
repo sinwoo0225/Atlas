@@ -17,6 +17,7 @@ import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { Meeting } from '../types';
 
 // 회의록 시간은 30분 단위만 — Chromium native time picker 는 분 spinner 에
@@ -486,6 +487,8 @@ export function MeetingsPage() {
   const [expanded, setExpanded] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+
+  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
 
   // 전체 회의록을 한 번에 가져오고 클라이언트사이드에서 필터링. 본문(Discussion / Decisions / ActionItems)
   // 검색을 위해 백엔드 검색 대신 클라이언트 필터로 통합.

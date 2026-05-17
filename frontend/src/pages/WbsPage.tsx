@@ -21,6 +21,7 @@ import { issuesApi } from '../api/issues';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { GanttChart } from './wbs/GanttChart';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType } from '../types';
 import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
 
@@ -557,6 +558,8 @@ export function WbsPage() {
   const [matchOnly, setMatchOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+
+  useGlobalShortcut('mod+n', () => { setEditing(null); setAddingChildOf(undefined); setShowForm(true); });
 
   const filterOpts: WbsFilterOpts = useMemo(() => {
     const t = new Date();

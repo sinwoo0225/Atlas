@@ -15,6 +15,7 @@ import { WbsTreePicker } from '../components/WbsTreePicker';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { Issue, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
 import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
 
@@ -45,6 +46,11 @@ export function IssuesPage() {
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+
+  useGlobalShortcut('mod+n', () => {
+    const el = document.querySelector('[data-issue-quickadd]') as HTMLInputElement | null;
+    if (el) { el.focus(); el.scrollIntoView({ block: 'center' }); }
+  });
 
   // link tuple → issueId 별 카운트 Map. 0 인 issue 는 키 미포함 (배지 분기에서 falsy 처리).
   const computeLinkCounts = (links: { issueId: number }[]) => {
@@ -329,6 +335,7 @@ export function IssuesPage() {
                   onChange={(e) => setNewTitle(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCreate(); }}
                   placeholder="새 이슈 제목 입력 후 Enter…"
+                  data-issue-quickadd
                   className="w-full bg-transparent text-sm text-primary placeholder:text-muted/70 focus:outline-none border-none px-0 py-0"
                 />
               </td>

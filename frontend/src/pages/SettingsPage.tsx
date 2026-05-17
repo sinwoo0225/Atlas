@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Save, Settings as SettingsIcon, FolderOpen, Server, Plug } from 'lucide-react';
+import { Save, Settings as SettingsIcon, FolderOpen, Server, Plug, Keyboard } from 'lucide-react';
+import { openShortcutsModal } from '../data/shortcuts';
 import {
   loadSettings,
   saveSettings,
@@ -170,6 +171,17 @@ export function SettingsPage() {
             placeholder="변경 이력/회의록 등에 미리 채워질 이름"
             className={inputClass}
           />
+        </FormField>
+      </Section>
+
+      <Section title="키보드 단축키">
+        <FormField
+          label="단축키 도움말"
+          hint="모든 페이지에서 ? 키로도 열 수 있습니다."
+        >
+          <Button variant="secondary" onClick={openShortcutsModal} leadingIcon={<Keyboard size={14} />}>
+            도움말 보기 (?)
+          </Button>
         </FormField>
       </Section>
 

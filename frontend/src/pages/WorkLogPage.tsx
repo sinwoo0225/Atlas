@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
 import { Button, Card, Spinner, DirtyDot, inputClass } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { WorkLog } from '../types';
 
 const DAY_LABELS = ['월', '화', '수', '목', '금'];
@@ -139,6 +140,14 @@ export function WorkLogPage() {
   const weekEnd = addDays(weekStart, 4);
   const selectedEntry = entries[selectedIdx];
   const selectedDate = weekDates[selectedIdx];
+
+  // Ctrl+N — "신규" 가 없는 페이지라 가장 자연스러운 액션: 오늘 요일로 점프 (오늘이 다른 주면 이번 주로 전환).
+  useGlobalShortcut('mod+n', () => {
+    const todayIso = isoDate(new Date());
+    const idxInWeek = weekDates.findIndex((d) => isoDate(d) === todayIso);
+    if (idxInWeek >= 0) setSelectedIdx(idxInWeek);
+    else setWeekStart(startOfWeek(new Date()));
+  });
 
   return (
     <div className="p-6 space-y-4">

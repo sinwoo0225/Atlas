@@ -5,6 +5,7 @@ import { resourcesApi } from '../api/resources';
 import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsStatusBadge } from '../utils/statusMaps';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { Resource, ResourceType, ResourceAssignment } from '../types';
 
 function ResourceForm({ initial, onSave, onCancel }: {
@@ -141,6 +142,8 @@ export function ResourcesPage() {
   const [editing, setEditing] = useState<Resource | null>(null);
   const [viewing, setViewing] = useState<Resource | null>(null);
   const [error, setError] = useState('');
+
+  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
 
   const load = () => resourcesApi.getAll().then(setResources).catch(() => setError('리소스 목록을 불러올 수 없습니다.'));
 

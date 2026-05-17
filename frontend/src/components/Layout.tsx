@@ -128,6 +128,7 @@ function ProjectSwitcher() {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { selectedProjectId, selectProject, projects } = useProjectStore();
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
   const [collapsed, setCollapsed] = useState(() => loadSettings().sidebarCollapsed);
@@ -141,6 +142,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
     });
   };
   useGlobalShortcut('mod+b', toggleCollapsed);
+
+  // G+X 시퀀스 — 페이지 이동. projectId 가 필요한 페이지는 URL → store → lastProjectId 순으로 fallback.
+  // pid 없으면 silent 무시 (네비게이션 단축키가 toast 띄우면 거슬림).
+  const resolveProjectId = (): number | null => {
+    const urlMatch = location.pathname.match(/^\/projects\/(\d+)\//);
+    if (urlMatch) return Number(urlMatch[1]);
+    if (selectedProjectId !== null) return selectedProjectId;
+    return loadSettings().lastProjectId;
+  };
+  useGlobalShortcut('g d', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/dashboard`); });
+  useGlobalShortcut('g i', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/issues`); });
+  useGlobalShortcut('g w', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/wbs`); });
+  useGlobalShortcut('g m', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/meetings`); });
+  useGlobalShortcut('g c', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/changelogs`); });
+  useGlobalShortcut('g v', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/devinfo`); });
+  useGlobalShortcut('g r', () => navigate('/resources'));
+  useGlobalShortcut('g s', () => navigate('/settings'));
 
   useEffect(() => {
     if (selectedProjectId !== null) return;

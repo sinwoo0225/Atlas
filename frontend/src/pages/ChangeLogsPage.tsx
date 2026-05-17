@@ -15,6 +15,7 @@ import { WbsTreePicker } from '../components/WbsTreePicker';
 import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { findItemName } from '../utils/wbsHelpers';
 import type { ChangeLog, ImpactLevel, Meeting, Issue, WbsItem } from '../types';
 
@@ -377,6 +378,8 @@ export function ChangeLogsPage() {
   const [showForm, setShowForm] = useState(initialNewWithSourceIssue != null);
   const [defaultSourceIssueId, setDefaultSourceIssueId] = useState<number | null>(initialNewWithSourceIssue);
   const [editing, setEditing] = useState<ChangeLog | null>(null);
+
+  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
   const [keyword, setKeyword] = useState('');
   const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'withSource' | 'noSource'>('all');
