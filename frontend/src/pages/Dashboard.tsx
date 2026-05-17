@@ -144,8 +144,10 @@ export function Dashboard() {
 
       <RiskAlertCard signals={riskSignals} projectId={pid} />
 
+      {/* 액션 필요 — 마일스톤·이슈 (위험 외 핵심 추적 대상) */}
+      <GroupHeader label="액션 필요" />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Section title="주요 마일스톤" Icon={Diamond} to={`/projects/${pid}/wbs`} emphasis>
+        <Section title="주요 마일스톤" Icon={Diamond} to={`/projects/${pid}/wbs`}>
           {upcomingMilestones.length === 0 ? (
             <Empty text="예정된 마일스톤 없음" />
           ) : (
@@ -162,6 +164,52 @@ export function Dashboard() {
                   </Badge>
                   <span className="text-xs text-muted">{m.endDate?.slice(0, 10)}</span>
                 </div>
+              </div>
+            ))
+          )}
+        </Section>
+
+        <Section title="이슈" Icon={AlertTriangle} to={`/projects/${pid}/issues`}>
+          {recentIssues.length === 0 ? (
+            <Empty text="등록된 이슈 없음" />
+          ) : (
+            recentIssues.map((i) => (
+              <div
+                key={i.id}
+                onClick={() => navigate(`/projects/${pid}/issues`)}
+                className="py-2 border-b border-default last:border-0 cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Badge variant={issueStatusBadge[i.status].variant} size="sm">{issueStatusBadge[i.status].label}</Badge>
+                  <Badge variant={issuePriorityBadge[i.priority].variant} size="sm">{issuePriorityBadge[i.priority].label}</Badge>
+                  {i.dueDate && <span className="text-xs text-muted">~ {i.dueDate.slice(0, 10)}</span>}
+                </div>
+                <p className="text-sm text-secondary mt-0.5 line-clamp-1">{i.title}</p>
+                {i.assigneeName && <p className="text-xs text-muted mt-0.5">담당: {i.assigneeName}</p>}
+              </div>
+            ))
+          )}
+        </Section>
+      </div>
+
+      {/* 참고 — 회의록·변경·DevInfo·일지 (조회 빈도 낮은 컨텍스트) */}
+      <GroupHeader label="참고" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Section title="최근 회의록" Icon={FileText} to={`/projects/${pid}/meetings`} compact>
+          {recentMeetings.length === 0 ? (
+            <Empty text="회의록 없음" />
+          ) : (
+            recentMeetings.map((m) => (
+              <div
+                key={m.id}
+                onClick={() => navigate(`/projects/${pid}/meetings`)}
+                className="py-2 border-b border-default last:border-0 cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-secondary line-clamp-1">{m.topic}</span>
+                  <span className="text-xs text-muted shrink-0 ml-2">{m.date.slice(0, 10)}</span>
+                </div>
+                <p className="text-xs text-muted mt-0.5 line-clamp-1">{attendeesToDisplay(m.attendees)}</p>
               </div>
             ))
           )}
@@ -187,26 +235,6 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="최근 회의록" Icon={FileText} to={`/projects/${pid}/meetings`} compact>
-          {recentMeetings.length === 0 ? (
-            <Empty text="회의록 없음" />
-          ) : (
-            recentMeetings.map((m) => (
-              <div
-                key={m.id}
-                onClick={() => navigate(`/projects/${pid}/meetings`)}
-                className="py-2 border-b border-default last:border-0 cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-secondary line-clamp-1">{m.topic}</span>
-                  <span className="text-xs text-muted shrink-0 ml-2">{m.date.slice(0, 10)}</span>
-                </div>
-                <p className="text-xs text-muted mt-0.5 line-clamp-1">{attendeesToDisplay(m.attendees)}</p>
-              </div>
-            ))
-          )}
-        </Section>
-
         <Section title="개발 정보" Icon={Code2} to={`/projects/${pid}/devinfo`} compact>
           {recentDevInfo.length === 0 ? (
             <Empty text="개발 정보 없음" />
@@ -224,29 +252,7 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="이슈" Icon={AlertTriangle} to={`/projects/${pid}/issues`} emphasis>
-          {recentIssues.length === 0 ? (
-            <Empty text="등록된 이슈 없음" />
-          ) : (
-            recentIssues.map((i) => (
-              <div
-                key={i.id}
-                onClick={() => navigate(`/projects/${pid}/issues`)}
-                className="py-2 border-b border-default last:border-0 cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Badge variant={issueStatusBadge[i.status].variant} size="sm">{issueStatusBadge[i.status].label}</Badge>
-                  <Badge variant={issuePriorityBadge[i.priority].variant} size="sm">{issuePriorityBadge[i.priority].label}</Badge>
-                  {i.dueDate && <span className="text-xs text-muted">~ {i.dueDate.slice(0, 10)}</span>}
-                </div>
-                <p className="text-sm text-secondary mt-0.5 line-clamp-1">{i.title}</p>
-                {i.assigneeName && <p className="text-xs text-muted mt-0.5">담당: {i.assigneeName}</p>}
-              </div>
-            ))
-          )}
-        </Section>
-
-        <Section title="이번 주 업무일지" Icon={NotebookPen} to={`/projects/${pid}/worklog`}>
+        <Section title="이번 주 업무일지" Icon={NotebookPen} to={`/projects/${pid}/worklog`} compact>
           {!thisWeekWorkLog || thisWeekWorkLog.days.every((d) => !d.done && !d.plan && !d.issues) ? (
             <Empty text="이번 주 기록 없음" />
           ) : (
@@ -268,17 +274,16 @@ export function Dashboard() {
             </div>
           )}
         </Section>
-
-        <div className="lg:col-span-2">
-          <Section title="최근 활동" Icon={Activity} to="/activity" compact>
-            {activities.length === 0 ? (
-              <Empty text="활동 기록 없음" />
-            ) : (
-              activities.map((a) => <ActivityRow key={a.id} activity={a} />)
-            )}
-          </Section>
-        </div>
       </div>
+
+      {/* 최근 활동 — 전폭, 그룹 외 */}
+      <Section title="최근 활동" Icon={Activity} to="/activity" compact>
+        {activities.length === 0 ? (
+          <Empty text="활동 기록 없음" />
+        ) : (
+          activities.map((a) => <ActivityRow key={a.id} activity={a} />)
+        )}
+      </Section>
 
       {(p.deliverables || p.relatedLinks) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -314,7 +319,6 @@ function Section({
   children,
   to,
   compact = false,
-  emphasis = false,
 }: {
   title: string;
   Icon: React.ComponentType<{ size?: number; className?: string }>;
@@ -323,16 +327,11 @@ function Section({
   to?: string;
   /** 컴팩트 톤 (P4-3 부 정보) — padding/font 축소 */
   compact?: boolean;
-  /** 강조 톤 (P4-3 핵심) — border-accent-soft */
-  emphasis?: boolean;
 }) {
   const navigate = useNavigate();
   const HeaderTag: any = to ? 'button' : 'div';
   return (
-    <Card
-      padding={compact ? 'normal' : 'spacious'}
-      className={emphasis ? 'border-accent' : ''}
-    >
+    <Card padding={compact ? 'normal' : 'spacious'}>
       <HeaderTag
         type={to ? 'button' : undefined}
         onClick={to ? () => navigate(to) : undefined}
@@ -346,6 +345,13 @@ function Section({
       </HeaderTag>
       {children}
     </Card>
+  );
+}
+
+// 그룹 헤더 — 액션/참고 같은 위젯 묶음 위에 얹는 옅은 라벨.
+function GroupHeader({ label }: { label: string }) {
+  return (
+    <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mt-2">{label}</h3>
   );
 }
 

@@ -12,6 +12,7 @@ interface Props {
 
 // D-4 부하 인사이트: 헤더 카드 아래·grid 위 위험 신호 알림.
 // 0 건이면 카드 자체 미노출 (시각 노이즈 방지).
+// 라운드 2: border-on-danger + bg-danger-soft 로 강조 강화, 헤더에 인라인 카운트 칩.
 export function RiskAlertCard({ signals, projectId }: Props) {
   const navigate = useNavigate();
   const { overdueWbs, dueSoonWbs, highPriorityOpenIssues } = signals;
@@ -54,10 +55,21 @@ export function RiskAlertCard({ signals, projectId }: Props) {
   );
 
   return (
-    <Card padding="spacious">
-      <div className="flex items-center gap-2 mb-3">
-        <AlertTriangle size={16} className="text-on-warning" />
-        <h2 className="h-card">주의가 필요한 항목</h2>
+    <Card
+      padding="spacious"
+      className="bg-danger-soft"
+      style={{ borderColor: 'var(--text-on-danger)', borderWidth: 1 }}
+    >
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <h2 className="h-card flex items-center gap-2">
+          <AlertTriangle size={16} className="text-on-danger" />
+          주의가 필요한 항목
+        </h2>
+        <div className="flex items-center gap-1.5">
+          {overdueWbs.length > 0 && <CountChip tone="danger" label="지연" count={overdueWbs.length} />}
+          {dueSoonWbs.length > 0 && <CountChip tone="warning" label="임박" count={dueSoonWbs.length} />}
+          {highPriorityOpenIssues.length > 0 && <CountChip tone="warning" label="High 이슈" count={highPriorityOpenIssues.length} />}
+        </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Column
@@ -93,6 +105,16 @@ export function RiskAlertCard({ signals, projectId }: Props) {
         </Column>
       </div>
     </Card>
+  );
+}
+
+function CountChip({ tone, label, count }: { tone: 'danger' | 'warning'; label: string; count: number }) {
+  const toneClass = tone === 'danger' ? 'text-on-danger' : 'text-on-warning';
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${toneClass}`}>
+      <span className="tabular-nums">{count}</span>
+      <span className="font-normal text-muted">{label}</span>
+    </span>
   );
 }
 
