@@ -131,6 +131,26 @@ foreach ($f in @($desktop, $www)) {
 Write-Host "  - Atlas.exe       : OK" -ForegroundColor Green
 Write-Host "  - wwwroot/index   : OK" -ForegroundColor Green
 
+# CLI 동봉 — Claude Code 등 외부 자동화에서 같은 데이터 폴더에 쓰기 가능 (사이클 6).
+# AssemblyName=Atlas-Cli 라 산출물명은 자동으로 Atlas-Cli.exe. Atlas.exe 와 같은 publish/ 폴더에 둠.
+Write-Host "==> Atlas-Cli publish (단일 파일, 외부 자동화 진입점)" -ForegroundColor Cyan
+dotnet publish (Join-Path $root 'src/ProjectManager.Cli/ProjectManager.Cli.csproj') `
+    -c Release -r win-x64 --self-contained `
+    -p:PublishSingleFile=true `
+    -p:IncludeNativeLibrariesForSelfExtract=true `
+    -o $publishDir
+if ($LASTEXITCODE -ne 0) { throw "Atlas-Cli publish 실패" }
+$cli = Join-Path $publishDir 'Atlas-Cli.exe'
+if (-not (Test-Path $cli)) { throw "필수 파일 누락: $cli" }
+Write-Host "  - Atlas-Cli.exe   : OK" -ForegroundColor Green
+
+# 외부 자동화용 사용법 매뉴얼을 publish 폴더에도 동봉 — 배포 zip 만 받은 사용자도 발견 용이.
+$usage = Join-Path $root 'ATLAS-CLI-USAGE.md'
+if (Test-Path $usage) {
+    Copy-Item $usage -Destination (Join-Path $publishDir 'ATLAS-CLI-USAGE.md') -Force
+    Write-Host "  - ATLAS-CLI-USAGE : OK" -ForegroundColor Green
+}
+
 if (-not $SkipZip) {
     $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
     $zipPath = Join-Path $root "Atlas-$tag.zip"

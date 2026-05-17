@@ -5,13 +5,10 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
-using ProjectManager.Application.Activity;
 using ProjectManager.Application.Search;
-using ProjectManager.Application.Services;
-using ProjectManager.AppHost.Services;
+using ProjectManager.AppHost.Composition;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;
-using ProjectManager.Infrastructure.FileStorage;
 using ProjectManager.Infrastructure.Persistence;
 
 namespace ProjectManager.AppHost;
@@ -38,53 +35,13 @@ public static class AppHostFactory
 
         var bootstrap = BootstrapConfig.Load();
         var pathResolver = new PathResolver(bootstrap.ResolveDataFolder());
-        builder.Services.AddSingleton(bootstrap);
-        builder.Services.AddSingleton(pathResolver);
-        builder.Services.AddSingleton<DevFilesStorage>();
-        builder.Services.AddSingleton<MeetingMarkdownExporter>();
 
         // X-Atlas-Actor 헤더 (작성자 자동 추적) 를 AppDbContext.SaveChanges 가 읽을 수 있게 등록.
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IActorAccessor, HttpActorAccessor>();
 
-        // Default Timeout=30 — 동시 라이터 충돌 시 즉시 'database is locked' 가 아니라 최대 30초 busy wait.
-        // 사용자 입력 수준의 동시성(드물게 겹치는 PUT/POST)은 이 한 줄로 거의 다 흡수된다.
-        builder.Services.AddScoped<SearchService>();
-        builder.Services.AddScoped<SearchSaveChangesInterceptor>();
-        builder.Services.AddScoped<ActivityLogInterceptor>();
-        builder.Services.AddDbContext<AppDbContext>((sp, opt) =>
-            opt
-                .UseSqlite($"Data Source={pathResolver.GetDatabasePath()};Default Timeout=30")
-                .AddInterceptors(
-                    sp.GetRequiredService<SearchSaveChangesInterceptor>(),
-                    sp.GetRequiredService<ActivityLogInterceptor>()));
-
-        builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
-        builder.Services.AddScoped<IWbsRepository, WbsRepository>();
-        builder.Services.AddScoped<IChangeLogRepository, ChangeLogRepository>();
-        builder.Services.AddScoped<IMeetingRepository, MeetingRepository>();
-        builder.Services.AddScoped<IDevInfoRepository, DevInfoRepository>();
-        builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
-        builder.Services.AddScoped<IIssueRepository, IssueRepository>();
-        builder.Services.AddScoped<IWorkLogRepository, WorkLogRepository>();
-        builder.Services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
-        builder.Services.AddScoped<IIssueWbsLinkRepository, IssueWbsLinkRepository>();
-
-        builder.Services.AddScoped<ProjectService>();
-        builder.Services.AddScoped<WbsService>();
-        builder.Services.AddScoped<ChangeLogService>();
-        builder.Services.AddScoped<MeetingService>();
-        builder.Services.AddScoped<DevInfoService>();
-        builder.Services.AddScoped<ResourceService>();
-        builder.Services.AddScoped<IssueService>();
-        builder.Services.AddScoped<WorkLogService>();
-        builder.Services.AddScoped<ActivityLogService>();
-        // 보존 정책 정기 타이머 — 시작 즉시 1회 + appsettings 의 CleanupIntervalHours 주기.
-        builder.Services.AddHostedService<ActivityLogCleanupService>();
-        builder.Services.AddScoped<MonitoringService>();
-        builder.Services.AddScoped<ActionItemPromotionService>();
-        builder.Services.AddScoped<IssueWbsLinkService>();
-        builder.Services.AddScoped<StartPageService>();
+        // DbContext + repository + service 그래프는 CLI/MCP 와 공유되는 헬퍼로 일원화.
+        builder.Services.AddAtlasServices(pathResolver, bootstrap, includeHostedServices: true);
 
         builder.Services.AddCors(opt => opt.AddDefaultPolicy(p =>
             p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
@@ -95,6 +52,9 @@ public static class AppHostFactory
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             db.Database.Migrate();
+            // WAL 전환 — Atlas.exe 가 켜진 상태에서 CLI/외부 프로세스가 같은 DB 에 쓸 때 lock 경합 회피.
+            // idempotent — 이미 WAL 이면 no-op. 기존 .db 는 첫 연결에 .db-wal / .db-shm 동반 생성.
+            db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
         }
 
         // ActivityLog 보존은 ActivityLogCleanupService (BackgroundService) 가 시작 즉시 1회 + 주기 실행. AddHostedService 위 등록.
