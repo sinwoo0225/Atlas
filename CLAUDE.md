@@ -2,6 +2,8 @@
 
 **Atlas** — *The map of your projects.* 로컬 우선 프로젝트 관리 앱. UI 한국어. 변경 로그는 `docs/개발로그/` (1 커밋 = 1 파일).
 
+사용자 관점(설치·기능 개요·외부 자동화) 은 [`README.md`](./README.md). 이 파일은 **Claude Code 작업 컨텍스트** — 코드 컨벤션, 자주 쓰는 명령, 진행 상태 추적, 함정 노트 진입점.
+
 구동 모드 / 데이터 경로 / 셸 동작 / 네이밍 호환성 (변경 금지) → `docs/architecture.md`, `docs/pitfalls.md`.
 
 ## 진행 상태 추적

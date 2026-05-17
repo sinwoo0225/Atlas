@@ -18,6 +18,20 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용. 한 작업에 여러 담당자가 있어도 정확히 매칭.
 - **설정** — 다크/라이트 테마, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그).
 
+## 외부 자동화 (Claude Code 등)
+
+Atlas 는 두 가지 외부 진입로를 함께 배포합니다 — `publish/` 폴더에 `Atlas-Cli.exe` (CLI) 와 `Atlas-Mcp.exe` (MCP 서버) 단일 파일로 동봉.
+
+- **CLI (`Atlas-Cli.exe`)** — PowerShell/Bash 셸에서 verb 호출. JSON 출력 → `ConvertFrom-Json` 파이프. CI/CD·사람이 직접 호출·스크립트 친화.
+- **MCP 서버 (`Atlas-Mcp.exe`)** — Claude Code 가 stdio MCP 표준으로 직접 호출. 자연어 한 줄 → 도구 자동 선택 → DB 반영. 등록은 한 번:
+  ```powershell
+  claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
+  ```
+
+둘 다 GUI 와 같은 데이터 폴더를 자동 발견 (`%LOCALAPPDATA%\Atlas\config.json`), SQLite WAL 모드로 Atlas.exe 가 켜진 상태에서도 동시 안전. 활동 로그에 actor (`claude-code` / `claude-code-mcp`) 로 기록되어 GUI 활동 페이지에서 사람 작업과 분리 추적.
+
+도구 21 종 · 시나리오 · PowerShell 인코딩 가이드 등 자세한 사용법은 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
+
 ## 스크린샷
 
 > 스크린샷은 추후 추가 예정. 아래 경로에 PNG 가 들어갈 예정입니다.
@@ -51,64 +65,21 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - 같은 항목을 두 사람이 거의 동시에 편집하면 한쪽이 409 응답을 받습니다 (낙관적 동시성 토큰). 새로고침 후 재시도.
 - TLS 는 평문 HTTP (사내 LAN 가정). 인터넷 노출이 필요하면 외부 reverse proxy + TLS 권장.
 
-## 개발 환경
+## 개발 (Contributor)
 
-요구 사항:
-
-- .NET 8 SDK
-- Node.js 20+
-- PowerShell 5.1+
-
-레포 클론 후:
+요구사항: **.NET 8 SDK · Node.js 20+ · PowerShell 5.1+** (Windows).
 
 ```powershell
 dotnet tool restore
 cd frontend; npm install; cd ..
-./start.ps1
+./start.ps1              # backend :5200 + Vite :5173 + 브라우저
+./publish.ps1            # publish/Atlas.exe + Atlas-Cli.exe + Atlas-Mcp.exe + wwwroot + zip
 ```
 
-`start.ps1` 은 백엔드 (http://localhost:5200) 와 Vite dev 서버 (http://localhost:5173) 를 별도 PowerShell 창에서 실행한 뒤 브라우저를 자동으로 엽니다.
-
-개별 실행:
-
-```powershell
-dotnet run --project src/ProjectManager.WebService
-# 다른 창에서
-cd frontend; npm run dev
-```
-
-프론트 빌드 / 린트:
-
-```powershell
-cd frontend
-npm run build
-npm run lint
-```
-
-## 빌드 & 배포
-
-```powershell
-./publish.ps1            # publish/Atlas.exe + publish/wwwroot + Atlas-YYYYMMDD_HHMMSS.zip
-./publish.ps1 -SkipZip   # zip 생성 생략
-./publish.ps1 -Server    # publish/server/Atlas-Server.exe (Client 모드 서버용) + Atlas-Server-YYYYMMDD_HHMMSS.zip
-```
-
-기본 산출물은 단일 self-contained `Atlas.exe` 입니다 — WebService 가 인프로세스 AppHost 로 통합되어 별도 백엔드 exe 가 필요 없습니다. `-Server` 옵션은 별도로 standalone `Atlas-Server.exe` 를 만들어 다중 사용자 환경의 서버 머신에 배포합니다.
-
-## 아키텍처
-
-- **DesktopApp** (`src/ProjectManager.DesktopApp`, WPF + WebView2, net8.0-windows) — 사용자 셸. AppHost 라이브러리를 인프로세스로 호스팅.
-- **WebService** (`src/ProjectManager.WebService`, ASP.NET Core 8) — `/api/*` REST + `wwwroot/` SPA 서빙.
-- **Application / Infrastructure / Core** — Clean Architecture, SQLite + EF Core 8.
-- **Frontend** (`frontend/`) — React 19 + Vite + Tailwind 4 + Zustand, ECharts (차트), Cytoscape + dagre (그래프), react-markdown.
-
-더 자세한 아키텍처 노트·네이밍 호환성 규칙·publish 시 단일파일 추출 경로 등의 디테일은 `CLAUDE.md` 참고.
-
-## 기술 스택
-
-- **Backend** — .NET 8, ASP.NET Core 8, Entity Framework Core 8 (SQLite).
-- **Desktop Shell** — WPF, Microsoft.Web.WebView2.
-- **Frontend** — React 19, Vite 8, TypeScript, Tailwind CSS 4, Zustand 5, ECharts 6, Cytoscape 3 + dagre, react-markdown, lucide-react.
+- 스택: **백엔드** .NET 8 / ASP.NET Core 8 / EF Core 8 (SQLite). **셸** WPF + WebView2. **프론트** React 19 + Vite + TypeScript + Tailwind 4 + Zustand + ECharts + Cytoscape.
+- 레이어링: `Core` / `Application` / `Infrastructure` / `WebService` / `AppHost` / `DesktopApp` (Clean Architecture).
+- `publish.ps1 -SkipZip` (zip 생략) · `-Server` (Client 모드용 standalone `Atlas-Server.exe`).
+- 더 자세한 아키텍처/네이밍 호환성/publish 함정/자주 쓰는 명령은 [`CLAUDE.md`](./CLAUDE.md) 참고.
 
 ## 라이선스
 
@@ -135,6 +106,20 @@ Atlas is a Windows desktop application that lets one person manage schedules, is
 - **Monitoring** — Cross-project view: four summary charts (project-status breakdown / issue status×priority matrix / upcoming-30-day milestones / per-project WBS progress), today's milestones, and this/last week's worklogs.
 - **Resources** — People and equipment, used as the autocomplete source for WBS assignees. Matches correctly even when a task has multiple assignees.
 - **Settings** — Dark / light theme, Markdown font size and line height, remember last project, change data folder location (native folder picker dialog).
+
+### External automation (Claude Code etc.)
+
+Atlas ships two external entry points alongside the GUI — both as single-file executables in `publish/`: `Atlas-Cli.exe` (CLI) and `Atlas-Mcp.exe` (MCP server).
+
+- **CLI (`Atlas-Cli.exe`)** — verb-based shell entry for PowerShell / Bash. JSON stdout, pipe-friendly. Good for scripts, CI/CD, and direct use by humans.
+- **MCP server (`Atlas-Mcp.exe`)** — stdio Model Context Protocol server consumed natively by Claude Code. One natural-language sentence → tool auto-selected → DB updated. Register once:
+  ```powershell
+  claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
+  ```
+
+Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config.json`); SQLite WAL keeps writes safe while `Atlas.exe` is open. Each entry point stamps the activity log with its own actor (`claude-code` / `claude-code-mcp`) so external automation is filterable from human edits.
+
+21 tools, scenarios, and a PowerShell encoding guide are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
 
 ### Screenshots
 
@@ -169,60 +154,21 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 - Two people editing the same item nearly simultaneously will see one of them get a 409 response (optimistic concurrency token). Refresh and retry.
 - TLS is plain HTTP (corporate LAN assumed). For internet exposure, put a reverse proxy with TLS in front.
 
-### Development
+### Development (Contributor)
 
-Requirements: .NET 8 SDK, Node.js 20+, PowerShell 5.1+.
-
-After cloning:
+Requirements: **.NET 8 SDK · Node.js 20+ · PowerShell 5.1+** (Windows).
 
 ```powershell
 dotnet tool restore
 cd frontend; npm install; cd ..
-./start.ps1
+./start.ps1              # backend :5200 + Vite :5173 + browser
+./publish.ps1            # publish/Atlas.exe + Atlas-Cli.exe + Atlas-Mcp.exe + wwwroot + zip
 ```
 
-`start.ps1` launches the backend (http://localhost:5200) and Vite dev server (http://localhost:5173) in separate PowerShell windows and opens the browser.
-
-Run components individually:
-
-```powershell
-dotnet run --project src/ProjectManager.WebService
-# in another window
-cd frontend; npm run dev
-```
-
-Frontend build / lint:
-
-```powershell
-cd frontend
-npm run build
-npm run lint
-```
-
-### Build & publish
-
-```powershell
-./publish.ps1            # publish/Atlas.exe + publish/wwwroot + Atlas-YYYYMMDD_HHMMSS.zip
-./publish.ps1 -SkipZip   # skip the zip step
-./publish.ps1 -Server    # publish/server/Atlas-Server.exe (Client-mode server) + Atlas-Server-YYYYMMDD_HHMMSS.zip
-```
-
-The default output is a single self-contained `Atlas.exe` — the WebService is folded into an in-process AppHost, so there is no separate backend executable. The `-Server` switch additionally builds a standalone `Atlas-Server.exe` for deployment to the server machine in multi-user setups.
-
-### Architecture
-
-- **DesktopApp** (`src/ProjectManager.DesktopApp`, WPF + WebView2, net8.0-windows) — user shell, hosts the AppHost library in-process.
-- **WebService** (`src/ProjectManager.WebService`, ASP.NET Core 8) — `/api/*` REST + `wwwroot/` SPA.
-- **Application / Infrastructure / Core** — Clean Architecture, SQLite + EF Core 8.
-- **Frontend** (`frontend/`) — React 19 + Vite + Tailwind 4 + Zustand, ECharts (charts), Cytoscape + dagre (graphs), react-markdown.
-
-See `CLAUDE.md` for the deeper architecture notes, naming-compatibility rules, and publish-time single-file extraction caveats.
-
-### Tech stack
-
-- **Backend** — .NET 8, ASP.NET Core 8, Entity Framework Core 8 (SQLite).
-- **Desktop shell** — WPF, Microsoft.Web.WebView2.
-- **Frontend** — React 19, Vite 8, TypeScript, Tailwind CSS 4, Zustand 5, ECharts 6, Cytoscape 3 + dagre, react-markdown, lucide-react.
+- Stack: **Backend** .NET 8 / ASP.NET Core 8 / EF Core 8 (SQLite). **Shell** WPF + WebView2. **Frontend** React 19 + Vite + TypeScript + Tailwind 4 + Zustand + ECharts + Cytoscape.
+- Layering: `Core` / `Application` / `Infrastructure` / `WebService` / `AppHost` / `DesktopApp` (Clean Architecture).
+- `publish.ps1 -SkipZip` (skip zip) · `-Server` (standalone `Atlas-Server.exe` for Client mode).
+- Deeper architecture notes, naming-compatibility rules, publish caveats, and common commands are in [`CLAUDE.md`](./CLAUDE.md).
 
 ### License
 

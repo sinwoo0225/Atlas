@@ -220,11 +220,16 @@ $root = .\Atlas-Cli.exe wbs create --project 1 --name "백엔드" | ConvertFrom-
 
 `<user>` 와 경로는 본인 환경에 맞게. 절대경로 권장 (Claude Code 가 어느 폴더에서 시작돼도 작동).
 
-### 방법 B — Claude Code CLI
+### 방법 B — Claude Code CLI (권장)
 
 ```powershell
-claude mcp add atlas "C:\Users\<user>\...\publish\Atlas-Mcp.exe"
+claude mcp add --scope user atlas "C:\Users\<user>\...\publish\Atlas-Mcp.exe"
 ```
+
+`--scope` 옵션:
+- **`user`** (권장) — 어디서 Claude Code 를 켜든 atlas 도구 사용 가능. 1 인 단독 사용자 컨텍스트에 자연. 등록은 `~/.claude.json` 의 글로벌 `mcpServers` 에 기록.
+- **`project`** — 현재 디렉토리의 `.mcp.json` 파일에 기록 (git 추적 → 팀 공유 가능). 이 레포에서만 활성.
+- **(생략, `local`)** — 본인 + 현재 프로젝트 디렉토리에서만. 다른 폴더 작업 중에는 안 보임. 가장 좁은 scope.
 
 ### actor (선택)
 
