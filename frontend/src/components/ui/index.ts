@@ -12,3 +12,4 @@ export { Textarea } from './Textarea';
 export { EmptyState } from './EmptyState';
 export { Spinner } from './Spinner';
 export { Skeleton } from './Skeleton';
+export { DirtyDot } from './DirtyDot';

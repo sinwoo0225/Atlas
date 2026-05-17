@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -188,16 +188,22 @@ function WbsItemForm({
             )}
             <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)" className="min-h-0 flex-1">
               {notesEditing || !form.notes ? (
-                <textarea
-                  value={form.notes}
-                  onChange={(e) => set('notes', e.target.value)}
-                  onKeyDown={(e) => applyTextareaTab(e, (next) => set('notes', next))}
-                  onFocus={() => setNotesEditing(true)}
-                  onBlur={() => setNotesEditing(false)}
-                  className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
-                  placeholder="작업에 대한 상세 정보 (마크다운 지원)"
-                  autoFocus={notesEditing}
-                />
+                <div className="relative flex-1 min-h-0 flex flex-col">
+                  <DirtyDot
+                    visible={form.notes !== (initial?.notes ?? '')}
+                    className="absolute top-2 right-2 z-10 pointer-events-none"
+                  />
+                  <textarea
+                    value={form.notes}
+                    onChange={(e) => set('notes', e.target.value)}
+                    onKeyDown={(e) => applyTextareaTab(e, (next) => set('notes', next))}
+                    onFocus={() => setNotesEditing(true)}
+                    onBlur={() => setNotesEditing(false)}
+                    className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
+                    placeholder="작업에 대한 상세 정보 (마크다운 지원)"
+                    autoFocus={notesEditing}
+                  />
+                </div>
               ) : (
                 <div
                   onClick={() => setNotesEditing(true)}

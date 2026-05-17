@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { ChevronLeft, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
-import { Button, Card, Spinner, inputClass } from '../components/ui';
+import { Button, Card, Spinner, DirtyDot, inputClass } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
 import type { WorkLog } from '../types';
 
@@ -305,6 +305,11 @@ function EditablePreviewField({
 }) {
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  // 마지막 저장(= 외부 prop) 시점의 값. value prop 이 외부 reload 로 바뀌면 동기화.
+  // dirty = 현재 value !== lastSavedRef. onBlur 시 부모가 persist 호출 후 reload 하면 useEffect 가 lastSavedRef 재동기화.
+  const lastSavedRef = useRef(value);
+  useEffect(() => { lastSavedRef.current = value; }, [value]);
+  const dirty = editing && value !== lastSavedRef.current;
 
   useEffect(() => {
     if (editing && textareaRef.current) {
@@ -317,19 +322,23 @@ function EditablePreviewField({
 
   if (editing) {
     return (
-      <textarea
-        ref={textareaRef}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onKeyDown={(e) => applyTextareaTab(e, onChange)}
-        onBlur={() => {
-          onBlur();
-          setEditing(false);
-        }}
-        placeholder={placeholder}
-        rows={12}
-        className="w-full text-sm font-mono resize-y px-2 py-1.5"
-      />
+      <div className="relative">
+        <DirtyDot visible={dirty} className="absolute top-2 right-2 z-10" />
+        <textarea
+          ref={textareaRef}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => applyTextareaTab(e, onChange)}
+          onBlur={() => {
+            lastSavedRef.current = value;
+            onBlur();
+            setEditing(false);
+          }}
+          placeholder={placeholder}
+          rows={12}
+          className="w-full text-sm font-mono resize-y px-2 py-1.5"
+        />
+      </div>
     );
   }
 

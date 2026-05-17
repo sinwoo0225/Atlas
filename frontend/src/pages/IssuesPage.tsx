@@ -7,7 +7,7 @@ import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
-import { Button, Card, Input, BadgeMenu, EmptyState, Skeleton, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { Button, Card, Input, BadgeMenu, EmptyState, Skeleton, DirtyDot, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -334,13 +334,16 @@ function IssueRow({
           </button>
         </td>
         <td className="py-2 px-3">
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => onUpdate(issue.id, 'title', title)}
-            onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-            className="w-full bg-transparent text-sm text-primary font-medium focus:outline-none focus:bg-surface-2 rounded px-1.5 py-1 transition-colors border border-transparent focus:border-default"
-          />
+          <div className="relative">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => onUpdate(issue.id, 'title', title)}
+              onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+              className="w-full bg-transparent text-sm text-primary font-medium focus:outline-none focus:bg-surface-2 rounded pl-1.5 pr-5 py-1 transition-colors border border-transparent focus:border-default"
+            />
+            <DirtyDot visible={title !== issue.title} className="absolute top-1/2 right-2 -translate-y-1/2" />
+          </div>
         </td>
         <td className="py-2 px-3">
           <BadgeMenu<IssueStatus>
@@ -373,13 +376,19 @@ function IssueRow({
           </select>
         </td>
         <td className="py-2 px-3">
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            onBlur={() => onUpdate(issue.id, 'dueDate', dueDate || undefined)}
-            className={`${inputClass} py-1 text-xs`}
-          />
+          <div className="relative">
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              onBlur={() => onUpdate(issue.id, 'dueDate', dueDate || undefined)}
+              className={`${inputClass} py-1 text-xs pr-6`}
+            />
+            <DirtyDot
+              visible={dueDate !== (issue.dueDate?.slice(0, 10) ?? '')}
+              className="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none"
+            />
+          </div>
         </td>
         <td className="py-2 px-3">
           <button
@@ -502,17 +511,20 @@ function DescriptionField({ value, onSave }: { value: string; onSave: (next: str
 
   if (editing || !value) {
     return (
-      <textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => applyTextareaTab(e, setDraft)}
-        onFocus={() => setEditing(true)}
-        onBlur={() => { setEditing(false); if (draft !== value) onSave(draft); }}
-        rows={8}
-        className={`${inputClass} resize-y font-mono`}
-        placeholder="이슈 상세 설명 (마크다운 지원)"
-        autoFocus={editing}
-      />
+      <div className="relative">
+        <DirtyDot visible={editing && draft !== value} className="absolute top-2 right-2 z-10" />
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => applyTextareaTab(e, setDraft)}
+          onFocus={() => setEditing(true)}
+          onBlur={() => { setEditing(false); if (draft !== value) onSave(draft); }}
+          rows={8}
+          className={`${inputClass} resize-y font-mono`}
+          placeholder="이슈 상세 설명 (마크다운 지원)"
+          autoFocus={editing}
+        />
+      </div>
     );
   }
 
