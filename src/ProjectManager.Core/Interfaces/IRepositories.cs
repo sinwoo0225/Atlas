@@ -17,7 +17,9 @@ public interface IWbsRepository
     Task<IEnumerable<WbsItem>> GetByProjectAsync(int projectId, int? versionId = null);
     Task<WbsItem?> GetByIdAsync(int id);
     Task<WbsItem> CreateAsync(WbsItem item);
-    Task<WbsItem> UpdateAsync(WbsItem item);
+    // expectedUpdatedAt 이 있으면 EF concurrency token 으로 비교 — 불일치 시 DbUpdateConcurrencyException → 409.
+    // null 이면 기존 동작 (사이클 12 외 호출자 — Promote/Sync 같은 내부 로직).
+    Task<WbsItem> UpdateAsync(WbsItem item, DateTime? expectedUpdatedAt = null);
     Task DeleteAsync(int id);
     Task<IEnumerable<WbsVersion>> GetVersionsByProjectAsync(int projectId);
     Task<WbsVersion?> GetVersionByIdAsync(int id);
@@ -32,7 +34,7 @@ public interface IChangeLogRepository
     Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId);
     Task<ChangeLog?> GetByIdAsync(int id);
     Task<ChangeLog> CreateAsync(ChangeLog log);
-    Task<ChangeLog> UpdateAsync(ChangeLog log);
+    Task<ChangeLog> UpdateAsync(ChangeLog log, DateTime? expectedUpdatedAt = null);
     Task DeleteAsync(int id);
     // 역방향 카운트 — Issue/WBS 행 배지용. (SourceIssueId 별 count, SourceWbsItemId 별 count).
     Task<(IReadOnlyDictionary<int, int> ByIssueId, IReadOnlyDictionary<int, int> ByWbsItemId)>
@@ -44,7 +46,7 @@ public interface IMeetingRepository
     Task<IEnumerable<Meeting>> GetByProjectAsync(int projectId, string? keyword = null);
     Task<Meeting?> GetByIdAsync(int id);
     Task<Meeting> CreateAsync(Meeting meeting);
-    Task<Meeting> UpdateAsync(Meeting meeting);
+    Task<Meeting> UpdateAsync(Meeting meeting, DateTime? expectedUpdatedAt = null);
     Task DeleteAsync(int id);
     // C-1 승격 라이프사이클 — Issue/WBS 삭제 시 ActionItem JSON 의 promotedXxxId 키 제거.
     // 반환: 정리된 회의록 수. 각 회의록은 인터셉터에 의해 Update 로 자동 로깅됨.

@@ -38,7 +38,7 @@ public class ChangeLogService(IChangeLogRepository repo)
         log.Impact = dto.Impact; log.RelatedDocLinks = dto.RelatedDocLinks;
         log.SourceIssueId = dto.SourceIssueId;
         log.SourceWbsItemId = dto.SourceWbsItemId;
-        var updated = await repo.UpdateAsync(log);
+        var updated = await repo.UpdateAsync(log, dto.UpdatedAt);
         return ToDto(await repo.GetByIdAsync(updated.Id) ?? updated);
     }
 

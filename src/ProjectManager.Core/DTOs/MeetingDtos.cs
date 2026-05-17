@@ -18,4 +18,5 @@ public record UpdateMeetingDto(
     DateTime Date,
     string? StartTime, string? EndTime,
     string Attendees, string Topic,
-    string Decisions, string Discussion, string ActionItems);
+    string Decisions, string Discussion, string ActionItems,
+    DateTime UpdatedAt);

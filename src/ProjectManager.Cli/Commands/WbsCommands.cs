@@ -118,7 +118,8 @@ internal static class WbsCommands
                 Status: pr.GetValueForOption(statusOpt) ?? existing.Status,
                 IsMilestone: pr.GetValueForOption(msOpt) ?? existing.IsMilestone,
                 Order: pr.GetValueForOption(orderOpt) ?? existing.Order,
-                Notes: pr.GetValueForOption(notesOpt) ?? existing.Notes);
+                Notes: pr.GetValueForOption(notesOpt) ?? existing.Notes,
+                UpdatedAt: existing.UpdatedAt);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;
@@ -150,7 +151,8 @@ internal static class WbsCommands
                 Name: existing.Name, Assignee: existing.Assignee,
                 StartDate: existing.StartDate, EndDate: existing.EndDate,
                 Status: existing.Status, IsMilestone: existing.IsMilestone,
-                Order: existing.Order, Notes: existing.Notes);
+                Order: existing.Order, Notes: existing.Notes,
+                UpdatedAt: existing.UpdatedAt);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;

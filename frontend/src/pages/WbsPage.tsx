@@ -60,6 +60,8 @@ function WbsItemForm({
     notes: initial?.notes ?? '',
     parentId: initial?.parentId ?? parentId ?? null,
   });
+  // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
+  const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
   const [notesEditing, setNotesEditing] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const set = <K extends keyof WbsFormData>(k: K, v: WbsFormData[K]) => setForm((f) => ({ ...f, [k]: v }));
@@ -81,10 +83,44 @@ function WbsItemForm({
       startDate: form.startDate || null, endDate: form.endDate || null,
       status: form.status as any, isMilestone: form.isMilestone,
       order: parseInt(form.order) || 0, notes: form.notes,
+      ...(initial ? { updatedAt: snapshotUpdatedAt } : {}),
     };
     if (initial) {
       const parentChanged = (initial.parentId ?? null) !== form.parentId;
-      await wbsApi.update(projectId, initial.id, payload as any);
+      try {
+        await wbsApi.update(projectId, initial.id, payload as any, { silent: true });
+      } catch (err) {
+        if (err instanceof Error && err.message.startsWith('API error 409')) {
+          toast.warning(
+            '다른 곳에서 먼저 저장됐어요. [서버 값 보기] 로 최신 값을 확인하세요.',
+            {
+              duration: 8000,
+              action: {
+                label: '서버 값 보기',
+                onClick: async () => {
+                  const fresh = await wbsApi.get(projectId, initial.id);
+                  setSnapshotUpdatedAt(fresh.updatedAt);
+                  setForm({
+                    name: fresh.name,
+                    assignee: fresh.assignee,
+                    startDate: fresh.startDate?.slice(0, 10) ?? '',
+                    endDate: fresh.endDate?.slice(0, 10) ?? '',
+                    status: fresh.status,
+                    isMilestone: fresh.isMilestone,
+                    order: (fresh.order ?? 2).toString(),
+                    notes: fresh.notes ?? '',
+                    parentId: fresh.parentId ?? null,
+                  });
+                  toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
+                },
+              },
+            },
+          );
+          return;
+        }
+        toast.error('저장 실패');
+        return;
+      }
       if (parentChanged) {
         const target = findItemName(form.parentId, allItems);
         toast.success(

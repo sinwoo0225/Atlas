@@ -27,8 +27,10 @@ public class MeetingRepository(AppDbContext db) : IMeetingRepository
         return meeting;
     }
 
-    public async Task<Meeting> UpdateAsync(Meeting meeting)
+    public async Task<Meeting> UpdateAsync(Meeting meeting, DateTime? expectedUpdatedAt = null)
     {
+        if (expectedUpdatedAt is DateTime expected)
+            db.Entry(meeting).Property(x => x.UpdatedAt).OriginalValue = expected;
         meeting.UpdatedAt = DateTime.UtcNow;
         db.Meetings.Update(meeting);
         await db.SaveChangesAsync();

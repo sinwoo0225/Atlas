@@ -24,8 +24,12 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         return item;
     }
 
-    public async Task<WbsItem> UpdateAsync(WbsItem item)
+    public async Task<WbsItem> UpdateAsync(WbsItem item, DateTime? expectedUpdatedAt = null)
     {
+        // 동시성 토큰: 클라가 GET 한 시점의 UpdatedAt 을 OriginalValue 로 강제 → DB 의 현재 값과 다르면 EF 가 0행 update → DbUpdateConcurrencyException.
+        // expectedUpdatedAt 이 없으면 내부 호출 (Promote/Sync) — 기존 동작 그대로.
+        if (expectedUpdatedAt is DateTime expected)
+            db.Entry(item).Property(x => x.UpdatedAt).OriginalValue = expected;
         item.UpdatedAt = DateTime.UtcNow;
         db.WbsItems.Update(item);
         await db.SaveChangesAsync();

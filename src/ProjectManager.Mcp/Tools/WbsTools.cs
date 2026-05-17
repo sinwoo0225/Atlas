@@ -74,7 +74,8 @@ public static class WbsTools
             Status: status ?? existing.Status,
             IsMilestone: isMilestone ?? existing.IsMilestone,
             Order: order ?? existing.Order,
-            Notes: notes ?? existing.Notes)));
+            Notes: notes ?? existing.Notes,
+            UpdatedAt: existing.UpdatedAt)));
     }
 
     [McpServerTool(Name = "atlas_wbs_move"),
@@ -94,7 +95,8 @@ public static class WbsTools
             Name: existing.Name, Assignee: existing.Assignee,
             StartDate: existing.StartDate, EndDate: existing.EndDate,
             Status: existing.Status, IsMilestone: existing.IsMilestone,
-            Order: existing.Order, Notes: existing.Notes)));
+            Order: existing.Order, Notes: existing.Notes,
+            UpdatedAt: existing.UpdatedAt)));
     }
 
     [McpServerTool(Name = "atlas_wbs_delete"),

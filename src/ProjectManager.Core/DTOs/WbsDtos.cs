@@ -20,7 +20,8 @@ public record UpdateWbsItemDto(
     int? ParentId,
     string Name, string Assignee,
     DateTime? StartDate, DateTime? EndDate,
-    WbsStatus Status, bool IsMilestone, int Order, string Notes);
+    WbsStatus Status, bool IsMilestone, int Order, string Notes,
+    DateTime UpdatedAt);
 
 public record WbsVersionDto(
     int Id, int ProjectId, string VersionName, string Description,

@@ -157,7 +157,8 @@ internal static class MeetingCommands
                 Topic: pr.GetValueForOption(topicOpt) ?? existing.Topic,
                 Decisions: pr.GetValueForOption(decisOpt) ?? existing.Decisions,
                 Discussion: pr.GetValueForOption(discOpt) ?? existing.Discussion,
-                ActionItems: actionItems);
+                ActionItems: actionItems,
+                UpdatedAt: existing.UpdatedAt);
             var updated = await svc.UpdateAsync(id, dto);
             if (updated is null) { ctx.ExitCode = CliJson.WriteError("not_found", $"Meeting {id} 없음"); return; }
             CliJson.WriteSuccess(Project(updated));

@@ -27,8 +27,10 @@ public class ChangeLogRepository(AppDbContext db) : IChangeLogRepository
         return log;
     }
 
-    public async Task<ChangeLog> UpdateAsync(ChangeLog log)
+    public async Task<ChangeLog> UpdateAsync(ChangeLog log, DateTime? expectedUpdatedAt = null)
     {
+        if (expectedUpdatedAt is DateTime expected)
+            db.Entry(log).Property(x => x.UpdatedAt).OriginalValue = expected;
         log.UpdatedAt = DateTime.UtcNow;
         db.ChangeLogs.Update(log);
         await db.SaveChangesAsync();

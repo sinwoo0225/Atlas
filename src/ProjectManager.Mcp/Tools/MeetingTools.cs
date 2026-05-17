@@ -84,7 +84,8 @@ public static class MeetingTools
             Topic: topic ?? existing.Topic,
             Decisions: decisions ?? existing.Decisions,
             Discussion: discussion ?? existing.Discussion,
-            ActionItems: actionItemsJson ?? existing.ActionItems);
+            ActionItems: actionItemsJson ?? existing.ActionItems,
+            UpdatedAt: existing.UpdatedAt);
         var updated = await svc.UpdateAsync(id, dto)
             ?? throw new InvalidOperationException($"Meeting {id} 없음");
         return McpJson.Serialize(Project(updated));

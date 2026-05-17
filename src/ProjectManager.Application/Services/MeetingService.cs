@@ -48,7 +48,7 @@ public class MeetingService(
         meeting.Attendees = dto.Attendees;
         meeting.Topic = dto.Topic; meeting.Decisions = dto.Decisions;
         meeting.Discussion = dto.Discussion; meeting.ActionItems = dto.ActionItems;
-        var updated = await repo.UpdateAsync(meeting);
+        var updated = await repo.UpdateAsync(meeting, dto.UpdatedAt);
         await SyncMarkdownAsync(updated, oldPath);
         // C-1 양방향 sync (A 방향) — promoted ActionItem.content 변경 시 Issue.Title / WbsItem.Name 도 갱신.
         await SyncPromotedContentAsync(oldActionItems, updated.ActionItems);

@@ -145,6 +145,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
   const [sourceWbsItemId, setSourceWbsItemId] = useState<number | null>(initial?.sourceWbsItemId ?? null);
   const [issuePickerOpen, setIssuePickerOpen] = useState(false);
   const [wbsPickerOpen, setWbsPickerOpen] = useState(false);
+  // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
+  const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
 
   useEffect(() => {
     meetingsApi.getByProject(projectId).then(setMeetings).catch(() => setMeetings([]));
@@ -178,9 +180,39 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
       relatedDocLinks: linkLines.join('\n'),
       sourceIssueId,
       sourceWbsItemId,
+      ...(initial ? { updatedAt: snapshotUpdatedAt } : {}),
     };
     if (initial) {
-      await changeLogsApi.update(projectId, initial.id, payload);
+      try {
+        await changeLogsApi.update(projectId, initial.id, payload, { silent: true });
+      } catch (err) {
+        if (err instanceof Error && err.message.startsWith('API error 409')) {
+          toast.warning(
+            '다른 곳에서 먼저 저장됐어요. [서버 값 보기] 로 최신 값을 확인하세요.',
+            {
+              duration: 8000,
+              action: {
+                label: '서버 값 보기',
+                onClick: async () => {
+                  const fresh = await changeLogsApi.get(projectId, initial.id);
+                  setSnapshotUpdatedAt(fresh.updatedAt);
+                  setDate(fresh.date?.slice(0, 10) ?? '');
+                  setContent(fresh.content ?? '');
+                  setImpact(fresh.impact);
+                  setOtherLinks(extractOtherLinks(fresh.relatedDocLinks).join('\n'));
+                  setSelectedMeetings(extractMeetingIds(fresh.relatedDocLinks));
+                  setSourceIssueId(fresh.sourceIssueId ?? null);
+                  setSourceWbsItemId(fresh.sourceWbsItemId ?? null);
+                  toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
+                },
+              },
+            },
+          );
+          return;
+        }
+        toast.error('저장 실패');
+        return;
+      }
     } else {
       await changeLogsApi.create(payload);
       toast.success('새 변경 이력이 추가됐어요');

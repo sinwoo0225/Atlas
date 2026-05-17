@@ -79,7 +79,7 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Status = dto.Status; item.IsMilestone = dto.IsMilestone;
         if (!parentChanged) item.Order = dto.Order;
         item.Notes = dto.Notes;
-        var updated = await repo.UpdateAsync(item);
+        var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
         if (!wasDone && updated.Status == WbsStatus.Done)
             await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- {updated.Name}");
         // C-1 양방향 sync (B 방향) — Name 변경 시 회의록 ActionItem.content 도 갱신.
