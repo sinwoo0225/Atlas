@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { AlertTriangle, ChevronDown, ChevronRight, Link as LinkIcon, ListTree, Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, FileText, Link as LinkIcon, ListTree, Plus, Search, X } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
+import { changeLogsApi } from '../api/changelogs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { Badge, Button, Card, Input, BadgeMenu, EmptyState, Skeleton, DirtyDot, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
@@ -29,10 +30,12 @@ const PRIORITY_OPTIONS: BadgeMenuOption<IssuePriority>[] = PRIORITY_VALUES.map((
 export function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
   const [linkCountByIssue, setLinkCountByIssue] = useState<Map<number, number>>(new Map());
+  const [sourceCountByIssue, setSourceCountByIssue] = useState<Record<number, number>>({});
   const [filter, setFilter] = useState<IssueStatus | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<IssuePriority | 'All'>('All');
   const [assigneeFilter, setAssigneeFilter] = useState<number | 'All' | 'Unassigned'>('All');
@@ -53,16 +56,18 @@ export function IssuesPage() {
     setError(null);
     setLoading(true);
     try {
-      const [is, rs, ws, lks] = await Promise.all([
+      const [is, rs, ws, lks, srcCounts] = await Promise.all([
         issuesApi.getByProject(pid),
         resourcesApi.getAll(),
         wbsApi.getByProject(pid),
         issueWbsLinksApi.byProject(pid).catch(() => []),
+        changeLogsApi.getSourceCounts(pid).catch(() => ({ byIssueId: {}, byWbsItemId: {} })),
       ]);
       setIssues(is);
       setResources(rs);
       setWbsItems(ws);
       setLinkCountByIssue(computeLinkCounts(lks));
+      setSourceCountByIssue(srcCounts.byIssueId);
     } catch (e) {
       setError(e);
     } finally {
@@ -74,6 +79,7 @@ export function IssuesPage() {
   const refreshIssues = useCallback(() => {
     issuesApi.getByProject(pid).then(setIssues).catch(() => {});
     issueWbsLinksApi.byProject(pid).then((lks) => setLinkCountByIssue(computeLinkCounts(lks))).catch(() => {});
+    changeLogsApi.getSourceCounts(pid).then((c) => setSourceCountByIssue(c.byIssueId)).catch(() => {});
   }, [pid]);
 
   // 펼침 행 안에서 link create/delete 후 카운트만 갱신.
@@ -108,6 +114,23 @@ export function IssuesPage() {
     const { assigneeName: _ignored, ...payload } = next;
     try {
       await issuesApi.update(pid, id, payload as Partial<Issue>);
+
+      // Open/InProgress → Resolved/Closed 전환 시 "변경이력 추가" 토스트.
+      // 한방향 트리거 (Closed → Open 은 안 뜸).
+      if (key === 'status') {
+        const openSet: IssueStatus[] = ['Open', 'InProgress'];
+        const closedSet: IssueStatus[] = ['Resolved', 'Closed'];
+        const wasOpen = openSet.includes(target.status);
+        const nowClosed = closedSet.includes(value as IssueStatus);
+        if (wasOpen && nowClosed) {
+          toast(`'${target.title}' 닫혔어요. 변경이력에 남길까요?`, {
+            action: {
+              label: '변경이력 추가',
+              onClick: () => navigate(`/projects/${pid}/changelogs?newWithSourceIssue=${id}`),
+            },
+          });
+        }
+      }
     } catch {
       // api/client.ts 가 토스트 처리 — 여기서는 행 값만 원복.
       setIssues((prev) => prev.map((i) => (i.id === id ? target : i)));
@@ -285,6 +308,7 @@ export function IssuesPage() {
                 wbsItems={wbsItems}
                 projectId={pid}
                 linkCount={linkCountByIssue.get(it.id) ?? 0}
+                sourceCount={sourceCountByIssue[it.id] ?? 0}
                 expanded={expanded === it.id}
                 onToggleExpand={() => setExpanded((prev) => (prev === it.id ? null : it.id))}
                 onUpdate={updateField}
@@ -321,19 +345,21 @@ export function IssuesPage() {
 }
 
 function IssueRow({
-  issue, resources, wbsItems, projectId, linkCount, expanded, onToggleExpand, onUpdate, onDelete, onLinksChanged,
+  issue, resources, wbsItems, projectId, linkCount, sourceCount, expanded, onToggleExpand, onUpdate, onDelete, onLinksChanged,
 }: {
   issue: Issue;
   resources: Resource[];
   wbsItems: WbsItem[];
   projectId: number;
   linkCount: number;
+  sourceCount: number;
   expanded: boolean;
   onToggleExpand: () => void;
   onUpdate: <K extends keyof Issue>(id: number, key: K, value: Issue[K]) => void;
   onDelete: (id: number, e: React.MouseEvent) => void;
   onLinksChanged: () => void;
 }) {
+  const navigate = useNavigate();
   const [title, setTitle] = useState(issue.title);
   const [dueDate, setDueDate] = useState(issue.dueDate?.slice(0, 10) ?? '');
 
@@ -375,6 +401,19 @@ function IssueRow({
               >
                 <Badge variant="neutral" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
                   <LinkIcon size={10} className="mr-0.5" /> {linkCount}
+                </Badge>
+              </button>
+            )}
+            {sourceCount > 0 && (
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${projectId}/changelogs?sourceIssue=${issue.id}`)}
+                className="shrink-0"
+                title="이 이슈가 출처인 변경이력 보기"
+                aria-label={`출처 변경이력 ${sourceCount}건 보기`}
+              >
+                <Badge variant="info" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
+                  <FileText size={10} className="mr-0.5" /> {sourceCount}
                 </Badge>
               </button>
             )}

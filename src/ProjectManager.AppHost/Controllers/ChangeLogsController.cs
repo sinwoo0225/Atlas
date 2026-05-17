@@ -12,6 +12,11 @@ public class ChangeLogsController(ChangeLogService svc) : ControllerBase
     public async Task<IActionResult> GetAll(int projectId) =>
         Ok(await svc.GetByProjectAsync(projectId));
 
+    // 역방향 카운트 — Issue/WBS 행 배지용 (lite shape: 두 dictionary).
+    [HttpGet("source-counts")]
+    public async Task<IActionResult> GetSourceCounts(int projectId) =>
+        Ok(await svc.GetSourceCountsAsync(projectId));
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int projectId, int id) =>
         await svc.GetByIdAsync(id) is { } dto ? Ok(dto) : NotFound();

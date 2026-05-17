@@ -40,4 +40,23 @@ public class ChangeLogRepository(AppDbContext db) : IChangeLogRepository
         var item = await db.ChangeLogs.FindAsync(id);
         if (item != null) { db.ChangeLogs.Remove(item); await db.SaveChangesAsync(); }
     }
+
+    public async Task<(IReadOnlyDictionary<int, int> ByIssueId, IReadOnlyDictionary<int, int> ByWbsItemId)>
+        GetSourceCountsAsync(int projectId)
+    {
+        // 두 GroupBy 를 별도 쿼리로 (각각 single SourceXxxId 필터 + count). SQLite 단순 select count.
+        var byIssue = await db.ChangeLogs
+            .Where(c => c.ProjectId == projectId && c.SourceIssueId != null)
+            .GroupBy(c => c.SourceIssueId!.Value)
+            .Select(g => new { Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        var byWbs = await db.ChangeLogs
+            .Where(c => c.ProjectId == projectId && c.SourceWbsItemId != null)
+            .GroupBy(c => c.SourceWbsItemId!.Value)
+            .Select(g => new { Id = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Id, x => x.Count);
+
+        return (byIssue, byWbs);
+    }
 }

@@ -49,6 +49,12 @@ public class ChangeLogService(IChangeLogRepository repo)
         return true;
     }
 
+    public async Task<ChangeLogSourceCountsDto> GetSourceCountsAsync(int projectId)
+    {
+        var (byIssue, byWbs) = await repo.GetSourceCountsAsync(projectId);
+        return new ChangeLogSourceCountsDto(byIssue, byWbs);
+    }
+
     private static ChangeLogDto ToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,
         c.RelatedDocLinks,

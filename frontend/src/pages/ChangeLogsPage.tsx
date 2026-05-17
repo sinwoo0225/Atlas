@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactECharts from 'echarts-for-react';
 import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
@@ -121,10 +121,11 @@ function formatLinkLabel(raw: string): string {
   }
 }
 
-function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, onSave, onCancel }: {
+function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, defaultSourceIssueId, onSave, onCancel }: {
   projectId: number; initial?: ChangeLog;
   issues: Issue[]; wbsItems: WbsItem[];
   onRefreshIssues: () => void;
+  defaultSourceIssueId?: number | null;
   onSave: () => void; onCancel: () => void;
 }) {
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
@@ -138,7 +139,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
   );
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [meetingKeyword, setMeetingKeyword] = useState('');
-  const [sourceIssueId, setSourceIssueId] = useState<number | null>(initial?.sourceIssueId ?? null);
+  // initial 우선, 없으면 defaultSourceIssueId (Issue 닫힘 토스트 → 자동 새 폼 경로).
+  const [sourceIssueId, setSourceIssueId] = useState<number | null>(initial?.sourceIssueId ?? defaultSourceIssueId ?? null);
   const [sourceWbsItemId, setSourceWbsItemId] = useState<number | null>(initial?.sourceWbsItemId ?? null);
   const [issuePickerOpen, setIssuePickerOpen] = useState(false);
   const [wbsPickerOpen, setWbsPickerOpen] = useState(false);
@@ -361,16 +363,37 @@ export function ChangeLogsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [logs, setLogs] = useState<ChangeLog[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [wbsItems, setWbsItems] = useState<WbsItem[]>([]);
-  const [showForm, setShowForm] = useState(false);
+  // URL ?newWithSourceIssue=N — Issue 닫힘 토스트의 "변경이력 추가" 클릭으로 도달.
+  // mount 시 1회 동기 읽어 초기값 결정 (useState lazy init — set-state-in-effect 회피).
+  const initialNewWithSourceIssue = (() => {
+    const p = new URLSearchParams(window.location.search).get('newWithSourceIssue');
+    return p ? Number(p) : null;
+  })();
+  const [showForm, setShowForm] = useState(initialNewWithSourceIssue != null);
+  const [defaultSourceIssueId, setDefaultSourceIssueId] = useState<number | null>(initialNewWithSourceIssue);
   const [editing, setEditing] = useState<ChangeLog | null>(null);
   const [keyword, setKeyword] = useState('');
   const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'withSource' | 'noSource'>('all');
+  // URL ?sourceIssue=N / ?sourceWbs=N — Issue/WBS 행 배지 클릭으로 도달했을 때 자동 필터.
+  const filterSourceIssue = searchParams.get('sourceIssue');
+  const filterSourceWbs = searchParams.get('sourceWbs');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+
+  // 위 lazy init 으로 소비한 쿼리는 URL 에서 제거 (시각적 위생). 외부 시스템(URL) 동기화이므로 effect OK.
+  useEffect(() => {
+    if (searchParams.has('newWithSourceIssue')) {
+      searchParams.delete('newWithSourceIssue');
+      setSearchParams(searchParams, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const load = useCallback(async () => {
     setError(null);
@@ -408,15 +431,31 @@ export function ChangeLogsPage() {
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
+    const filterIssueIdNum = filterSourceIssue != null ? Number(filterSourceIssue) : null;
+    const filterWbsIdNum = filterSourceWbs != null ? Number(filterSourceWbs) : null;
     return logs.filter((l) => {
       if (impactFilter !== 'All' && l.impact !== impactFilter) return false;
+      const hasSource = l.sourceIssueId != null || l.sourceWbsItemId != null;
+      if (sourceFilter === 'withSource' && !hasSource) return false;
+      if (sourceFilter === 'noSource' && hasSource) return false;
+      // URL 쿼리 — 특정 source 만
+      if (filterIssueIdNum != null && l.sourceIssueId !== filterIssueIdNum) return false;
+      if (filterWbsIdNum != null && l.sourceWbsItemId !== filterWbsIdNum) return false;
       if (kw) {
         const hay = `${l.content} ${l.createdBy ?? ''} ${l.updatedBy ?? ''} ${l.relatedDocLinks ?? ''}`.toLowerCase();
         if (!hay.includes(kw)) return false;
       }
       return true;
     });
-  }, [logs, keyword, impactFilter]);
+  }, [logs, keyword, impactFilter, sourceFilter, filterSourceIssue, filterSourceWbs]);
+
+  const clearSourceQuery = () => {
+    if (searchParams.has('sourceIssue') || searchParams.has('sourceWbs')) {
+      searchParams.delete('sourceIssue');
+      searchParams.delete('sourceWbs');
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -486,8 +525,31 @@ export function ChangeLogsPage() {
               <option key={v} value={v}>{v}</option>
             ))}
           </select>
-          {(keyword || impactFilter !== 'All') && (
-            <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setImpactFilter('All'); }}>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as 'all' | 'withSource' | 'noSource')}
+            className={`${inputClassNoW} py-1.5 text-sm w-32`}
+          >
+            <option value="all">출처 전체</option>
+            <option value="withSource">출처 있음</option>
+            <option value="noSource">출처 없음</option>
+          </select>
+          {/* URL 쿼리 (?sourceIssue=N / ?sourceWbs=N) 활성 — 자동 필터 안내 + 해제 */}
+          {(filterSourceIssue || filterSourceWbs) && (
+            <Badge variant="accent" size="sm" className="flex items-center gap-1">
+              {filterSourceIssue ? `Issue #${filterSourceIssue} 출처` : `WBS #${filterSourceWbs} 출처`}
+              <button
+                type="button"
+                onClick={clearSourceQuery}
+                className="hover:opacity-70"
+                aria-label="출처 필터 해제"
+              >
+                <X size={11} />
+              </button>
+            </Badge>
+          )}
+          {(keyword || impactFilter !== 'All' || sourceFilter !== 'all' || filterSourceIssue || filterSourceWbs) && (
+            <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setImpactFilter('All'); setSourceFilter('all'); clearSourceQuery(); }}>
               초기화
             </Button>
           )}
@@ -608,8 +670,9 @@ export function ChangeLogsPage() {
           issues={issues}
           wbsItems={wbsItems}
           onRefreshIssues={refreshIssues}
-          onSave={() => { setShowForm(false); refreshLogs(); }}
-          onCancel={() => setShowForm(false)}
+          defaultSourceIssueId={defaultSourceIssueId}
+          onSave={() => { setShowForm(false); setDefaultSourceIssueId(null); refreshLogs(); }}
+          onCancel={() => { setShowForm(false); setDefaultSourceIssueId(null); }}
         />
       )}
       {editing && (

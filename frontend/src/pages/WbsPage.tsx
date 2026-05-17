@@ -2,9 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Link as LinkIcon } from 'lucide-react';
+import { Plus, Pencil, X, Save, Diamond, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Link as LinkIcon, FileText } from 'lucide-react';
 import { wbsApi } from '../api/wbs';
 import { resourcesApi } from '../api/resources';
+import { changeLogsApi } from '../api/changelogs';
 import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
@@ -371,15 +372,18 @@ function DateEditModal({
   );
 }
 
-function WbsRow({ item, projectId, depth = 0, matchedIds, linkCountByWbs, onEdit, onDelete, onAddChild, onStatusChange }: {
+function WbsRow({ item, projectId, depth = 0, matchedIds, linkCountByWbs, sourceCountByWbs, onEdit, onDelete, onAddChild, onStatusChange }: {
   item: WbsItem; projectId: number; depth?: number;
   matchedIds?: Set<number>;
   linkCountByWbs: Map<number, number>;
+  sourceCountByWbs: Record<number, number>;
   onEdit: (item: WbsItem) => void; onDelete: (id: number) => void;
   onAddChild: (parentId: number) => void;
   onStatusChange: (item: WbsItem, status: WbsStatus) => void;
 }) {
+  const navigate = useNavigate();
   const linkCount = linkCountByWbs.get(item.id) ?? 0;
+  const sourceCount = sourceCountByWbs[item.id] ?? 0;
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.order);
@@ -424,6 +428,19 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, linkCountByWbs, onEdit
               >
                 <Badge variant="neutral" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
                   <LinkIcon size={10} className="mr-0.5" /> {linkCount}
+                </Badge>
+              </button>
+            )}
+            {sourceCount > 0 && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); navigate(`/projects/${projectId}/changelogs?sourceWbs=${item.id}`); }}
+                className="ml-1 shrink-0"
+                title="이 작업이 출처인 변경이력 보기"
+                aria-label={`출처 변경이력 ${sourceCount}건 보기`}
+              >
+                <Badge variant="info" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
+                  <FileText size={10} className="mr-0.5" /> {sourceCount}
                 </Badge>
               </button>
             )}
@@ -480,6 +497,7 @@ function WbsRow({ item, projectId, depth = 0, matchedIds, linkCountByWbs, onEdit
         <WbsRow key={child.id} item={child} projectId={projectId} depth={depth + 1}
           matchedIds={matchedIds}
           linkCountByWbs={linkCountByWbs}
+          sourceCountByWbs={sourceCountByWbs}
           onEdit={onEdit} onDelete={onDelete} onAddChild={onAddChild} onStatusChange={onStatusChange} />
       ))}
     </>
@@ -494,6 +512,7 @@ export function WbsPage() {
   const [resources, setResources] = useState<Resource[]>([]);
   const [allIssues, setAllIssues] = useState<Issue[]>([]);
   const [linkCountByWbs, setLinkCountByWbs] = useState<Map<number, number>>(new Map());
+  const [sourceCountByWbs, setSourceCountByWbs] = useState<Record<number, number>>({});
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
   const [view, setView] = useState<'table' | 'gantt'>('table');
   const [showForm, setShowForm] = useState(false);
@@ -536,18 +555,20 @@ export function WbsPage() {
     setError(null);
     setLoading(true);
     try {
-      const [is, vs, rs, ais, lks] = await Promise.all([
+      const [is, vs, rs, ais, lks, srcCounts] = await Promise.all([
         wbsApi.getByProject(pid, currentVersion),
         wbsApi.getVersions(pid),
         resourcesApi.getAll(),
         issuesApi.getByProject(pid),
         issueWbsLinksApi.byProject(pid).catch(() => []),
+        changeLogsApi.getSourceCounts(pid).catch(() => ({ byIssueId: {}, byWbsItemId: {} })),
       ]);
       setItems(is);
       setVersions(vs);
       setResources(rs);
       setAllIssues(ais);
       setLinkCountByWbs(computeLinkCountsByWbs(lks));
+      setSourceCountByWbs(srcCounts.byWbsItemId);
     } catch (e) {
       setError(e);
     } finally {
@@ -560,6 +581,7 @@ export function WbsPage() {
     wbsApi.getByProject(pid, currentVersion).then(setItems).catch(() => {});
     wbsApi.getVersions(pid).then(setVersions).catch(() => {});
     issueWbsLinksApi.byProject(pid).then((lks) => setLinkCountByWbs(computeLinkCountsByWbs(lks))).catch(() => {});
+    changeLogsApi.getSourceCounts(pid).then((c) => setSourceCountByWbs(c.byWbsItemId)).catch(() => {});
   }, [pid, currentVersion]);
 
   // RelatedIssuesSection 에서 link create/delete 후 카운트만 갱신 (모달 안에서 호출).
@@ -757,6 +779,7 @@ export function WbsPage() {
                   projectId={pid}
                   matchedIds={matchedIds}
                   linkCountByWbs={linkCountByWbs}
+                  sourceCountByWbs={sourceCountByWbs}
                   onEdit={setEditing}
                   onDelete={handleDelete}
                   onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}

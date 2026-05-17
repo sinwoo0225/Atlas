@@ -34,6 +34,9 @@ public interface IChangeLogRepository
     Task<ChangeLog> CreateAsync(ChangeLog log);
     Task<ChangeLog> UpdateAsync(ChangeLog log);
     Task DeleteAsync(int id);
+    // 역방향 카운트 — Issue/WBS 행 배지용. (SourceIssueId 별 count, SourceWbsItemId 별 count).
+    Task<(IReadOnlyDictionary<int, int> ByIssueId, IReadOnlyDictionary<int, int> ByWbsItemId)>
+        GetSourceCountsAsync(int projectId);
 }
 
 public interface IMeetingRepository
