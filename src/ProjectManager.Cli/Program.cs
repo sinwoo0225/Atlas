@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ProjectManager.AppHost.Composition;
-using ProjectManager.Cli;
 using ProjectManager.Cli.Commands;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;

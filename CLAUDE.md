@@ -22,8 +22,8 @@
 - **백엔드만**: `dotnet run --project src/ProjectManager.WebService`
 - **프론트만**: `cd frontend; npm run dev` (Vite 가 `/api` → `:5200` 프록시)
 - **빌드 / 린트**: `cd frontend; npm run build` / `npm run lint`
-- **배포**: `./publish.ps1` (DesktopApp single-file + `wwwroot/` + `Atlas-Cli.exe` → `Atlas-*.zip`, `-SkipZip` 가능). `./publish.ps1 -Server` 는 `Atlas-Server.exe` + 운영 템플릿 zip.
-- **CLI (외부 자동화·Claude Code 세션)**: `publish/Atlas-Cli.exe`. 같은 데이터 폴더 자동 발견. 사용법은 레포 루트 `ATLAS-CLI-USAGE.md`.
+- **배포**: `./publish.ps1` (DesktopApp single-file + `wwwroot/` + `Atlas-Cli.exe` + `Atlas-Mcp.exe` → `Atlas-*.zip`, `-SkipZip` 가능). `./publish.ps1 -Server` 는 `Atlas-Server.exe` + 운영 템플릿 zip.
+- **외부 자동화 (Claude Code 세션)**: 쉘은 `publish/Atlas-Cli.exe` (CLI), 네이티브 도구 콜은 `publish/Atlas-Mcp.exe` (stdio MCP). 같은 데이터 폴더 자동 발견. 사용법·도구 표·등록 가이드는 레포 루트 `ATLAS-CLI-USAGE.md`.
 - **EF 마이그레이션**: 반드시 **레포 루트**에서 (`dotnet-tools.json` 이 v8.0.16 에 핀 — 글로벌 v10 은 net8 못 읽음). `dotnet ef migrations add <Name> --project src/ProjectManager.Infrastructure --startup-project src/ProjectManager.WebService`. 앱 시작 시 `AppHostFactory.Build` 의 `db.Database.Migrate()` 가 자동 적용.
 
 ## 더 보기

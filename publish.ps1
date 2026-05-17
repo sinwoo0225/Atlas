@@ -144,6 +144,18 @@ $cli = Join-Path $publishDir 'Atlas-Cli.exe'
 if (-not (Test-Path $cli)) { throw "필수 파일 누락: $cli" }
 Write-Host "  - Atlas-Cli.exe   : OK" -ForegroundColor Green
 
+# MCP 서버 동봉 — Claude Code .mcp.json 등록 1줄로 자연어 → 도구 콜 (사이클 7).
+Write-Host "==> Atlas-Mcp publish (단일 파일, stdio MCP 서버)" -ForegroundColor Cyan
+dotnet publish (Join-Path $root 'src/ProjectManager.Mcp/ProjectManager.Mcp.csproj') `
+    -c Release -r win-x64 --self-contained `
+    -p:PublishSingleFile=true `
+    -p:IncludeNativeLibrariesForSelfExtract=true `
+    -o $publishDir
+if ($LASTEXITCODE -ne 0) { throw "Atlas-Mcp publish 실패" }
+$mcp = Join-Path $publishDir 'Atlas-Mcp.exe'
+if (-not (Test-Path $mcp)) { throw "필수 파일 누락: $mcp" }
+Write-Host "  - Atlas-Mcp.exe   : OK" -ForegroundColor Green
+
 # 외부 자동화용 사용법 매뉴얼을 publish 폴더에도 동봉 — 배포 zip 만 받은 사용자도 발견 용이.
 $usage = Join-Path $root 'ATLAS-CLI-USAGE.md'
 if (Test-Path $usage) {

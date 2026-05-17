@@ -1,6 +1,11 @@
-# Atlas CLI 사용법
+# Atlas 외부 자동화 매뉴얼 (CLI + MCP)
 
-> 외부 프로세스(특히 다른 Claude Code 세션)에서 Atlas 데이터를 자동으로 넣고 빼기 위한 단일 파일 exe. 자연어 입력 → Claude Code → CLI → SQLite. 백엔드 서버 포트가 열려 있지 않아도 작동 (같은 DB 파일을 직접 연다).
+> 외부 프로세스(특히 다른 Claude Code 세션)에서 Atlas 데이터를 자동으로 넣고 빼기 위한 두 가지 진입로. 자연어 입력 → Claude Code → (CLI exe 또는 MCP 도구 콜) → SQLite. 백엔드 서버 포트가 열려 있지 않아도 작동 (같은 DB 파일을 직접 연다).
+>
+> - **CLI (`Atlas-Cli.exe`)** — 셸 진입. PowerShell/Bash 스크립트, 사람이 직접 호출, CI/CD 친화.
+> - **MCP (`Atlas-Mcp.exe`)** — Claude Code 네이티브 도구 콜. 자연어 한 줄 → 도구 자동 선택 → 결과. friction 최소.
+>
+> 두 진입로는 같은 `AppServicesRegistration` 서비스 그래프를 공유 — 비즈니스 룰, ActivityLog, IAuditable, WAL 등 동일. 일관성 보장.
 
 ## What
 
@@ -193,7 +198,90 @@ $root = .\Atlas-Cli.exe wbs create --project 1 --name "백엔드" | ConvertFrom-
 - **CLI 가 만든 데이터는 GUI 에서 새로고침해야 보임** — Atlas.exe 가 실시간 푸시를 받지는 않는다 (당분간)
 - **활동 페이지 actor** 가 `claude-code` 로 박혀 사람 변경과 구분됨. CLI 호출 전에 `$env:ATLAS_CLI_ACTOR` 를 바꿔 분기 가능
 
+---
+
+# MCP 서버 (Atlas-Mcp.exe)
+
+> Claude Code 가 네이티브 도구 콜로 Atlas 데이터에 접근. 셸/JSON 파싱/escape 함정 없이 자연어 → 도구 자동 선택. 등록 1 번 한 뒤로는 그냥 한국어로 요청하면 됨.
+
+## 등록 — Claude Code `.mcp.json` 또는 CLI
+
+### 방법 A — 프로젝트 `.mcp.json` (이 레포 또는 다른 프로젝트 루트에)
+
+```json
+{
+  "mcpServers": {
+    "atlas": {
+      "command": "C:\\Users\\<user>\\Documents\\Workspace\\start\\publish\\Atlas-Mcp.exe"
+    }
+  }
+}
+```
+
+`<user>` 와 경로는 본인 환경에 맞게. 절대경로 권장 (Claude Code 가 어느 폴더에서 시작돼도 작동).
+
+### 방법 B — Claude Code CLI
+
+```powershell
+claude mcp add atlas "C:\Users\<user>\...\publish\Atlas-Mcp.exe"
+```
+
+### actor (선택)
+
+```powershell
+[Environment]::SetEnvironmentVariable('ATLAS_MCP_ACTOR', 'claude-code-mcp', 'User')
+```
+
+기본 `claude-code-mcp` — CLI 의 `claude-code` 와 구분되어 활동 페이지에서 진입로 분리 추적 가능. env 가 시스템 또는 사용자 변수로 박혀야 Claude Code 가 spawn 한 자식 프로세스에 전달됨.
+
+## 검증
+
+Claude Code 재시작 후:
+
+```
+/mcp
+```
+
+→ `atlas` 서버 connected + 21 tools listed (`atlas_project_list`, `atlas_issue_create`, ...).
+
+## 도구 목록 (21 개 — CLI verb 와 1:1)
+
+| 도구 | 설명 |
+|---|---|
+| `atlas_project_list` / `_get` / `_create` / `_update` / `_delete` | 프로젝트 CRUD (5) |
+| `atlas_issue_list` (project + status?) / `_get` / `_create` / `_update` / `_delete` | 이슈 CRUD (5) |
+| `atlas_wbs_list` (project + version?) / `_get` / `_create` / `_update` / `_move` / `_delete` | WBS CRUD + 트리 이동 (6) |
+| `atlas_meeting_list` (project + keyword?) / `_get` / `_create` / `_update` / `_delete` | 회의록 CRUD (5) |
+
+각 도구 `[Description]` 으로 LLM 이 의도 추론. `update` 는 null 필드 = 기존 값 유지 (CLI 와 동일). `wbs_move` 는 root 화 (`root=true`) 또는 새 parent 지정.
+
+### ActionItems 입력 (회의록)
+
+`atlas_meeting_create` / `_update` 의 `actionItemsJson` 파라미터에 JSON 배열 문자열 전달:
+
+```
+[{"id":"a1","content":"검증 완료","assignee":"sinwoo","deadline":"2026-05-25"}]
+```
+
+LLM 이 자연어 → JSON string 생성 (Claude 는 이걸 잘 함). CLI 의 PowerShell escape 함정 없음 — MCP 도구 콜은 구조화된 인자 전달.
+
+## 시나리오 예시 (Claude Code 자연어)
+
+- "프로젝트 4 의 오픈 이슈 보여 줘" → `atlas_issue_list(projectId=4, status=Open)`
+- "프로젝트 4 에 '5월 회고' 라는 High 이슈 추가해" → `atlas_issue_create(projectId=4, title="5월 회고", priority=High)`
+- "프로젝트 4 에 오늘 회의록 만들어. 주제 'CLI/MCP 검증', action items 는 ['검증 완료', '문서 정리']" → `atlas_meeting_create(projectId=4, date="2026-05-17", topic="CLI/MCP 검증", actionItemsJson="[{...},{...}]")`
+- "WBS 12 를 root 로 옮겨" → `atlas_wbs_move(id=12, root=true)`
+
+## 주의
+
+- **stdio 통신**: stdout 오염 금지 — 로깅은 ClearProviders 적용됨. PR 시 `Console.WriteLine` 추가 금지
+- **WAL + 동시성**: Atlas.exe / Atlas-Cli.exe / Atlas-Mcp.exe 셋 다 같은 DB 동시 사용 안전
+- **GUI 새로고침**: MCP 가 만든 데이터도 GUI 는 다음 새로고침에 보임
+- **에러**: 도구 메서드의 예외는 MCP SDK 가 `isError` 응답으로 자동 변환. LLM 이 사용자에게 자연 응답으로 변환
+
+---
+
 ## 후속
 
-- 사이클 7 — MCP 서버 (`Atlas-Mcp.exe`). CLI 와 같은 코어 위에 stdio MCP 노출. Claude Code `.mcp.json` 등록 한 줄로 도구 콜 가능. 본 매뉴얼에 등록 가이드 추가 예정.
-- 핵심 4 엔티티 외 (ChangeLog / WorkLog / DevInfo / Resource) 의 verb 는 사용 패턴 보고 후속 추가.
+- 핵심 4 엔티티 외 (ChangeLog / WorkLog / DevInfo / Resource) 의 verb/도구는 사용 패턴 보고 후속 추가
+- ActionItems 같은 JSON-in-TEXT 필드의 타입화 입력 (record[] 직접 지원) — SDK 검증 후 업그레이드
