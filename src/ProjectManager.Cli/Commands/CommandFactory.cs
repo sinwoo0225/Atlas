@@ -14,6 +14,10 @@ internal static class CommandFactory
         root.AddCommand(IssueCommands.Build(services));
         root.AddCommand(WbsCommands.Build(services));
         root.AddCommand(MeetingCommands.Build(services));
+        root.AddCommand(ChangeLogCommands.Build(services));
+        root.AddCommand(WorkLogCommands.Build(services));
+        root.AddCommand(DevInfoCommands.Build(services));
+        root.AddCommand(ResourceCommands.Build(services));
         return root;
     }
 }

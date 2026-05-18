@@ -84,6 +84,43 @@ atlas-cli meeting create --project N --date YYYY-MM-DD --topic "..."
                           --action-items '[...]'      # PowerShell 비추천, file/stdin 사용]
 atlas-cli meeting update --id N [...]
 atlas-cli meeting delete --id N
+
+atlas-cli changelog list --project N
+atlas-cli changelog get --id N
+atlas-cli changelog create --project N --date YYYY-MM-DD
+                           [--content "md" | --content-file PATH    # 또는 - (stdin)
+                            --impact Low|Medium|High|Critical
+                            --related-doc-links "..."
+                            --source-issue N --source-wbs N]
+atlas-cli changelog update --id N [...]
+atlas-cli changelog delete --id N
+
+atlas-cli worklog week --project N [--week-start YYYY-MM-DD]   # 미지정 시 오늘 기준 주 (Monday)
+atlas-cli worklog upsert --project N --date YYYY-MM-DD
+                         [--done "md" | --done-file PATH|-
+                          --plan "md" | --plan-file PATH|-
+                          --issues "md" | --issues-file PATH|-]
+# delete 는 없음 (ProjectId+Date upsert 도메인)
+
+atlas-cli devinfo list --project N
+atlas-cli devinfo get --id N
+atlas-cli devinfo create --project N --title "..." --type Markdown|File|Link
+                         [--storage Copy|Reference                       # File 타입에만 의미
+                          --content "md" | --content-file PATH|-          # Markdown 타입
+                          --file-path "..."                               # File 타입
+                          --url "https://..."                             # Link 타입
+                          --tags "api, auth"]
+atlas-cli devinfo update --id N [...]
+atlas-cli devinfo delete --id N
+atlas-cli devinfo tags --project N [--sort alpha|freq]                    # distinct 태그 list
+
+atlas-cli resource list                                                   # 전역 — --project 없음
+atlas-cli resource get --id N
+atlas-cli resource create --name "..." [--type Person|Equipment
+                                        --department ... --email ... --phone ... --notes ...]
+atlas-cli resource update --id N [...]
+atlas-cli resource delete --id N
+atlas-cli resource assignments --id N                                     # 할당된 WBS 목록
 ```
 
 자세한 옵션 설명은 `atlas-cli <verb> <action> --help`.
@@ -249,7 +286,7 @@ Claude Code 재시작 후:
 
 → `atlas` 서버 connected + 21 tools listed (`atlas_project_list`, `atlas_issue_create`, ...).
 
-## 도구 목록 (21 개 — CLI verb 와 1:1)
+## 도구 목록 (40 개 — CLI verb 와 1:1)
 
 | 도구 | 설명 |
 |---|---|
@@ -257,6 +294,10 @@ Claude Code 재시작 후:
 | `atlas_issue_list` (project + status?) / `_get` / `_create` / `_update` / `_delete` | 이슈 CRUD (5) |
 | `atlas_wbs_list` (project + version?) / `_get` / `_create` / `_update` / `_move` / `_delete` | WBS CRUD + 트리 이동 (6) |
 | `atlas_meeting_list` (project + keyword?) / `_get` / `_create` / `_update` / `_delete` | 회의록 CRUD (5) |
+| `atlas_changelog_list` (project) / `_get` / `_create` / `_update` / `_delete` | 변경이력 CRUD (5) |
+| `atlas_worklog_week` (project + weekStart?) / `_upsert` (project + date) | 업무일지 — Upsert 도메인 (2) |
+| `atlas_devinfo_list` (project) / `_get` / `_create` / `_update` / `_delete` / `_tags` (project + sort?) | 개발 정보 CRUD + tags (6) |
+| `atlas_resource_list` / `_get` / `_create` / `_update` / `_delete` / `_assignments` (id) | 리소스 CRUD + 할당 (전역, 6) |
 
 각 도구 `[Description]` 으로 LLM 이 의도 추론. `update` 는 null 필드 = 기존 값 유지 (CLI 와 동일). `wbs_move` 는 root 화 (`root=true`) 또는 새 parent 지정.
 
@@ -288,5 +329,6 @@ LLM 이 자연어 → JSON string 생성 (Claude 는 이걸 잘 함). CLI 의 Po
 
 ## 후속
 
-- 핵심 4 엔티티 외 (ChangeLog / WorkLog / DevInfo / Resource) 의 verb/도구는 사용 패턴 보고 후속 추가
+- ChangeLog / WorkLog / DevInfo / Resource 의 CLI + MCP 전부 추가 완료 (사이클 40 / 41 — 2026-05-18). "CLI/MCP 4 엔티티 외 도구 추가" 백로그 완전 마감
+- 보류된 helper — WorkLog `append-done` / DevInfo `rename-tag` `merge-tags` 는 사용 패턴 누적 후 추가
 - ActionItems 같은 JSON-in-TEXT 필드의 타입화 입력 (record[] 직접 지원) — SDK 검증 후 업그레이드
