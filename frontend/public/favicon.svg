@@ -1,17 +1,26 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
-  <rect x="0" y="0" width="256" height="256" rx="48" ry="48" fill="#141414"/>
-  <g stroke="#5b6a8a" stroke-width="6" stroke-linecap="round" fill="none">
-    <line x1="76"  y1="74"  x2="128" y2="128"/>
-    <line x1="196" y1="80"  x2="128" y2="128"/>
-    <line x1="72"  y1="190" x2="128" y2="128"/>
-    <line x1="200" y1="196" x2="128" y2="128"/>
-  </g>
-  <g fill="#7c8db5" stroke="#3f3f46" stroke-width="2">
-    <circle cx="76"  cy="74"  r="20"/>
-    <circle cx="196" cy="80"  r="20"/>
-    <circle cx="72"  cy="190" r="20"/>
-    <circle cx="200" cy="196" r="20"/>
-  </g>
-  <circle cx="128" cy="128" r="38" fill="#c9a96b" stroke="#3f3f46" stroke-width="3"/>
-  <circle cx="118" cy="118" r="10" fill="#dec38d" opacity="0.7"/>
+  <!-- Atlas Calligraphic "A" — 굵기 contrast (얇은 upstroke + 굵은 downstroke) + swash 가로바 + apex dot. -->
+  <rect x="0" y="0" width="256" height="256" rx="64" ry="64" fill="#141414"/>
+
+  <!-- 좌측 사선 — hairline upstroke. 얇음. -->
+  <path d="M 122 52 L 132 52 L 70 220 L 56 220 Z" fill="#c9a96b"/>
+
+  <!-- 우측 사선 — 굵은 downstroke (캘리그라피의 main weight). -->
+  <path d="M 124 52 L 152 52 L 202 220 L 174 220 Z" fill="#c9a96b"/>
+
+  <!-- 가로 바 — swash. 좌측 살짝 굵고 우측 가늘게 taper, 끝부분 살짝 위로 올라가는 꼬리. -->
+  <path d="M 78 154
+           Q 130 148 168 156
+           Q 188 160 198 144
+           Q 180 168 168 168
+           Q 130 174 78 168 Z" fill="#c9a96b"/>
+
+  <!-- Apex dot — 캘리그라피 잉크의 점 (테르미널). -->
+  <circle cx="127" cy="42" r="6" fill="#dec38d"/>
+  <circle cx="125" cy="40" r="2" fill="#141414" opacity="0.5"/>
+
+  <!-- Base serif — 좌측 base 의 우아한 outward swash. -->
+  <path d="M 56 220 Q 38 224 32 234 Q 50 228 62 226 Z" fill="#c9a96b"/>
+  <!-- 우측 base serif — 대칭이 아닌 짧게 (캘리그라피의 손맛). -->
+  <path d="M 202 220 Q 218 224 224 232 Q 210 226 196 226 Z" fill="#c9a96b"/>
 </svg>
