@@ -30,15 +30,36 @@ Atlas 는 두 가지 외부 진입로를 함께 배포합니다 — `publish/` �
 
 둘 다 GUI 와 같은 데이터 폴더를 자동 발견 (`%LOCALAPPDATA%\Atlas\config.json`), SQLite WAL 모드로 Atlas.exe 가 켜진 상태에서도 동시 안전. 활동 로그에 actor (`claude-code` / `claude-code-mcp`) 로 기록되어 GUI 활동 페이지에서 사람 작업과 분리 추적.
 
-도구 21 종 · 시나리오 · PowerShell 인코딩 가이드 등 자세한 사용법은 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
+도구 40 종 (project · issue · wbs · meeting · changelog · worklog · devinfo · resource) · 시나리오 · PowerShell 인코딩 가이드 · CLI vs MCP 선택 매트릭스 · 다른 머신 인식 가이드는 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
 
 ## 스크린샷
 
-> 스크린샷은 추후 추가 예정. 아래 경로에 PNG 가 들어갈 예정입니다.
->
-> - 대시보드: `screenshots/dashboard.png`
-> - WBS 간트차트: `screenshots/wbs-gantt.png`
-> - 프로젝트 맵: `screenshots/project-map.png`
+### 대시보드 — KPI · 주요 마일스톤 · 이슈 · 최근 회의록·변경 이력 위젯
+![Dashboard](screenshots/dashboard.png)
+
+### WBS + 간트차트 — 계층 트리 · 마일스톤 · 드래그 reorder · 표↔간트 정렬 통일
+![WBS Gantt](screenshots/wbs-gantt.png)
+
+### 프로젝트 맵 — Cytoscape + dagre. 5 hub 방사형 / 타임라인 레이아웃 + 미니맵
+![Project Map](screenshots/project-map.png)
+
+### 이슈 관리 — 인라인 BadgeMenu (viewport flip), 상단 quickadd 행
+![Issues](screenshots/issues.png)
+
+### 회의록 — 결정 / 논의 / Action Items + `Meetings/` 자동 md export
+![Meetings](screenshots/meetings.png)
+
+### 변경 이력 — 영향도 · 출처 (Issue/WBS) · 일자별 스택 차트
+![Change Log](screenshots/changelog.png)
+
+### 개발 정보 — Markdown / File (Copy·Reference) / Link 3 타입 + 태그
+![Dev Info](screenshots/devinfo.png)
+
+### 통합 모니터링 — 전 프로젝트 종합 시각화 + 담당자 × 마감 히트맵
+![Monitoring](screenshots/monitoring.png)
+
+### 업무 일지 — 주간 한 일 / 계획 / 이슈, 마크다운 export
+![Worklog](screenshots/worklog.png)
 
 ## 시작하기 (사용자)
 
@@ -119,15 +140,36 @@ Atlas ships two external entry points alongside the GUI — both as single-file 
 
 Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config.json`); SQLite WAL keeps writes safe while `Atlas.exe` is open. Each entry point stamps the activity log with its own actor (`claude-code` / `claude-code-mcp`) so external automation is filterable from human edits.
 
-21 tools, scenarios, and a PowerShell encoding guide are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
+40 tools (project · issue · wbs · meeting · changelog · worklog · devinfo · resource), scenarios, a PowerShell encoding guide, a CLI-vs-MCP decision matrix, and an other-machine setup guide are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
 
 ### Screenshots
 
-> To be added. PNG files will live under:
->
-> - Dashboard: `screenshots/dashboard.png`
-> - WBS Gantt: `screenshots/wbs-gantt.png`
-> - Project map: `screenshots/project-map.png`
+#### Dashboard — KPIs, milestones, issues, recent meetings & change log widgets
+![Dashboard](screenshots/dashboard.png)
+
+#### WBS + Gantt — Hierarchical tree, milestones, drag-reorder, table↔gantt unified sort
+![WBS Gantt](screenshots/wbs-gantt.png)
+
+#### Project map — Cytoscape + dagre. 5-hub radial / timeline layouts with minimap
+![Project Map](screenshots/project-map.png)
+
+#### Issues — Inline BadgeMenu (viewport flip), top quickadd row
+![Issues](screenshots/issues.png)
+
+#### Meetings — Decisions / discussion / action items, auto Markdown export to `Meetings/`
+![Meetings](screenshots/meetings.png)
+
+#### Change log — Impact, source (Issue/WBS) backlinks, daily stacked chart
+![Change Log](screenshots/changelog.png)
+
+#### Dev info — Markdown / File (Copy·Reference) / Link types, tagging
+![Dev Info](screenshots/devinfo.png)
+
+#### Monitoring — Cross-project summary charts + assignee × deadline heatmap
+![Monitoring](screenshots/monitoring.png)
+
+#### Worklog — Weekly Done / Plan / Issues, Markdown export
+![Worklog](screenshots/worklog.png)
 
 ### Getting started (end users)
 
