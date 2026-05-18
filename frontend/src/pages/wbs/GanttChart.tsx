@@ -706,7 +706,8 @@ export function GanttChart({
       splitLine: { show: false },
     },
     dataZoom: [
-      { type: 'inside', xAxisIndex: 0, filterMode: 'none', zoomOnMouseWheel: 'ctrl', start: zoomRange.start, end: zoomRange.end },
+      // inside (wheel zoom) 은 차트 위 wheel 을 capture 해 페이지 스크롤을 막아 제거.
+      // slider 만 두어 페이지 스크롤 자연 forward + drag 로 기간 조정은 유지.
       {
         type: 'slider',
         xAxisIndex: 0,
