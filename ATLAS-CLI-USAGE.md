@@ -327,6 +327,86 @@ LLM 이 자연어 → JSON string 생성 (Claude 는 이걸 잘 함). CLI 의 Po
 
 ---
 
+---
+
+## 언제 CLI vs MCP — 토큰·사용 시나리오
+
+같은 데이터를 둘 다 만질 수 있지만, 시나리오에 따라 비용이 다르다.
+
+| 시나리오 | 권장 | 이유 |
+|---|---|---|
+| **대량 일괄 입력/조회** (N≥10) | **CLI** | 한 PowerShell 루프 = N 호출. LLM 토큰은 스크립트 작성 한 번만 (~수백~1500 토큰). MCP 는 매 호출마다 인자/응답 JSON 누적 (71건 = 약 30,000+ 토큰) |
+| **단건 / 즉석 요청** ("이슈 하나 만들어", "오늘 작업 정리해줘") | **MCP** | 자연어 → 도구 자동 선택. 스크립트 작성·디버깅 friction 없음. 토큰 차이 미미 |
+| **CI/CD · cron · 셸 자동화** | **CLI** | exit code + stdout JSON, 표준 파이프 친화 |
+| **타입 안전한 enum/필드 입력** | **MCP** | 도구 시그니처가 LLM 추론 도움 (`status=Open|InProgress|Resolved|Closed` 등) |
+| **PowerShell escape 함정 회피** | **MCP** | CLI 의 큰따옴표 strip 함정 없음 — 도구 콜은 구조화된 인자 |
+
+**예**: 71 dev log → ChangeLog 일괄 import 는 CLI (사이클 40). "방금 닫힌 이슈 #42 에 대한 ChangeLog 한 줄" 은 MCP.
+
+curl (REST API) 은 토큰 측면 CLI 와 유사하지만 백엔드 가동 + API 키 필요 — 단독 사용자 컨텍스트에선 CLI 가 더 단순.
+
+---
+
+## 다른 머신에서 Atlas CLI/MCP 인식시키기
+
+새 컴퓨터에 Atlas 를 깐 뒤 그 컴퓨터의 Claude Code 가 Atlas 데이터를 다룰 수 있게 하는 3 가지 방법. **MCP 등록 + user-level CLAUDE.md 한 줄** 조합 권장.
+
+### 1. MCP 등록 (가장 깔끔)
+
+```powershell
+claude mcp add --scope user atlas "C:\path\to\publish\Atlas-Mcp.exe"
+```
+
+- `--scope user` — 어느 폴더에서 Claude Code 켜도 `atlas_*` 도구 40 개 자동 노출
+- Claude Code 재시작 후 `/mcp` 로 `atlas` 서버 connected 확인
+- 등록 1 회 / 자연어 → 도구 자동 선택 / 매번 권한 prompt 없음
+
+### 2. user-level CLAUDE.md (CLI 의 존재·사용법 안내)
+
+위치: `~/.claude/CLAUDE.md` (모든 프로젝트 공통)
+
+```markdown
+## Atlas CLI (외부 자동화)
+
+- 실행: `C:\path\to\publish\Atlas-Cli.exe` (자세한 사용법: 같은 폴더의 `ATLAS-CLI-USAGE.md`)
+- 데이터 폴더 자동 발견 (`%LOCALAPPDATA%\Atlas\config.json` 의 `dataFolder`)
+- **PowerShell 5.1 에서 한글 입출력 시 세션 시작에 한 번**:
+  ```powershell
+  $OutputEncoding = [System.Text.Encoding]::UTF8
+  [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+  ```
+- 대량 일괄은 CLI / 단건은 MCP 권장 (위 매뉴얼 참고)
+```
+
+→ Claude 가 conversation 시작 시 자동 로드. "Atlas 프로젝트 4 의 오픈 이슈 리스트" 같은 요청에 CLI 를 자연스럽게 선택.
+
+### 3. settings.json 권한 (Bash prompt 회피)
+
+`~/.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(*\\Atlas-Cli.exe *)",
+      "Bash(*\\publish\\Atlas-Cli.exe *)"
+    ]
+  }
+}
+```
+
+→ 매번 "Atlas-Cli.exe 실행 허용?" 모달 없이 통과. MCP 만 쓰면 불필요.
+
+### 권장 조합
+
+1. **MCP 등록** (1 회) — 자연어 즉석 요청 처리
+2. **user CLAUDE.md 1 줄** — "Atlas 대량 입력은 CLI, 단건은 MCP" 가이드
+3. (선택) **settings.json 권한** — CLI 도 같이 쓸 때 prompt 회피
+
+> 단독 사용자 컨텍스트라 settings.json 의 권한 범위는 자유롭게 — 팀 공유 시는 `Bash(*)` 같은 광범위 권한 주의.
+
+---
+
 ## 후속
 
 - ChangeLog / WorkLog / DevInfo / Resource 의 CLI + MCP 전부 추가 완료 (사이클 40 / 41 — 2026-05-18). "CLI/MCP 4 엔티티 외 도구 추가" 백로그 완전 마감
