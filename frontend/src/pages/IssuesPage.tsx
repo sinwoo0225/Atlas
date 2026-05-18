@@ -292,6 +292,28 @@ export function IssuesPage() {
             </tr>
           </thead>
           <tbody>
+            {/* 상단 빈 행 — 제목 + Enter / 추가 버튼으로 빠르게 신규 생성 */}
+            <tr className="bg-surface-2/30">
+              <td className="py-2 px-4 text-muted">
+                <Plus size={14} />
+              </td>
+              <td className="py-2 px-3" colSpan={5}>
+                <input
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCreate(); }}
+                  placeholder="새 이슈 제목 입력 후 Enter…"
+                  data-issue-quickadd
+                  className="w-full bg-transparent text-sm text-primary placeholder:text-muted/70 focus:outline-none border-none px-0 py-0"
+                />
+              </td>
+              <td className="py-2 px-3">
+                <Button variant="ghost" size="sm" onClick={handleQuickCreate}>
+                  추가
+                </Button>
+              </td>
+            </tr>
+
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={7} className="p-0">
@@ -300,7 +322,7 @@ export function IssuesPage() {
                     title="이슈가 없습니다."
                     description={
                       filter === 'All' && priorityFilter === 'All' && assigneeFilter === 'All' && !keyword
-                        ? '아래 빈 행에서 제목을 입력해 빠르게 추가할 수 있습니다.'
+                        ? '위 빈 행에서 제목을 입력해 빠르게 추가할 수 있습니다.'
                         : '조건에 맞는 이슈가 없습니다. 필터를 초기화해 보세요.'
                     }
                   />
@@ -323,28 +345,6 @@ export function IssuesPage() {
                 onLinksChanged={refreshLinkCounts}
               />
             ))}
-
-            {/* 마지막 빈 행 — 제목 + Enter / 추가 버튼으로 빠르게 신규 생성 */}
-            <tr className="bg-surface-2/30">
-              <td className="py-2 px-4 text-muted">
-                <Plus size={14} />
-              </td>
-              <td className="py-2 px-3" colSpan={5}>
-                <input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCreate(); }}
-                  placeholder="새 이슈 제목 입력 후 Enter…"
-                  data-issue-quickadd
-                  className="w-full bg-transparent text-sm text-primary placeholder:text-muted/70 focus:outline-none border-none px-0 py-0"
-                />
-              </td>
-              <td className="py-2 px-3">
-                <Button variant="ghost" size="sm" onClick={handleQuickCreate}>
-                  추가
-                </Button>
-              </td>
-            </tr>
           </tbody>
         </table>
       </Card>
