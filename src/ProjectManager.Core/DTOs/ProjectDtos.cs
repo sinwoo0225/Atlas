@@ -37,3 +37,21 @@ public record RiskSignalsDto(
     IReadOnlyList<WbsItemDto> OverdueWbs,
     IReadOnlyList<WbsItemDto> DueSoonWbs,
     IReadOnlyList<IssueDto> HighPriorityOpenIssues);
+
+// 백업 zip 미리보기 — 어떤 프로젝트가 들어있는지 보여주고 사용자가 한 개를 선택.
+// (백업은 DB 전체를 담으므로 zip 하나에 다수 프로젝트가 포함됨.)
+public record ImportPreviewItemDto(
+    int Id, string Name, string Description,
+    DateTime CreatedAt, DateTime UpdatedAt,
+    int IssueCount, int WbsCount, int MeetingCount);
+
+// 가져오기 결과 요약 — 카운트 + 리소스 매핑 통계 + 경고 목록.
+// IssuesAssigneeMatched: 백업측 담당자를 Email 로 현재 DB 리소스에 매핑 성공한 이슈 수.
+// IssuesAssigneeMissing: 담당자가 있었으나 매핑 실패하여 미할당(null) 처리된 이슈 수.
+public record ImportProjectResultDto(
+    int NewProjectId, string NewProjectName, string NewFolderPath,
+    int IssuesImported, int IssuesAssigneeMatched, int IssuesAssigneeMissing,
+    int WbsItemsImported, int WbsVersionsImported,
+    int MeetingsImported, int DevInfoItemsImported,
+    int WorkLogsImported, int ChangeLogsImported, int IssueWbsLinksImported,
+    IReadOnlyList<string> Warnings);

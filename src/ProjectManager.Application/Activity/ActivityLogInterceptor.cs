@@ -102,6 +102,9 @@ public class ActivityLogInterceptor(IActorAccessor actorAccessor) : SaveChangesI
     private void Capture(ChangeTracker? tracker)
     {
         if (tracker == null) return;
+        // import 중에는 자식 수백~수천 행이 한 트랜잭션 안에 쏟아져 활동 피드를 오염시키므로 skip.
+        // import 완료 후 ProjectService 가 요약 1행을 합성 insert.
+        if (ImportContext.IsImporting) return;
         var actor = actorAccessor.GetActor();
         var ts = DateTime.UtcNow;
         var list = new List<PendingActivity>();

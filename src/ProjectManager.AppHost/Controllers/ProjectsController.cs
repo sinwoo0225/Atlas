@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.DTOs;
@@ -40,5 +41,53 @@ public class ProjectsController(ProjectService svc) : ControllerBase
         var result = await svc.CreateBackupAsync(id);
         if (result is null) return NotFound();
         return File(result.Value.Stream, "application/zip", result.Value.FileName);
+    }
+
+    // 백업 zip 안에 포함된 프로젝트 목록 미리보기 (사용자가 어느 프로젝트를 import 할지 선택).
+    [HttpPost("import/preview")]
+    public async Task<IActionResult> ImportPreview(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "백업 zip 파일이 비어 있습니다." });
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var items = await svc.ListImportPreviewAsync(stream, ct);
+            if (items is null)
+                return BadRequest(new { error = "백업 zip 안에서 db/projectmanager.db 를 찾을 수 없습니다." });
+            return Ok(items);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return StatusCode(StatusCodes.Status415UnsupportedMediaType, new { error = ex.Message });
+        }
+        catch (InvalidDataException)
+        {
+            return BadRequest(new { error = "유효한 zip 파일이 아닙니다." });
+        }
+    }
+
+    // 백업 zip 에서 지정된 sourceProjectId 한 개를 현재 DB 에 새 프로젝트로 머지.
+    [HttpPost("import")]
+    public async Task<IActionResult> Import(IFormFile file, [FromForm] int sourceProjectId, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(new { error = "백업 zip 파일이 비어 있습니다." });
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var result = await svc.ImportProjectAsync(stream, sourceProjectId, ct);
+            if (result is null)
+                return NotFound(new { error = $"백업 안에 ID {sourceProjectId} 프로젝트가 없습니다." });
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (InvalidDataException)
+        {
+            return BadRequest(new { error = "유효한 zip 파일이 아닙니다." });
+        }
     }
 }

@@ -45,7 +45,9 @@ public class AppDbContext(
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
-            e.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
+            // ParentId 셀프 참조: Cascade — 부모 WBS 삭제 시 자식 트리 전부 함께 삭제.
+            // Project cascade-delete 시 SQLite 가 부모/자식 순서 무관하게 처리할 수 있어야 Project 삭제가 성공한다 (Restrict 면 FK 위반).
+            e.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Version).WithMany(x => x.WbsItems).HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.SetNull);
         });
 

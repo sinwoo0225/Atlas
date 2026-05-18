@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Download, FolderOpen, Calendar, Users } from 'lucide-react';
+import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { startPageApi } from '../api/startPage';
 import { useProjectStore } from '../store/useProjectStore';
@@ -11,7 +11,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { StartPageWidgets } from './projectList/StartPageWidgets';
 import { getRecent, type RecentItem } from '../utils/recentItems';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
-import type { Project, ProjectStatus, StartPageData } from '../types';
+import type { ImportPreviewItem, Project, ProjectStatus, StartPageData } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'Planned', label: '계획' },
@@ -142,6 +142,11 @@ export function ProjectList() {
   const [error, setError] = useState('');
   const [startPageData, setStartPageData] = useState<StartPageData>({ myOpenItems: [], dueSoonItems: [] });
   const [recent, setRecent] = useState<RecentItem[]>(() => getRecent());
+  // 백업 zip 가져오기 — 파일 선택 → preview → 사용자가 한 항목 선택 → 본 import 호출 의 2-step UX.
+  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreviewItem[] | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
 
@@ -194,6 +199,55 @@ export function ProjectList() {
     } catch { setError('백업 실패'); }
   };
 
+  const handleImportFileChosen = async (file: File) => {
+    setImportFile(file);
+    setImportPreview(null);
+    setImporting(true);
+    try {
+      const items = await projectsApi.importPreview(file);
+      if (items.length === 0) {
+        toast.error('백업 안에 가져올 프로젝트가 없습니다.');
+        setImportFile(null);
+      } else {
+        setImportPreview(items);
+      }
+    } catch (e: any) {
+      toast.error(e?.message || '백업 zip 분석 실패');
+      setImportFile(null);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportSelect = async (sourceId: number) => {
+    if (!importFile) return;
+    setImporting(true);
+    try {
+      const result = await projectsApi.import(importFile, sourceId);
+      // 결과 토스트 — 매핑/누락 수치 노출.
+      const parts = [
+        `이슈 ${result.issuesImported}건 (담당자 매칭 ${result.issuesAssigneeMatched}, 누락 ${result.issuesAssigneeMissing})`,
+        `WBS ${result.wbsItemsImported}건`,
+        `회의 ${result.meetingsImported}건`,
+      ];
+      toast.success(`'${result.newProjectName}' 가져옴 — ${parts.join(', ')}`);
+      for (const w of result.warnings) toast.warning(w, { duration: 8000 });
+      // 목록 새로고침.
+      projectsApi.getAll().then(setProjects).catch(() => {});
+      setImportFile(null);
+      setImportPreview(null);
+    } catch (e: any) {
+      toast.error(e?.message || '가져오기 실패');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const cancelImport = () => {
+    setImportFile(null);
+    setImportPreview(null);
+  };
+
   const openProject = (id: number) => {
     selectProject(id);
     navigate(`/projects/${id}/dashboard`);
@@ -203,9 +257,30 @@ export function ProjectList() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h1 className="h-page">프로젝트 목록</h1>
-        <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-          새 프로젝트
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => importInputRef.current?.click()}
+            leadingIcon={<Upload size={16} />}
+            disabled={importing}
+          >
+            가져오기
+          </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleImportFileChosen(f);
+              e.target.value = ''; // 같은 파일 재선택 허용
+            }}
+          />
+          <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+            새 프로젝트
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -292,6 +367,53 @@ export function ProjectList() {
 
       {showForm && <ProjectForm onSave={handleCreate} onCancel={() => setShowForm(false)} />}
       {editing && <ProjectForm initial={editing} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
+
+      {importPreview && (
+        <Modal
+          open
+          onClose={cancelImport}
+          title="가져올 프로젝트 선택"
+          size="lg"
+          showCloseButton
+          footer={
+            <Button variant="secondary" onClick={cancelImport} leadingIcon={<X size={16} />}>
+              취소
+            </Button>
+          }
+        >
+          <div className="space-y-1">
+            <p className="text-sm text-muted mb-3">
+              백업 zip 안의 프로젝트 중 하나를 골라 현재 데이터에 새 프로젝트로 추가합니다.
+              리소스 마스터는 가져오지 않으며, 이슈 담당자는 이메일로 자동 매칭합니다.
+            </p>
+            <div className="border border-default rounded-md divide-y divide-default max-h-[60vh] overflow-y-auto">
+              {importPreview.map((p) => (
+                <button
+                  key={p.id}
+                  disabled={importing}
+                  onClick={() => handleImportSelect(p.id)}
+                  className="w-full text-left p-3 hover:bg-elevated disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-primary truncate">{p.name}</div>
+                      {p.description && (
+                        <div className="text-sm text-muted truncate mt-0.5">{p.description}</div>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2 text-xs text-muted">
+                      <Badge size="sm" variant="neutral">이슈 {p.issueCount}</Badge>
+                      <Badge size="sm" variant="neutral">WBS {p.wbsCount}</Badge>
+                      <Badge size="sm" variant="neutral">회의 {p.meetingCount}</Badge>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {importing && <div className="text-sm text-muted mt-3">가져오는 중...</div>}
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

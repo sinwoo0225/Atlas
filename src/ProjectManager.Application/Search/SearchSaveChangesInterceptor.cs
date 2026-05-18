@@ -66,6 +66,9 @@ public class SearchSaveChangesInterceptor(SearchService search) : SaveChangesInt
     private void Capture(ChangeTracker? tracker)
     {
         if (tracker == null) return;
+        // import 중에는 자식 수백~수천 행을 한 트랜잭션 안에 쏟아 인덱스 동기화가 느려지므로 skip.
+        // import 완료 후 ProjectService 가 RebuildAllAsync 를 1회 호출해 일괄 색인.
+        if (ImportContext.IsImporting) return;
         var upserts = new List<object>();
         var deletes = new List<(string, int)>();
         foreach (var entry in tracker.Entries())

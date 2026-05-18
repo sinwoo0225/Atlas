@@ -37,6 +37,35 @@ export interface RiskSignals {
   highPriorityOpenIssues: Issue[];
 }
 
+// 백업 zip 가져오기 — 미리보기 항목과 결과 요약.
+export interface ImportPreviewItem {
+  id: number;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  issueCount: number;
+  wbsCount: number;
+  meetingCount: number;
+}
+
+export interface ImportProjectResult {
+  newProjectId: number;
+  newProjectName: string;
+  newFolderPath: string;
+  issuesImported: number;
+  issuesAssigneeMatched: number;
+  issuesAssigneeMissing: number;
+  wbsItemsImported: number;
+  wbsVersionsImported: number;
+  meetingsImported: number;
+  devInfoItemsImported: number;
+  workLogsImported: number;
+  changeLogsImported: number;
+  issueWbsLinksImported: number;
+  warnings: string[];
+}
+
 // 시작 화면 위젯(E-2). across-project myOpenItems + dueSoonItems.
 export interface StartPageData {
   myOpenItems: StartPageItem[];
