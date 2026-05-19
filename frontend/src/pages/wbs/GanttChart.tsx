@@ -13,6 +13,7 @@ import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
 import { wbsStatusBadge } from '../../utils/statusMaps';
 import { sortSiblings } from '../../utils/wbsSort';
+import { spanOf } from '../../utils/wbsSpan';
 import { Button } from '../../components/ui';
 
 /* ============================================================================
@@ -29,25 +30,6 @@ interface GanttRow {
   effEnd?: number;
   /** 부모이면서 자식 합산 범위로 그리는 막대인지(=얇은 음영 표시). */
   isParentBar: boolean;
-}
-
-/** 노드와 모든 후손 중 startDate/endDate 가 있는 것들의 min/max. */
-function spanOf(item: WbsItem): { start?: number; end?: number } {
-  let start: number | undefined;
-  let end: number | undefined;
-  const visit = (n: WbsItem) => {
-    if (n.startDate) {
-      const t = new Date(n.startDate).getTime();
-      if (start === undefined || t < start) start = t;
-    }
-    if (n.endDate) {
-      const t = new Date(n.endDate).getTime();
-      if (end === undefined || t > end) end = t;
-    }
-    n.children?.forEach(visit);
-  };
-  visit(item);
-  return { start, end };
 }
 
 function flattenForGantt(items: WbsItem[], collapsed: Set<number>): GanttRow[] {

@@ -762,16 +762,16 @@ export function WbsPage() {
             onDragEnd={handleDragEnd}
             onDragCancel={() => setActiveId(null)}
           >
-            <table className="w-full min-w-[800px]">
+            <table className="w-full min-w-[960px]">
               <thead>
                 <tr className="border-b border-default text-xs text-muted">
                   <th className="text-left py-3 px-4 font-medium">작업명</th>
-                  <th className="text-left py-3 px-3 font-medium">담당자</th>
-                  <th className="text-left py-3 px-3 font-medium">시작일</th>
-                  <th className="text-left py-3 px-3 font-medium">종료일</th>
-                  <th className="text-left py-3 px-3 font-medium">중요도</th>
-                  <th className="text-left py-3 px-3 font-medium">상태</th>
-                  <th className="text-left py-3 px-3 font-medium">작업</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-28">담당자</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">시작일</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">종료일</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-20">중요도</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-20">상태</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">작업</th>
                 </tr>
               </thead>
               <tbody>

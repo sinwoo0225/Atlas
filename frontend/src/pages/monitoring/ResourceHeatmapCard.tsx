@@ -42,25 +42,18 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
   const [selected, setSelected] = useState<[number, number] | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('due');
 
-  // 사이드 패널 → 헤더 셀렉트로 이동. "미할당"은 항상 마지막 고정.
+  // 미할당 항목은 백엔드에서 행으로 누적하지 않고 unassignedItems 카운트로만 노출.
   const sortedRows = useMemo<ResourceHeatmapRow[]>(() => {
     if (!data) return [];
     const rows = [...data.rows];
-    const sep = (a: ResourceHeatmapRow, b: ResourceHeatmapRow) => {
-      const au = a.assignee === '미할당' ? 1 : 0;
-      const bu = b.assignee === '미할당' ? 1 : 0;
-      return au - bu;
-    };
     if (sortMode === 'load') {
       rows.sort((a, b) =>
-        sep(a, b) || b.counts.reduce((s, c) => s + c, 0) - a.counts.reduce((s, c) => s + c, 0));
+        b.counts.reduce((s, c) => s + c, 0) - a.counts.reduce((s, c) => s + c, 0));
     } else if (sortMode === 'name') {
-      rows.sort((a, b) => sep(a, b) || a.assignee.localeCompare(b.assignee, 'ko'));
+      rows.sort((a, b) => a.assignee.localeCompare(b.assignee, 'ko'));
     } else {
       // 마감순 = 가장 이른 마감 주(counts > 0 인 weekIndex 최소) 가 위로.
       rows.sort((a, b) => {
-        const sepR = sep(a, b);
-        if (sepR !== 0) return sepR;
         const ea = a.counts.findIndex((c) => c > 0);
         const eb = b.counts.findIndex((c) => c > 0);
         const ax = ea < 0 ? Infinity : ea;
@@ -105,8 +98,13 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
         <h3 className="h-card flex items-center gap-2">
           <Users size={16} className="text-muted" />
           담당자 × 8주
+          {data && data.unassignedItems > 0 && (
+            <span className="text-xs font-normal text-muted" title="담당자 미지정 항목 (히트맵 제외)">
+              · 미할당 {data.unassignedItems}건
+            </span>
+          )}
         </h3>
-        {data && data.totalItems > 0 && (
+        {data && sortedRows.length > 0 && (
           <select
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
@@ -121,11 +119,13 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
       </div>
       {loading || !data ? (
         <Skeleton height={height} />
-      ) : data.totalItems === 0 ? (
+      ) : sortedRows.length === 0 ? (
         <EmptyState
           icon={<CalendarCheck size={28} />}
-          title="다가오는 마감 없음"
-          description="앞으로 8주간 미완료 마감 없음"
+          title={data.unassignedItems > 0 ? '할당된 마감 없음' : '다가오는 마감 없음'}
+          description={data.unassignedItems > 0
+            ? `미할당 ${data.unassignedItems}건만 있음 — 담당자 배정 후 히트맵에 표시됩니다`
+            : '앞으로 8주간 미완료 마감 없음'}
         />
       ) : (
         <ReactECharts

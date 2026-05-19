@@ -40,7 +40,8 @@ public record ActivityByProjectDto(
 public record ResourceHeatmapDto(
     IReadOnlyList<string> WeekStarts,
     IReadOnlyList<ResourceHeatmapRow> Rows,
-    int TotalItems);
+    int TotalItems,
+    int UnassignedItems);
 
 public record ResourceHeatmapRow(
     string Assignee,

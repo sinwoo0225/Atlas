@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Badge, BadgeMenu } from '../../components/ui';
 import { wbsImportanceBadge } from '../../utils/statusMaps';
+import { spanOf, toIsoDate } from '../../utils/wbsSpan';
 import type { WbsItem, WbsStatus } from '../../types';
 
 interface Props {
@@ -39,6 +40,24 @@ export function SortableWbsRow({
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.importance);
   const isMatched = matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
+
+  // 부모 행 날짜 fallback — 본인 값이 없으면 자손 합산 min/max 를 흐리게 표시.
+  const computedSpan = hasChildren && (!item.startDate || !item.endDate)
+    ? spanOf(item) : undefined;
+  const showStart = item.startDate ?? (computedSpan?.start ? toIsoDate(computedSpan.start) : undefined);
+  const showEnd   = item.endDate   ?? (computedSpan?.end   ? toIsoDate(computedSpan.end)   : undefined);
+  const startIsComputed = !item.startDate && !!computedSpan?.start;
+  const endIsComputed   = !item.endDate   && !!computedSpan?.end;
+
+  // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태(완료/예정 흐리게, 완료 취소선).
+  const nameWeight = depth === 0 ? 'font-semibold' : '';
+  const nameColor =
+    item.status === 'Done' || item.status === 'Planned'
+      ? 'text-muted'
+      : depth === 0
+        ? 'text-accent'
+        : 'text-primary';
+  const nameDecoration = item.status === 'Done' ? 'line-through' : '';
 
   const {
     attributes, listeners,
@@ -98,7 +117,7 @@ export function SortableWbsRow({
             )}
             {item.isMilestone && <Diamond size={12} className="text-accent" />}
             <span
-              className="text-sm text-primary hover:text-accent cursor-pointer transition-colors"
+              className={`text-sm ${nameWeight} ${nameColor} ${nameDecoration} hover:text-accent cursor-pointer transition-colors`}
               onClick={() => onEdit(item)}
             >
               {item.name}
@@ -131,13 +150,23 @@ export function SortableWbsRow({
             )}
           </div>
         </td>
-        <td className="py-2 px-3 text-sm text-secondary">{item.assignee}</td>
-        <td className="py-2 px-3 text-xs text-muted">{item.startDate?.slice(0, 10)}</td>
-        <td className="py-2 px-3 text-xs text-muted">{item.endDate?.slice(0, 10)}</td>
-        <td className="py-2 px-3">
+        <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={item.assignee || undefined}>{item.assignee}</td>
+        <td
+          className={`py-2 px-3 text-xs whitespace-nowrap ${startIsComputed ? 'text-muted opacity-60 italic' : 'text-muted'}`}
+          title={startIsComputed ? '자식 작업에서 계산된 시작일' : undefined}
+        >
+          {showStart?.slice(0, 10)}
+        </td>
+        <td
+          className={`py-2 px-3 text-xs whitespace-nowrap ${endIsComputed ? 'text-muted opacity-60 italic' : 'text-muted'}`}
+          title={endIsComputed ? '자식 작업에서 계산된 종료일' : undefined}
+        >
+          {showEnd?.slice(0, 10)}
+        </td>
+        <td className="py-2 px-3 whitespace-nowrap">
           <Badge variant={importance.variant} size="sm">{importance.label}</Badge>
         </td>
-        <td className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+        <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
           <BadgeMenu<WbsStatus>
             value={item.status}
             options={[
@@ -149,7 +178,7 @@ export function SortableWbsRow({
             title="상태 변경"
           />
         </td>
-        <td className="py-2 px-3">
+        <td className="py-2 px-3 whitespace-nowrap">
           <div className="flex items-center gap-1">
             <button
               onClick={() => onAddChild(item.id)}

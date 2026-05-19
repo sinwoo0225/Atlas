@@ -330,6 +330,7 @@ export interface ResourceHeatmap {
   weekStarts: string[];
   rows: ResourceHeatmapRow[];
   totalItems: number;
+  unassignedItems: number;
 }
 
 export type ActivityEntityType =
