@@ -108,7 +108,7 @@ function DevInfoForm({
       open
       onClose={onCancel}
       title={initial ? '정보 수정' : '개발 정보 추가'}
-      size="lg"
+      size="xxl"
       fixedHeight
       footer={
         <>
@@ -117,7 +117,7 @@ function DevInfoForm({
         </>
       }
     >
-      <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2 space-y-4">
+      <div className="flex-1 min-h-0 flex flex-col -mx-2 px-2 gap-4">
         <FormField label="제목" required>
           <input value={form.title} onChange={(e) => set('title', e.target.value)} className={inputClass} />
         </FormField>
@@ -143,13 +143,12 @@ function DevInfoForm({
         </div>
 
         {form.type === 'Markdown' && (
-          <FormField label="내용 (Markdown)" hint="저장 시 프로젝트 폴더에 [제목].md 파일로 저장됩니다.">
+          <FormField label="내용 (Markdown)" hint="저장 시 프로젝트 폴더에 [제목].md 파일로 저장됩니다." className="flex-1 min-h-0">
             <textarea
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
               onKeyDown={(e) => applyTextareaTab(e, (next) => set('content', next))}
-              rows={10}
-              className={`${inputClass} resize-none font-mono`}
+              className={`${inputClass} font-mono flex-1 min-h-0`}
             />
           </FormField>
         )}

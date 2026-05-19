@@ -50,6 +50,8 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
 
   const [decisions, setDecisions] = useState<string[]>(() => parseDecisions(initial?.decisions ?? ''));
   const [decisionInput, setDecisionInput] = useState('');
+  const [editingDecisionIdx, setEditingDecisionIdx] = useState<number | null>(null);
+  const [editingDecisionValue, setEditingDecisionValue] = useState('');
 
   const [actionItems, setActionItems] = useState<ActionItem[]>(() => parseActionItems(initial?.actionItems ?? ''));
   // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
@@ -86,6 +88,25 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
     setDecisionInput('');
   };
   const removeDecision = (i: number) => setDecisions(decisions.filter((_, idx) => idx !== i));
+  const startEditDecision = (i: number) => {
+    setEditingDecisionIdx(i);
+    setEditingDecisionValue(decisions[i]);
+  };
+  const commitEditDecision = () => {
+    if (editingDecisionIdx == null) return;
+    const v = editingDecisionValue.trim();
+    setDecisions((prev) =>
+      v
+        ? prev.map((d, idx) => (idx === editingDecisionIdx ? v : d))
+        : prev.filter((_, idx) => idx !== editingDecisionIdx),
+    );
+    setEditingDecisionIdx(null);
+    setEditingDecisionValue('');
+  };
+  const cancelEditDecision = () => {
+    setEditingDecisionIdx(null);
+    setEditingDecisionValue('');
+  };
 
   const addAction = () =>
     setActionItems([...actionItems, { id: crypto.randomUUID(), content: '', assignee: '', deadline: '' }]);
@@ -275,7 +296,28 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
               <ul className="space-y-1">
                 {decisions.map((d, i) => (
                   <li key={i} className="flex items-center justify-between bg-surface-2 px-2 py-1 rounded">
-                    <span className="text-sm text-secondary">{d}</span>
+                    {editingDecisionIdx === i ? (
+                      <input
+                        autoFocus
+                        value={editingDecisionValue}
+                        onChange={(e) => setEditingDecisionValue(e.target.value)}
+                        onBlur={commitEditDecision}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') { e.preventDefault(); commitEditDecision(); }
+                          else if (e.key === 'Escape') { e.preventDefault(); cancelEditDecision(); }
+                        }}
+                        className={`${inputClassNoW} flex-1 mr-2 text-sm`}
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => startEditDecision(i)}
+                        className="flex-1 text-left text-sm text-secondary hover:text-primary cursor-text"
+                        title="클릭해서 수정"
+                      >
+                        {d}
+                      </button>
+                    )}
                     <button onClick={() => removeDecision(i)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity" title="결정사항 삭제" aria-label="결정사항 삭제">
                       <X size={14} />
                     </button>
