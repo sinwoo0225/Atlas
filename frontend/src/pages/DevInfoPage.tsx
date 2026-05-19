@@ -47,7 +47,7 @@ function DevInfoForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     title: initial?.title ?? '',
     type: initial?.type ?? 'Markdown' as DevInfoType,
     storageMode: initial?.storageMode ?? 'Copy' as DevInfoStorageMode,
@@ -55,7 +55,9 @@ function DevInfoForm({
     filePath: initial?.filePath ?? '',
     url: initial?.url ?? '',
     tags: initial?.tags ?? '',
-  });
+  };
+  const [form, setForm] = useState(initialForm);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bridgeAvailable = isHostBridgeAvailable();
@@ -110,6 +112,7 @@ function DevInfoForm({
       title={initial ? '정보 수정' : '개발 정보 추가'}
       size="xxl"
       fixedHeight
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>

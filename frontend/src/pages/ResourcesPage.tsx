@@ -13,14 +13,16 @@ function ResourceForm({ initial, onSave, onCancel }: {
   onSave: (data: Omit<Resource, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }) {
-  const [form, setForm] = useState({
+  const initialForm = {
     name: initial?.name ?? '',
     type: (initial?.type ?? 'Person') as ResourceType,
     department: initial?.department ?? '',
     email: initial?.email ?? '',
     phone: initial?.phone ?? '',
     notes: initial?.notes ?? '',
-  });
+  };
+  const [form, setForm] = useState(initialForm);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
@@ -29,6 +31,7 @@ function ResourceForm({ initial, onSave, onCancel }: {
       onClose={onCancel}
       title={initial?.id ? '리소스 수정' : '리소스 등록'}
       size="md"
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>

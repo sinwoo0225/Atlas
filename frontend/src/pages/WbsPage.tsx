@@ -58,7 +58,7 @@ function WbsItemForm({
   onLinksChanged: () => void;
   onSave: () => void; onCancel: () => void;
 }) {
-  const [form, setForm] = useState<WbsFormData>({
+  const initialForm: WbsFormData = {
     name: initial?.name ?? '',
     assignee: initial?.assignee ?? '',
     startDate: initial?.startDate?.slice(0, 10) ?? '',
@@ -68,7 +68,10 @@ function WbsItemForm({
     importance: (initial?.importance ?? 2).toString(),
     notes: initial?.notes ?? '',
     parentId: initial?.parentId ?? parentId ?? null,
-  });
+  };
+  const [form, setForm] = useState<WbsFormData>(initialForm);
+  const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(initialForm));
+  const dirty = JSON.stringify(form) !== initialSnapshot;
   // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
   const [notesEditing, setNotesEditing] = useState(false);
@@ -109,7 +112,7 @@ function WbsItemForm({
                 onClick: async () => {
                   const fresh = await wbsApi.get(projectId, initial.id);
                   setSnapshotUpdatedAt(fresh.updatedAt);
-                  setForm({
+                  const freshForm: WbsFormData = {
                     name: fresh.name,
                     assignee: fresh.assignee,
                     startDate: fresh.startDate?.slice(0, 10) ?? '',
@@ -119,7 +122,9 @@ function WbsItemForm({
                     importance: (fresh.importance ?? 2).toString(),
                     notes: fresh.notes ?? '',
                     parentId: fresh.parentId ?? null,
-                  });
+                  };
+                  setForm(freshForm);
+                  setInitialSnapshot(JSON.stringify(freshForm));
                   toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
                 },
               },
@@ -152,6 +157,7 @@ function WbsItemForm({
       title={initial ? '작업 수정' : '작업 추가'}
       size="xl"
       fixedHeight
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>

@@ -56,6 +56,23 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   const [actionItems, setActionItems] = useState<ActionItem[]>(() => parseActionItems(initial?.actionItems ?? ''));
   // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
+  // dirty 가드 — 모달 닫기 시 변경 손실 확인. [서버 값 보기] 시 setInitialSnapshot 으로 새 기준 적용.
+  const [initialSnapshot, setInitialSnapshot] = useState(() => {
+    const parsedAtt = parseAttendees(initial?.attendees ?? '');
+    return JSON.stringify({
+      date: initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+      startTime: initial?.startTime ?? '',
+      endTime: initial?.endTime ?? '',
+      topic: initial?.topic ?? '',
+      discussion: initial?.discussion ?? '',
+      attendees: parsedAtt.length > 0 ? parsedAtt : [],
+      decisions: parseDecisions(initial?.decisions ?? ''),
+      actionItems: parseActionItems(initial?.actionItems ?? ''),
+    });
+  });
+  const dirty = JSON.stringify({
+    date, startTime, endTime, topic, discussion, attendees, decisions, actionItems,
+  }) !== initialSnapshot;
 
   const addOrg = () => setAttendees([...attendees, { org: '', members: [''] }]);
   const updateOrg = (i: number, k: 'org', v: string) => {
@@ -152,15 +169,28 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                 onClick: async () => {
                   const fresh = await meetingsApi.get(projectId, initial.id);
                   setSnapshotUpdatedAt(fresh.updatedAt);
-                  setDate(fresh.date?.slice(0, 10) ?? '');
-                  setStartTime(fresh.startTime ?? '');
-                  setEndTime(fresh.endTime ?? '');
-                  setTopic(fresh.topic ?? '');
-                  setDiscussion(fresh.discussion ?? '');
+                  const freshDate = fresh.date?.slice(0, 10) ?? '';
+                  const freshStart = fresh.startTime ?? '';
+                  const freshEnd = fresh.endTime ?? '';
+                  const freshTopic = fresh.topic ?? '';
+                  const freshDiscussion = fresh.discussion ?? '';
                   const parsedAtt = parseAttendees(fresh.attendees ?? '');
-                  setAttendees(parsedAtt.length > 0 ? parsedAtt : []);
-                  setDecisions(parseDecisions(fresh.decisions ?? ''));
-                  setActionItems(parseActionItems(fresh.actionItems ?? ''));
+                  const freshAttendees = parsedAtt.length > 0 ? parsedAtt : [];
+                  const freshDecisions = parseDecisions(fresh.decisions ?? '');
+                  const freshActions = parseActionItems(fresh.actionItems ?? '');
+                  setDate(freshDate);
+                  setStartTime(freshStart);
+                  setEndTime(freshEnd);
+                  setTopic(freshTopic);
+                  setDiscussion(freshDiscussion);
+                  setAttendees(freshAttendees);
+                  setDecisions(freshDecisions);
+                  setActionItems(freshActions);
+                  setInitialSnapshot(JSON.stringify({
+                    date: freshDate, startTime: freshStart, endTime: freshEnd, topic: freshTopic,
+                    discussion: freshDiscussion, attendees: freshAttendees,
+                    decisions: freshDecisions, actionItems: freshActions,
+                  }));
                   toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
                 },
               },
@@ -185,6 +215,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
       title={initial ? '회의록 수정' : '회의록 작성'}
       size="wide"
       fixedHeight
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>

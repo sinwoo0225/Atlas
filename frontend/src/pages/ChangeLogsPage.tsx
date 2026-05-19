@@ -147,6 +147,19 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
   const [wbsPickerOpen, setWbsPickerOpen] = useState(false);
   // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
+  // dirty 가드 — 모달 닫기 시 변경 손실 확인. [서버 값 보기] 시 setInitialSnapshot 으로 새 기준 적용.
+  const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify({
+    date: initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10),
+    content: initial?.content ?? '',
+    impact: initial?.impact ?? 'Low',
+    otherLinks: initial ? extractOtherLinks(initial.relatedDocLinks).join('\n') : '',
+    selectedMeetings: initial ? extractMeetingIds(initial.relatedDocLinks) : [],
+    sourceIssueId: initial?.sourceIssueId ?? defaultSourceIssueId ?? null,
+    sourceWbsItemId: initial?.sourceWbsItemId ?? null,
+  }));
+  const dirty = JSON.stringify({
+    date, content, impact, otherLinks, selectedMeetings, sourceIssueId, sourceWbsItemId,
+  }) !== initialSnapshot;
 
   useEffect(() => {
     meetingsApi.getByProject(projectId).then(setMeetings).catch(() => setMeetings([]));
@@ -196,13 +209,25 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                 onClick: async () => {
                   const fresh = await changeLogsApi.get(projectId, initial.id);
                   setSnapshotUpdatedAt(fresh.updatedAt);
-                  setDate(fresh.date?.slice(0, 10) ?? '');
-                  setContent(fresh.content ?? '');
-                  setImpact(fresh.impact);
-                  setOtherLinks(extractOtherLinks(fresh.relatedDocLinks).join('\n'));
-                  setSelectedMeetings(extractMeetingIds(fresh.relatedDocLinks));
-                  setSourceIssueId(fresh.sourceIssueId ?? null);
-                  setSourceWbsItemId(fresh.sourceWbsItemId ?? null);
+                  const freshDate = fresh.date?.slice(0, 10) ?? '';
+                  const freshContent = fresh.content ?? '';
+                  const freshImpact = fresh.impact;
+                  const freshOtherLinks = extractOtherLinks(fresh.relatedDocLinks).join('\n');
+                  const freshSelectedMeetings = extractMeetingIds(fresh.relatedDocLinks);
+                  const freshSourceIssueId = fresh.sourceIssueId ?? null;
+                  const freshSourceWbsItemId = fresh.sourceWbsItemId ?? null;
+                  setDate(freshDate);
+                  setContent(freshContent);
+                  setImpact(freshImpact);
+                  setOtherLinks(freshOtherLinks);
+                  setSelectedMeetings(freshSelectedMeetings);
+                  setSourceIssueId(freshSourceIssueId);
+                  setSourceWbsItemId(freshSourceWbsItemId);
+                  setInitialSnapshot(JSON.stringify({
+                    date: freshDate, content: freshContent, impact: freshImpact,
+                    otherLinks: freshOtherLinks, selectedMeetings: freshSelectedMeetings,
+                    sourceIssueId: freshSourceIssueId, sourceWbsItemId: freshSourceWbsItemId,
+                  }));
                   toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
                 },
               },
@@ -232,6 +257,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
       title={initial ? '변경 이력 수정' : '변경 이력 추가'}
       size="lg"
       fixedHeight
+      dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
