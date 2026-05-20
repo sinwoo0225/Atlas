@@ -6,6 +6,7 @@ using ProjectManager.Application.Services;
 using ProjectManager.AppHost.Services;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;
+using ProjectManager.Infrastructure.ExternalTools;
 using ProjectManager.Infrastructure.FileStorage;
 using ProjectManager.Infrastructure.Persistence;
 
@@ -26,6 +27,7 @@ public static class AppServicesRegistration
         services.AddSingleton(pathResolver);
         services.AddSingleton<DevFilesStorage>();
         services.AddSingleton<MeetingMarkdownExporter>();
+        services.AddSingleton<ClaudeCliService>();
 
         // Default Timeout=30 — 동시 라이터 충돌 시 즉시 'database is locked' 가 아니라 최대 30초 busy wait.
         // 사용자 입력 수준의 동시성(드물게 겹치는 PUT/POST · CLI 호출)은 이 한 줄로 거의 다 흡수된다.

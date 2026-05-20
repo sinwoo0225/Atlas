@@ -197,6 +197,14 @@ export function getMachineAccount(): Promise<string | null> {
   });
 }
 
+// Windows 음성 입력(받아쓰기) 토글 = Win+H. 웹은 OS 전역 단축키를 못 보내므로 호스트에 위임.
+// 데스크톱앱(브릿지)에서만 동작 — 브라우저 dev 에서는 no-op (버튼도 숨김).
+export function launchDictation(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'launchDictation', requestId: `dictation-${++counter}-${Date.now()}` });
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;

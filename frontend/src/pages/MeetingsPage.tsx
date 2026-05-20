@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search, AlertTriangle, ListTree } from 'lucide-react';
+import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search, AlertTriangle, ListTree, Sparkles, Mic } from 'lucide-react';
 import { meetingsApi } from '../api/meetings';
+import { aiApi } from '../api/ai';
+import { loadSettings } from '../store/settings';
+import { isHostBridgeAvailable, launchDictation } from '../utils/hostBridge';
 import {
   parseAttendees,
   attendeesToDisplay,
@@ -19,6 +22,19 @@ import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { Meeting } from '../types';
+
+// 논의내용 상단에 삽입하는 'AI 요약' 블록. 재요약 시 기존 블록을 걷어내고 새로 prepend (중복 방지).
+const AI_SUMMARY_HEADER = '## 🤖 AI 요약';
+const AI_SUMMARY_SEP = '\n\n---\n\n';
+function prependAiSummary(orig: string, summary: string): string {
+  let base = orig;
+  if (base.startsWith(AI_SUMMARY_HEADER)) {
+    const idx = base.indexOf(AI_SUMMARY_SEP);
+    base = idx >= 0 ? base.slice(idx + AI_SUMMARY_SEP.length) : '';
+  }
+  const block = `${AI_SUMMARY_HEADER}\n${summary.trim()}`;
+  return base.trim().length > 0 ? `${block}${AI_SUMMARY_SEP}${base}` : block;
+}
 
 // 회의록 시간은 30분 단위만 — Chromium native time picker 는 분 spinner 에
 // step 옵션을 반영하지 않으므로 <select> 로 대체한다.
@@ -38,6 +54,38 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   const [topic, setTopic] = useState(initial?.topic ?? '');
   const [discussion, setDiscussion] = useState(initial?.discussion ?? '');
   const [discussionEditing, setDiscussionEditing] = useState(false);
+  const discussionRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // 받아쓰기 버튼 — 데스크톱앱(호스트 브릿지)에서만. textarea 포커스 후 Win+H 합성 요청.
+  const bridgeAvailable = isHostBridgeAvailable();
+  const handleDictation = () => {
+    setDiscussionEditing(true); // 프리뷰 → textarea 전환 보장
+    setTimeout(() => {
+      discussionRef.current?.focus();
+      launchDictation();
+    }, 60);
+  };
+
+  // 'AI 요약' 버튼 — 설정에서 활성화한 경우에만 노출. 로컬 claude CLI 로 논의내용 요약 → 상단 삽입.
+  const aiEnabled = loadSettings().aiSummaryEnabled;
+  const [aiSummarizing, setAiSummarizing] = useState(false);
+  const handleAiSummary = async () => {
+    if (!discussion.trim()) { toast.info('논의 내용을 먼저 입력하세요'); return; }
+    setAiSummarizing(true);
+    try {
+      const { summary } = await aiApi.summarize(discussion);
+      setDiscussion(prependAiSummary(discussion, summary));
+      setDiscussionEditing(true);
+      toast.success('AI 요약을 상단에 추가했어요');
+    } catch (e) {
+      // 서버 오류(claude 실패 등)는 api client 가 이미 토스트 — 네트워크 등 그 외만 보완.
+      if (!(e instanceof Error && e.message.startsWith('API error'))) {
+        toast.error('AI 요약 실패 — 네트워크/백엔드 확인');
+      }
+    } finally {
+      setAiSummarizing(false);
+    }
+  };
 
   const [attendees, setAttendees] = useState<AttendeeOrg[]>(() => {
     const parsed = parseAttendees(initial?.attendees ?? '');
@@ -419,8 +467,24 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
 
           {/* 우측 - 논의 내용 (마크다운). 모달 우측 공간 끝까지 채움. */}
           <FormField label="논의 내용 (마크다운 지원, 포커스 아웃 시 렌더링)" className="flex-1 flex flex-col min-h-0">
+            <div className="flex items-center justify-between gap-2 mb-1 shrink-0">
+              <span className="text-xs text-muted">💡 Win+H 로 받아쓰기 입력</span>
+              <div className="flex items-center gap-1">
+                {bridgeAvailable && (
+                  <Button variant="ghost" size="sm" onClick={handleDictation} leadingIcon={<Mic size={14} />}>
+                    받아쓰기
+                  </Button>
+                )}
+                {aiEnabled && (
+                  <Button variant="ghost" size="sm" onClick={handleAiSummary} disabled={aiSummarizing} leadingIcon={<Sparkles size={14} />}>
+                    {aiSummarizing ? 'AI 요약 중…' : 'AI 요약'}
+                  </Button>
+                )}
+              </div>
+            </div>
             {discussionEditing || !discussion ? (
               <textarea
+                ref={discussionRef}
                 value={discussion}
                 onChange={(e) => setDiscussion(e.target.value)}
                 onKeyDown={(e) => applyTextareaTab(e, setDiscussion)}

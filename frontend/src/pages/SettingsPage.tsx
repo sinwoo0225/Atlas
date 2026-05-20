@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Save, Settings as SettingsIcon, FolderOpen, Server, Plug, Keyboard } from 'lucide-react';
+import { toast } from 'sonner';
+import { Save, Settings as SettingsIcon, FolderOpen, Server, Plug, Keyboard, Sparkles } from 'lucide-react';
 import { openShortcutsModal } from '../data/shortcuts';
+import { aiApi } from '../api/ai';
 import {
   loadSettings,
   saveSettings,
@@ -50,6 +52,20 @@ export function SettingsPage() {
 
   const update = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [k]: v }));
+  };
+
+  const [aiTesting, setAiTesting] = useState(false);
+  const handleClaudeTest = async () => {
+    setAiTesting(true);
+    try {
+      const r = await aiApi.claudeCheck();
+      if (r.available) toast.success(`Claude CLI 연결 OK${r.sample ? ` — "${r.sample.slice(0, 40)}"` : ''}`);
+      else toast.error(r.error || 'Claude CLI 호출 실패');
+    } catch {
+      toast.error('Claude CLI 테스트 실패 — 백엔드/CLI 설치 확인');
+    } finally {
+      setAiTesting(false);
+    }
   };
 
   const handleSave = () => {
@@ -181,6 +197,27 @@ export function SettingsPage() {
         >
           <Button variant="secondary" onClick={openShortcutsModal} leadingIcon={<Keyboard size={14} />}>
             도움말 보기 (?)
+          </Button>
+        </FormField>
+      </Section>
+
+      <Section title="AI 요약 (로컬 Claude Code)">
+        <FormField
+          label="회의록 'AI 요약' 버튼 표시"
+          hint="로컬에 Claude Code CLI(claude)가 설치·로그인돼 있어야 동작합니다. 회의록 논의내용을 claude 로 요약합니다."
+        >
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.aiSummaryEnabled}
+              onChange={(e) => update('aiSummaryEnabled', e.target.checked)}
+            />
+            <span className="text-sm text-secondary">활성화 (저장 후 적용)</span>
+          </label>
+        </FormField>
+        <FormField label="연결 테스트" hint="claude CLI 를 한 번 호출해 설치·인증·응답을 확인합니다.">
+          <Button variant="secondary" onClick={handleClaudeTest} disabled={aiTesting} leadingIcon={<Sparkles size={14} />}>
+            {aiTesting ? '테스트 중…' : '테스트'}
           </Button>
         </FormField>
       </Section>

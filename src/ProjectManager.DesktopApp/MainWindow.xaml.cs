@@ -266,11 +266,32 @@ public partial class MainWindow : Window
                 });
                 WebView.CoreWebView2.PostWebMessageAsJson(response);
             }
+            else if (type == "launchDictation")
+            {
+                // Windows 음성 입력(받아쓰기) 토글 = Win+H. 웹은 OS 전역 단축키를 못 보내므로
+                // 호스트가 키 입력을 합성한다. 입력은 현재 포커스된 편집 컨트롤(논의내용 textarea)로 들어간다.
+                SendWinH();
+            }
         }
         catch (System.Exception ex)
         {
             TryLog($"[host-bridge-err] {ex.GetType().Name}: {ex.Message}");
         }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+
+    // Win+H 합성: LWIN↓ H↓ H↑ LWIN↑. (keybd_event 는 단발 조합엔 충분)
+    private static void SendWinH()
+    {
+        const byte VK_LWIN = 0x5B;
+        const byte VK_H = 0x48;
+        const uint KEYEVENTF_KEYUP = 0x0002;
+        keybd_event(VK_LWIN, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_H, 0, 0, UIntPtr.Zero);
+        keybd_event(VK_H, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+        keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
     }
 
     private async Task TestServerConnectionAsync(string? requestId, string? url, string? apiKey)

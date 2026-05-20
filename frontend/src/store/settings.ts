@@ -8,6 +8,8 @@ export interface AppSettings {
   markdownFontSize: number;
   markdownLineHeight: number;
   sidebarCollapsed: boolean;
+  // 회의록 'AI 요약' 버튼 노출 여부. 로컬 Claude CLI 가 있어야 동작 — 설정에서 옵트인.
+  aiSummaryEnabled: boolean;
 }
 
 const KEY = 'pm-hub-settings';
@@ -23,6 +25,7 @@ const defaults: AppSettings = {
   markdownFontSize: 14,
   markdownLineHeight: 1.7,
   sidebarCollapsed: false,
+  aiSummaryEnabled: false,
 };
 
 export function loadSettings(): AppSettings {
