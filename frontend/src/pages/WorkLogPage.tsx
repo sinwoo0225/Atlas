@@ -318,6 +318,7 @@ function EditablePreviewField({
   // dirty = 현재 value !== lastSavedRef. onBlur 시 부모가 persist 호출 후 reload 하면 useEffect 가 lastSavedRef 재동기화.
   const lastSavedRef = useRef(value);
   useEffect(() => { lastSavedRef.current = value; }, [value]);
+  // eslint-disable-next-line react-hooks/refs -- 마지막 저장값(prop) 과 비교하는 dirty 플래그, 렌더 중 ref 읽기 의도적
   const dirty = editing && value !== lastSavedRef.current;
 
   useEffect(() => {

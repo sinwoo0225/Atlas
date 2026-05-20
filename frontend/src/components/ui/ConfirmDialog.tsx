@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components -- confirmDialog 유틸 + Host 컴포넌트 의도적 콜로케이션 (dev HMR 전용 규칙) */
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './Button';
 
@@ -32,6 +33,12 @@ export function ConfirmDialogHost() {
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
+  const close = useCallback((v: boolean) => {
+    resolver?.(v);
+    resolver = null;
+    setOpts(null);
+  }, []);
+
   useEffect(() => {
     openSetter = setOpts;
     return () => {
@@ -62,14 +69,7 @@ export function ConfirmDialogHost() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opts]);
-
-  const close = (v: boolean) => {
-    resolver?.(v);
-    resolver = null;
-    setOpts(null);
-  };
+  }, [opts, close]);
 
   if (!opts) return null;
 

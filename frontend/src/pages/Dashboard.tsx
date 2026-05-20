@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ElementType } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity, ChevronRight } from 'lucide-react';
@@ -65,6 +65,7 @@ export function Dashboard() {
   const pid = p.id;
 
   const daysLeft = p.endDate
+    // eslint-disable-next-line react-hooks/purity -- 표시용 D-day, 렌더 시점 현재시각이 의도된 값
     ? Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000)
     : null;
 
@@ -339,7 +340,7 @@ function Section({
   compact?: boolean;
 }) {
   const navigate = useNavigate();
-  const HeaderTag: any = to ? 'button' : 'div';
+  const HeaderTag: ElementType = to ? 'button' : 'div';
   return (
     <Card padding={compact ? 'normal' : 'spacious'}>
       <HeaderTag

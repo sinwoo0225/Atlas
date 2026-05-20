@@ -83,7 +83,7 @@ export function BadgeMenu<T extends string>({
         type="button"
         onClick={(e) => {
           e.stopPropagation();
-          open ? closeMenu() : openMenu();
+          if (open) closeMenu(); else openMenu();
         }}
         title={title}
         className="cursor-pointer"

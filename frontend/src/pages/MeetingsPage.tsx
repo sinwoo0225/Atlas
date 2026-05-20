@@ -202,6 +202,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
         return;
       }
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 리터럴↔CreateMeetingDto 구조 일치, 캐스트만 필요
       await meetingsApi.create(payload as any);
       toast.success(topic.trim() ? `새 회의록 '${topic.trim()}' 이(가) 추가됐어요` : '새 회의록이 추가됐어요');
     }

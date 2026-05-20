@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// cytoscape 그래프 API(노드/엣지 콜백, layout 옵션 등)는 동적 타입이라 좁힌 타입을 줘도
+// 캐스팅이 누적된다. GanttChart·MonitoringChartGrid 등 차트 파일과 동일하게 파일 단위로 any 룰 끔.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import cytoscape from 'cytoscape';

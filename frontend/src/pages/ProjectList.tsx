@@ -55,6 +55,7 @@ function ProjectForm({
       budget: form.budget ? parseFloat(form.budget) : undefined,
       startDate: form.startDate || undefined,
       endDate: form.endDate || undefined,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 폼 문자열 budget/date 를 변환한 payload, onSave 타입과 구조 동일
     } as any);
   };
 
@@ -173,7 +174,7 @@ export function ProjectList() {
     return () => window.removeEventListener('atlas:recent-updated', handler);
   }, []);
 
-  const handleCreate = async (data: any) => {
+  const handleCreate = async (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => {
     try {
       const p = await projectsApi.create(data);
       addProject(p);
@@ -182,7 +183,7 @@ export function ProjectList() {
     } catch { setError('프로젝트 생성 실패'); }
   };
 
-  const handleUpdate = async (data: any) => {
+  const handleUpdate = async (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => {
     if (!editing) return;
     try {
       const p = await projectsApi.update(editing.id, data);
@@ -222,8 +223,8 @@ export function ProjectList() {
       } else {
         setImportPreview(items);
       }
-    } catch (e: any) {
-      toast.error(e?.message || '백업 zip 분석 실패');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '백업 zip 분석 실패');
       setImportFile(null);
     } finally {
       setImporting(false);
@@ -247,8 +248,8 @@ export function ProjectList() {
       projectsApi.getAll().then(setProjects).catch(() => {});
       setImportFile(null);
       setImportPreview(null);
-    } catch (e: any) {
-      toast.error(e?.message || '가져오기 실패');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '가져오기 실패');
     } finally {
       setImporting(false);
     }
@@ -314,6 +315,7 @@ export function ProjectList() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {projects.map((p) => {
             const daysLeft = p.endDate
+              // eslint-disable-next-line react-hooks/purity -- 표시용 D-day, 렌더 시점 현재시각이 의도된 값
               ? Math.ceil((new Date(p.endDate).getTime() - Date.now()) / 86400000)
               : null;
             const showDaysLeft = daysLeft !== null && p.status !== 'Done';

@@ -77,6 +77,7 @@ function DevInfoForm({
     if (initial) {
       await devInfoApi.update(projectId, initial.id, payload);
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 리터럴↔CreateDevInfoDto 구조 일치, 캐스트만 필요
       await devInfoApi.create(payload as any);
       toast.success(form.title.trim() ? `새 개발 정보 '${form.title.trim()}' 이(가) 추가됐어요` : '새 개발 정보가 추가됐어요');
     }

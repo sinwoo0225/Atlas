@@ -94,13 +94,14 @@ function WbsItemForm({
       projectId, versionId: versionId ?? null, parentId: form.parentId,
       name: form.name, assignee: form.assignee,
       startDate: form.startDate || null, endDate: form.endDate || null,
-      status: form.status as any, isMilestone: form.isMilestone,
+      status: form.status as WbsStatus, isMilestone: form.isMilestone,
       importance: parseInt(form.importance) || 2, notes: form.notes,
       ...(initial ? { updatedAt: snapshotUpdatedAt, sortOrder: initial.sortOrder } : {}),
     };
     if (initial) {
       const parentChanged = (initial.parentId ?? null) !== form.parentId;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 객체 리터럴↔UpdateWbsItemDto 구조 일치, 캐스트만 필요
         await wbsApi.update(projectId, initial.id, payload as any, { silent: true });
       } catch (err) {
         if (err instanceof Error && err.message.startsWith('API error 409')) {
@@ -145,6 +146,7 @@ function WbsItemForm({
         );
       }
     } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 객체 리터럴↔CreateWbsItemDto 구조 일치, 캐스트만 필요
       await wbsApi.create(payload as any);
       toast.success(`새 작업 '${form.name}' 이(가) 추가됐어요`);
     }
