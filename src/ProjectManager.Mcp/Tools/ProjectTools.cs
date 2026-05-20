@@ -27,6 +27,7 @@ public static class ProjectTools
     public static async Task<string> Create(
         ProjectService svc,
         [Description("프로젝트 이름")] string name,
+        [Description("프로젝트 구분 (과제|내부|사업|유지보수/하자보수 등 자유 문자열)")] string? category = null,
         [Description("설명")] string? description = null,
         [Description("목표")] string? goal = null,
         [Description("상태 Planned|Waiting|InProgress|Done")] ProjectStatus? status = null,
@@ -38,6 +39,7 @@ public static class ProjectTools
         [Description("관련 링크 (줄바꿈 구분)")] string? relatedLinks = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateProjectDto(
             Name: name,
+            Category: category ?? string.Empty,
             Description: description ?? string.Empty,
             Goal: goal ?? string.Empty,
             Status: status ?? ProjectStatus.Planned,
@@ -52,7 +54,7 @@ public static class ProjectTools
      Description("프로젝트 부분 갱신 — null 인 필드는 기존 값 유지")]
     public static async Task<string> Update(
         ProjectService svc, int id,
-        string? name = null, string? description = null, string? goal = null,
+        string? name = null, string? category = null, string? description = null, string? goal = null,
         ProjectStatus? status = null,
         DateTime? startDate = null, DateTime? endDate = null,
         decimal? budget = null,
@@ -62,6 +64,7 @@ public static class ProjectTools
             ?? throw new InvalidOperationException($"Project {id} 없음");
         return McpJson.Serialize(await svc.UpdateAsync(id, new UpdateProjectDto(
             Name: name ?? existing.Name,
+            Category: category ?? existing.Category,
             Description: description ?? existing.Description,
             Goal: goal ?? existing.Goal,
             Status: status ?? existing.Status,

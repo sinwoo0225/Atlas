@@ -2,10 +2,12 @@ export type WbsStatus = 'Planned' | 'InProgress' | 'Done';
 export type ImpactLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type DevInfoType = 'Markdown' | 'File' | 'Link';
 export type ProjectStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done';
+export type ProjectCategory = '과제' | '내부' | '사업' | '유지보수/하자보수';
 
 export interface Project {
   id: number;
   name: string;
+  category: string;
   description: string;
   goal: string;
   status: ProjectStatus;
@@ -252,6 +254,19 @@ export interface WeeklyWorkLogProject {
 export interface WeeklyWorkLog {
   weekStart: string;
   projects: WeeklyWorkLogProject[];
+}
+
+export interface OpenIssue {
+  id: number;
+  title: string;
+  description: string;
+  assigneeName?: string | null;
+}
+
+export interface OpenIssuesByProject {
+  projectId: number;
+  projectName: string;
+  issues: OpenIssue[];
 }
 
 export interface ProjectStatusBreakdown {

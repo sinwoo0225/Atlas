@@ -119,6 +119,7 @@ public class ProjectService(
         var project = new Project
         {
             Name = dto.Name,
+            Category = dto.Category ?? string.Empty,
             Description = dto.Description,
             Goal = dto.Goal,
             Status = dto.Status,
@@ -138,6 +139,7 @@ public class ProjectService(
         var project = await projectRepo.GetByIdAsync(id);
         if (project is null) return null;
         project.Name = dto.Name;
+        project.Category = dto.Category ?? string.Empty;
         project.Description = dto.Description;
         project.Goal = dto.Goal;
         project.Status = dto.Status;
@@ -227,7 +229,7 @@ public class ProjectService(
     }
 
     public static ProjectDto ToDto(Project p) => new(
-        p.Id, p.Name, p.Description, p.Goal, p.Status,
+        p.Id, p.Name, p.Category, p.Description, p.Goal, p.Status,
         p.StartDate, p.EndDate, p.Budget,
         p.Participants, p.Deliverables, p.RelatedLinks,
         p.FolderPath, p.CreatedAt, p.UpdatedAt);
@@ -563,6 +565,7 @@ public class ProjectService(
         var newProject = new Project
         {
             Name = newName,
+            Category = src.Category ?? string.Empty,
             Description = src.Description ?? string.Empty,
             Goal = src.Goal ?? string.Empty,
             Status = src.Status,

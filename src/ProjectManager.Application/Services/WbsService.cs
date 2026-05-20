@@ -91,7 +91,8 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Notes = dto.Notes;
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
         if (!wasDone && updated.Status == WbsStatus.Done)
-            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- {updated.Name}");
+            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today,
+                WorkLogService.FormatDoneLine("작업", updated.Name, updated.Assignee, DateTime.Today));
         // C-1 양방향 sync (B 방향) — Name 변경 시 회의록 ActionItem.content 도 갱신.
         if (nameChanged)
             await meetingRepo.SyncPromotedWbsContentAsync(updated.ProjectId, updated.Id, updated.Name);

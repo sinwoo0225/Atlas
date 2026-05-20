@@ -11,7 +11,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { StartPageWidgets } from './projectList/StartPageWidgets';
 import { getRecent, type RecentItem } from '../utils/recentItems';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
-import type { ImportPreviewItem, Project, ProjectStatus, StartPageData } from '../types';
+import type { ImportPreviewItem, Project, ProjectCategory, ProjectStatus, StartPageData } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'Planned', label: '계획' },
@@ -19,6 +19,8 @@ const statusOptions: { value: ProjectStatus; label: string }[] = [
   { value: 'InProgress', label: '진행' },
   { value: 'Done', label: '완료' },
 ];
+
+const categoryOptions: ProjectCategory[] = ['과제', '내부', '사업', '유지보수/하자보수'];
 
 function ProjectForm({
   initial,
@@ -31,6 +33,7 @@ function ProjectForm({
 }) {
   const initialForm = {
     name: initial?.name ?? '',
+    category: initial?.category ?? '',
     description: initial?.description ?? '',
     goal: initial?.goal ?? '',
     status: (initial?.status ?? 'Planned') as ProjectStatus,
@@ -78,6 +81,14 @@ function ProjectForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-full">
           {/* 좌측 - 기본 정보 */}
           <div className="space-y-3">
+            <FormField label="프로젝트 구분">
+              <select value={form.category} onChange={(e) => set('category', e.target.value)} className={inputClass}>
+                <option value="">(미지정)</option>
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+            </FormField>
             <FormField label="프로젝트명" required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
@@ -315,7 +326,10 @@ export function ProjectList() {
                 onClick={() => openProject(p.id)}
               >
                 <div className="flex items-start justify-between mb-2 gap-2">
-                  <h3 className="font-medium text-primary group-hover:text-accent transition-colors min-w-0 truncate">{p.name}</h3>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h3 className="font-medium text-primary group-hover:text-accent transition-colors min-w-0 truncate">{p.name}</h3>
+                    {p.category && <Badge size="sm" variant="neutral" className="shrink-0">{p.category}</Badge>}
+                  </div>
                   <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
                       <button onClick={() => handleBackup(p)} title="백업" aria-label="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">

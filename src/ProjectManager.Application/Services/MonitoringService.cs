@@ -287,4 +287,25 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
 
         return new WeeklyWorkLogDto(start, grouped);
     }
+
+    // 주간 업무일지 통합에 붙일 '이슈 목록' — 전 프로젝트의 미해결(Open·InProgress) 이슈를 프로젝트별로 묶음.
+    public async Task<IReadOnlyList<OpenIssuesByProjectDto>> GetOpenIssuesByProjectAsync()
+    {
+        var issues = await db.Issues
+            .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
+            .Include(i => i.AssigneeResource)
+            .Include(i => i.Project)
+            .ToListAsync();
+
+        return issues
+            .GroupBy(i => new { i.ProjectId, ProjectName = i.Project.Name })
+            .Select(g => new OpenIssuesByProjectDto(
+                g.Key.ProjectId,
+                g.Key.ProjectName,
+                g.OrderByDescending(i => i.Priority).ThenBy(i => i.Id)
+                 .Select(i => new OpenIssueDto(i.Id, i.Title, i.Description, i.AssigneeResource?.Name))
+                 .ToList()))
+            .OrderBy(p => p.ProjectName)
+            .ToList();
+    }
 }

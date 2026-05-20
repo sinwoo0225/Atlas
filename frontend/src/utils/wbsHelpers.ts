@@ -1,11 +1,18 @@
-import type { WbsItem } from '../types';
+import type { WbsItem, WbsStatus } from '../types';
+
+// 콤마 구분 담당자 문자열을 개인 단위로 분리. 빈 토큰은 제거.
+export function splitAssignees(raw: string | null | undefined): string[] {
+  return (raw ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+}
 
 // 필터 조건. 빈 키워드/필터는 통과.
 export interface WbsFilterOpts {
-  kw: string;            // lowercase, trimmed
+  kw: string;                  // lowercase, trimmed
   unassigned: boolean;
   late: boolean;
-  todayMs: number;       // Date.now() 기준 자정 ms (지연 비교용)
+  statuses: Set<WbsStatus>;    // 비어있으면 전체 통과
+  assignees: Set<string>;      // 개인 단위. 비어있으면 전체 통과
+  todayMs: number;             // Date.now() 기준 자정 ms (지연 비교용)
 }
 
 export function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
@@ -14,6 +21,11 @@ export function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
     if (!hay.includes(o.kw)) return false;
   }
   if (o.unassigned && item.assignee.trim()) return false;
+  if (o.statuses.size > 0 && !o.statuses.has(item.status)) return false;
+  if (o.assignees.size > 0) {
+    const own = splitAssignees(item.assignee);
+    if (!own.some((a) => o.assignees.has(a))) return false;
+  }
   if (o.late) {
     if (!item.endDate) return false;
     if (item.status === 'Done') return false;
@@ -44,7 +56,18 @@ export function filterWbsTree(items: WbsItem[], o: WbsFilterOpts): WbsItem[] {
 }
 
 export function hasAnyFilter(o: WbsFilterOpts): boolean {
-  return !!o.kw || o.unassigned || o.late;
+  return !!o.kw || o.unassigned || o.late || o.statuses.size > 0 || o.assignees.size > 0;
+}
+
+// 트리 전체를 순회하며 담당자를 개인 단위로 쪼개 unique 정렬 반환 (표 필터 칩용).
+export function uniqueAssigneesSplit(items: WbsItem[]): string[] {
+  const set = new Set<string>();
+  const walk = (n: WbsItem) => {
+    splitAssignees(n.assignee).forEach((a) => set.add(a));
+    n.children?.forEach(walk);
+  };
+  items.forEach(walk);
+  return [...set].sort((a, b) => a.localeCompare(b, 'ko'));
 }
 
 // 자기 자신 + 모든 자손 id 집합. WbsTreePicker 의 excludeIds 계산에 사용 —

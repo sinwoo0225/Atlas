@@ -48,6 +48,7 @@ internal static class ProjectCommands
     private static Command BuildCreate(IServiceProvider services)
     {
         var nameOpt = new Option<string>("--name", "이름") { IsRequired = true };
+        var categoryOpt = new Option<string?>("--category", "프로젝트 구분 (과제|내부|사업|유지보수/하자보수 등)");
         var descOpt = new Option<string?>("--description", "설명");
         var goalOpt = new Option<string?>("--goal", "목표");
         var statusOpt = new Option<ProjectStatus?>("--status", "Planned|Waiting|InProgress|Done");
@@ -59,12 +60,13 @@ internal static class ProjectCommands
         var linksOpt = new Option<string?>("--links", "관련 링크");
 
         var c = new Command("create", "프로젝트 생성")
-        { nameOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt };
+        { nameOpt, categoryOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
             var dto = new CreateProjectDto(
                 Name: pr.GetValueForOption(nameOpt)!,
+                Category: pr.GetValueForOption(categoryOpt) ?? string.Empty,
                 Description: pr.GetValueForOption(descOpt) ?? string.Empty,
                 Goal: pr.GetValueForOption(goalOpt) ?? string.Empty,
                 Status: pr.GetValueForOption(statusOpt) ?? ProjectStatus.Planned,
@@ -85,6 +87,7 @@ internal static class ProjectCommands
         // null 인 옵션은 기존 값 유지 — Update 는 "지정한 필드만 덮어쓰기" 패턴.
         var idOpt = new Option<int>("--id", "프로젝트 ID") { IsRequired = true };
         var nameOpt = new Option<string?>("--name", "이름");
+        var categoryOpt = new Option<string?>("--category", "프로젝트 구분 (과제|내부|사업|유지보수/하자보수 등)");
         var descOpt = new Option<string?>("--description", "설명");
         var goalOpt = new Option<string?>("--goal", "목표");
         var statusOpt = new Option<ProjectStatus?>("--status", "Planned|Waiting|InProgress|Done");
@@ -96,7 +99,7 @@ internal static class ProjectCommands
         var linksOpt = new Option<string?>("--links", "관련 링크");
 
         var c = new Command("update", "프로젝트 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt };
+        { idOpt, nameOpt, categoryOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -106,6 +109,7 @@ internal static class ProjectCommands
             if (existing is null) { ctx.ExitCode = CliJson.WriteError("not_found", $"Project {id} 없음"); return; }
             var dto = new UpdateProjectDto(
                 Name: pr.GetValueForOption(nameOpt) ?? existing.Name,
+                Category: pr.GetValueForOption(categoryOpt) ?? existing.Category,
                 Description: pr.GetValueForOption(descOpt) ?? existing.Description,
                 Goal: pr.GetValueForOption(goalOpt) ?? existing.Goal,
                 Status: pr.GetValueForOption(statusOpt) ?? existing.Status,

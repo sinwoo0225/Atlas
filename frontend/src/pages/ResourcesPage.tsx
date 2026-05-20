@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, CopyButton, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
@@ -67,10 +67,16 @@ function ResourceForm({ initial, onSave, onCancel }: {
 
         <div className="grid grid-cols-2 gap-3">
           <FormField label="이메일">
-            <input value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />
+            <div className="flex items-center gap-1.5">
+              <input value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />
+              <CopyButton value={form.email} title="이메일 복사" />
+            </div>
           </FormField>
           <FormField label="연락처">
-            <input value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputClass} />
+            <div className="flex items-center gap-1.5">
+              <input value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputClass} />
+              <CopyButton value={form.phone} title="연락처 복사" />
+            </div>
           </FormField>
         </div>
 
@@ -258,10 +264,22 @@ export function ResourcesPage() {
                   <p className="flex items-center gap-1.5"><Building size={12} /> {r.department}</p>
                 )}
                 {r.email && (
-                  <p className="flex items-center gap-1.5 truncate"><Mail size={12} /> {r.email}</p>
+                  <p className="flex items-center gap-1.5">
+                    <Mail size={12} className="shrink-0" />
+                    <span className="truncate">{r.email}</span>
+                    <span onClick={(e) => e.stopPropagation()} className="ml-auto">
+                      <CopyButton value={r.email} title="이메일 복사" className="!p-1" />
+                    </span>
+                  </p>
                 )}
                 {r.phone && (
-                  <p className="flex items-center gap-1.5"><Phone size={12} /> {r.phone}</p>
+                  <p className="flex items-center gap-1.5">
+                    <Phone size={12} className="shrink-0" />
+                    <span className="truncate">{r.phone}</span>
+                    <span onClick={(e) => e.stopPropagation()} className="ml-auto">
+                      <CopyButton value={r.phone} title="연락처 복사" className="!p-1" />
+                    </span>
+                  </p>
                 )}
               </div>
               {r.notes && <p className="text-xs text-muted mt-2 line-clamp-2">{r.notes}</p>}

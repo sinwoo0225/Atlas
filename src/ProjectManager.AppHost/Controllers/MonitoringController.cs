@@ -26,6 +26,10 @@ public class MonitoringController(MonitoringService svc) : ControllerBase
         return Ok(await svc.GetActivityByProjectAsync(d, t));
     }
 
+    // 주간 업무일지 통합에 첨부할 '이슈 목록' — 프로젝트별 미해결 이슈 스냅샷.
+    [HttpGet("issues/open")]
+    public async Task<IActionResult> OpenIssues() => Ok(await svc.GetOpenIssuesByProjectAsync());
+
     [HttpGet("worklogs/weekly")]
     public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart)
     {

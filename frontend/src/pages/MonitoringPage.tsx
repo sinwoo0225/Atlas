@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Activity, RefreshCw, Calendar, NotebookPen, Download } from 'lucide-react';
+import { Activity, RefreshCw, Calendar, NotebookPen, Download, AlertCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
@@ -10,6 +10,7 @@ import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
 import type {
   ActivityByProject,
   MonitoringCharts as MonitoringChartsData,
+  OpenIssuesByProject,
   ResourceHeatmap,
   TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
 } from '../types';
@@ -69,6 +70,7 @@ export function MonitoringPage() {
   const [charts, setCharts] = useState<MonitoringChartsData | null>(null);
   const [heatmap, setHeatmap] = useState<ResourceHeatmap | null>(null);
   const [activityByProject, setActivityByProject] = useState<ActivityByProject[]>([]);
+  const [openIssues, setOpenIssues] = useState<OpenIssuesByProject[]>([]);
 
   const load = () => {
     setLoading(true);
@@ -81,14 +83,16 @@ export function MonitoringPage() {
       monitoringApi.getCharts(),
       monitoringApi.getResourceHeatmap(),
       monitoringApi.getActivityByProject(30),
+      monitoringApi.openIssues(),
     ])
-      .then(([today, thisW, lastW, ch, hm, abp]) => {
+      .then(([today, thisW, lastW, ch, hm, abp, oi]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
         setCharts(ch);
         setHeatmap(hm);
         setActivityByProject(abp);
+        setOpenIssues(oi);
       })
       .catch(() => setError('모니터링 데이터를 불러올 수 없습니다.'))
       .finally(() => setLoading(false));
@@ -219,22 +223,30 @@ export function MonitoringPage() {
       )}
 
       {tab === 'logs' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
-          <WeeklySection
-            title="지난 주 업무일지"
-            data={lastWeek}
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <WeeklySection
+              title="지난 주 업무일지"
+              data={lastWeek}
+              loading={loading}
+              onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
+              variant="muted"
+              exportable
+            />
+            <WeeklySection
+              title="이번 주 업무일지"
+              data={thisWeek}
+              loading={loading}
+              onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
+              variant="current"
+              exportable
+              openIssues={openIssues}
+            />
+          </div>
+          <OpenIssuesSection
+            openIssues={openIssues}
             loading={loading}
-            onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
-            variant="muted"
-            exportable
-          />
-          <WeeklySection
-            title="이번 주 업무일지"
-            data={thisWeek}
-            loading={loading}
-            onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
-            variant="current"
-            exportable
+            onProjectClick={(id) => navigate(`/projects/${id}/issues`)}
           />
         </div>
       )}
@@ -268,7 +280,12 @@ function TabBar({ value, onChange }: { value: MonitoringTab; onChange: (next: Mo
   );
 }
 
-function buildWeeklyMarkdown(data: WeeklyWorkLog): string {
+// 이슈 설명을 한 줄 요약으로 — 줄바꿈/연속 공백을 단일 공백으로 접음.
+function oneLine(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = []): string {
   const weekStart = data.weekStart.slice(0, 10);
   // 종료일 = 주 시작 + 4일 (월~금)
   const start = new Date(weekStart);
@@ -288,32 +305,46 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog): string {
 
   if (data.projects.length === 0) {
     lines.push('_(기록 없음)_');
-    return lines.join('\n');
-  }
-
-  for (const p of data.projects) {
-    lines.push(`## ${p.projectName}`);
     lines.push('');
-    for (const d of p.days) {
-      const hasAny = fields.some((f) => (d[f.key] ?? '').trim() !== '');
-      if (!hasAny) continue;
-      const dateShort = d.date.slice(5, 10).replace('-', '/');
-      lines.push(`### ${d.dayLabel} (${dateShort})`);
-      for (const f of fields) {
-        const val = (d[f.key] ?? '').trim();
-        if (!val) continue;
-        lines.push(`**${f.label}**:`);
-        lines.push('');
-        lines.push(val);
-        lines.push('');
+  } else {
+    for (const p of data.projects) {
+      lines.push(`## ${p.projectName}`);
+      lines.push('');
+      for (const d of p.days) {
+        const hasAny = fields.some((f) => (d[f.key] ?? '').trim() !== '');
+        if (!hasAny) continue;
+        const dateShort = d.date.slice(5, 10).replace('-', '/');
+        lines.push(`### ${d.dayLabel} (${dateShort})`);
+        for (const f of fields) {
+          const val = (d[f.key] ?? '').trim();
+          if (!val) continue;
+          lines.push(`**${f.label}**:`);
+          lines.push('');
+          lines.push(val);
+          lines.push('');
+        }
       }
     }
+  }
+
+  // 미해결 이슈 스냅샷 — '[프로젝트명] 이슈이름 - 이슈설명'.
+  const issueLines = openIssues.flatMap((p) =>
+    p.issues.map((i) => {
+      const desc = oneLine(i.description);
+      return `- [${p.projectName}] ${i.title}${desc ? ` - ${desc}` : ''}`;
+    }),
+  );
+  if (issueLines.length > 0) {
+    lines.push('## 이슈 목록');
+    lines.push('');
+    lines.push(...issueLines);
+    lines.push('');
   }
   return lines.join('\n');
 }
 
-function downloadWeeklyMarkdown(data: WeeklyWorkLog) {
-  const md = buildWeeklyMarkdown(data);
+function downloadWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = []) {
+  const md = buildWeeklyMarkdown(data, openIssues);
   const weekStart = data.weekStart.slice(0, 10);
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -329,7 +360,7 @@ function downloadWeeklyMarkdown(data: WeeklyWorkLog) {
 type WeeklyVariant = 'current' | 'muted';
 
 function WeeklySection({
-  title, data, loading, onProjectClick, variant = 'current', exportable = false,
+  title, data, loading, onProjectClick, variant = 'current', exportable = false, openIssues = [],
 }: {
   title: string;
   data: WeeklyWorkLog | null;
@@ -337,6 +368,7 @@ function WeeklySection({
   onProjectClick: (id: number) => void;
   variant?: WeeklyVariant;
   exportable?: boolean;
+  openIssues?: OpenIssuesByProject[];
 }) {
   const muted = variant === 'muted';
   const titleCls = muted ? 'text-secondary' : 'text-primary';
@@ -358,9 +390,9 @@ function WeeklySection({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => downloadWeeklyMarkdown(data!)}
+            onClick={() => downloadWeeklyMarkdown(data!, openIssues)}
             leadingIcon={<Download size={14} />}
-            title="md 파일로 내보내기"
+            title="md 파일로 내보내기 (미해결 이슈 목록 포함)"
           >
             md 내보내기
           </Button>
@@ -424,5 +456,58 @@ function DayBlock({ day, field }: { day: WeeklyWorkLogDay; field: WorkLogField }
       <p className="text-xs font-semibold text-secondary">{day.dayLabel}</p>
       <div className="markdown-body pl-3"><ReactMarkdown>{day[field]}</ReactMarkdown></div>
     </div>
+  );
+}
+
+// 미해결(Open·InProgress) 이슈를 프로젝트별로 묶어 보여주는 섹션. md 내보내기엔 '이번 주' 일지에 첨부됨.
+function OpenIssuesSection({
+  openIssues, loading, onProjectClick,
+}: {
+  openIssues: OpenIssuesByProject[];
+  loading: boolean;
+  onProjectClick: (id: number) => void;
+}) {
+  const total = openIssues.reduce((n, p) => n + p.issues.length, 0);
+  return (
+    <section className="space-y-3">
+      <h2 className="h-section flex items-center gap-2 text-primary">
+        <AlertCircle size={16} className="text-accent" />
+        이슈 목록
+        <span className="text-xs text-muted font-normal">(미해결 {total}건)</span>
+      </h2>
+      {loading ? (
+        <Spinner label="불러오는 중..." />
+      ) : openIssues.length === 0 ? (
+        <Card padding="spacious" className="text-center text-muted text-sm">
+          미해결 이슈 없음
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {openIssues.map((p) => (
+            <Card key={p.projectId} padding="normal">
+              <button
+                onClick={() => onProjectClick(p.projectId)}
+                className="text-base font-bold text-primary hover:text-accent transition-colors"
+              >
+                {p.projectName}
+              </button>
+              <ul className="mt-2 space-y-1">
+                {p.issues.map((i) => (
+                  <li key={i.id} className="text-sm text-secondary flex flex-wrap items-baseline gap-x-1.5">
+                    <span className="font-medium text-primary">{i.title}</span>
+                    {i.description.trim() && (
+                      <span className="text-muted">- {i.description.replace(/\s+/g, ' ').trim()}</span>
+                    )}
+                    {i.assigneeName && (
+                      <Badge variant="neutral" size="sm">{i.assigneeName}</Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

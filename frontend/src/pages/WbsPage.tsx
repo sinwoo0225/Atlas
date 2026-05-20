@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks } from 'lucide-react';
+import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
   closestCenter, useSensor, useSensors,
@@ -18,8 +18,9 @@ import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import {
   collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName,
-  applySortOrderPatchesLocal, hasAnyFilter, type WbsFilterOpts,
+  applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
+import { wbsStatusBadge } from '../utils/statusMaps';
 import { sortWbsTree } from '../utils/wbsSort';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { IssuePicker } from '../components/IssuePicker';
@@ -475,6 +476,9 @@ export function WbsPage() {
   const [keyword, setKeyword] = useState('');
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [lateOnly, setLateOnly] = useState(false);
+  const [filterStatuses, setFilterStatuses] = useState<Set<WbsStatus>>(new Set());
+  const [filterAssignees, setFilterAssignees] = useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = useState(false);
   const [matchOnly, setMatchOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
@@ -484,8 +488,39 @@ export function WbsPage() {
   const filterOpts: WbsFilterOpts = useMemo(() => {
     const t = new Date();
     t.setHours(0, 0, 0, 0);
-    return { kw: keyword.trim().toLowerCase(), unassigned: unassignedOnly, late: lateOnly, todayMs: t.getTime() };
-  }, [keyword, unassignedOnly, lateOnly]);
+    return {
+      kw: keyword.trim().toLowerCase(),
+      unassigned: unassignedOnly,
+      late: lateOnly,
+      statuses: filterStatuses,
+      assignees: filterAssignees,
+      todayMs: t.getTime(),
+    };
+  }, [keyword, unassignedOnly, lateOnly, filterStatuses, filterAssignees]);
+
+  const assigneeOptions = useMemo(() => uniqueAssigneesSplit(items), [items]);
+
+  // 패널 칩 필터 활성 개수 (상태·담당자·미할당·지연). 키워드는 별도(바).
+  const chipFilterCount = filterStatuses.size + filterAssignees.size + (unassignedOnly ? 1 : 0) + (lateOnly ? 1 : 0);
+
+  const toggleStatus = (s: WbsStatus) => setFilterStatuses((prev) => {
+    const next = new Set(prev);
+    if (next.has(s)) next.delete(s); else next.add(s);
+    return next;
+  });
+  const toggleAssignee = (a: string) => setFilterAssignees((prev) => {
+    const next = new Set(prev);
+    if (next.has(a)) next.delete(a); else next.add(a);
+    return next;
+  });
+  const resetFilters = () => {
+    setKeyword('');
+    setUnassignedOnly(false);
+    setLateOnly(false);
+    setFilterStatuses(new Set());
+    setFilterAssignees(new Set());
+    setMatchOnly(false);
+  };
 
   const matchedIds = useMemo(
     () => hasAnyFilter(filterOpts) ? collectMatchedIds(items, filterOpts) : new Set<number>(),
@@ -693,39 +728,107 @@ export function WbsPage() {
         )}
 
         <div className="ml-auto flex items-center gap-2 flex-wrap">
-          <div className="relative">
-            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-            <input
-              type="search"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              placeholder="작업명·담당자·노트…"
-              className={`${inputClass} pl-7 py-1.5 text-sm w-48`}
-            />
-          </div>
-          <Button variant={unassignedOnly ? 'primary' : 'secondary'} size="sm" onClick={() => setUnassignedOnly((v) => !v)}>
-            미할당
+          {/* 키워드·매칭만 = 표 전용. 상태·담당자·미할당·지연 = 패널 안 공통 필터. */}
+          {view === 'table' && (
+            <div className="relative">
+              <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+              <input
+                type="search"
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="작업명·담당자·노트…"
+                className={`${inputClass} pl-7 py-1.5 text-sm w-48`}
+              />
+            </div>
+          )}
+          <Button
+            variant={(showFilters || chipFilterCount > 0) ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setShowFilters((v) => !v)}
+            leadingIcon={<Filter size={14} />}
+          >
+            필터
+            {chipFilterCount > 0 && ` (${chipFilterCount})`}
           </Button>
-          <Button variant={lateOnly ? 'primary' : 'secondary'} size="sm" onClick={() => setLateOnly((v) => !v)}>
-            지연
-          </Button>
+          {/* 패널이 닫혀 있을 때만 바에 노출 — 열려 있으면 칩 옆(패널)에서 토글. */}
+          {view === 'table' && hasAnyFilter(filterOpts) && !showFilters && (
+            <label className="text-xs text-muted flex items-center gap-1 cursor-pointer">
+              <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
+              매칭만 보기
+            </label>
+          )}
           {hasAnyFilter(filterOpts) && (
-            <>
-              <label className="text-xs text-muted flex items-center gap-1 cursor-pointer">
-                <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
-                매칭만 보기
-              </label>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setKeyword(''); setUnassignedOnly(false); setLateOnly(false); setMatchOnly(false); }}
-              >
-                초기화
-              </Button>
-            </>
+            <Button variant="ghost" size="sm" onClick={resetFilters}>
+              초기화
+            </Button>
           )}
         </div>
       </Card>
+
+      {showFilters && (
+        <Card padding="tight" className="space-y-2 text-xs">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-muted w-12 shrink-0">상태</span>
+            {(['Planned', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
+              const active = filterStatuses.has(s);
+              return (
+                <button
+                  key={s}
+                  onClick={() => toggleStatus(s)}
+                  className={`px-2 py-0.5 rounded border transition-colors ${
+                    active ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
+                  }`}
+                >
+                  {wbsStatusBadge[s].label}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setLateOnly((v) => !v)}
+              className={`px-2 py-0.5 rounded border transition-colors ${
+                lateOnly ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
+              }`}
+              title="마감 지난 미완료"
+            >
+              지연
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-muted w-12 shrink-0">담당자</span>
+            <button
+              onClick={() => setUnassignedOnly((v) => !v)}
+              className={`px-2 py-0.5 rounded border transition-colors ${
+                unassignedOnly ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
+              }`}
+            >
+              미할당
+            </button>
+            {assigneeOptions.map((a) => {
+                const active = filterAssignees.has(a);
+                return (
+                  <button
+                    key={a}
+                    onClick={() => toggleAssignee(a)}
+                    className={`px-2 py-0.5 rounded border transition-colors ${
+                      active ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
+                    }`}
+                  >
+                    {a}
+                  </button>
+                );
+              })}
+          </div>
+          {view === 'table' && hasAnyFilter(filterOpts) && (
+            <div className="flex items-center gap-2 pt-1 border-t border-default">
+              <span className="text-muted w-12 shrink-0">보기</span>
+              <label className="flex items-center gap-1 cursor-pointer">
+                <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
+                매칭만 보기 (비매칭 행 숨김)
+              </label>
+            </div>
+          )}
+        </Card>
+      )}
 
       {loading ? (
         <Card padding="spacious">
@@ -749,6 +852,10 @@ export function WbsPage() {
             projectId={pid}
             onDoubleClick={(it) => setDateEditing(it)}
             onItemsChanged={refresh}
+            filterStatuses={filterStatuses}
+            filterAssignees={filterAssignees}
+            unassignedOnly={unassignedOnly}
+            lateOnly={lateOnly}
           />
         </Card>
       ) : items.length === 0 ? (

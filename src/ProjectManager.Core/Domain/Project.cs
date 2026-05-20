@@ -6,6 +6,7 @@ public class Project : IAuditable
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;   // 프로젝트 구분: 과제·내부·사업·유지보수/하자보수 (자유 문자열)
     public string Description { get; set; } = string.Empty;
     public string Goal { get; set; } = string.Empty;
     public ProjectStatus Status { get; set; } = ProjectStatus.Planned;

@@ -13,6 +13,16 @@ public class WorkLogService(IWorkLogRepository repo)
         return d.AddDays(-diff);
     }
 
+    /// <summary>
+    /// 완료 자동 등록 줄 포맷: "- [완료] (종류) 이름 - 담당자, YYYY-MM-DD".
+    /// 담당자가 비어있으면 " - 담당자" 부분을 생략. (이슈/WBS 완료 전환 시 공통 사용)
+    /// </summary>
+    public static string FormatDoneLine(string kind, string name, string? assignee, DateTime date)
+    {
+        var who = string.IsNullOrWhiteSpace(assignee) ? string.Empty : $" - {assignee.Trim()}";
+        return $"- [완료] ({kind}) {name}{who}, {date:yyyy-MM-dd}";
+    }
+
     public async Task<IEnumerable<WorkLogDto>> GetWeekAsync(int projectId, DateTime weekStart) =>
         (await repo.GetByProjectWeekAsync(projectId, StartOfWeek(weekStart))).Select(ToDto);
 

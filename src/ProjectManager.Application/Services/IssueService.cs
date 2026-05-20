@@ -46,12 +46,14 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         issue.AssigneeResourceId = dto.AssigneeResourceId;
         issue.DueDate = dto.DueDate;
         var updated = await repo.UpdateAsync(issue);
+        var reloaded = (await repo.GetByIdAsync(updated.Id))!;
         if (!wasCompleted && IsCompleted(updated.Status))
-            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today, $"- [이슈] {updated.Title}");
+            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today,
+                WorkLogService.FormatDoneLine("이슈", reloaded.Title, reloaded.AssigneeResource?.Name, DateTime.Today));
         // C-1 양방향 sync (B 방향) — Title 변경 시 회의록 ActionItem.content 도 갱신.
         if (titleChanged)
             await meetingRepo.SyncPromotedIssueContentAsync(updated.ProjectId, updated.Id, updated.Title);
-        return ToDto((await repo.GetByIdAsync(updated.Id))!);
+        return ToDto(reloaded);
     }
 
     public async Task<bool> DeleteAsync(int id)

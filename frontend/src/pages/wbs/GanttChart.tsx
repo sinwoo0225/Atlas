@@ -7,11 +7,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsInstance } from 'echarts-for-react';
 import * as htmlToImage from 'html-to-image';
-import { ChevronDown, ChevronRight, Diamond, Download, Filter, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, Diamond, Download } from 'lucide-react';
 import type { WbsItem, WbsStatus } from '../../types';
 import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
 import { wbsStatusBadge } from '../../utils/statusMaps';
+import { splitAssignees } from '../../utils/wbsHelpers';
 import { sortSiblings } from '../../utils/wbsSort';
 import { spanOf } from '../../utils/wbsSpan';
 import { Button } from '../../components/ui';
@@ -88,16 +89,6 @@ function toIsoDate(t: number): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
-
-function uniqueAssignees(items: WbsItem[]): string[] {
-  const set = new Set<string>();
-  const walk = (n: WbsItem) => {
-    if (n.assignee?.trim()) set.add(n.assignee.trim());
-    n.children?.forEach(walk);
-  };
-  items.forEach(walk);
-  return [...set].sort();
 }
 
 function weekendMarkAreas(minT: number, maxT: number): Array<Array<{ xAxis: number }>> {
@@ -228,12 +219,22 @@ export function GanttChart({
   projectId,
   onDoubleClick,
   onItemsChanged,
+  filterStatuses,
+  filterAssignees,
+  unassignedOnly,
+  lateOnly,
 }: {
   items: WbsItem[];
   projectId: number;
   onDoubleClick: (item: WbsItem) => void;
   /** 드래그로 일정이 바뀐 뒤 부모에서 다시 fetch 하도록 알리는 콜백. */
   onItemsChanged: () => void;
+  /** 상단 공통 필터 — 표/간트가 같은 선택을 공유. 비어있으면 전체. */
+  filterStatuses: Set<WbsStatus>;
+  filterAssignees: Set<string>;
+  /** 미할당(담당자 없음)·지연(마감 지난 미완료) 토글 — 공통 필터. */
+  unassignedOnly: boolean;
+  lateOnly: boolean;
 }) {
   const theme = useThemeMode();
   const colors = getChartColors(theme);
@@ -247,9 +248,6 @@ export function GanttChart({
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [scale, setScale] = useState<Scale>('day');
   const [hoveredId, setHoveredId] = useState<number | null>(null);
-  const [filterStatuses, setFilterStatuses] = useState<Set<WbsStatus>>(new Set());
-  const [filterAssignees, setFilterAssignees] = useState<Set<string>>(new Set());
-  const [showFilters, setShowFilters] = useState(false);
   // 사용자가 줌·팬으로 설정한 dataZoom 백분율. notMerge=true 라도 옵션에 매번 명시해 유지.
   const [zoomRange, setZoomRange] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
 
@@ -270,11 +268,16 @@ export function GanttChart({
   useEffect(() => { projectIdRef.current = projectId; }, [projectId]);
   useEffect(() => { onItemsChangedRef.current = onItemsChanged; }, [onItemsChanged]);
 
-  const allAssignees = useMemo(() => uniqueAssignees(items), [items]);
+  const [todayMs] = useState(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t.getTime(); });
 
   const filterDim = (item: WbsItem): boolean => {
     if (filterStatuses.size > 0 && !filterStatuses.has(item.status)) return true;
-    if (filterAssignees.size > 0 && !filterAssignees.has(item.assignee?.trim() ?? '')) return true;
+    if (filterAssignees.size > 0) {
+      const own = splitAssignees(item.assignee);
+      if (!own.some((a) => filterAssignees.has(a))) return true;
+    }
+    if (unassignedOnly && item.assignee.trim()) return true;
+    if (lateOnly && !(item.endDate && item.status !== 'Done' && new Date(item.endDate).getTime() < todayMs)) return true;
     return false;
   };
 
@@ -290,29 +293,6 @@ export function GanttChart({
       else next.add(id);
       return next;
     });
-  };
-
-  const toggleStatus = (s: WbsStatus) => {
-    setFilterStatuses((prev) => {
-      const next = new Set(prev);
-      if (next.has(s)) next.delete(s);
-      else next.add(s);
-      return next;
-    });
-  };
-
-  const toggleAssignee = (a: string) => {
-    setFilterAssignees((prev) => {
-      const next = new Set(prev);
-      if (next.has(a)) next.delete(a);
-      else next.add(a);
-      return next;
-    });
-  };
-
-  const clearFilters = () => {
-    setFilterStatuses(new Set());
-    setFilterAssignees(new Set());
   };
 
   /* ─────────── graphic 패치 (React state 우회) ───────────
@@ -788,19 +768,6 @@ export function GanttChart({
             </Button>
           ))}
         </div>
-        <Button
-          variant={showFilters ? 'primary' : 'secondary'}
-          size="sm"
-          onClick={() => setShowFilters((v) => !v)}
-          leadingIcon={<Filter size={14} />}
-        >
-          필터{filterStatuses.size + filterAssignees.size > 0 ? ` (${filterStatuses.size + filterAssignees.size})` : ''}
-        </Button>
-        {(filterStatuses.size > 0 || filterAssignees.size > 0) && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} leadingIcon={<X size={14} />}>
-            필터 초기화
-          </Button>
-        )}
         <Button variant="secondary" size="sm" onClick={handleExportPng} leadingIcon={<Download size={14} />}>
           PNG 저장
         </Button>
@@ -808,47 +775,6 @@ export function GanttChart({
           막대 호버=핸들 표시 · 가운데=이동 / 좌우 끝=리사이즈 · 더블클릭=날짜 모달
         </span>
       </div>
-
-      {showFilters && (
-        <div className="bg-surface-2 border border-default rounded-md p-3 space-y-2 text-xs">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-muted w-12">상태</span>
-            {(['Planned', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
-              const active = filterStatuses.has(s);
-              return (
-                <button
-                  key={s}
-                  onClick={() => toggleStatus(s)}
-                  className={`px-2 py-0.5 rounded border transition-colors ${
-                    active ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
-                  }`}
-                >
-                  {wbsStatusBadge[s].label}
-                </button>
-              );
-            })}
-          </div>
-          {allAssignees.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-muted w-12">담당자</span>
-              {allAssignees.map((a) => {
-                const active = filterAssignees.has(a);
-                return (
-                  <button
-                    key={a}
-                    onClick={() => toggleAssignee(a)}
-                    className={`px-2 py-0.5 rounded border transition-colors ${
-                      active ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
-                    }`}
-                  >
-                    {a}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 본문: 좌측 라벨 + 우측 차트. PNG 캡처는 이 wrapper 통째. */}
       {rows.length === 0 ? (
