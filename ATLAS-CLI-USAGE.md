@@ -52,7 +52,8 @@ JSON 출력 들여쓰기가 필요하면 `$env:ATLAS_CLI_PRETTY = '1'`. 기본�
 ```
 atlas-cli project list
 atlas-cli project get --id N
-atlas-cli project create --name "..." [--description ... --goal ... --status Planned|Waiting|InProgress|Done
+atlas-cli project create --name "..." [--category 과제|내부|사업|유지보수/하자보수
+                                       --description ... --goal ... --status Planned|Waiting|InProgress|Done
                                        --start YYYY-MM-DD --end YYYY-MM-DD --budget DEC
                                        --participants "..." --deliverables "..." --links "..."]
 atlas-cli project update --id N [위 옵션 중 변경할 것만]

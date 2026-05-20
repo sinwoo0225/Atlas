@@ -10,7 +10,7 @@ namespace ProjectManager.Mcp.Tools;
 public static class ProjectTools
 {
     [McpServerTool(Name = "atlas_project_list"),
-     Description("모든 Atlas 프로젝트 조회 → JSON 배열 (id/name/status/dates/...)")]
+     Description("모든 Atlas 프로젝트 조회 → JSON 배열 (id/name/category/status/dates/...)")]
     public static async Task<string> List(ProjectService svc) =>
         McpJson.Serialize(await svc.GetAllAsync());
 
