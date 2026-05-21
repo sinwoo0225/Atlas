@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 
-export type ThemeMode = 'light' | 'dark';
+export type ThemeMode = 'light' | 'dark' | 'custom';
 
 function getCurrentTheme(): ThemeMode {
   if (typeof document === 'undefined') return 'dark';
-  return document.documentElement.classList.contains('light') ? 'light' : 'dark';
+  const cl = document.documentElement.classList;
+  if (cl.contains('custom')) return 'custom';
+  return cl.contains('light') ? 'light' : 'dark';
 }
 
 /** 다크/라이트 테마를 추적하는 훅.
@@ -91,6 +93,61 @@ const LIGHT_CHART_COLORS: ChartColors = {
   ganttRowHover:      'rgba(74, 103, 151, 0.10)',   // accent rgba v2 옅게
 };
 
+// 커스텀 테마 — applyTheme 가 인라인으로 주입한 CSS 토큰을 그대로 읽어 차트색 구성.
+// (ECharts 는 CSS 변수를 못 받으므로 getComputedStyle 로 현재 값을 꺼낸다.)
+function cssVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined') return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
+}
+
+function rgbaFromHexVar(name: string, alpha: number, fallback: string): string {
+  const v = cssVar(name, '');
+  const h = v.replace('#', '');
+  if (h.length < 6) return fallback;
+  const n = parseInt(h, 16);
+  if (Number.isNaN(n)) return fallback;
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+// 현재 --bg-base 가 어두운 계열인지 (커스텀 테마의 명암 방향 판별).
+function customIsDark(): boolean {
+  const bg = cssVar('--bg-base', '#12151b').replace('#', '');
+  const bgN = parseInt(bg.length >= 6 ? bg : '12151b', 16);
+  const bgLum = (((bgN >> 16) & 255) + ((bgN >> 8) & 255) + (bgN & 255)) / 3;
+  return bgLum < 128;
+}
+
+/** 하드코드 hex 그라데이션을 쓰는 차트 헬퍼용 — 'custom' 을 명암 기준 dark/light 로 환원. */
+export function effectiveLightDark(theme: ThemeMode): 'dark' | 'light' {
+  if (theme === 'dark' || theme === 'light') return theme;
+  return customIsDark() ? 'dark' : 'light';
+}
+
+function readChartColorsFromCss(): ChartColors {
+  const accent = cssVar('--accent', '#9eb2ce');
+  const isDark = customIsDark();
+  return {
+    tooltipBg: cssVar('--bg-surface', '#1f232b'),
+    tooltipBorder: cssVar('--border-default', '#3a4051'),
+    tooltipText: cssVar('--text-primary', '#f0f2f7'),
+    axisText: cssVar('--text-muted', '#a8aebd'),
+    axisLine: cssVar('--border-default', '#3a4051'),
+    splitLine: cssVar('--bg-surface-2', '#2a2f3a'),
+    accent,
+    accentBar: accent,
+    mutedBar: cssVar('--border-strong', '#545b6e'),
+    ganttBarPlanned: cssVar('--border-strong', '#545b6e'),
+    ganttBarInProgress: cssVar('--warning', '#f5b955'),
+    ganttBarDone: cssVar('--success', '#4ade80'),
+    ganttBarParent: rgbaFromHexVar('--accent', 0.35, 'rgba(158, 178, 206, 0.35)'),
+    ganttMilestone: cssVar('--accent-2', '#e6b552'),
+    ganttToday: cssVar('--danger', '#f87171'),
+    ganttWeekend: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.035)',
+    ganttRowHover: rgbaFromHexVar('--accent', 0.12, 'rgba(158, 178, 206, 0.12)'),
+  };
+}
+
 export function getChartColors(theme: ThemeMode): ChartColors {
+  if (theme === 'custom') return readChartColorsFromCss();
   return theme === 'light' ? LIGHT_CHART_COLORS : DARK_CHART_COLORS;
 }

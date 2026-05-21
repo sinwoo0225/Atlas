@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { diffLines } from 'diff';
 import { Badge } from './ui';
 import { ACTIVITY_TYPE_META, ACTION_META, relativeTime, activityUrl } from '../utils/activity';
+import { EntityIcon } from '../utils/iconRegistry';
 import { useProjectColor } from '../utils/projectColor';
 import type { ActivityLog } from '../types';
 
@@ -18,7 +19,6 @@ export function ActivityRow({ activity, showProject = false }: { activity: Activ
   const meta = ACTIVITY_TYPE_META[activity.entityType];
   const action = ACTION_META[activity.action];
   const url = activityUrl(activity);
-  const Icon = meta.Icon;
 
   const changedEntries = activity.changedFields ? Object.entries(activity.changedFields) : [];
   const hasChanges = changedEntries.length > 0;
@@ -29,7 +29,7 @@ export function ActivityRow({ activity, showProject = false }: { activity: Activ
         onClick={url ? () => navigate(url) : undefined}
         className="flex items-center gap-2 py-1.5 border-b border-default last:border-0"
       >
-        <Icon size={14} className="text-muted shrink-0" />
+        <EntityIcon slot={activity.entityType} size={14} className="text-muted shrink-0" />
         <span className="text-xs text-muted shrink-0 w-12">{meta.label}</span>
         <Badge variant={action.variant} size="sm">{action.label}</Badge>
         {showProject && activity.projectName && activity.projectId != null && (

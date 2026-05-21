@@ -20,7 +20,8 @@ import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
-import { applyTheme, applyMarkdownStyle, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
+import { applyAppearance, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
+import { isCustomDark } from './utils/themeCustom';
 import { getMachineAccount } from './utils/hostBridge';
 import { systemApi, EXPECTED_API_VERSION } from './api/system';
 
@@ -29,11 +30,14 @@ export default function App() {
 
   useEffect(() => {
     const s = loadSettings();
-    applyTheme(s.theme);
-    applyMarkdownStyle(s.markdownFontSize, s.markdownLineHeight);
+    applyAppearance(s);
 
-    // SettingsPage 가 theme 변경 시 'atlas:settings-changed' 발화 — Toaster theme 동기화 (P7-1)
-    const onSettings = () => setTheme(loadSettings().theme);
+    // SettingsPage 가 외관 변경 시 'atlas:settings-changed' 발화 — 테마·로고색·문서제목 재적용 + Toaster theme 동기화 (P7-1)
+    const onSettings = () => {
+      const next = loadSettings();
+      applyAppearance(next);
+      setTheme(next.theme);
+    };
     window.addEventListener('atlas:settings-changed', onSettings);
 
     // 작성자 자동 추적의 시작점: defaultAuthor 가 비어 있으면 클라 머신 계정으로 한 번 시드.
@@ -61,7 +65,13 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Toaster position="top-right" theme={theme} richColors closeButton duration={4000} />
+      <Toaster
+        position="top-right"
+        theme={theme === 'custom' ? (isCustomDark(loadSettings().customColors) ? 'dark' : 'light') : theme}
+        richColors
+        closeButton
+        duration={4000}
+      />
       <GlobalProgressBar />
       <ConfirmDialogHost />
       <CommandPalette />

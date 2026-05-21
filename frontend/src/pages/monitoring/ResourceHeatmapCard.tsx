@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Users, CalendarCheck } from 'lucide-react';
 import { Card, Badge, EmptyState, Skeleton, Modal } from '../../components/ui';
-import { getChartColors, useThemeMode } from '../../utils/themeColors';
+import { getChartColors, useThemeMode, effectiveLightDark } from '../../utils/themeColors';
 import type { ResourceHeatmap, ResourceHeatmapItem, ResourceHeatmapRow } from '../../types';
 
 interface Props {
@@ -74,7 +74,7 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
         points.push([wi, ri, c]);
       });
     });
-    return buildOption(data.weekStarts, sortedRows, points, max, colors, theme);
+    return buildOption(data.weekStarts, sortedRows, points, max, colors, effectiveLightDark(theme));
   }, [data, sortedRows, colors, theme]);
 
   const selectedItems = useMemo<ResourceHeatmapItem[]>(() => {

@@ -4,7 +4,7 @@
 import ReactECharts from 'echarts-for-react';
 import { PieChart, AlertTriangle, Diamond, BarChart3, Activity } from 'lucide-react';
 import { Card, Skeleton, Badge } from '../../components/ui';
-import { getChartColors, useThemeMode, type ChartColors } from '../../utils/themeColors';
+import { getChartColors, useThemeMode, effectiveLightDark, type ChartColors } from '../../utils/themeColors';
 import { projectStatusBadge } from '../../utils/statusMaps';
 import { ResourceHeatmapCard } from './ResourceHeatmapCard';
 import type {
@@ -55,7 +55,7 @@ export function MonitoringChartGrid({
           <ProjectStatusBreakdownWidget
             data={data}
             colors={colors}
-            theme={theme}
+            theme={effectiveLightDark(theme)}
             onProjectClick={onProjectClick}
           />
         )}
@@ -72,7 +72,7 @@ export function MonitoringChartGrid({
           <p className="text-sm text-muted py-12 text-center">등록된 이슈 없음</p>
         ) : (
           <ReactECharts
-            option={buildIssueMatrixOption(data, colors, theme)}
+            option={buildIssueMatrixOption(data, colors, effectiveLightDark(theme))}
             style={{ height: CHART_HEIGHT }}
           />
         )}

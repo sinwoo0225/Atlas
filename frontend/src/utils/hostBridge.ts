@@ -205,6 +205,25 @@ export function launchDictation(): void {
   bridge.postMessage({ type: 'launchDictation', requestId: `dictation-${++counter}-${Date.now()}` });
 }
 
+// 데스크톱 앱의 커스텀 제목 표시줄 워드마크 + OS 창 제목(작업표시줄·Alt+Tab)을 갱신한다.
+// 제목 표시줄은 네이티브 XAML 이라 document.title 로는 안 바뀌므로 호스트에 위임.
+// 브라우저 dev 에서는 no-op (탭 제목은 document.title 가 담당).
+export interface HostBrand {
+  primaryText: string;
+  accentText: string;
+  primaryColor: string;
+  accentColor: string;
+  title: string;
+  // 작업표시줄/창 아이콘 data URL. 빈 문자열이면 호스트가 기본 atlas.ico 로 복귀.
+  iconDataUrl: string;
+}
+
+export function setHostBrand(brand: HostBrand): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setBrand', ...brand });
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;

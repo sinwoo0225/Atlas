@@ -1,23 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, AlertTriangle, CalendarDays, FileText, FolderOpen, GitBranch, Code2, NotebookPen } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { search, type SearchEntityType, type SearchHit } from '../api/search';
+import { EntityIcon } from '../utils/iconRegistry';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 
 const DEBOUNCE_MS = 200;
 const RESULT_LIMIT = 30;
 
-// 엔티티 타입별 라벨/색/아이콘. 색은 index.css 의 토큰 변수와 어울리는 hex 직접 사용 —
-// ProjectMap 5각형 팔레트와 톤을 맞춤.
-const TYPE_META: Record<SearchEntityType, { label: string; Icon: typeof Search; color: string }> = {
-  Project:     { label: '프로젝트',  Icon: FolderOpen,    color: '#9eb2ce' },
-  WbsItem:     { label: 'WBS',       Icon: CalendarDays,  color: '#84cc16' },
-  Issue:       { label: '이슈',      Icon: AlertTriangle, color: '#f87171' },
-  Meeting:     { label: '회의록',    Icon: FileText,      color: '#a78bfa' },
-  ChangeLog:   { label: '변경',      Icon: GitBranch,     color: '#fbbf24' },
-  DevInfoItem: { label: '개발정보',  Icon: Code2,         color: '#34d399' },
-  WorkLog:     { label: '업무일지',  Icon: NotebookPen,   color: '#60a5fa' },
+// 엔티티 타입별 라벨/색. 색은 index.css 의 토큰 변수와 어울리는 hex 직접 사용 —
+// ProjectMap 5각형 팔레트와 톤을 맞춤. 아이콘은 iconRegistry 의 getEntityIcon 으로 조회.
+const TYPE_META: Record<SearchEntityType, { label: string; color: string }> = {
+  Project:     { label: '프로젝트',  color: '#9eb2ce' },
+  WbsItem:     { label: 'WBS',       color: '#84cc16' },
+  Issue:       { label: '이슈',      color: '#f87171' },
+  Meeting:     { label: '회의록',    color: '#a78bfa' },
+  ChangeLog:   { label: '변경',      color: '#fbbf24' },
+  DevInfoItem: { label: '개발정보',  color: '#34d399' },
+  WorkLog:     { label: '업무일지',  color: '#60a5fa' },
 };
 
 function urlFor(hit: SearchHit): string {
@@ -177,7 +178,6 @@ export function CommandPalette() {
             <ul className="py-1">
               {results.map((hit, i) => {
                 const meta = TYPE_META[hit.type];
-                const Icon = meta.Icon;
                 const active = i === activeIndex;
                 return (
                   <li key={`${hit.type}-${hit.id}`}>
@@ -192,7 +192,7 @@ export function CommandPalette() {
                         active ? 'bg-surface-3' : 'hover:bg-surface-2'
                       }`}
                     >
-                      <Icon size={16} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
+                      <EntityIcon slot={hit.type} size={16} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-xs">
                           <span className="font-medium" style={{ color: meta.color }}>{meta.label}</span>

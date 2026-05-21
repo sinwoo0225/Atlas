@@ -1,19 +1,16 @@
-import {
-  Activity, FolderOpen, CalendarDays, AlertTriangle, FileText,
-  GitBranch, Code2, NotebookPen, User,
-} from 'lucide-react';
 import type { ActivityLog, ActivityEntityType, ActivityAction } from '../types';
 
-// 활동 피드의 entity 타입별 라벨/아이콘 — CommandPalette TYPE_META 와 톤 동일.
-export const ACTIVITY_TYPE_META: Record<ActivityEntityType, { label: string; Icon: typeof Activity }> = {
-  Project:     { label: '프로젝트',  Icon: FolderOpen },
-  WbsItem:     { label: 'WBS',       Icon: CalendarDays },
-  Issue:       { label: '이슈',      Icon: AlertTriangle },
-  Meeting:     { label: '회의록',    Icon: FileText },
-  ChangeLog:   { label: '변경',      Icon: GitBranch },
-  DevInfoItem: { label: '개발정보',  Icon: Code2 },
-  WorkLog:     { label: '업무일지',  Icon: NotebookPen },
-  Resource:    { label: '리소스',    Icon: User },
+// 활동 피드의 entity 타입별 라벨. 아이콘은 utils/iconRegistry 의 getEntityIcon 으로 조회
+// (설정에서 슬롯별 커스터마이즈 가능) — CommandPalette TYPE_META 와 톤 동일.
+export const ACTIVITY_TYPE_META: Record<ActivityEntityType, { label: string }> = {
+  Project:     { label: '프로젝트' },
+  WbsItem:     { label: 'WBS' },
+  Issue:       { label: '이슈' },
+  Meeting:     { label: '회의록' },
+  ChangeLog:   { label: '변경' },
+  DevInfoItem: { label: '개발정보' },
+  WorkLog:     { label: '업무일지' },
+  Resource:    { label: '리소스' },
 };
 
 export const ACTION_META: Record<ActivityAction, { label: string; variant: 'success' | 'info' | 'danger' }> = {

@@ -1,46 +1,35 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  FolderOpen,
-  LayoutDashboard,
-  CalendarDays,
-  GitBranch,
-  FileText,
-  Code2,
-  Network,
-  Settings,
-  Activity,
-  BarChart3,
-  Users,
-  AlertTriangle,
   ChevronDown,
   Check,
-  NotebookPen,
   Search,
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadSettings, patchSettings } from '../store/settings';
+import { MenuIcon } from '../utils/iconRegistry';
 import { useRecentTracker } from '../hooks/useRecentTracker';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 
+// path = iconRegistry 의 메뉴 슬롯키. 아이콘은 getMenuIcon(slot) 으로 조회(커스터마이즈 가능).
 const navItems = [
-  { path: '/', label: '프로젝트 목록', Icon: FolderOpen },
-  { path: '/monitoring', label: '통합 모니터링', Icon: BarChart3 },
-  { path: '/activity', label: '전체 활동', Icon: Activity },
-  { path: '/resources', label: '리소스 관리', Icon: Users },
+  { path: '/', label: '프로젝트 목록' },
+  { path: '/monitoring', label: '통합 모니터링' },
+  { path: '/activity', label: '전체 활동' },
+  { path: '/resources', label: '리소스 관리' },
 ];
 
 const projectNavItems = [
-  { path: 'dashboard', label: '대시보드', Icon: LayoutDashboard },
-  { path: 'wbs', label: '일정/WBS', Icon: CalendarDays },
-  { path: 'worklog', label: '업무일지', Icon: NotebookPen },
-  { path: 'issues', label: '이슈 관리', Icon: AlertTriangle },
-  { path: 'changelogs', label: '변경이력', Icon: GitBranch },
-  { path: 'meetings', label: '회의록', Icon: FileText },
-  { path: 'devinfo', label: '개발 정보', Icon: Code2 },
-  { path: 'map', label: '프로젝트 맵', Icon: Network },
+  { path: 'dashboard', label: '대시보드' },
+  { path: 'wbs', label: '일정/WBS' },
+  { path: 'worklog', label: '업무일지' },
+  { path: 'issues', label: '이슈 관리' },
+  { path: 'changelogs', label: '변경이력' },
+  { path: 'meetings', label: '회의록' },
+  { path: 'devinfo', label: '개발 정보' },
+  { path: 'map', label: '프로젝트 맵' },
 ];
 
 // 사이드바의 검색 트리거. 실제 검색 UI 는 CommandPalette (App 최상위 mount) — 이 버튼은
@@ -134,6 +123,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(() => loadSettings().sidebarCollapsed);
   useRecentTracker();
 
+  // 워드마크 텍스트 + 메뉴 아이콘 오버라이드 — 설정 저장 시(atlas:settings-changed) 즉시 반영.
+  const [brand, setBrand] = useState(() => {
+    const s = loadSettings();
+    return { primary: s.brandPrimaryText, accent: s.brandAccentText, menuIcons: s.menuIcons };
+  });
+  useEffect(() => {
+    const onChange = () => {
+      const s = loadSettings();
+      setBrand({ primary: s.brandPrimaryText, accent: s.brandAccentText, menuIcons: s.menuIcons });
+    };
+    window.addEventListener('atlas:settings-changed', onChange);
+    return () => window.removeEventListener('atlas:settings-changed', onChange);
+  }, []);
+
   const toggleCollapsed = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -191,12 +194,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className={`py-4 border-b border-default ${collapsed ? 'px-2 flex flex-col items-center gap-2' : 'px-4 flex items-center justify-between gap-2'}`}>
           {collapsed ? (
             <h1 className="text-xl leading-none tracking-tight">
-              <span className="logo-primary">A</span><span className="logo-accent">t</span>
+              <span className="logo-primary">{brand.primary.slice(0, 1) || 'A'}</span>
+              <span className="logo-accent">{brand.accent.slice(0, 1) || 't'}</span>
             </h1>
           ) : (
             <div className="min-w-0">
               <h1 className="text-2xl leading-none tracking-tight">
-                <span className="logo-primary">At</span><span className="logo-accent">las</span>
+                <span className="logo-primary">{brand.primary}</span><span className="logo-accent">{brand.accent}</span>
               </h1>
               <p className="text-[11px] text-muted mt-1 tracking-wide">The map of your projects</p>
             </div>
@@ -225,7 +229,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         )}
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
-          {navItems.map(({ path, label, Icon }) => {
+          {navItems.map(({ path, label }) => {
             const active = location.pathname === path;
             return (
               <Link
@@ -235,7 +239,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 aria-current={active ? 'page' : undefined}
                 title={collapsed ? label : undefined}
               >
-                <Icon size={16} />
+                <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
                 {!collapsed && label}
               </Link>
             );
@@ -251,7 +255,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </div>
               )}
               {collapsed && <div className="border-t border-default mt-3 mb-1" />}
-              {projectNavItems.map(({ path, label, Icon }) => {
+              {projectNavItems.map(({ path, label }) => {
                 const fullPath = `/projects/${selectedProjectId}/${path}`;
                 const active = location.pathname === fullPath;
                 return (
@@ -262,7 +266,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     aria-current={active ? 'page' : undefined}
                     title={collapsed ? label : undefined}
                   >
-                    <Icon size={16} />
+                    <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
                     {!collapsed && label}
                   </Link>
                 );
@@ -281,7 +285,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 aria-current={active ? 'page' : undefined}
                 title={collapsed ? '설정' : undefined}
               >
-                <Settings size={16} />
+                <MenuIcon slot="settings" overrides={brand.menuIcons} size={16} />
                 {!collapsed && '설정'}
               </Link>
             );

@@ -25,7 +25,7 @@
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
                     <TextBlock VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="16">
-                        <Run Text="At" Foreground="#7c8db5" FontStyle="Italic" FontWeight="ExtraBold"/><Run Text="las" Foreground="#c9a96b" FontStyle="Italic" FontWeight="ExtraBold"/>
+                        <Run x:Name="BrandPrimaryRun" Text="At" Foreground="#7c8db5" FontStyle="Italic" FontWeight="ExtraBold"/><Run x:Name="BrandAccentRun" Text="las" Foreground="#c9a96b" FontStyle="Italic" FontWeight="ExtraBold"/>
                     </TextBlock>
                     <TextBlock Text="The map of your projects" Foreground="#a1a1aa" FontSize="11"
                                FontFamily="Segoe UI" VerticalAlignment="Center" Margin="10,2,0,0"/>

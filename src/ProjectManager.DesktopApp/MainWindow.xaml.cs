@@ -272,6 +272,19 @@ public partial class MainWindow : Window
                 // 호스트가 키 입력을 합성한다. 입력은 현재 포커스된 편집 컨트롤(논의내용 textarea)로 들어간다.
                 SendWinH();
             }
+            else if (type == "setBrand")
+            {
+                // 프론트 브랜드 설정 → 네이티브 커스텀 제목 표시줄 워드마크 + OS 창 제목(작업표시줄·Alt+Tab).
+                // 제목 표시줄은 XAML 이라 document.title 로 못 바꾸므로 호스트가 직접 갱신한다.
+                var primaryText = doc.RootElement.TryGetProperty("primaryText", out var ptEl) ? ptEl.GetString() : null;
+                var accentText = doc.RootElement.TryGetProperty("accentText", out var atEl) ? atEl.GetString() : null;
+                var primaryColor = doc.RootElement.TryGetProperty("primaryColor", out var pcEl) ? pcEl.GetString() : null;
+                var accentColor = doc.RootElement.TryGetProperty("accentColor", out var acEl) ? acEl.GetString() : null;
+                var brandTitle = doc.RootElement.TryGetProperty("title", out var btEl) ? btEl.GetString() : null;
+                var iconDataUrl = doc.RootElement.TryGetProperty("iconDataUrl", out var icEl) ? icEl.GetString() : null;
+                ApplyBrand(primaryText, accentText, primaryColor, accentColor, brandTitle);
+                ApplyIcon(iconDataUrl);
+            }
         }
         catch (System.Exception ex)
         {
@@ -292,6 +305,62 @@ public partial class MainWindow : Window
         keybd_event(VK_H, 0, 0, UIntPtr.Zero);
         keybd_event(VK_H, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
         keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+    }
+
+    // 커스텀 제목 표시줄 워드마크(Run 텍스트·색) + OS 창 제목을 갱신.
+    // WebMessageReceived 는 UI 스레드에서 발화하므로 직접 UI 접근 가능.
+    private void ApplyBrand(string? primaryText, string? accentText, string? primaryColor, string? accentColor, string? title)
+    {
+        if (!string.IsNullOrEmpty(primaryText) && BrandPrimaryRun is not null) BrandPrimaryRun.Text = primaryText;
+        if (!string.IsNullOrEmpty(accentText) && BrandAccentRun is not null) BrandAccentRun.Text = accentText;
+        var pBrush = TryBrush(primaryColor);
+        if (pBrush is not null && BrandPrimaryRun is not null) BrandPrimaryRun.Foreground = pBrush;
+        var aBrush = TryBrush(accentColor);
+        if (aBrush is not null && BrandAccentRun is not null) BrandAccentRun.Foreground = aBrush;
+        if (!string.IsNullOrWhiteSpace(title)) Title = title!;
+    }
+
+    private static System.Windows.Media.Brush? TryBrush(string? hex)
+    {
+        if (string.IsNullOrWhiteSpace(hex)) return null;
+        try
+        {
+            var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(hex);
+            return new System.Windows.Media.SolidColorBrush(color);
+        }
+        catch { return null; }
+    }
+
+    // 작업표시줄/창 아이콘 갱신. data URL 이면 디코드해 적용, 비어 있으면 기본 atlas.ico 복귀.
+    // exe 파일 임베드 아이콘(<ApplicationIcon>)과 별개 — 실행 중인 창 아이콘만 바뀐다.
+    private void ApplyIcon(string? dataUrl)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(dataUrl))
+            {
+                Icon = new System.Windows.Media.Imaging.BitmapImage(
+                    new Uri("pack://application:,,,/Resources/atlas.ico"));
+                return;
+            }
+
+            // "data:image/png;base64,XXXX" → base64 본문만 추출.
+            var comma = dataUrl.IndexOf(',');
+            if (comma < 0) return;
+            var bytes = Convert.FromBase64String(dataUrl[(comma + 1)..]);
+
+            var bmp = new System.Windows.Media.Imaging.BitmapImage();
+            bmp.BeginInit();
+            bmp.CacheOption = System.Windows.Media.Imaging.BitmapCacheOption.OnLoad;
+            bmp.StreamSource = new MemoryStream(bytes);
+            bmp.EndInit();
+            bmp.Freeze();
+            Icon = bmp;
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[apply-icon-err] {ex.GetType().Name}: {ex.Message}");
+        }
     }
 
     private async Task TestServerConnectionAsync(string? requestId, string? url, string? apiKey)
