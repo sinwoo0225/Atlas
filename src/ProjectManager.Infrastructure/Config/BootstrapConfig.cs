@@ -22,6 +22,42 @@ public sealed class BootstrapConfig
     [JsonPropertyName("apiKey")]
     public string? ApiKey { get; set; }
 
+    // ===== 자동 백업 (Local 데스크톱 in-process · 서버에서 동작) =====
+    // 백엔드 AutoBackupService 가 매 틱 재로드해 사용. config.json 에 두므로 재시작 불필요.
+    [JsonPropertyName("autoBackupEnabled")]
+    public bool AutoBackupEnabled { get; set; }
+
+    // 백업 zip 을 떨굴 폴더. OneDrive/Dropbox 등 동기화 폴더 권장. 데이터 폴더 하위 금지(재귀).
+    [JsonPropertyName("backupFolder")]
+    public string? BackupFolder { get; set; }
+
+    [JsonPropertyName("backupIntervalHours")]
+    public int BackupIntervalHours { get; set; } = 24;
+
+    // 보관할 최근 백업 개수. 0 이하면 무제한(자동 삭제 안 함).
+    [JsonPropertyName("backupRetention")]
+    public int BackupRetention { get; set; } = 10;
+
+    [JsonPropertyName("backupIncludeFiles")]
+    public bool BackupIncludeFiles { get; set; } = true;
+
+    // ===== 브랜드(워드마크) — 프론트가 setBrand 로 보내면 호스트가 여기 저장.
+    // 다음 실행 시 로딩 오버레이·제목 표시줄을 프론트 로드 전에 미리 칠하는 용도. =====
+    [JsonPropertyName("brandPrimaryText")]
+    public string? BrandPrimaryText { get; set; }
+
+    [JsonPropertyName("brandAccentText")]
+    public string? BrandAccentText { get; set; }
+
+    [JsonPropertyName("brandPrimaryColor")]
+    public string? BrandPrimaryColor { get; set; }
+
+    [JsonPropertyName("brandAccentColor")]
+    public string? BrandAccentColor { get; set; }
+
+    [JsonPropertyName("brandTitle")]
+    public string? BrandTitle { get; set; }
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,

@@ -30,6 +30,26 @@ export interface DataFolderSetResult {
   requiresRestart: boolean;
 }
 
+export interface BackupConfig {
+  enabled: boolean;
+  folder: string | null;
+  intervalHours: number;
+  retention: number;
+  includeFiles: boolean;
+}
+
+export interface BackupStatus {
+  folder: string | null;
+  lastBackupAt: string | null;
+  count: number;
+}
+
+export interface BackupRunResult {
+  fileName: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
 export const systemApi = {
   // silent — 시작 시 1회 호출이라 progress bar / 자동 toast 제외 (mismatch / 실패는 App.tsx 가 별도 처리).
   ping: () => api.get<SystemPing>('/system/ping', { silent: true }),
@@ -38,4 +58,8 @@ export const systemApi = {
     api.post<DataFolderPreview>('/system/data-folder/preview', { path }),
   setDataFolder: (path: string) =>
     api.put<DataFolderSetResult>('/system/data-folder', { path }),
+  getBackupConfig: () => api.get<BackupConfig>('/system/backup/config'),
+  setBackupConfig: (c: BackupConfig) => api.put<{ saved: boolean }>('/system/backup/config', c),
+  runBackup: () => api.post<BackupRunResult>('/system/backup/run', {}),
+  getBackupStatus: () => api.get<BackupStatus>('/system/backup/status'),
 };

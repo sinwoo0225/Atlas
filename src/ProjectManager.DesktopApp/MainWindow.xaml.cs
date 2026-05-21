@@ -47,6 +47,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        // 로딩 오버레이가 보이기 전에 직전 실행의 브랜드(워드마크·제목)를 미리 적용.
+        ApplyPersistedBrand();
         Loaded += OnLoaded;
         Closing += OnClosing;
     }
@@ -284,6 +286,7 @@ public partial class MainWindow : Window
                 var iconDataUrl = doc.RootElement.TryGetProperty("iconDataUrl", out var icEl) ? icEl.GetString() : null;
                 ApplyBrand(primaryText, accentText, primaryColor, accentColor, brandTitle);
                 ApplyIcon(iconDataUrl);
+                PersistBrand(primaryText, accentText, primaryColor, accentColor, brandTitle);
             }
         }
         catch (System.Exception ex)
@@ -307,17 +310,73 @@ public partial class MainWindow : Window
         keybd_event(VK_LWIN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
     }
 
-    // 커스텀 제목 표시줄 워드마크(Run 텍스트·색) + OS 창 제목을 갱신.
-    // WebMessageReceived 는 UI 스레드에서 발화하므로 직접 UI 접근 가능.
+    // 커스텀 제목 표시줄 + 로딩 오버레이 워드마크(Run 텍스트·색) + OS 창 제목을 갱신.
+    // WebMessageReceived(런타임)·생성자(시작) 양쪽에서 호출. UI 스레드 직접 접근.
     private void ApplyBrand(string? primaryText, string? accentText, string? primaryColor, string? accentColor, string? title)
     {
-        if (!string.IsNullOrEmpty(primaryText) && BrandPrimaryRun is not null) BrandPrimaryRun.Text = primaryText;
-        if (!string.IsNullOrEmpty(accentText) && BrandAccentRun is not null) BrandAccentRun.Text = accentText;
         var pBrush = TryBrush(primaryColor);
-        if (pBrush is not null && BrandPrimaryRun is not null) BrandPrimaryRun.Foreground = pBrush;
         var aBrush = TryBrush(accentColor);
-        if (aBrush is not null && BrandAccentRun is not null) BrandAccentRun.Foreground = aBrush;
+
+        if (!string.IsNullOrEmpty(primaryText))
+        {
+            if (BrandPrimaryRun is not null) BrandPrimaryRun.Text = primaryText;
+            if (LoadingPrimaryRun is not null) LoadingPrimaryRun.Text = primaryText;
+        }
+        if (!string.IsNullOrEmpty(accentText))
+        {
+            if (BrandAccentRun is not null) BrandAccentRun.Text = accentText;
+            if (LoadingAccentRun is not null) LoadingAccentRun.Text = accentText;
+        }
+        if (pBrush is not null)
+        {
+            if (BrandPrimaryRun is not null) BrandPrimaryRun.Foreground = pBrush;
+            if (LoadingPrimaryRun is not null) LoadingPrimaryRun.Foreground = pBrush;
+        }
+        if (aBrush is not null)
+        {
+            if (BrandAccentRun is not null) BrandAccentRun.Foreground = aBrush;
+            if (LoadingAccentRun is not null) LoadingAccentRun.Foreground = aBrush;
+        }
         if (!string.IsNullOrWhiteSpace(title)) Title = title!;
+    }
+
+    // 시작 시: 직전 실행에서 저장해 둔 브랜드를 프론트 로드 전에 미리 적용
+    // (로딩 오버레이는 WebView2 전에 보이므로 config.json 값으로 칠한다).
+    private void ApplyPersistedBrand()
+    {
+        try
+        {
+            var c = BootstrapConfig.Load();
+            ApplyBrand(c.BrandPrimaryText, c.BrandAccentText, c.BrandPrimaryColor, c.BrandAccentColor, c.BrandTitle);
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[persisted-brand-err] {ex.Message}");
+        }
+    }
+
+    // 프론트가 보낸 브랜드를 config.json 에 저장 — 다음 실행 시 ApplyPersistedBrand 가 읽음.
+    // 값이 그대로면 디스크를 건드리지 않는다(setBrand 는 부팅·저장마다 발화하므로 churn 방지).
+    private void PersistBrand(string? primaryText, string? accentText, string? primaryColor, string? accentColor, string? title)
+    {
+        try
+        {
+            var c = BootstrapConfig.Load();
+            if (c.BrandPrimaryText == primaryText && c.BrandAccentText == accentText
+                && c.BrandPrimaryColor == primaryColor && c.BrandAccentColor == accentColor
+                && c.BrandTitle == title)
+                return;
+            c.BrandPrimaryText = primaryText;
+            c.BrandAccentText = accentText;
+            c.BrandPrimaryColor = primaryColor;
+            c.BrandAccentColor = accentColor;
+            c.BrandTitle = title;
+            BootstrapConfig.Save(c);
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[persist-brand-err] {ex.Message}");
+        }
     }
 
     private static System.Windows.Media.Brush? TryBrush(string? hex)

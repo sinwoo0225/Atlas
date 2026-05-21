@@ -34,7 +34,7 @@ import {
 import { useProjectStore } from '../store/useProjectStore';
 import { Button, Card, FormField, Modal, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import { systemApi, type DataFolderInfo, type DataFolderPreview } from '../api/system';
+import { systemApi, type DataFolderInfo, type DataFolderPreview, type BackupConfig, type BackupStatus } from '../api/system';
 import {
   pickFolder,
   isHostBridgeAvailable,
@@ -531,6 +531,7 @@ export function SettingsPage() {
       <ConnectionModeSection onModeChanged={setConnectionMode} />
 
       {connectionMode === 'Local' && <DataFolderSection />}
+      {connectionMode === 'Local' && <AutoBackupSection />}
       {connectionMode === 'Client' && (
         <Section title="데이터">
           <p className="text-sm text-secondary">
@@ -656,6 +657,153 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="h-card mb-4">{title}</h2>
       <div className="space-y-4">{children}</div>
     </Card>
+  );
+}
+
+const BACKUP_INTERVALS: { value: number; label: string }[] = [
+  { value: 24, label: '매일 (24시간)' },
+  { value: 12, label: '12시간' },
+  { value: 6, label: '6시간' },
+  { value: 0, label: '앱 실행마다' },
+];
+
+function AutoBackupSection() {
+  const bridgeAvailable = isHostBridgeAvailable();
+  const [cfg, setCfg] = useState<BackupConfig | null>(null);
+  const [status, setStatus] = useState<BackupStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const refresh = () => {
+    systemApi.getBackupConfig().then(setCfg).catch(() => {});
+    systemApi.getBackupStatus().then(setStatus).catch(() => {});
+  };
+  useEffect(() => { refresh(); }, []);
+
+  if (!cfg) return null;
+
+  const update = <K extends keyof BackupConfig>(k: K, v: BackupConfig[K]) =>
+    setCfg((c) => (c ? { ...c, [k]: v } : c));
+
+  const handleBrowse = async () => {
+    const picked = await pickFolder(cfg.folder ?? undefined);
+    if (picked) update('folder', picked);
+  };
+
+  const handleSave = async () => {
+    setBusy(true);
+    try {
+      await systemApi.setBackupConfig(cfg);
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 2500);
+      refresh();
+    } catch (e) {
+      toast.error((e as Error).message || '저장 실패');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRunNow = async () => {
+    if (!cfg.folder?.trim()) {
+      toast.error('먼저 백업 폴더를 지정하세요.');
+      return;
+    }
+    setRunning(true);
+    try {
+      // 현재 폴더/옵션을 먼저 저장한 뒤 즉시 백업 (백엔드는 저장된 설정을 사용).
+      await systemApi.setBackupConfig(cfg);
+      const r = await systemApi.runBackup();
+      toast.success(`백업 완료 — ${r.fileName} (${Math.round(r.sizeBytes / 1024)} KB)`);
+      refresh();
+    } catch (e) {
+      toast.error((e as Error).message || '백업 실패');
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  const lastText = status?.lastBackupAt
+    ? `${new Date(status.lastBackupAt).toLocaleString()} (총 ${status.count}개 보관)`
+    : '아직 백업 없음';
+
+  return (
+    <Section title="자동 백업">
+      <FormField
+        label="자동 백업 사용"
+        hint="전체 데이터(DB + 첨부파일)를 지정한 폴더로 주기적으로 내보냅니다. 그 폴더가 OneDrive·Dropbox 등 동기화 폴더면 자동으로 클라우드에 올라갑니다."
+      >
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" checked={cfg.enabled} onChange={(e) => update('enabled', e.target.checked)} />
+          <span className="text-sm text-secondary">활성화</span>
+        </label>
+      </FormField>
+
+      <FormField label="백업 폴더" hint="데이터 폴더 안에는 둘 수 없습니다(재귀 방지). 클라우드 동기화 폴더 권장.">
+        <div className="space-y-2">
+          <input
+            value={cfg.folder ?? ''}
+            onChange={(e) => update('folder', e.target.value)}
+            placeholder="예: C:\Users\me\OneDrive\AtlasBackups"
+            className={inputClass}
+            spellCheck={false}
+          />
+          {bridgeAvailable && (
+            <Button variant="secondary" size="md" onClick={handleBrowse} leadingIcon={<FolderOpen size={14} />}>
+              찾아보기
+            </Button>
+          )}
+        </div>
+      </FormField>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <FormField label="주기">
+          <select
+            value={cfg.intervalHours}
+            onChange={(e) => update('intervalHours', Number(e.target.value))}
+            className={inputClass}
+          >
+            {BACKUP_INTERVALS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="보관 개수" hint="0 = 무제한">
+          <input
+            type="number"
+            min={0}
+            value={cfg.retention}
+            onChange={(e) => update('retention', Math.max(0, Number(e.target.value) || 0))}
+            className={inputClass}
+          />
+        </FormField>
+        <FormField label="첨부파일 포함">
+          <label className="flex items-center gap-2 cursor-pointer h-[38px]">
+            <input type="checkbox" checked={cfg.includeFiles} onChange={(e) => update('includeFiles', e.target.checked)} />
+            <span className="text-sm text-secondary">DB + 첨부</span>
+          </label>
+        </FormField>
+      </div>
+
+      <FormField label="상태" hint="복구: zip 을 풀어 데이터 폴더에 덮어쓰거나(앱 종료 상태), 프로젝트별로 '가져오기' 사용.">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button variant="primary" onClick={handleSave} disabled={busy} leadingIcon={<Save size={14} />}>
+            {busy ? '저장 중…' : '저장'}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={handleRunNow}
+            disabled={running || !cfg.folder?.trim()}
+            leadingIcon={running ? <Spinner size="sm" /> : <Download size={14} />}
+          >
+            {running ? '백업 중…' : '지금 백업'}
+          </Button>
+          {savedAt && <span className="text-sm text-on-success">저장되었습니다.</span>}
+          <span className="text-xs text-muted">마지막 백업: {lastText}</span>
+        </div>
+      </FormField>
+    </Section>
   );
 }
 

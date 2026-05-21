@@ -1,6 +1,7 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
+using ProjectManager.AppHost.Services;
 using ProjectManager.Infrastructure.Config;
 
 namespace ProjectManager.AppHost.Controllers;
@@ -103,6 +104,62 @@ public class SystemController : ControllerBase
         BootstrapConfig.Save(cfg);
 
         return Ok(new { saved = path, requiresRestart = true });
+    }
+
+    // ===== 자동 백업 =====
+    public record BackupConfigDto(bool Enabled, string? Folder, int IntervalHours, int Retention, bool IncludeFiles);
+
+    [HttpGet("backup/config")]
+    public IActionResult GetBackupConfig()
+    {
+        var c = BootstrapConfig.Load();
+        return Ok(new BackupConfigDto(
+            c.AutoBackupEnabled, c.BackupFolder, c.BackupIntervalHours, c.BackupRetention, c.BackupIncludeFiles));
+    }
+
+    [HttpPut("backup/config")]
+    public IActionResult SetBackupConfig([FromBody] BackupConfigDto req, [FromServices] BackupService backup)
+    {
+        var folder = req.Folder?.Trim();
+        if (req.Enabled && string.IsNullOrEmpty(folder))
+            return BadRequest(new { error = "자동 백업을 켜려면 백업 폴더를 지정하세요." });
+        if (!string.IsNullOrEmpty(folder) && backup.IsDestInsideDataFolder(folder))
+            return BadRequest(new { error = "백업 폴더는 데이터 폴더 안에 둘 수 없습니다." });
+
+        var c = BootstrapConfig.Load();
+        c.AutoBackupEnabled = req.Enabled;
+        c.BackupFolder = string.IsNullOrEmpty(folder) ? null : folder;
+        c.BackupIntervalHours = req.IntervalHours < 0 ? 0 : req.IntervalHours; // 0 = 매 실행
+        c.BackupRetention = req.Retention;
+        c.BackupIncludeFiles = req.IncludeFiles;
+        BootstrapConfig.Save(c);
+        return Ok(new { saved = true });
+    }
+
+    [HttpPost("backup/run")]
+    public async Task<IActionResult> RunBackup([FromServices] BackupService backup)
+    {
+        var c = BootstrapConfig.Load();
+        if (string.IsNullOrWhiteSpace(c.BackupFolder))
+            return BadRequest(new { error = "백업 폴더가 설정되지 않았습니다." });
+        try
+        {
+            var r = await backup.CreateFullBackupAsync(
+                c.BackupFolder!, c.BackupIncludeFiles, c.BackupRetention, HttpContext.RequestAborted);
+            return Ok(new { fileName = r.FileName, sizeBytes = r.SizeBytes, createdAt = r.CreatedAtUtc });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("backup/status")]
+    public IActionResult BackupStatus([FromServices] BackupService backup)
+    {
+        var c = BootstrapConfig.Load();
+        var (last, count) = backup.GetStatus(c.BackupFolder);
+        return Ok(new { folder = c.BackupFolder, lastBackupAt = last, count });
     }
 
     private static bool CheckWritable(string path)
