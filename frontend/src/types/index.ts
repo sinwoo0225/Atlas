@@ -348,6 +348,19 @@ export interface ResourceHeatmap {
   unassignedItems: number;
 }
 
+// 마감 캘린더 이벤트 — WBS 종료일 / 이슈 마감일. date 는 yyyy-MM-dd.
+export interface CalendarEvent {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  date: string;
+  status: string; // WbsStatus | IssueStatus
+  isMilestone: boolean;
+  priority: string | null; // 이슈 전용(High/Medium/Low)
+}
+
 export type ActivityEntityType =
   | 'Project'
   | 'WbsItem'

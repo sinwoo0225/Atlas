@@ -238,6 +238,7 @@ html.light .cmd-hit mark {
 /* ========== Status soft utility classes ========== */
 .bg-success-soft { background-color: var(--bg-success-soft); }
 .bg-warning-soft { background-color: var(--bg-warning-soft); }
+.bg-warning      { background-color: var(--warning); }
 .bg-danger-soft  { background-color: var(--bg-danger-soft); }
 .bg-info-soft    { background-color: var(--bg-info-soft); }
 .bg-neutral-soft { background-color: var(--bg-neutral-soft); }

@@ -43,6 +43,40 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         return new MonitoringDto(dtos);
     }
 
+    // 마감 캘린더: [from, to] (날짜 단위, 양끝 포함) 의 WBS 종료일 + 이슈 마감일 이벤트를 across-project 로.
+    // heatmap 과 같은 두 엔티티지만 전 상태 포함(status 캐리 → 프론트가 완료/지남 스타일 분기).
+    public async Task<IReadOnlyList<CalendarEventDto>> GetCalendarAsync(DateTime from, DateTime to)
+    {
+        var fromDate = from.Date;
+        var toDate = to.Date;
+
+        var wbs = await db.WbsItems
+            .Where(w => w.EndDate.HasValue
+                && w.EndDate.Value.Date >= fromDate
+                && w.EndDate.Value.Date <= toDate)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+
+        var issues = await db.Issues
+            .Where(i => i.DueDate.HasValue
+                && i.DueDate.Value.Date >= fromDate
+                && i.DueDate.Value.Date <= toDate)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+
+        var events = new List<CalendarEventDto>(wbs.Count + issues.Count);
+        events.AddRange(wbs.Select(x => new CalendarEventDto(
+            "wbs", x.w.Id, x.w.ProjectId, x.p.Name,
+            x.w.Name, IsoDate(x.w.EndDate!.Value), x.w.Status.ToString(),
+            x.w.IsMilestone, null)));
+        events.AddRange(issues.Select(x => new CalendarEventDto(
+            "issue", x.i.Id, x.i.ProjectId, x.p.Name,
+            x.i.Title, IsoDate(x.i.DueDate!.Value), x.i.Status.ToString(),
+            false, x.i.Priority.ToString())));
+
+        return events;
+    }
+
     public async Task<MonitoringChartsDto> GetChartsAsync(int upcomingDays = 30)
     {
         var today = DateTime.Today;

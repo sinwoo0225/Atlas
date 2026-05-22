@@ -56,3 +56,16 @@ public record ResourceHeatmapItem(
     string ProjectName,
     string Title,
     string DueDate);
+
+// 마감 캘린더(통합 모니터링 '작업' 탭의 캘린더 뷰): across-project WBS 종료일 + 이슈 마감일 이벤트.
+// Date 는 yyyy-MM-dd. IsMilestone 은 wbs 전용(issue 는 false), Priority 는 issue 전용(wbs 는 null).
+public record CalendarEventDto(
+    string Kind, // "wbs" | "issue"
+    int Id,
+    int ProjectId,
+    string ProjectName,
+    string Title,
+    string Date,
+    string Status,
+    bool IsMilestone,
+    string? Priority);

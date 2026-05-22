@@ -484,6 +484,20 @@ export function SettingsPage() {
             className={inputClass}
           />
         </FormField>
+
+        <FormField
+          label="통합 모니터링 '작업' 탭 기본 보기"
+          hint="작업 탭을 열 때 기본으로 보여줄 뷰입니다."
+        >
+          <select
+            value={settings.defaultTaskView}
+            onChange={(e) => update('defaultTaskView', e.target.value as AppSettings['defaultTaskView'])}
+            className={inputClass}
+          >
+            <option value="list">리스트</option>
+            <option value="calendar">캘린더</option>
+          </select>
+        </FormField>
       </Section>
 
       <Section title="키보드 단축키">

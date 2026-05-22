@@ -1,6 +1,6 @@
 import { api } from './client';
 import type {
-  ActivityByProject, MonitoringCharts, MonitoringData, OpenIssuesByProject, ResourceHeatmap,
+  ActivityByProject, CalendarEvent, MonitoringCharts, MonitoringData, OpenIssuesByProject, ResourceHeatmap,
 } from '../types';
 
 export const monitoringApi = {
@@ -12,4 +12,7 @@ export const monitoringApi = {
     api.get<ActivityByProject[]>(`/monitoring/activity-by-project?days=${days}`),
   // 주간 업무일지 통합 첨부용 — 프로젝트별 미해결 이슈 스냅샷.
   openIssues: () => api.get<OpenIssuesByProject[]>('/monitoring/issues/open'),
+  // 마감 캘린더 — from/to (yyyy-MM-dd, 양끝 포함) 범위의 WBS·이슈 마감 이벤트.
+  getCalendar: (from: string, to: string) =>
+    api.get<CalendarEvent[]>(`/monitoring/calendar?from=${from}&to=${to}`),
 };

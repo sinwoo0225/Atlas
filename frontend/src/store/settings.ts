@@ -17,6 +17,8 @@ export interface AppSettings {
   markdownFontSize: number;
   markdownLineHeight: number;
   sidebarCollapsed: boolean;
+  // 통합 모니터링 '작업' 탭을 열 때 기본 보기 (URL 에 view 파라미터가 없을 때 적용).
+  defaultTaskView: 'list' | 'calendar';
   // 회의록 'AI 요약' 버튼 노출 여부. 로컬 Claude CLI 가 있어야 동작 — 설정에서 옵트인.
   aiSummaryEnabled: boolean;
   // theme === 'custom' 일 때 사용할 핵심 12색. 다크/라이트 시드로 채워 편집.
@@ -50,6 +52,7 @@ const defaults: AppSettings = {
   markdownFontSize: 14,
   markdownLineHeight: 1.7,
   sidebarCollapsed: false,
+  defaultTaskView: 'list',
   aiSummaryEnabled: false,
   customColors: { ...DARK_BASE },
   brandPrimaryText: 'At',

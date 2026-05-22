@@ -4,9 +4,11 @@ import { Activity, RefreshCw, Calendar, NotebookPen, Download, AlertCircle } fro
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
+import { loadSettings } from '../store/settings';
 import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
+import { DeadlineCalendar } from './monitoring/DeadlineCalendar';
 import type {
   ActivityByProject,
   MonitoringCharts as MonitoringChartsData,
@@ -30,6 +32,16 @@ const TABS: { value: MonitoringTab; label: string }[] = [
 ];
 function isTab(v: string | null): v is MonitoringTab {
   return v === 'overview' || v === 'tasks' || v === 'logs';
+}
+
+// '작업' 탭 내부 뷰 — 추후 'kanban' 추가 시 배열에만 항목 추가하면 확장.
+type TaskView = 'list' | 'calendar';
+const TASK_VIEWS: { value: TaskView; label: string }[] = [
+  { value: 'list',     label: '리스트' },
+  { value: 'calendar', label: '캘린더' },
+];
+function isTaskView(v: string | null): v is TaskView {
+  return v === 'list' || v === 'calendar';
 }
 
 function startOfWeek(d: Date): Date {
@@ -59,6 +71,15 @@ export function MonitoringPage() {
     const params = new URLSearchParams(searchParams);
     if (next === 'overview') params.delete('tab');
     else params.set('tab', next);
+    setSearchParams(params, { replace: true });
+  };
+
+  // URL view 파라미터가 있으면 우선, 없으면 설정의 기본 보기.
+  const viewParam = searchParams.get('view');
+  const taskView: TaskView = isTaskView(viewParam) ? viewParam : loadSettings().defaultTaskView;
+  const setTaskView = (next: TaskView) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('view', next); // 명시적 선택은 항상 파라미터로 고정 (기본값과 무관하게 유지).
     setSearchParams(params, { replace: true });
   };
 
@@ -143,6 +164,11 @@ export function MonitoringPage() {
 
       {tab === 'tasks' && (
         <section className="space-y-3">
+          <TaskViewSwitch value={taskView} onChange={setTaskView} />
+          {taskView === 'calendar' ? (
+            <DeadlineCalendar />
+          ) : (
+          <>
           <Card padding="normal">
             <p className="text-xs text-muted flex items-center gap-2">
               <Calendar size={12} />
@@ -219,6 +245,8 @@ export function MonitoringPage() {
               ))}
             </div>
           )}
+          </>
+          )}
         </section>
       )}
 
@@ -273,6 +301,33 @@ function TabBar({ value, onChange }: { value: MonitoringTab; onChange: (next: Mo
             }`}
           >
             {t.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// '작업' 탭 내부 뷰 전환 (리스트 / 캘린더 …). TabBar 와 동일 스타일.
+function TaskViewSwitch({ value, onChange }: { value: TaskView; onChange: (next: TaskView) => void }) {
+  return (
+    <div role="tablist" className="inline-flex rounded-md border border-default bg-surface p-0.5">
+      {TASK_VIEWS.map((v) => {
+        const active = v.value === value;
+        return (
+          <button
+            key={v.value}
+            role="tab"
+            aria-selected={active}
+            type="button"
+            onClick={() => onChange(v.value)}
+            className={`px-3 py-1.5 text-sm rounded transition-colors ${
+              active
+                ? 'bg-accent text-on-accent font-medium'
+                : 'text-secondary hover:text-primary hover:bg-surface-2'
+            }`}
+          >
+            {v.label}
           </button>
         );
       })}

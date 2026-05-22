@@ -30,6 +30,26 @@ public class MonitoringController(MonitoringService svc) : ControllerBase
     [HttpGet("issues/open")]
     public async Task<IActionResult> OpenIssues() => Ok(await svc.GetOpenIssuesByProjectAsync());
 
+    // 마감 캘린더 — from/to (yyyy-MM-dd, 양끝 포함). 누락 시 이번 달. 범위는 최대 92일로 clamp.
+    [HttpGet("calendar")]
+    public async Task<IActionResult> Calendar([FromQuery] string? from, [FromQuery] string? to)
+    {
+        static bool TryDate(string? s, out DateTime d) =>
+            DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out d);
+
+        DateTime fromDate, toDate;
+        if (TryDate(from, out var f)) fromDate = f.Date;
+        else { var now = DateTime.Today; fromDate = new DateTime(now.Year, now.Month, 1); }
+
+        if (TryDate(to, out var t)) toDate = t.Date;
+        else toDate = fromDate.AddMonths(1).AddDays(-1);
+
+        if (toDate < fromDate) toDate = fromDate;
+        if ((toDate - fromDate).TotalDays > 92) toDate = fromDate.AddDays(92);
+
+        return Ok(await svc.GetCalendarAsync(fromDate, toDate));
+    }
+
     [HttpGet("worklogs/weekly")]
     public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart)
     {
