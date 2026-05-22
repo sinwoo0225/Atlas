@@ -69,3 +69,17 @@ public record CalendarEventDto(
     string Status,
     bool IsMilestone,
     string? Priority);
+
+// 칸반 보드('작업' 탭 칸반 뷰): across-project WBS + 이슈. 컬럼(예정/진행/완료) 매핑은 프론트가 Status 로 수행.
+// 완료(Done/Resolved/Closed)는 서비스에서 최근 N일만 포함. DueDate 는 yyyy-MM-dd(WBS EndDate / 이슈 DueDate).
+public record KanbanItemDto(
+    string Kind, // "wbs" | "issue"
+    int Id,
+    int ProjectId,
+    string ProjectName,
+    string Title,
+    string Status,
+    bool IsMilestone,
+    string? Priority,
+    string? Assignee,
+    string? DueDate);

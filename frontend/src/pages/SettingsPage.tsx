@@ -496,6 +496,7 @@ export function SettingsPage() {
           >
             <option value="list">리스트</option>
             <option value="calendar">캘린더</option>
+            <option value="kanban">칸반</option>
           </select>
         </FormField>
       </Section>

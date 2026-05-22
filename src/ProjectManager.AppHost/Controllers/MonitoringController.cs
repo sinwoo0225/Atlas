@@ -1,12 +1,15 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
+using ProjectManager.Core.Domain;
 
 namespace ProjectManager.AppHost.Controllers;
 
+public record KanbanMoveRequest(string Kind, int Id, string Column);
+
 [ApiController]
 [Route("api/monitoring")]
-public class MonitoringController(MonitoringService svc) : ControllerBase
+public class MonitoringController(MonitoringService svc, WbsService wbsSvc, IssueService issueSvc) : ControllerBase
 {
     [HttpGet("today")]
     public async Task<IActionResult> Today() => Ok(await svc.GetTodayAsync());
@@ -48,6 +51,53 @@ public class MonitoringController(MonitoringService svc) : ControllerBase
         if ((toDate - fromDate).TotalDays > 92) toDate = fromDate.AddDays(92);
 
         return Ok(await svc.GetCalendarAsync(fromDate, toDate));
+    }
+
+    // 칸반 보드 — 미완 전부 + 완료는 doneSince 이후(누락 시 14일 전). doneSince 는 yyyy-MM-dd(UTC 자정 해석).
+    [HttpGet("kanban")]
+    public async Task<IActionResult> Kanban([FromQuery] string? doneSince)
+    {
+        DateTime since;
+        if (!string.IsNullOrWhiteSpace(doneSince)
+            && DateTime.TryParseExact(doneSince, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var parsed))
+            since = parsed;
+        else
+            since = DateTime.UtcNow.AddDays(-14);
+        return Ok(await svc.GetKanbanAsync(since));
+    }
+
+    // 칸반 드래그 — 카드(WBS/이슈)를 컬럼(todo/doing/done)으로 이동 → 상태 변경. 컬럼→상태 매핑은 kind 별.
+    [HttpPost("kanban/move")]
+    public async Task<IActionResult> KanbanMove([FromBody] KanbanMoveRequest req)
+    {
+        var kind = req.Kind?.ToLowerInvariant();
+        var column = req.Column?.ToLowerInvariant();
+        if (kind == "wbs")
+        {
+            var status = column switch
+            {
+                "todo" => WbsStatus.Planned,
+                "doing" => WbsStatus.InProgress,
+                "done" => WbsStatus.Done,
+                _ => (WbsStatus?)null,
+            };
+            if (status is null) return BadRequest(new { error = "잘못된 컬럼" });
+            return await wbsSvc.SetStatusAsync(req.Id, status.Value) ? Ok() : NotFound();
+        }
+        if (kind == "issue")
+        {
+            // 완료 컬럼 드롭은 Resolved 로(Closed 는 이슈 페이지에서 수동).
+            var status = column switch
+            {
+                "todo" => IssueStatus.Open,
+                "doing" => IssueStatus.InProgress,
+                "done" => IssueStatus.Resolved,
+                _ => (IssueStatus?)null,
+            };
+            if (status is null) return BadRequest(new { error = "잘못된 컬럼" });
+            return await issueSvc.SetStatusAsync(req.Id, status.Value) ? Ok() : NotFound();
+        }
+        return BadRequest(new { error = "잘못된 종류" });
     }
 
     [HttpGet("worklogs/weekly")]

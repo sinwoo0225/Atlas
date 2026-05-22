@@ -361,6 +361,21 @@ export interface CalendarEvent {
   priority: string | null; // 이슈 전용(High/Medium/Low)
 }
 
+// 칸반 보드 항목 — WBS + 이슈. 컬럼은 status 로 매핑.
+export type KanbanColumn = 'todo' | 'doing' | 'done';
+export interface KanbanItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  status: string; // WbsStatus | IssueStatus
+  isMilestone: boolean;
+  priority: string | null;
+  assignee: string | null;
+  dueDate: string | null; // yyyy-MM-dd
+}
+
 export type ActivityEntityType =
   | 'Project'
   | 'WbsItem'

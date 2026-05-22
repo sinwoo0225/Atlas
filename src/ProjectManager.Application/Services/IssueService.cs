@@ -56,6 +56,19 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         return ToDto(reloaded);
     }
 
+    // 칸반 드래그 — 상태만 변경. 현재 값으로 UpdateDto 를 구성해 기존 UpdateAsync 재사용
+    // (완료(Resolved/Closed) 전환 시 worklog 자동 등록 그대로).
+    public async Task<bool> SetStatusAsync(int id, IssueStatus status)
+    {
+        var issue = await repo.GetByIdAsync(id);
+        if (issue is null) return false;
+        if (issue.Status == status) return true;
+        var dto = new UpdateIssueDto(
+            issue.Title, issue.Description, status, issue.Priority, issue.AssigneeResourceId, issue.DueDate);
+        await UpdateAsync(id, dto);
+        return true;
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         var issue = await repo.GetByIdAsync(id);

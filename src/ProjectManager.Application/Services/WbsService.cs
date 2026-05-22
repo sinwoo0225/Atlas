@@ -99,6 +99,20 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         return ToDto(updated, []);
     }
 
+    // 칸반 드래그 — 상태만 변경. 현재 엔티티 값으로 UpdateDto 를 구성해 기존 UpdateAsync 재사용
+    // (완료 전환 시 worklog 자동 등록·동시성 가드 그대로). 현재 UpdatedAt 을 토큰으로 써 staleness 없음.
+    public async Task<bool> SetStatusAsync(int id, WbsStatus status)
+    {
+        var item = await repo.GetByIdAsync(id);
+        if (item is null) return false;
+        if (item.Status == status) return true;
+        var dto = new UpdateWbsItemDto(
+            item.ParentId, item.Name, item.Assignee, item.StartDate, item.EndDate,
+            status, item.IsMilestone, item.Importance, item.Notes, item.SortOrder, item.UpdatedAt);
+        await UpdateAsync(id, dto);
+        return true;
+    }
+
     public async Task<bool> DeleteAsync(int id)
     {
         var item = await repo.GetByIdAsync(id);

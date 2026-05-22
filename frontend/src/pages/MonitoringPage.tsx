@@ -9,6 +9,7 @@ import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../component
 import { wbsStatusBadge } from '../utils/statusMaps';
 import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
 import { DeadlineCalendar } from './monitoring/DeadlineCalendar';
+import { KanbanBoard } from './monitoring/KanbanBoard';
 import type {
   ActivityByProject,
   MonitoringCharts as MonitoringChartsData,
@@ -34,14 +35,15 @@ function isTab(v: string | null): v is MonitoringTab {
   return v === 'overview' || v === 'tasks' || v === 'logs';
 }
 
-// '작업' 탭 내부 뷰 — 추후 'kanban' 추가 시 배열에만 항목 추가하면 확장.
-type TaskView = 'list' | 'calendar';
+// '작업' 탭 내부 뷰 — 배열에 항목만 추가하면 확장.
+type TaskView = 'list' | 'calendar' | 'kanban';
 const TASK_VIEWS: { value: TaskView; label: string }[] = [
   { value: 'list',     label: '리스트' },
   { value: 'calendar', label: '캘린더' },
+  { value: 'kanban',   label: '칸반' },
 ];
 function isTaskView(v: string | null): v is TaskView {
-  return v === 'list' || v === 'calendar';
+  return v === 'list' || v === 'calendar' || v === 'kanban';
 }
 
 function startOfWeek(d: Date): Date {
@@ -167,6 +169,8 @@ export function MonitoringPage() {
           <TaskViewSwitch value={taskView} onChange={setTaskView} />
           {taskView === 'calendar' ? (
             <DeadlineCalendar />
+          ) : taskView === 'kanban' ? (
+            <KanbanBoard />
           ) : (
           <>
           <Card padding="normal">

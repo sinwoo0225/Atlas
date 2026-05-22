@@ -77,6 +77,36 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         return events;
     }
 
+    // 칸반 보드: 미완(WBS 비-Done / 이슈 Open·InProgress) 전부 + 완료(Done / Resolved·Closed)는 doneSince 이후만.
+    // 컬럼(예정/진행/완료) 그룹화는 프론트가 Status 매핑으로 수행(드래그 낙관 갱신).
+    public async Task<IReadOnlyList<KanbanItemDto>> GetKanbanAsync(DateTime doneSince)
+    {
+        var wbs = await db.WbsItems
+            .Where(w => w.Status != WbsStatus.Done || w.UpdatedAt >= doneSince)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+
+        var issues = await db.Issues
+            .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress
+                || ((i.Status == IssueStatus.Resolved || i.Status == IssueStatus.Closed) && i.UpdatedAt >= doneSince))
+            .Include(i => i.AssigneeResource)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+
+        var items = new List<KanbanItemDto>(wbs.Count + issues.Count);
+        items.AddRange(wbs.Select(x => new KanbanItemDto(
+            "wbs", x.w.Id, x.w.ProjectId, x.p.Name, x.w.Name, x.w.Status.ToString(),
+            x.w.IsMilestone, null,
+            string.IsNullOrWhiteSpace(x.w.Assignee) ? null : x.w.Assignee,
+            x.w.EndDate.HasValue ? IsoDate(x.w.EndDate.Value) : null)));
+        items.AddRange(issues.Select(x => new KanbanItemDto(
+            "issue", x.i.Id, x.i.ProjectId, x.p.Name, x.i.Title, x.i.Status.ToString(),
+            false, x.i.Priority.ToString(),
+            x.i.AssigneeResource != null ? x.i.AssigneeResource.Name : null,
+            x.i.DueDate.HasValue ? IsoDate(x.i.DueDate.Value) : null)));
+        return items;
+    }
+
     public async Task<MonitoringChartsDto> GetChartsAsync(int upcomingDays = 30)
     {
         var today = DateTime.Today;
