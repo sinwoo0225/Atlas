@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, CalendarClock, History } from 'lucide-react';
-import { Card } from '../../components/ui';
+import { Card, Modal } from '../../components/ui';
 import type { StartPageItem } from '../../types';
 import type { RecentItem } from '../../utils/recentItems';
 
@@ -26,6 +27,7 @@ interface Props {
 // E-2 시작 화면 위젯 — 3 column. 셋 모두 0 이면 row 자체 미노출.
 export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
   const navigate = useNavigate();
+  const [showAllMine, setShowAllMine] = useState(false);
   if (myOpenItems.length + dueSoonItems.length + recent.length === 0) return null;
 
   const itemPath = (it: StartPageItem) =>
@@ -33,11 +35,16 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
       ? `/projects/${it.projectId}/issues?highlight=${it.id}`
       : `/projects/${it.projectId}/wbs?highlight=${it.id}`;
 
+  const goItem = (it: StartPageItem) => {
+    setShowAllMine(false);
+    navigate(itemPath(it));
+  };
+
   const itemRow = (it: StartPageItem) => (
     <button
       key={`${it.kind}-${it.id}`}
       type="button"
-      onClick={() => navigate(itemPath(it))}
+      onClick={() => goItem(it)}
       className="w-full text-left flex items-center gap-2 py-1 px-2 -mx-2 rounded hover:bg-surface-2 transition-colors"
     >
       <span className="text-sm text-secondary truncate flex-1 min-w-0">{it.title}</span>
@@ -67,7 +74,18 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
         title="내 작업"
         count={myOpenItems.length}
         empty="할당된 작업 없음"
-        overflow={myOpenItems.length > MAX_ROWS ? myOpenItems.length - MAX_ROWS : 0}
+        overflow={0}
+        action={
+          myOpenItems.length > MAX_ROWS ? (
+            <button
+              type="button"
+              onClick={() => setShowAllMine(true)}
+              className="text-xs text-accent hover:underline shrink-0"
+            >
+              전체보기
+            </button>
+          ) : undefined
+        }
       >
         {myOpenItems.slice(0, MAX_ROWS).map(itemRow)}
       </Widget>
@@ -89,6 +107,17 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
       >
         {recent.slice(0, MAX_ROWS).map(recentRow)}
       </Widget>
+
+      <Modal
+        open={showAllMine}
+        onClose={() => setShowAllMine(false)}
+        title={`내 작업 (${myOpenItems.length})`}
+        size="lg"
+        fixedHeight
+        showCloseButton
+      >
+        <div className="flex-1 overflow-y-auto space-y-0">{myOpenItems.map(itemRow)}</div>
+      </Modal>
     </div>
   );
 }
@@ -99,6 +128,7 @@ function Widget({
   count,
   empty,
   overflow,
+  action,
   children,
 }: {
   icon: React.ReactNode;
@@ -106,6 +136,7 @@ function Widget({
   count: number;
   empty: string;
   overflow: number;
+  action?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -115,6 +146,7 @@ function Widget({
         <h2 className="h-card">
           {title} ({count})
         </h2>
+        {action && <div className="ml-auto">{action}</div>}
       </div>
       {count === 0 ? (
         <p className="text-xs text-muted italic">{empty}</p>
