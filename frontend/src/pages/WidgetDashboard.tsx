@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'sonner';
-import { GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
+import { GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward, AppWindow, Eye, EyeOff } from 'lucide-react';
 import { monitoringApi } from '../api/monitoring';
 import { issuesApi } from '../api/issues';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
 import type { TodayWbs, IssuePriority, Project, WbsStatus } from '../types';
-import { applyAppearance, loadSettings } from '../store/settings';
+import { applyAppearance, loadSettings, patchSettings } from '../store/settings';
 import { isCustomDark } from '../utils/themeCustom';
 import {
   isHostBridgeAvailable, beginWidgetDrag, setWidgetOpacity, setWidgetPinned, closeWidget,
   onMediaUpdate, mediaControl, mediaSeek, requestMedia, type MediaState,
+  onActiveWindowsUpdate, setActiveWindowsEnabled, requestActiveWindows, type ActiveWindowItem,
 } from '../utils/hostBridge';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
@@ -319,6 +320,74 @@ function NowPlaying() {
   );
 }
 
+function formatDwell(s: number): string {
+  if (s < 60) return `${s}초`;
+  if (s < 3600) return `${Math.floor(s / 60)}분`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return m ? `${h}시간 ${m}분` : `${h}시간`;
+}
+
+function ActiveWindows() {
+  const [enabled, setEnabled] = useState(() => loadSettings().widgetActiveWindowsEnabled);
+  const [items, setItems] = useState<ActiveWindowItem[]>([]);
+
+  useEffect(() => {
+    const off = onActiveWindowsUpdate((s) => { setEnabled(s.enabled); setItems(s.items); });
+    setActiveWindowsEnabled(loadSettings().widgetActiveWindowsEnabled);
+    requestActiveWindows();
+    return off;
+  }, []);
+
+  if (!isHostBridgeAvailable()) return null;
+
+  const toggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    patchSettings({ widgetActiveWindowsEnabled: next });
+    setActiveWindowsEnabled(next);
+    if (!next) setItems([]);
+  };
+
+  return (
+    <section className="rounded-xl border border-default bg-surface p-3.5">
+      <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">
+        <AppWindow size={12} /> 최근 활성 창
+        <button
+          onClick={toggle}
+          title={enabled ? '추적 끄기' : '추적 켜기'}
+          className="ml-auto w-6 h-6 flex items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-secondary"
+        >
+          {enabled ? <Eye size={13} /> : <EyeOff size={13} />}
+        </button>
+      </h4>
+      {!enabled ? (
+        <p className="text-xs text-muted py-2 text-center">추적이 꺼져 있어요.</p>
+      ) : items.length === 0 ? (
+        <p className="text-xs text-muted py-2 text-center">아직 기록된 창이 없어요.</p>
+      ) : (
+        <div className="space-y-0.5">
+          {items.map((w, i) => (
+            <div key={`${w.app}-${i}`} className="flex items-center gap-2.5 px-1 py-1.5">
+              <span className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center text-[10px] font-bold text-on-accent bg-accent uppercase">
+                {w.app.slice(0, 2)}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[12px] font-semibold text-primary truncate">{w.app}</div>
+                {w.title && <div className="text-[11px] text-muted truncate">{w.title}</div>}
+              </div>
+              <span className="text-[10px] text-muted tabular-nums shrink-0">{formatDwell(w.seconds)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {enabled && (
+        <p className="mt-2 text-[10px] text-muted opacity-80">이 PC에만 기록 · 외부 전송 없음</p>
+      )}
+    </section>
+  );
+}
+
 export function WidgetDashboard() {
   const settings = loadSettings();
   const toasterTheme = settings.theme === 'custom'
@@ -390,6 +459,7 @@ export function WidgetDashboard() {
             <Clock />
           </div>
           <NowPlaying />
+          <ActiveWindows />
           <TodayTasks />
           <QuickCreateIssue />
         </div>

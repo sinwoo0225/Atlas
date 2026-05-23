@@ -21,6 +21,8 @@ export interface AppSettings {
   defaultTaskView: 'list' | 'calendar' | 'kanban';
   // 회의록 'AI 요약' 버튼 노출 여부. 로컬 Claude CLI 가 있어야 동작 — 설정에서 옵트인.
   aiSummaryEnabled: boolean;
+  // 위젯 '최근 활성 창' 추적 ON/OFF (프라이버시). 기본 ON. 창 제목은 이 PC 메모리에만, 외부 전송 없음.
+  widgetActiveWindowsEnabled: boolean;
   // theme === 'custom' 일 때 사용할 핵심 12색. 다크/라이트 시드로 채워 편집.
   customColors: BaseColors;
   // 브랜드 워드마크 — 'At'(primary) + 'las'(accent) 분할, 색 2개, 탭/창 제목.
@@ -54,6 +56,7 @@ const defaults: AppSettings = {
   sidebarCollapsed: false,
   defaultTaskView: 'list',
   aiSummaryEnabled: false,
+  widgetActiveWindowsEnabled: true,
   customColors: { ...DARK_BASE },
   brandPrimaryText: 'At',
   brandAccentText: 'las',

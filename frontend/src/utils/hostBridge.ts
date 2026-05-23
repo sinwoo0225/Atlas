@@ -312,6 +312,35 @@ export function requestMedia(): void {
   bridge.postMessage({ type: 'mediaRequest' });
 }
 
+// ===== 최근 활성 창 =====
+export interface ActiveWindowItem { app: string; title: string; seconds: number; }
+export interface ActiveWindowsState { enabled: boolean; items: ActiveWindowItem[]; }
+
+export function onActiveWindowsUpdate(cb: (s: ActiveWindowsState) => void): () => void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return () => {};
+  const handler = (e: MessageEvent) => {
+    const data = e.data as (ActiveWindowsState & { type?: string }) | null | undefined;
+    if (!data || typeof data !== 'object' || data.type !== 'activeWindowsUpdate') return;
+    cb({ enabled: !!data.enabled, items: data.items ?? [] });
+  };
+  bridge.addEventListener('message', handler);
+  return () => bridge.removeEventListener('message', handler);
+}
+
+// 추적 ON/OFF (프라이버시). 끄면 네이티브가 훅 해제 + 기록 삭제.
+export function setActiveWindowsEnabled(enabled: boolean): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setActiveWindowsEnabled', enabled });
+}
+
+export function requestActiveWindows(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'activeWindowsRequest' });
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;

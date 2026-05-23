@@ -19,6 +19,7 @@ public sealed class WidgetForm : Form
     private readonly string _wwwroot;
     private readonly Microsoft.Web.WebView2.WinForms.WebView2 _webView;
     private MediaController? _media;
+    private ActiveWindowTracker? _activeWindows;
     private bool _initialized;
     private double _widgetOpacity = 0.92;
 
@@ -49,7 +50,12 @@ public sealed class WidgetForm : Form
         _webView = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
         Controls.Add(_webView);
 
-        FormClosing += (_, _) => { PersistState(); _media?.Dispose(); _media = null; };
+        FormClosing += (_, _) =>
+        {
+            PersistState();
+            _media?.Dispose(); _media = null;
+            _activeWindows?.Dispose(); _activeWindows = null;
+        };
     }
 
     private Point ComputeLocation(BootstrapConfig c)
@@ -77,6 +83,9 @@ public sealed class WidgetForm : Form
             // SMTC 미디어 컨트롤러 — 상태 변화를 위젯으로 push(UI 스레드 마샬링).
             _media = new MediaController(PushToWeb);
             await _media.InitAsync();
+
+            // 최근 활성 창 추적 — UI 스레드(메시지 루프)에서 생성. 활성화는 위젯이 설정값으로 토글.
+            _activeWindows = new ActiveWindowTracker(PushToWeb, (uint)Environment.ProcessId);
         }
         catch (System.Exception ex)
         {
@@ -135,6 +144,13 @@ public sealed class WidgetForm : Form
                     break;
                 case "mediaRequest":
                     _ = _media?.RequestAsync();
+                    break;
+                case "setActiveWindowsEnabled":
+                    if (doc.RootElement.TryGetProperty("enabled", out var awEl))
+                        _activeWindows?.SetEnabled(awEl.GetBoolean());
+                    break;
+                case "activeWindowsRequest":
+                    _activeWindows?.Request();
                     break;
                 case "hideWidget":
                 case "closeWidget":
