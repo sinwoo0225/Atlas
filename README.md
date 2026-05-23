@@ -6,8 +6,8 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 
 ## 시작하기 (사용자)
 
-1. 릴리스 zip 을 받아 원하는 폴더에 압축 해제.
-2. `Atlas.exe` 실행.
+- **설치형** (권장) — 릴리스의 `Atlas-Setup-*.exe` 를 실행해 설치합니다. 관리자 권한 없이 현재 사용자 폴더에 설치되고 시작 메뉴에 등록됩니다. 새 버전이 나오면 앱이 알려주고 설정에서 받아 설치할 수 있습니다.
+- **포터블** — `Atlas-*.zip` 을 받아 원하는 폴더에 압축 해제 후 `Atlas.exe` 실행.
 
 요구 사항:
 
@@ -47,6 +47,7 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용. 한 작업에 여러 담당자가 있어도 정확히 매칭.
 - **외관·설정** — 다크/라이트 + **커스텀 색 테마**(핵심 12색 지정 → 나머지 자동 파생), **브랜드 워드마크·앱 아이콘 커스터마이즈**, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그), **설정 내보내기/가져오기**(JSON).
 - **자동 백업** — 전체 데이터(DB + 첨부)를 지정 폴더로 주기적으로 zip 백업(보관 개수 관리). 동기화 폴더(OneDrive 등) 지정 시 오프사이트 백업.
+- **자동 업데이트** — 앱이 주기적으로 GitHub 릴리스를 확인해 새 버전이 있으면 알려주고, 설정 > 업데이트 에서 직접 확인·다운로드·설치할 수 있습니다 (다운로드까지만 자동, 설치 실행은 사용자가 직접). 설치형으로 받은 경우에 동작.
 
 ## 외부 자동화 (Claude Code 등)
 
@@ -104,8 +105,7 @@ cd frontend; npm install; cd ..
 
 - 스택: **백엔드** .NET 8 / ASP.NET Core 8 / EF Core 8 (SQLite). **셸** WPF + WebView2. **프론트** React 19 + Vite + TypeScript + Tailwind 4 + Zustand + ECharts + Cytoscape.
 - 레이어링: `Core` / `Application` / `Infrastructure` / `WebService` / `AppHost` / `DesktopApp` (Clean Architecture).
-- `publish.ps1 -SkipZip` (zip 생략) · `-Server` (Client 모드용 standalone `Atlas-Server.exe`).
-- 더 자세한 아키텍처/네이밍 호환성/publish 함정/자주 쓰는 명령은 [`CLAUDE.md`](./CLAUDE.md) 참고.
+- `publish.ps1 -SkipZip` (zip 생략) · `-Server` (Client 모드용 standalone `Atlas-Server.exe`) · `-Installer` (설치형 `Atlas-Setup-*.exe`, Inno Setup 6 필요).
 
 ## 라이선스
 
@@ -121,8 +121,8 @@ Atlas is a Windows desktop application that lets one person manage schedules, is
 
 ### Getting started (end users)
 
-1. Download the release zip and extract it to any folder.
-2. Run `Atlas.exe`.
+- **Installer** (recommended) — run `Atlas-Setup-*.exe` from the release. It installs per-user (no admin) and adds a Start Menu entry. The app notifies you when a new version is available and you can update from Settings.
+- **Portable** — download `Atlas-*.zip`, extract it to any folder, and run `Atlas.exe`.
 
 Requirements:
 
@@ -162,6 +162,7 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 - **Resources** — People and equipment, used as the autocomplete source for WBS assignees. Matches correctly even when a task has multiple assignees.
 - **Appearance & settings** — Dark / light + **custom color theme** (pick 12 core colors, the rest auto-derived), **brand wordmark & app-icon customization**, Markdown font size and line height, remember last project, change data folder location (native folder picker), **settings export/import** (JSON).
 - **Automatic backup** — Periodically zip the full data (DB + attachments) into a folder you choose, with retention. Point it at a synced folder (OneDrive/Dropbox) for off-site backups.
+- **Automatic updates** — The app periodically checks GitHub Releases and notifies you when a newer version exists; you can check, download, and install from Settings > Update (download is automatic, running the installer is up to you). Applies to installer-based setups.
 
 ### External automation (Claude Code etc.)
 
@@ -219,8 +220,7 @@ cd frontend; npm install; cd ..
 
 - Stack: **Backend** .NET 8 / ASP.NET Core 8 / EF Core 8 (SQLite). **Shell** WPF + WebView2. **Frontend** React 19 + Vite + TypeScript + Tailwind 4 + Zustand + ECharts + Cytoscape.
 - Layering: `Core` / `Application` / `Infrastructure` / `WebService` / `AppHost` / `DesktopApp` (Clean Architecture).
-- `publish.ps1 -SkipZip` (skip zip) · `-Server` (standalone `Atlas-Server.exe` for Client mode).
-- Deeper architecture notes, naming-compatibility rules, publish caveats, and common commands are in [`CLAUDE.md`](./CLAUDE.md).
+- `publish.ps1 -SkipZip` (skip zip) · `-Server` (standalone `Atlas-Server.exe` for Client mode) · `-Installer` (build `Atlas-Setup-*.exe`, requires Inno Setup 6).
 
 ### License
 
