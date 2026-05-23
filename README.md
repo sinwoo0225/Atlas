@@ -48,6 +48,7 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **외관·설정** — 다크/라이트 + **커스텀 색 테마**(핵심 12색 지정 → 나머지 자동 파생), **브랜드 워드마크·앱 아이콘 커스터마이즈**, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그), **설정 내보내기/가져오기**(JSON).
 - **자동 백업** — 전체 데이터(DB + 첨부)를 지정 폴더로 주기적으로 zip 백업(보관 개수 관리). 동기화 폴더(OneDrive 등) 지정 시 오프사이트 백업.
 - **자동 업데이트** — 앱이 주기적으로 GitHub 릴리스를 확인해 새 버전이 있으면 알려주고, 설정 > 업데이트 에서 직접 확인·다운로드·설치할 수 있습니다 (다운로드까지만 자동, 설치 실행은 사용자가 직접). 설치형으로 받은 경우에 동작.
+- **위젯 모드** — 데스크톱 한쪽에 항상 떠 있는 컴팩트 플로팅 위젯. 시계·날씨, 시스템 음악 재생 제어(Windows SMTC — 어떤 앱이든 재생 중인 곡의 제목·아트워크·재생/정지/이전/다음·타임라인), 최근 활성 창(머문 시간), 오늘 내 작업, 빠른 작성(이슈·변경이력·리소스). 사이드바 버튼 또는 `Ctrl+Alt+W` 로 토글하고 투명도·항상 위 고정·확장(2열)·크기 조정·드래그를 지원합니다. (데스크톱 전용)
 
 ## 외부 자동화 (Claude Code 등)
 
@@ -163,6 +164,7 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 - **Appearance & settings** — Dark / light + **custom color theme** (pick 12 core colors, the rest auto-derived), **brand wordmark & app-icon customization**, Markdown font size and line height, remember last project, change data folder location (native folder picker), **settings export/import** (JSON).
 - **Automatic backup** — Periodically zip the full data (DB + attachments) into a folder you choose, with retention. Point it at a synced folder (OneDrive/Dropbox) for off-site backups.
 - **Automatic updates** — The app periodically checks GitHub Releases and notifies you when a newer version exists; you can check, download, and install from Settings > Update (download is automatic, running the installer is up to you). Applies to installer-based setups.
+- **Widget mode** — A compact, always-on-top floating widget. Clock & weather, system media controls (Windows SMTC — title, artwork, play/pause/prev/next, and a seekable timeline for whatever app is playing), recent active windows (with dwell time), today's tasks, and quick-create (issue / change log / resource). Toggle from the sidebar or `Ctrl+Alt+W`; supports adjustable transparency, always-on-top pin, an expanded 2-column layout, resizing, and dragging. (Desktop only.)
 
 ### External automation (Claude Code etc.)
 
