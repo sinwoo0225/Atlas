@@ -6,9 +6,11 @@ import {
   Search,
   PanelLeftClose,
   PanelLeftOpen,
+  LayoutGrid,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadSettings, patchSettings } from '../store/settings';
+import { isHostBridgeAvailable, toggleWidget } from '../utils/hostBridge';
 import { MenuIcon } from '../utils/iconRegistry';
 import { useRecentTracker } from '../hooks/useRecentTracker';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
@@ -276,7 +278,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        <div className={`${collapsed ? 'p-2' : 'p-3'} border-t border-default`}>
+        <div className={`${collapsed ? 'p-2' : 'p-3'} border-t border-default space-y-1`}>
+          {(() => {
+            const bridge = isHostBridgeAvailable();
+            return (
+              <button
+                type="button"
+                onClick={() => toggleWidget()}
+                disabled={!bridge}
+                title={bridge ? '위젯 토글 (Ctrl+Alt+W)' : '데스크톱 앱에서만 사용할 수 있어요'}
+                aria-label="위젯 토글"
+                className={`${linkClass(false)} w-full disabled:opacity-40 disabled:cursor-not-allowed`}
+              >
+                <LayoutGrid size={16} />
+                {!collapsed && '위젯'}
+              </button>
+            );
+          })()}
           {(() => {
             const active = location.pathname === '/settings';
             return (

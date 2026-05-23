@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import type { ThemeMode } from './store/settings';
 import { Layout } from './components/Layout';
+import { WidgetDashboard } from './pages/WidgetDashboard';
 import { ProjectList } from './pages/ProjectList';
 import { Dashboard } from './pages/Dashboard';
 import { WbsPage } from './pages/WbsPage';
@@ -26,7 +27,9 @@ import { isCustomDark } from './utils/themeCustom';
 import { getMachineAccount } from './utils/hostBridge';
 import { systemApi, EXPECTED_API_VERSION } from './api/system';
 
-export default function App() {
+// 메인 앱 셸 — 사이드바 Layout + 전역 컴포넌트 + 시작 시 핑/업데이트 체크.
+// 위젯(/widget)은 이 셸 밖에서 독립 렌더되므로 핑·업데이트 토스트·커맨드팔레트가 뜨지 않는다.
+function MainShell() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadSettings().theme);
 
   useEffect(() => {
@@ -72,7 +75,7 @@ export default function App() {
   }, []);
 
   return (
-    <BrowserRouter>
+    <>
       <Toaster
         position="top-right"
         theme={theme === 'custom' ? (isCustomDark(loadSettings().customColors) ? 'dark' : 'light') : theme}
@@ -85,7 +88,19 @@ export default function App() {
       <CommandPalette />
       <ShortcutsModal />
       <Layout>
-        <Routes>
+        <Outlet />
+      </Layout>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* 위젯 모드: 사이드바·전역 토스트 없는 독립 셸 (별도 WebView2 창에서 로드) */}
+        <Route path="/widget" element={<WidgetDashboard />} />
+        <Route element={<MainShell />}>
           <Route path="/" element={<ProjectList />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
@@ -101,8 +116,8 @@ export default function App() {
           <Route path="/projects/:projectId/map" element={<ProjectMapPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
 }

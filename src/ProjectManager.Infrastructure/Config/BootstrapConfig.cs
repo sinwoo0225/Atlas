@@ -74,6 +74,28 @@ public sealed class BootstrapConfig
     [JsonPropertyName("brandTitle")]
     public string? BrandTitle { get; set; }
 
+    // ===== 위젯 모드 (데스크톱 보조 always-on-top 창) =====
+    // 창 위치·크기·투명도·고정상태를 보존. 0 이면 미설정 → 화면 우측 상단 기본 배치.
+    [JsonPropertyName("widgetX")]
+    public double WidgetX { get; set; }
+
+    [JsonPropertyName("widgetY")]
+    public double WidgetY { get; set; }
+
+    [JsonPropertyName("widgetWidth")]
+    public double WidgetWidth { get; set; } = 360;
+
+    [JsonPropertyName("widgetHeight")]
+    public double WidgetHeight { get; set; } = 560;
+
+    // 창 불투명도 0.4~1.0. 기본 0.92.
+    [JsonPropertyName("widgetOpacity")]
+    public double WidgetOpacity { get; set; } = 0.92;
+
+    // 항상 위(Topmost) 고정 여부. 기본 true.
+    [JsonPropertyName("widgetPinned")]
+    public bool WidgetPinned { get; set; } = true;
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,

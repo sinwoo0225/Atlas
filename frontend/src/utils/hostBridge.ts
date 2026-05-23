@@ -224,6 +224,44 @@ export function setHostBrand(brand: HostBrand): void {
   bridge.postMessage({ type: 'setBrand', ...brand });
 }
 
+// ===== 위젯 모드 (데스크톱 보조 always-on-top 창) =====
+// 모두 fire-and-forget — 응답이 필요 없는 네이티브 창 제어. 브릿지 없으면 no-op.
+
+// 메인 앱 → 위젯 창 표시/숨김 토글 (사이드바 버튼).
+export function toggleWidget(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'toggleWidget' });
+}
+
+// 위젯 창 → 자신의 불투명도 변경 (0.4~1.0). 호스트가 즉시 적용 + config 저장.
+export function setWidgetOpacity(opacity: number): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setWidgetOpacity', opacity });
+}
+
+// 위젯 창 → 항상 위(Topmost) 고정 토글.
+export function setWidgetPinned(pinned: boolean): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setWidgetPinned', pinned });
+}
+
+// 위젯 창 → 자기 자신 닫기(숨김). 다시 토글하면 재표시.
+export function closeWidget(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'hideWidget' });
+}
+
+// 위젯 타이틀바 mousedown → 네이티브 창 드래그 시작(WM_NCLBUTTONDOWN).
+export function beginWidgetDrag(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'beginWidgetDrag' });
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;

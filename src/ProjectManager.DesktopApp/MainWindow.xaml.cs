@@ -22,27 +22,9 @@ public partial class MainWindow : Window
     private const string VirtualHost = "atlas.local";
     private static readonly string AppUrl = $"https://{VirtualHost}/index.html";
 
-    private static readonly Dictionary<string, string> MimeMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [".html"] = "text/html; charset=utf-8",
-        [".htm"] = "text/html; charset=utf-8",
-        [".js"] = "application/javascript; charset=utf-8",
-        [".mjs"] = "application/javascript; charset=utf-8",
-        [".css"] = "text/css; charset=utf-8",
-        [".json"] = "application/json; charset=utf-8",
-        [".svg"] = "image/svg+xml",
-        [".png"] = "image/png",
-        [".jpg"] = "image/jpeg",
-        [".jpeg"] = "image/jpeg",
-        [".gif"] = "image/gif",
-        [".webp"] = "image/webp",
-        [".ico"] = "image/x-icon",
-        [".woff"] = "font/woff",
-        [".woff2"] = "font/woff2",
-        [".ttf"] = "font/ttf",
-        [".map"] = "application/json; charset=utf-8",
-        [".txt"] = "text/plain; charset=utf-8",
-    };
+    // 위젯(보조 always-on-top 창) — 메인 WebView2 의 환경·apiClient·wwwroot 를 공유. WinForms Form 으로 호스팅.
+    private CoreWebView2Environment? _env;
+    private WidgetForm? _widget;
 
     public MainWindow()
     {
@@ -57,7 +39,12 @@ public partial class MainWindow : Window
     {
         base.OnSourceInitialized(e);
         var source = (HwndSource)PresentationSource.FromVisual(this)!;
+        _hwnd = source.Handle;
         source.AddHook(WndProc);
+
+        // 전역 단축키 Ctrl+Alt+W → 위젯 토글. 다른 앱이 선점했으면 조용히 실패(앱 시작은 막지 않음).
+        try { _hotkeyRegistered = RegisterHotKey(_hwnd, HotkeyId, MOD_CONTROL | MOD_ALT, VK_W); }
+        catch { _hotkeyRegistered = false; }
     }
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
@@ -128,21 +115,21 @@ public partial class MainWindow : Window
         }
 
         Directory.CreateDirectory(userDataFolder);
-        var env = await CoreWebView2Environment.CreateAsync(null, userDataFolder);
-        await WebView.EnsureCoreWebView2Async(env);
+        // 위젯 창의 레이어드 투명도(LWA_ALPHA)가 WebView2 콘텐츠에도 적용되려면 GPU 컴포지팅을 꺼야 한다.
+        // (GPU 스왑체인은 창 레이어드 알파를 우회 — 끄면 창 표면에 그려져 DWM 이 알파와 함께 합성)
+        // 메인 창도 같은 환경을 공유하나 렌더링은 정상(CPU 컴포지팅 경로).
+        var envOptions = new CoreWebView2EnvironmentOptions { AdditionalBrowserArguments = "--disable-gpu-compositing" };
+        _env = await CoreWebView2Environment.CreateAsync(null, userDataFolder, envOptions);
+        await WebView.EnsureCoreWebView2Async(_env);
 
         // single-file 환경에서 실제 exe 옆 폴더(= wwwroot) 를 정적파일 소스로 잡는다.
         var exeDir = Path.GetDirectoryName(Environment.ProcessPath) ?? AppContext.BaseDirectory;
         _wwwroot = Path.Combine(exeDir, "wwwroot");
 
-        // SetVirtualHostNameToFolderMapping 와 WebResourceRequested 가 같은 호스트에 공존하면
-        // 가상호스트가 우선되어 핸들러가 발화하지 않는다. 따라서 가상호스트는 쓰지 않고
-        // 모든 요청을 WebResourceRequested 로 가로채서 처리한다.
-        WebView.CoreWebView2.AddWebResourceRequestedFilter(
-            $"*://{VirtualHost}/*", CoreWebView2WebResourceContext.All);
-        WebView.CoreWebView2.WebResourceRequested += OnApiRequested;
+        // atlas.local/* 정적파일 서빙 + /api 프록시는 WebViewServer 로 위임(위젯 창과 공유).
+        new WebViewServer(WebView.CoreWebView2, () => _apiClient, _wwwroot).Attach();
 
-        // 프론트엔드 ↔ WPF 호스트 메시지 브릿지. 현재는 네이티브 폴더 다이얼로그용.
+        // 프론트엔드 ↔ WPF 호스트 메시지 브릿지(네이티브 다이얼로그·연결설정·브랜드·위젯 토글).
         WebView.CoreWebView2.WebMessageReceived += OnHostMessageReceived;
 
         WebView.CoreWebView2.Navigate(AppUrl);
@@ -288,11 +275,40 @@ public partial class MainWindow : Window
                 ApplyIcon(iconDataUrl);
                 PersistBrand(primaryText, accentText, primaryColor, accentColor, brandTitle);
             }
+            else if (type == "toggleWidget")
+            {
+                ToggleWidget();
+            }
+            else if (type == "showWidget")
+            {
+                ShowWidget();
+            }
+            else if (type == "hideWidget")
+            {
+                _widget?.Hide();
+            }
         }
         catch (System.Exception ex)
         {
             TryLog($"[host-bridge-err] {ex.GetType().Name}: {ex.Message}");
         }
+    }
+
+    // ---------- 위젯 창 토글 ----------
+    private void ToggleWidget()
+    {
+        if (_widget is { Visible: true })
+            _widget.Hide();
+        else
+            ShowWidget();
+    }
+
+    private void ShowWidget()
+    {
+        if (_env is null || WebView.CoreWebView2 is null) return; // WebView 초기화 전이면 무시
+        _widget ??= new WidgetForm(_env, () => _apiClient, _wwwroot);
+        if (!_widget.Visible) _widget.Show();
+        _widget.Activate();
     }
 
     [DllImport("user32.dll")]
@@ -467,148 +483,20 @@ public partial class MainWindow : Window
         catch { /* 셔다운 등으로 dispatcher 없으면 무시 */ }
     }
 
-    private async void OnApiRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
-    {
-        var deferral = e.GetDeferral();
-        string path = "?";
-        try
-        {
-            var src = e.Request;
-            var uri = new Uri(src.Uri);
-            path = uri.PathAndQuery;
-
-            // 정적파일 처리 (api 가 아닌 모든 요청)
-            if (!path.StartsWith("/api/", StringComparison.OrdinalIgnoreCase))
-            {
-                e.Response = BuildStaticResponse(path);
-                return;
-            }
-
-            var req = new HttpRequestMessage(new HttpMethod(src.Method), path);
-
-            // GET/HEAD 가 아닌데 src.Content 가 있다면 body 를 모두 읽어서 byte[] 로 buffer.
-            // CoreWebView2 가 주는 stream 은 한 번만 읽을 수 있고, lifecycle 도 짧다.
-            byte[]? bodyBytes = null;
-            string? incomingContentType = null;
-            if (src.Content is not null
-                && !HttpMethods.IsGet(src.Method)
-                && !HttpMethods.IsHead(src.Method))
-            {
-                using var ms = new MemoryStream();
-                await src.Content.CopyToAsync(ms);
-                bodyBytes = ms.ToArray();
-            }
-
-            // 헤더 분리: Content-* 류는 content 헤더로, 나머지는 request 헤더로.
-            // Content-Type 을 별도로 캐치해서 ByteArrayContent.Headers.ContentType 으로 명시 설정.
-            foreach (var h in src.Headers)
-            {
-                if (string.Equals(h.Key, "Content-Type", StringComparison.OrdinalIgnoreCase))
-                {
-                    incomingContentType = h.Value;
-                    continue;
-                }
-                if (!req.Headers.TryAddWithoutValidation(h.Key, h.Value))
-                {
-                    // request 헤더로 못 들어가는 건 보통 content 헤더 (Content-Length, Content-Disposition 등)
-                }
-            }
-
-            if (bodyBytes is not null)
-            {
-                var content = new ByteArrayContent(bodyBytes);
-                if (!string.IsNullOrEmpty(incomingContentType)
-                    && System.Net.Http.Headers.MediaTypeHeaderValue.TryParse(incomingContentType, out var mt))
-                {
-                    content.Headers.ContentType = mt;
-                }
-                req.Content = content;
-            }
-
-            using var resp = await _apiClient!.SendAsync(req);
-            var bytes = await resp.Content.ReadAsByteArrayAsync();
-            var statusCode = (int)resp.StatusCode;
-            if (statusCode >= 400)
-            {
-                var preview = bytes.Length > 0
-                    ? Encoding.UTF8.GetString(bytes, 0, Math.Min(bytes.Length, 400))
-                    : "(empty)";
-                TryLog($"[api-err] {src.Method} {path} -> {statusCode}: {preview}");
-            }
-
-            var sb = new StringBuilder();
-            foreach (var h in resp.Headers.Concat(resp.Content.Headers))
-                foreach (var v in h.Value)
-                    sb.AppendLine($"{h.Key}: {v}");
-
-            e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(
-                new MemoryStream(bytes), (int)resp.StatusCode, resp.ReasonPhrase ?? "OK",
-                sb.ToString().TrimEnd());
-        }
-        catch (System.Exception ex)
-        {
-            TryLog($"[api-error] {path}: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
-            var msg = Encoding.UTF8.GetBytes(
-                $"{{\"error\":\"{ex.GetType().Name}: {ex.Message.Replace("\"", "\\\"")}\"}}");
-            e.Response = WebView.CoreWebView2.Environment.CreateWebResourceResponse(
-                new MemoryStream(msg), 500, "Internal Server Error",
-                "Content-Type: application/json; charset=utf-8");
-        }
-        finally
-        {
-            deferral.Complete();
-        }
-    }
-
-    private CoreWebView2WebResourceResponse BuildStaticResponse(string pathAndQuery)
-    {
-        // query string 제거, 선행 / 제거.
-        var qIdx = pathAndQuery.IndexOf('?');
-        var path = (qIdx >= 0 ? pathAndQuery[..qIdx] : pathAndQuery).TrimStart('/');
-        if (string.IsNullOrEmpty(path)) path = "index.html";
-
-        var full = Path.GetFullPath(Path.Combine(_wwwroot, path.Replace('/', Path.DirectorySeparatorChar)));
-        // 디렉토리 탈출 방지
-        var rootFull = Path.GetFullPath(_wwwroot) + Path.DirectorySeparatorChar;
-        if (!full.StartsWith(rootFull, StringComparison.OrdinalIgnoreCase))
-            full = Path.Combine(_wwwroot, "index.html");
-
-        // 정적파일이 없으면 SPA fallback → index.html (React Router 지원)
-        if (!File.Exists(full))
-            full = Path.Combine(_wwwroot, "index.html");
-
-        try
-        {
-            var bytes = File.ReadAllBytes(full);
-            var ext = Path.GetExtension(full);
-            var mime = MimeMap.TryGetValue(ext, out var m) ? m : "application/octet-stream";
-            return WebView.CoreWebView2.Environment.CreateWebResourceResponse(
-                new MemoryStream(bytes), 200, "OK", $"Content-Type: {mime}");
-        }
-        catch (System.Exception ex)
-        {
-            TryLog($"[static-error] {path}: {ex.Message}");
-            var msg = Encoding.UTF8.GetBytes($"Not Found: {path}");
-            return WebView.CoreWebView2.Environment.CreateWebResourceResponse(
-                new MemoryStream(msg), 404, "Not Found", "Content-Type: text/plain; charset=utf-8");
-        }
-    }
-
-    private static void TryLog(string line)
-    {
-        try
-        {
-            var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var dir = Path.Combine(local, "Atlas");
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, "atlas-debug.log");
-            File.AppendAllText(path, $"[{DateTime.Now:HH:mm:ss.fff}] {line}\n");
-        }
-        catch { }
-    }
+    private static void TryLog(string line) => DesktopLog.Write(line);
 
     private async void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        if (_hotkeyRegistered)
+        {
+            try { UnregisterHotKey(_hwnd, HotkeyId); } catch { }
+            _hotkeyRegistered = false;
+        }
+        if (_widget is not null)
+        {
+            _widget.Close(); // 위젯이 살아있으면 메인 종료 후에도 프로세스가 남음
+            _widget = null;
+        }
         if (_ownsApiClient)
         {
             _apiClient?.Dispose();
@@ -636,12 +524,30 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
+    // ---------- 전역 단축키 (Ctrl+Alt+W → 위젯 토글) ----------
+    private IntPtr _hwnd;
+    private bool _hotkeyRegistered;
+    private const int HotkeyId = 0x9001;
+    private const int WM_HOTKEY = 0x0312;
+    private const uint MOD_ALT = 0x0001;
+    private const uint MOD_CONTROL = 0x0002;
+    private const uint VK_W = 0x57;
+
+    [DllImport("user32.dll")] private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+    [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
     // ---------- Taskbar-aware maximize ----------
     private const int WM_GETMINMAXINFO = 0x0024;
     private const int MONITOR_DEFAULTTONEAREST = 0x00000002;
 
     private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
+        if (msg == WM_HOTKEY && wParam.ToInt32() == HotkeyId)
+        {
+            ToggleWidget();
+            handled = true;
+            return IntPtr.Zero;
+        }
         if (msg == WM_GETMINMAXINFO)
         {
             var mmi = Marshal.PtrToStructure<MINMAXINFO>(lParam);
