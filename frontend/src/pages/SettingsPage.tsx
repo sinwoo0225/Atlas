@@ -34,7 +34,7 @@ import {
 import { useProjectStore } from '../store/useProjectStore';
 import { Button, Card, FormField, Modal, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import { systemApi, type DataFolderInfo, type DataFolderPreview, type BackupConfig, type BackupStatus } from '../api/system';
+import { systemApi, type DataFolderInfo, type DataFolderPreview, type BackupConfig, type BackupStatus, type UpdateConfig, type UpdateStatus } from '../api/system';
 import {
   pickFolder,
   isHostBridgeAvailable,
@@ -547,6 +547,7 @@ export function SettingsPage() {
 
       {connectionMode === 'Local' && <DataFolderSection />}
       {connectionMode === 'Local' && <AutoBackupSection />}
+      {connectionMode === 'Local' && <UpdateSection />}
       {connectionMode === 'Client' && (
         <Section title="데이터">
           <p className="text-sm text-secondary">
@@ -816,6 +817,185 @@ function AutoBackupSection() {
           </Button>
           {savedAt && <span className="text-sm text-on-success">저장되었습니다.</span>}
           <span className="text-xs text-muted">마지막 백업: {lastText}</span>
+        </div>
+      </FormField>
+    </Section>
+  );
+}
+
+const UPDATE_INTERVALS: { value: number; label: string }[] = [
+  { value: 24, label: '매일 (24시간)' },
+  { value: 12, label: '12시간' },
+  { value: 6, label: '6시간' },
+  { value: 168, label: '매주' },
+];
+
+function UpdateSection() {
+  const [cfg, setCfg] = useState<UpdateConfig | null>(null);
+  const [status, setStatus] = useState<UpdateStatus | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+
+  const refreshStatus = () => systemApi.getUpdateStatus().then(setStatus).catch(() => {});
+  useEffect(() => {
+    systemApi.getUpdateConfig().then(setCfg).catch(() => {});
+    refreshStatus();
+  }, []);
+
+  // 다운로드 중에는 진행률 폴링.
+  useEffect(() => {
+    if (status?.phase !== 'downloading') return;
+    const id = setInterval(refreshStatus, 800);
+    return () => clearInterval(id);
+  }, [status?.phase]);
+
+  if (!cfg) return null;
+
+  const result = status?.lastResult ?? null;
+  const phase = status?.phase ?? 'idle';
+  const runningSessions = (status?.runningMcp ?? 0) + (status?.runningCli ?? 0);
+
+  const handleCheck = async () => {
+    setChecking(true);
+    try {
+      const r = await systemApi.checkUpdate();
+      await refreshStatus();
+      systemApi.getUpdateConfig().then(setCfg).catch(() => {});
+      if (r.hasUpdate) toast.success(`새 버전 v${r.latestVersion} 사용 가능`);
+      else toast.info(`최신 버전입니다 (v${r.currentVersion})`);
+    } catch (e) {
+      toast.error((e as Error).message || '업데이트 확인 실패');
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setStatus(await systemApi.startUpdateDownload());
+    } catch (e) {
+      toast.error((e as Error).message || '다운로드 시작 실패');
+    }
+  };
+
+  const handleLaunch = async () => {
+    const message = runningSessions > 0
+      ? `설치 프로그램을 실행하면 현재 실행 중인 Atlas와 연결된 Claude(MCP/CLI) 세션 ${runningSessions}개가 모두 종료됩니다. 진행할까요?`
+      : '설치 프로그램을 실행하면 Atlas가 종료되고 새 버전이 설치됩니다. 진행할까요?';
+    if (!await confirmDialog({ title: '업데이트 설치', message, confirmLabel: '설치 실행', danger: runningSessions > 0 })) return;
+    try {
+      await systemApi.launchUpdate();
+    } catch (e) {
+      toast.error((e as Error).message || '설치 실행 실패');
+    }
+  };
+
+  const handleSaveConfig = async (enabled: boolean, intervalHours: number) => {
+    setCfg((c) => (c ? { ...c, enabled, intervalHours } : c));
+    try {
+      await systemApi.setUpdateConfig(enabled, intervalHours);
+      setSavedAt(Date.now());
+      setTimeout(() => setSavedAt(null), 2000);
+    } catch (e) {
+      toast.error((e as Error).message || '저장 실패');
+    }
+  };
+
+  const lastChecked = cfg.lastCheckedAt ? new Date(cfg.lastCheckedAt).toLocaleString() : '없음';
+
+  return (
+    <Section title="업데이트">
+      <FormField label="현재 버전">
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-sm text-secondary">v{result?.currentVersion ?? '—'}</span>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={handleCheck}
+            disabled={checking}
+            leadingIcon={checking ? <Spinner size="sm" /> : <RotateCcw size={14} />}
+          >
+            {checking ? '확인 중…' : '지금 확인'}
+          </Button>
+          <span className="text-xs text-muted">마지막 확인: {lastChecked}</span>
+        </div>
+      </FormField>
+
+      {result?.hasUpdate ? (
+        <FormField
+          label={`새 버전 v${result.latestVersion}`}
+          hint={result.sizeBytes > 0 ? `설치 파일 약 ${Math.round(result.sizeBytes / 1024 / 1024)} MB` : undefined}
+        >
+          <div className="space-y-3">
+            {result.releaseNotes && (
+              <div className="max-h-40 overflow-y-auto text-sm text-secondary border border-default rounded-md p-3 whitespace-pre-wrap">
+                {result.releaseNotes}
+              </div>
+            )}
+
+            {phase === 'downloading' ? (
+              <div className="space-y-1">
+                <div className="h-2 rounded bg-surface-2 overflow-hidden">
+                  <div className="h-full bg-accent transition-all" style={{ width: `${status?.percent ?? 0}%` }} />
+                </div>
+                <span className="text-xs text-muted">다운로드 중… {status?.percent ?? 0}%</span>
+              </div>
+            ) : phase === 'ready' && status?.downloadedPath ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <Button variant="primary" onClick={handleLaunch} leadingIcon={<Download size={14} />}>
+                  설치 실행
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => systemApi.revealUpdate().catch(() => {})}
+                  leadingIcon={<FolderOpen size={14} />}
+                >
+                  다운로드 폴더 열기
+                </Button>
+                {runningSessions > 0 && (
+                  <span className="text-xs text-on-warning">⚠ 실행 중 Claude 세션 {runningSessions}개 — 설치 시 종료됩니다.</span>
+                )}
+              </div>
+            ) : (
+              <Button variant="primary" onClick={handleDownload} disabled={!result.downloadUrl} leadingIcon={<Download size={14} />}>
+                다운로드
+              </Button>
+            )}
+
+            {phase === 'error' && status?.error && <span className="text-sm text-on-danger">{status.error}</span>}
+          </div>
+        </FormField>
+      ) : (
+        phase === 'error' && status?.error && (
+          <FormField label="확인 결과"><span className="text-sm text-on-danger">{status.error}</span></FormField>
+        )
+      )}
+
+      <FormField
+        label="자동 확인"
+        hint="백그라운드에서 주기적으로 새 버전을 확인합니다. 다운로드·설치는 자동으로 하지 않습니다."
+      >
+        <div className="flex items-center gap-4 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={cfg.enabled}
+              onChange={(e) => handleSaveConfig(e.target.checked, cfg.intervalHours)}
+            />
+            <span className="text-sm text-secondary">활성화</span>
+          </label>
+          <select
+            className={inputClass}
+            style={{ width: 'auto' }}
+            value={cfg.intervalHours}
+            disabled={!cfg.enabled}
+            onChange={(e) => handleSaveConfig(cfg.enabled, Number(e.target.value))}
+          >
+            {UPDATE_INTERVALS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {savedAt && <span className="text-sm text-on-success">저장되었습니다.</span>}
         </div>
       </FormField>
     </Section>

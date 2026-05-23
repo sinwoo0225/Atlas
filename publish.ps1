@@ -6,16 +6,19 @@
     - -Server: ProjectManager.WebService 를 standalone Atlas-Server.exe 로 publish/server/ 에 빌드하고 별도 zip 생성.
       (Client 모드 클라이언트들이 붙는 원격 서버. wwwroot 는 클라가 자체 보유하므로 서버에는 미포함.)
     - -Version <ver>: zip 이름의 stamp 대신 명시한 버전을 사용. 릴리즈 자산용.
+    - -Installer: Inno Setup(ISCC) 으로 per-user 설치형 Atlas-Setup-<버전>.exe 도 생성 (DesktopApp 모드).
 .EXAMPLE
-    .\publish.ps1                       # Atlas-YYYYMMDD_HHMMSS.zip
-    .\publish.ps1 -Version 1.4.0        # Atlas-1.4.0.zip
-    .\publish.ps1 -Server -Version 1.4.0  # Atlas-Server-1.4.0.zip
-    .\publish.ps1 -SkipZip              # zip 생략
+    .\publish.ps1                          # Atlas-YYYYMMDD_HHMMSS.zip
+    .\publish.ps1 -Version 1.4.0           # Atlas-1.4.0.zip
+    .\publish.ps1 -Version 1.5.0 -Installer  # Atlas-1.5.0.zip + Atlas-Setup-1.5.0.exe
+    .\publish.ps1 -Server -Version 1.4.0   # Atlas-Server-1.4.0.zip
+    .\publish.ps1 -SkipZip                 # zip 생략
 #>
 param(
     [switch]$SkipZip,
     [switch]$Server,
-    [string]$Version
+    [string]$Version,
+    [switch]$Installer
 )
 
 $ErrorActionPreference = 'Stop'
@@ -163,8 +166,9 @@ if (Test-Path $usage) {
     Write-Host "  - ATLAS-CLI-USAGE : OK" -ForegroundColor Green
 }
 
+$tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
+
 if (-not $SkipZip) {
-    $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
     $zipPath = Join-Path $root "Atlas-$tag.zip"
     Write-Host "==> 압축 생성: $zipPath" -ForegroundColor Cyan
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
@@ -172,4 +176,36 @@ if (-not $SkipZip) {
     Write-Host "완료. $zipPath 파일을 전달하세요." -ForegroundColor Green
 } else {
     Write-Host "완료. publish/ 폴더 내용을 압축하여 전달하세요." -ForegroundColor Green
+}
+
+# -Installer: Inno Setup(ISCC) 으로 per-user 설치형 Atlas-Setup-<버전>.exe 생성.
+# ISCC 미설치 시 빌드 실패가 아니라 경고만 (포터블 zip 은 이미 생성됨).
+if ($Installer) {
+    Write-Host "==> 인스톨러 생성 (Inno Setup)" -ForegroundColor Cyan
+    $iscc = $null
+    $isccCandidates = @(
+        (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+        (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe')
+    )
+    foreach ($c in $isccCandidates) {
+        if ($c -and (Test-Path $c)) { $iscc = $c; break }
+    }
+    if (-not $iscc) {
+        $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+        if ($cmd) { $iscc = $cmd.Source }
+    }
+
+    if (-not $iscc) {
+        Write-Warning "ISCC.exe(Inno Setup 6) 를 찾을 수 없습니다. https://jrsoftware.org/isdl.php 에서 설치 후 다시 실행하세요. (포터블 zip 은 이미 생성됨)"
+    } else {
+        $iss = Join-Path $root 'installer\Atlas.iss'
+        & $iscc "/DMyAppVersion=$tag" $iss
+        if ($LASTEXITCODE -ne 0) { throw "인스톨러 컴파일 실패 (ISCC exit $LASTEXITCODE)" }
+        $setupExe = Join-Path $root "Atlas-Setup-$tag.exe"
+        if (Test-Path $setupExe) {
+            Write-Host "완료. $setupExe 생성됨." -ForegroundColor Green
+        } else {
+            Write-Warning "ISCC 는 성공했으나 $setupExe 를 찾지 못했습니다. installer\Atlas.iss 의 OutputDir/OutputBaseFilename 을 확인하세요."
+        }
+    }
 }

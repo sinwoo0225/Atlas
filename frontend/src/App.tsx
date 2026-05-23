@@ -60,6 +60,13 @@ export default function App() {
       toast.error('Atlas 백엔드에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.', { duration: 8000 });
     });
 
+    // 백그라운드 업데이트 체크가 새 버전을 발견해 뒀으면 시작 시 안내 (silent — 실패해도 무시).
+    systemApi.getUpdateStatus().then((s) => {
+      if (s.lastResult?.hasUpdate) {
+        toast.info(`새 버전 v${s.lastResult.latestVersion} 사용 가능 — 설정 › 업데이트에서 받을 수 있어요.`, { duration: 8000 });
+      }
+    }).catch(() => {});
+
     return () => window.removeEventListener('atlas:settings-changed', onSettings);
   }, []);
 

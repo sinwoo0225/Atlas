@@ -50,6 +50,34 @@ export interface BackupRunResult {
   createdAt: string;
 }
 
+export interface UpdateConfig {
+  enabled: boolean;
+  intervalHours: number;
+  lastCheckedAt: string | null;
+  latestKnownVersion: string | null;
+}
+
+export interface UpdateCheckResult {
+  currentVersion: string;
+  latestVersion: string;
+  hasUpdate: boolean;
+  releaseNotes: string | null;
+  downloadUrl: string | null;
+  assetName: string | null;
+  sizeBytes: number;
+  publishedAt: string | null;
+}
+
+export interface UpdateStatus {
+  phase: 'idle' | 'checking' | 'downloading' | 'ready' | 'error';
+  percent: number;
+  downloadedPath: string | null;
+  error: string | null;
+  lastResult: UpdateCheckResult | null;
+  runningMcp: number;
+  runningCli: number;
+}
+
 export const systemApi = {
   // silent — 시작 시 1회 호출이라 progress bar / 자동 toast 제외 (mismatch / 실패는 App.tsx 가 별도 처리).
   ping: () => api.get<SystemPing>('/system/ping', { silent: true }),
@@ -62,4 +90,12 @@ export const systemApi = {
   setBackupConfig: (c: BackupConfig) => api.put<{ saved: boolean }>('/system/backup/config', c),
   runBackup: () => api.post<BackupRunResult>('/system/backup/run', {}),
   getBackupStatus: () => api.get<BackupStatus>('/system/backup/status'),
+  getUpdateConfig: () => api.get<UpdateConfig>('/system/update/config'),
+  setUpdateConfig: (enabled: boolean, intervalHours: number) =>
+    api.put<{ saved: boolean }>('/system/update/config', { enabled, intervalHours }),
+  checkUpdate: () => api.post<UpdateCheckResult>('/system/update/check', {}),
+  getUpdateStatus: () => api.get<UpdateStatus>('/system/update/status', { silent: true }),
+  startUpdateDownload: () => api.post<UpdateStatus>('/system/update/download', {}),
+  launchUpdate: () => api.post<{ launched: boolean }>('/system/update/launch', {}),
+  revealUpdate: () => api.post<{ revealed: boolean }>('/system/update/reveal', {}),
 };

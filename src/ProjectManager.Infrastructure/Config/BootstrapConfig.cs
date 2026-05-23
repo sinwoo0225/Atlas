@@ -41,6 +41,22 @@ public sealed class BootstrapConfig
     [JsonPropertyName("backupIncludeFiles")]
     public bool BackupIncludeFiles { get; set; } = true;
 
+    // ===== 자동 업데이트 체크 (Local 데스크톱 in-process · 서버에서 동작) =====
+    // 백엔드 UpdateCheckService 가 매 틱 재로드해 GitHub 릴리즈를 조회. 다운로드는 사용자가 직접 트리거.
+    [JsonPropertyName("updateCheckEnabled")]
+    public bool UpdateCheckEnabled { get; set; } = true;
+
+    [JsonPropertyName("updateCheckIntervalHours")]
+    public int UpdateCheckIntervalHours { get; set; } = 24;
+
+    // 마지막으로 GitHub 를 조회한 시각(UTC). 주기 도래 판정 + 재시작에도 중복 조회 방지.
+    [JsonPropertyName("updateLastCheckedAt")]
+    public DateTime? UpdateLastCheckedAt { get; set; }
+
+    // 마지막 조회에서 발견한 최신 릴리즈 버전(semver). 시작 시 토스트 노출 판단용.
+    [JsonPropertyName("updateLatestKnownVersion")]
+    public string? UpdateLatestKnownVersion { get; set; }
+
     // ===== 브랜드(워드마크) — 프론트가 setBrand 로 보내면 호스트가 여기 저장.
     // 다음 실행 시 로딩 오버레이·제목 표시줄을 프론트 로드 전에 미리 칠하는 용도. =====
     [JsonPropertyName("brandPrimaryText")]

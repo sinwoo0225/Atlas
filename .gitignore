@@ -36,6 +36,9 @@ Thumbs.db
 # Archive
 *.zip
 
+# Release artifacts (publish.ps1 -Installer 가 레포 루트에 생성)
+Atlas-Setup-*.exe
+
 # Misc
 publish/
 

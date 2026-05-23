@@ -66,12 +66,14 @@ public static class AppServicesRegistration
         services.AddScoped<IssueWbsLinkService>();
         services.AddScoped<StartPageService>();
         services.AddScoped<BackupService>();
+        services.AddSingleton<UpdateService>();
 
-        // 보존 정책·자동 백업 정기 타이머는 장기 실행 호스트(웹/데스크톱·서버) 에서만 — CLI/원샷에서는 불필요.
+        // 보존 정책·자동 백업·업데이트 체크 정기 타이머는 장기 실행 호스트(웹/데스크톱·서버) 에서만 — CLI/원샷에서는 불필요.
         if (includeHostedServices)
         {
             services.AddHostedService<ActivityLogCleanupService>();
             services.AddHostedService<AutoBackupService>();
+            services.AddHostedService<UpdateCheckService>();
         }
 
         return services;

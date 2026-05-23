@@ -162,6 +162,55 @@ public class SystemController : ControllerBase
         return Ok(new { folder = c.BackupFolder, lastBackupAt = last, count });
     }
 
+    // ===== 자동 업데이트 =====
+    public record SetUpdateConfigRequest(bool Enabled, int IntervalHours);
+
+    [HttpGet("update/config")]
+    public IActionResult GetUpdateConfig([FromServices] UpdateService updates)
+        => Ok(updates.GetConfig());
+
+    [HttpPut("update/config")]
+    public IActionResult SetUpdateConfig([FromBody] SetUpdateConfigRequest req, [FromServices] UpdateService updates)
+    {
+        updates.SaveConfig(req.Enabled, req.IntervalHours);
+        return Ok(new { saved = true });
+    }
+
+    [HttpPost("update/check")]
+    public async Task<IActionResult> CheckUpdate([FromServices] UpdateService updates)
+        => Ok(await updates.CheckAsync(HttpContext.RequestAborted));
+
+    [HttpGet("update/status")]
+    public IActionResult UpdateStatus([FromServices] UpdateService updates)
+        => Ok(updates.GetStatus());
+
+    [HttpPost("update/download")]
+    public IActionResult DownloadUpdate([FromServices] UpdateService updates)
+    {
+        updates.StartDownload();
+        return Accepted(updates.GetStatus());
+    }
+
+    [HttpPost("update/launch")]
+    public IActionResult LaunchUpdate([FromServices] UpdateService updates)
+    {
+        // 설치 파일 실행은 데스크톱 세션이 있는 Local 모드에서만. Client 모드는 원격 서버라 무의미.
+        if (!string.Equals(BootstrapConfig.Load().Mode, "Local", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { error = "설치 실행은 Local 모드에서만 가능합니다." });
+
+        if (!updates.LaunchDownloaded(out var error))
+            return BadRequest(new { error });
+        return Ok(new { launched = true });
+    }
+
+    [HttpPost("update/reveal")]
+    public IActionResult RevealUpdate([FromServices] UpdateService updates)
+    {
+        if (!string.Equals(BootstrapConfig.Load().Mode, "Local", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(new { error = "Local 모드에서만 가능합니다." });
+        return updates.RevealDownloaded() ? Ok(new { revealed = true }) : BadRequest(new { error = "파일을 찾을 수 없습니다." });
+    }
+
     private static bool CheckWritable(string path)
     {
         try
