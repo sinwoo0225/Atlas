@@ -27,6 +27,8 @@ export interface AppSettings {
   widgetWeatherLat: number | null;
   widgetWeatherLon: number | null;
   widgetWeatherLabel: string;
+  // 위젯 레이아웃 — false=컴팩트(1열) / true=확장(2열, 더 넓은 창).
+  widgetExpanded: boolean;
   // theme === 'custom' 일 때 사용할 핵심 12색. 다크/라이트 시드로 채워 편집.
   customColors: BaseColors;
   // 브랜드 워드마크 — 'At'(primary) + 'las'(accent) 분할, 색 2개, 탭/창 제목.
@@ -64,6 +66,7 @@ const defaults: AppSettings = {
   widgetWeatherLat: null,
   widgetWeatherLon: null,
   widgetWeatherLabel: '',
+  widgetExpanded: false,
   customColors: { ...DARK_BASE },
   brandPrimaryText: 'At',
   brandAccentText: 'las',

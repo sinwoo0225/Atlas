@@ -135,6 +135,16 @@ public sealed class WidgetForm : Form
                 case "beginWidgetDrag":
                     BeginNativeDrag();
                     break;
+                case "beginWidgetResize":
+                    BeginNativeResize();
+                    break;
+                case "setWidgetWidth":
+                    if (doc.RootElement.TryGetProperty("width", out var wEl))
+                    {
+                        Width = Math.Max(MinimumSize.Width, wEl.GetInt32());
+                        PersistState();
+                    }
+                    break;
                 case "mediaControl":
                     _ = _media?.ControlAsync(doc.RootElement.TryGetProperty("action", out var aEl) ? aEl.GetString() : null);
                     break;
@@ -193,6 +203,17 @@ public sealed class WidgetForm : Form
         catch { /* best effort */ }
     }
 
+    // 우하단 그립에서 OS 리사이즈 루프 시작(프레임리스 + WebView2 가 가장자리를 덮어 NCHITTEST 불가하므로).
+    private void BeginNativeResize()
+    {
+        try
+        {
+            ReleaseCapture();
+            SendMessage(Handle, WM_NCLBUTTONDOWN, (IntPtr)HTBOTTOMRIGHT, IntPtr.Zero);
+        }
+        catch { /* best effort */ }
+    }
+
     private void PersistState()
     {
         try
@@ -218,6 +239,7 @@ public sealed class WidgetForm : Form
     // ---------- Win32 ----------
     private const int WM_NCLBUTTONDOWN = 0x00A1;
     private const int HTCAPTION = 0x0002;
+    private const int HTBOTTOMRIGHT = 0x0011;
     private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
     private const int DWMWCP_ROUND = 2;
 

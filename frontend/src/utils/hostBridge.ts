@@ -262,6 +262,20 @@ export function beginWidgetDrag(): void {
   bridge.postMessage({ type: 'beginWidgetDrag' });
 }
 
+// 우하단 그립 mousedown → 네이티브 창 리사이즈 시작(WM_NCLBUTTONDOWN/HTBOTTOMRIGHT).
+export function beginWidgetResize(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'beginWidgetResize' });
+}
+
+// 레이아웃 토글 시 창 너비 변경(컴팩트↔확장).
+export function setWidgetWidth(width: number): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setWidgetWidth', width });
+}
+
 // ===== 시스템 미디어(SMTC) — 위젯 Now Playing =====
 export interface MediaState {
   hasSession: boolean;

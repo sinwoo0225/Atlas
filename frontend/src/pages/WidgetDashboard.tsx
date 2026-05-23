@@ -3,18 +3,20 @@ import { Toaster, toast } from 'sonner';
 import {
   GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward,
   AppWindow, Eye, EyeOff, MapPin, Sun, Moon, Cloud, CloudSun, CloudRain, CloudSnow, CloudFog,
-  CloudLightning, CloudDrizzle, type LucideIcon,
+  CloudLightning, CloudDrizzle, Maximize2, Minimize2, type LucideIcon,
 } from 'lucide-react';
 import { monitoringApi } from '../api/monitoring';
 import { issuesApi } from '../api/issues';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
+import { changeLogsApi } from '../api/changelogs';
+import { resourcesApi } from '../api/resources';
 import { systemApi, type GeoResult, type WeatherNow } from '../api/system';
-import type { TodayWbs, IssuePriority, Project, WbsStatus } from '../types';
+import type { TodayWbs, IssuePriority, Project, WbsStatus, ImpactLevel, ResourceType } from '../types';
 import { applyAppearance, loadSettings, patchSettings } from '../store/settings';
 import { isCustomDark } from '../utils/themeCustom';
 import {
-  isHostBridgeAvailable, beginWidgetDrag, setWidgetOpacity, setWidgetPinned, closeWidget,
+  isHostBridgeAvailable, beginWidgetDrag, beginWidgetResize, setWidgetWidth, setWidgetOpacity, setWidgetPinned, closeWidget,
   onMediaUpdate, mediaControl, mediaSeek, requestMedia, type MediaState,
   onActiveWindowsUpdate, setActiveWindowsEnabled, requestActiveWindows, type ActiveWindowItem,
 } from '../utils/hostBridge';
@@ -253,84 +255,170 @@ function TodayTasks() {
   );
 }
 
+const QC_INPUT = 'w-full text-[13px] px-2.5 py-2 rounded-md bg-surface-2 text-primary border border-default outline-none';
+
 const PRIORITIES: { value: IssuePriority; label: string }[] = [
   { value: 'Low', label: '낮음' },
   { value: 'Medium', label: '보통' },
   { value: 'High', label: '높음' },
 ];
+const IMPACTS: { value: ImpactLevel; label: string }[] = [
+  { value: 'Low', label: '낮음' },
+  { value: 'Medium', label: '보통' },
+  { value: 'High', label: '높음' },
+  { value: 'Critical', label: '심각' },
+];
+const todayStr = () => new Date().toISOString().slice(0, 10);
 
-function QuickCreateIssue() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [projectId, setProjectId] = useState<number | null>(null);
+function SaveButton({ onClick, disabled, saving }: { onClick: () => void; disabled: boolean; saving: boolean }) {
+  return (
+    <button
+      onClick={onClick} disabled={disabled}
+      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-[13px] font-semibold bg-accent text-on-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {saving ? <Check size={15} /> : <Plus size={15} />} 등록
+    </button>
+  );
+}
+
+function ProjectSelect({ projects, value, onChange }: { projects: Project[]; value: number | null; onChange: (id: number) => void }) {
+  return (
+    <select className={QC_INPUT} value={value ?? ''} onChange={(e) => onChange(Number(e.target.value))}>
+      {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+    </select>
+  );
+}
+
+function QuickIssue({ projects }: { projects: Project[] }) {
+  const [projectId, setProjectId] = useState<number | null>(projects[0]?.id ?? null);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<IssuePriority>('Medium');
   const [dueDate, setDueDate] = useState('');
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    projectsApi.getAll().then((ps) => {
-      setProjects(ps);
-      if (ps.length > 0) setProjectId(ps[0].id);
-    }).catch(() => {});
-  }, []);
+  useEffect(() => { if (projectId == null && projects[0]) setProjectId(projects[0].id); }, [projects, projectId]);
 
   const submit = async () => {
     if (!projectId || !title.trim() || saving) return;
     setSaving(true);
     try {
-      await issuesApi.create({
-        projectId,
-        title: title.trim(),
-        description: '',
-        status: 'Open',
-        priority,
-        assigneeResourceId: null,
-        dueDate: dueDate || undefined,
-      });
+      await issuesApi.create({ projectId, title: title.trim(), description: '', status: 'Open', priority, assigneeResourceId: null, dueDate: dueDate || undefined });
       toast.success('이슈를 등록했어요.');
-      setTitle('');
-      setDueDate('');
-    } catch {
-      /* client.ts 가 토스트 처리 */
-    } finally {
-      setSaving(false);
-    }
+      setTitle(''); setDueDate('');
+    } catch { /* client toast */ } finally { setSaving(false); }
   };
 
-  const inputCls = 'w-full text-[13px] px-2.5 py-2 rounded-md bg-surface-2 text-primary border border-default focus:border-accent outline-none';
+  return (
+    <div className="space-y-2.5">
+      <ProjectSelect projects={projects} value={projectId} onChange={setProjectId} />
+      <input className={QC_INPUT} placeholder="이슈 제목" value={title} onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(); }} />
+      <div className="flex gap-2">
+        <select className={QC_INPUT} value={priority} onChange={(e) => setPriority(e.target.value as IssuePriority)}>
+          {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+        </select>
+        <input className={QC_INPUT} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+      </div>
+      <SaveButton onClick={submit} disabled={!title.trim() || saving} saving={saving} />
+    </div>
+  );
+}
+
+function QuickChangelog({ projects }: { projects: Project[] }) {
+  const [projectId, setProjectId] = useState<number | null>(projects[0]?.id ?? null);
+  const [date, setDate] = useState(todayStr());
+  const [impact, setImpact] = useState<ImpactLevel>('Low');
+  const [content, setContent] = useState('');
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (projectId == null && projects[0]) setProjectId(projects[0].id); }, [projects, projectId]);
+
+  const submit = async () => {
+    if (!projectId || !content.trim() || saving) return;
+    setSaving(true);
+    try {
+      await changeLogsApi.create({ projectId, date, content: content.trim(), impact, relatedDocLinks: '', sourceIssueId: null, sourceWbsItemId: null });
+      toast.success('변경이력을 등록했어요.');
+      setContent('');
+    } catch { /* client toast */ } finally { setSaving(false); }
+  };
 
   return (
+    <div className="space-y-2.5">
+      <ProjectSelect projects={projects} value={projectId} onChange={setProjectId} />
+      <div className="flex gap-2">
+        <input className={QC_INPUT} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <select className={QC_INPUT} value={impact} onChange={(e) => setImpact(e.target.value as ImpactLevel)}>
+          {IMPACTS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+        </select>
+      </div>
+      <textarea className={`${QC_INPUT} resize-none`} rows={3} placeholder="변경 내용" value={content} onChange={(e) => setContent(e.target.value)} />
+      <SaveButton onClick={submit} disabled={!content.trim() || saving} saving={saving} />
+    </div>
+  );
+}
+
+function QuickResource() {
+  const [name, setName] = useState('');
+  const [type, setType] = useState<ResourceType>('Person');
+  const [department, setDepartment] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      await resourcesApi.create({ name: name.trim(), type, department: department.trim(), email: '', phone: '', notes: '' });
+      toast.success('리소스를 등록했어요.');
+      setName(''); setDepartment('');
+    } catch { /* client toast */ } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="space-y-2.5">
+      <input className={QC_INPUT} placeholder="이름" value={name} onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(); }} />
+      <div className="flex gap-2">
+        <select className={QC_INPUT} value={type} onChange={(e) => setType(e.target.value as ResourceType)}>
+          <option value="Person">인력</option>
+          <option value="Equipment">장비</option>
+        </select>
+        <input className={QC_INPUT} placeholder="부서(선택)" value={department} onChange={(e) => setDepartment(e.target.value)} />
+      </div>
+      <SaveButton onClick={submit} disabled={!name.trim() || saving} saving={saving} />
+    </div>
+  );
+}
+
+type QuickEntity = 'issue' | 'changelog' | 'resource';
+const QUICK_TABS: { id: QuickEntity; label: string }[] = [
+  { id: 'issue', label: '이슈' },
+  { id: 'changelog', label: '변경이력' },
+  { id: 'resource', label: '리소스' },
+];
+
+function QuickCreate() {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [entity, setEntity] = useState<QuickEntity>('issue');
+  useEffect(() => { projectsApi.getAll().then(setProjects).catch(() => {}); }, []);
+
+  const needsProject = entity !== 'resource';
+  return (
     <section className="rounded-xl border border-default bg-surface p-3.5">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">빠른 작성 · 이슈</h4>
-      {projects.length === 0 ? (
-        <p className="text-xs text-muted py-3 text-center">프로젝트를 먼저 만들어 주세요.</p>
-      ) : (
-        <div className="space-y-2.5">
-          <select className={inputCls} value={projectId ?? ''} onChange={(e) => setProjectId(Number(e.target.value))}>
-            {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <input
-            className={inputCls}
-            placeholder="이슈 제목"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(); }}
-          />
-          <div className="flex gap-2">
-            <select className={inputCls} value={priority} onChange={(e) => setPriority(e.target.value as IssuePriority)}>
-              {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
-            <input className={inputCls} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-          </div>
-          <button
-            onClick={submit}
-            disabled={!title.trim() || saving}
-            className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-[13px] font-semibold bg-accent text-on-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {saving ? <Check size={15} /> : <Plus size={15} />} 등록
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">빠른 작성</h4>
+      <div className="flex gap-1 mb-3">
+        {QUICK_TABS.map((t) => (
+          <button key={t.id} onClick={() => setEntity(t.id)}
+            className={`flex-1 text-[12px] py-1.5 rounded-md border transition-colors ${
+              entity === t.id ? 'bg-accent-soft border-accent text-accent font-medium' : 'border-default text-muted hover:text-secondary'
+            }`}>
+            {t.label}
           </button>
-        </div>
-      )}
+        ))}
+      </div>
+      {needsProject && projects.length === 0 ? (
+        <p className="text-xs text-muted py-3 text-center">프로젝트를 먼저 만들어 주세요.</p>
+      ) : entity === 'issue' ? <QuickIssue projects={projects} />
+        : entity === 'changelog' ? <QuickChangelog projects={projects} />
+        : <QuickResource />}
     </section>
   );
 }
@@ -503,6 +591,7 @@ export function WidgetDashboard() {
 
   const [opacity, setOpacity] = useState(92);
   const [pinned, setPinned] = useState(true);
+  const [expanded, setExpanded] = useState(() => loadSettings().widgetExpanded);
 
   // 테마(다크/라이트)를 메인 앱과 일치시킨다. 창 둥근모서리·반투명은 네이티브가 처리.
   useEffect(() => {
@@ -511,12 +600,28 @@ export function WidgetDashboard() {
 
   const onOpacity = (v: number) => { setOpacity(v); setWidgetOpacity(v / 100); };
   const onPin = () => { const next = !pinned; setPinned(next); setWidgetPinned(next); };
+  const onToggleLayout = () => {
+    const next = !expanded;
+    setExpanded(next);
+    patchSettings({ widgetExpanded: next });
+    setWidgetWidth(next ? 720 : 360); // 확장=2열 넓게, 컴팩트=1열
+  };
+
+  const hero = (
+    <div
+      className="rounded-2xl border border-default p-4 flex items-start gap-3"
+      style={{ background: 'linear-gradient(135deg, var(--accent-soft), var(--bg-surface) 65%)' }}
+    >
+      <Clock />
+      <Weather />
+    </div>
+  );
 
   return (
     <div className="h-screen w-screen overflow-hidden text-primary bg-base">
       <Toaster position="top-center" theme={toasterTheme} richColors closeButton duration={3000} />
-      <div className="flex flex-col h-full bg-base overflow-hidden">
-        {/* 타이틀바 — 드래그 핸들 + 투명도 슬라이더 + 핀 + 닫기 */}
+      <div className="relative flex flex-col h-full bg-base overflow-hidden">
+        {/* 타이틀바 — 드래그 핸들 + 레이아웃 토글 + 투명도 슬라이더 + 핀 + 닫기 */}
         <div
           className="flex items-center gap-2 px-3 py-2 border-b border-default select-none"
           onMouseDown={(e) => { if (e.button === 0) beginWidgetDrag(); }}
@@ -524,6 +629,16 @@ export function WidgetDashboard() {
           <GripHorizontal size={14} className="text-muted" />
           <span className="text-[12px] font-semibold text-secondary tracking-wide">Atlas 위젯</span>
           <div className="flex-1" />
+          {bridge && (
+            <button
+              onClick={onToggleLayout}
+              onMouseDown={(e) => e.stopPropagation()}
+              title={expanded ? '컴팩트 보기' : '확장 보기'}
+              className="w-6 h-6 flex items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-secondary mr-1"
+            >
+              {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </button>
+          )}
           {bridge && (
             <label className="flex items-center gap-1.5 mr-1" title="창 투명도" onMouseDown={(e) => e.stopPropagation()}>
               <input
@@ -556,20 +671,44 @@ export function WidgetDashboard() {
           )}
         </div>
 
-        {/* 본문 */}
-        <div className="flex-1 overflow-y-auto p-3 space-y-3">
-          <div
-            className="rounded-2xl border border-default p-4 flex items-start gap-3"
-            style={{ background: 'linear-gradient(135deg, var(--accent-soft), var(--bg-surface) 65%)' }}
-          >
-            <Clock />
-            <Weather />
-          </div>
-          <NowPlaying />
-          <ActiveWindows />
-          <TodayTasks />
-          <QuickCreateIssue />
+        {/* 본문 — 컴팩트(1열) / 확장(2열) */}
+        <div className="flex-1 overflow-y-auto p-3">
+          {expanded ? (
+            <div className="grid grid-cols-2 gap-3 items-start">
+              <div className="space-y-3 min-w-0">
+                {hero}
+                <NowPlaying />
+                <ActiveWindows />
+              </div>
+              <div className="space-y-3 min-w-0">
+                <TodayTasks />
+                <QuickCreate />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {hero}
+              <NowPlaying />
+              <ActiveWindows />
+              <TodayTasks />
+              <QuickCreate />
+            </div>
+          )}
         </div>
+
+        {/* 우하단 리사이즈 그립 — 네이티브 창 리사이즈 시작 */}
+        {bridge && (
+          <div
+            onMouseDown={(e) => { if (e.button === 0) { e.preventDefault(); beginWidgetResize(); } }}
+            title="크기 조정"
+            className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize text-muted"
+            style={{ lineHeight: 0 }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+              <path d="M14 6 L6 14 M14 10 L10 14" />
+            </svg>
+          </div>
+        )}
       </div>
     </div>
   );
