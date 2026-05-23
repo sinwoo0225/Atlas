@@ -23,6 +23,10 @@ export interface AppSettings {
   aiSummaryEnabled: boolean;
   // 위젯 '최근 활성 창' 추적 ON/OFF (프라이버시). 기본 ON. 창 제목은 이 PC 메모리에만, 외부 전송 없음.
   widgetActiveWindowsEnabled: boolean;
+  // 위젯 날씨 위치 (옵트인). 미설정(null)이면 날씨 미표시. 좌표는 open-meteo 조회용.
+  widgetWeatherLat: number | null;
+  widgetWeatherLon: number | null;
+  widgetWeatherLabel: string;
   // theme === 'custom' 일 때 사용할 핵심 12색. 다크/라이트 시드로 채워 편집.
   customColors: BaseColors;
   // 브랜드 워드마크 — 'At'(primary) + 'las'(accent) 분할, 색 2개, 탭/창 제목.
@@ -57,6 +61,9 @@ const defaults: AppSettings = {
   defaultTaskView: 'list',
   aiSummaryEnabled: false,
   widgetActiveWindowsEnabled: true,
+  widgetWeatherLat: null,
+  widgetWeatherLon: null,
+  widgetWeatherLabel: '',
   customColors: { ...DARK_BASE },
   brandPrimaryText: 'At',
   brandAccentText: 'las',

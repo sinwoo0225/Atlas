@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'sonner';
-import { GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward, AppWindow, Eye, EyeOff } from 'lucide-react';
+import {
+  GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward,
+  AppWindow, Eye, EyeOff, MapPin, Sun, Moon, Cloud, CloudSun, CloudRain, CloudSnow, CloudFog,
+  CloudLightning, CloudDrizzle, type LucideIcon,
+} from 'lucide-react';
 import { monitoringApi } from '../api/monitoring';
 import { issuesApi } from '../api/issues';
 import { projectsApi } from '../api/projects';
 import { wbsApi } from '../api/wbs';
+import { systemApi, type GeoResult, type WeatherNow } from '../api/system';
 import type { TodayWbs, IssuePriority, Project, WbsStatus } from '../types';
 import { applyAppearance, loadSettings, patchSettings } from '../store/settings';
 import { isCustomDark } from '../utils/themeCustom';
@@ -44,13 +49,114 @@ function Clock() {
   const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const ss = String(now.getSeconds()).padStart(2, '0');
   return (
-    <div className="flex items-end gap-1.5">
-      <span className="text-[44px] leading-none font-bold tracking-tight tabular-nums text-primary">{hm}</span>
-      <span className="text-lg font-semibold text-muted tabular-nums mb-0.5">{ss}</span>
-      <span className="ml-auto text-right text-xs text-secondary self-end mb-1">
+    <div className="min-w-0">
+      <div className="flex items-end gap-1.5">
+        <span className="text-[40px] leading-none font-bold tracking-tight tabular-nums text-primary">{hm}</span>
+        <span className="text-base font-semibold text-muted tabular-nums mb-0.5">{ss}</span>
+      </div>
+      <div className="mt-1.5 text-xs text-secondary">
         {now.getFullYear()}. {now.getMonth() + 1}. {now.getDate()} ({WD[now.getDay()]})
-      </span>
+      </div>
     </div>
+  );
+}
+
+// WMO weather_code → 라벨 + 아이콘.
+function weatherInfo(code: number, isDay: boolean): { label: string; Icon: LucideIcon } {
+  if (code === 0) return { label: '맑음', Icon: isDay ? Sun : Moon };
+  if (code === 1 || code === 2) return { label: '대체로 맑음', Icon: CloudSun };
+  if (code === 3) return { label: '흐림', Icon: Cloud };
+  if (code === 45 || code === 48) return { label: '안개', Icon: CloudFog };
+  if (code >= 51 && code <= 57) return { label: '이슬비', Icon: CloudDrizzle };
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return { label: '비', Icon: CloudRain };
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return { label: '눈', Icon: CloudSnow };
+  if (code >= 95) return { label: '뇌우', Icon: CloudLightning };
+  return { label: '흐림', Icon: Cloud };
+}
+
+function Weather() {
+  const s0 = loadSettings();
+  const [loc, setLoc] = useState<{ lat: number | null; lon: number | null; label: string }>({
+    lat: s0.widgetWeatherLat, lon: s0.widgetWeatherLon, label: s0.widgetWeatherLabel,
+  });
+  const [data, setData] = useState<WeatherNow | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState<GeoResult[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (loc.lat == null || loc.lon == null) return;
+    const load = () => systemApi.getWeather(loc.lat!, loc.lon!).then(setData).catch(() => {});
+    load();
+    const id = setInterval(load, 30 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [loc.lat, loc.lon]);
+
+  const search = async () => {
+    if (!q.trim()) return;
+    setSearching(true);
+    try { const r = await systemApi.geocodeWeather(q.trim()); setResults(r.results ?? []); }
+    catch { setResults([]); }
+    finally { setSearching(false); }
+  };
+  const pick = (g: GeoResult) => {
+    patchSettings({ widgetWeatherLat: g.lat, widgetWeatherLon: g.lon, widgetWeatherLabel: g.label });
+    setLoc({ lat: g.lat, lon: g.lon, label: g.label });
+    setData(null);
+    setEditing(false); setResults([]); setQ('');
+  };
+
+  if (editing) {
+    return (
+      <div className="ml-auto w-[160px] shrink-0">
+        <div className="flex gap-1">
+          <input
+            autoFocus value={q} onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
+            placeholder="도시 검색"
+            className="flex-1 min-w-0 text-[12px] px-2 py-1 rounded-md bg-surface-2 text-primary border border-default outline-none"
+          />
+          <button onClick={() => setEditing(false)} className="text-muted hover:text-secondary px-1" title="취소"><X size={14} /></button>
+        </div>
+        {searching && <div className="text-[10px] text-muted mt-1">검색 중…</div>}
+        <div className="mt-1 max-h-28 overflow-y-auto">
+          {results.map((g, i) => (
+            <button key={`${g.lat}-${i}`} onClick={() => pick(g)}
+              className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-surface-2 text-secondary truncate">
+              {g.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (loc.lat == null || loc.lon == null) {
+    return (
+      <button onClick={() => setEditing(true)}
+        className="ml-auto self-start text-[11px] text-muted hover:text-secondary flex items-center gap-1">
+        <MapPin size={12} /> 날씨 설정
+      </button>
+    );
+  }
+
+  const info = data ? weatherInfo(data.code, data.isDay) : null;
+  return (
+    <button onClick={() => setEditing(true)} className="ml-auto text-right shrink-0 flex flex-col items-end" title="위치 변경">
+      {data && info ? (
+        <>
+          <div className="flex items-center gap-1.5">
+            <info.Icon size={22} className="text-accent-2" />
+            <span className="text-2xl font-bold text-primary leading-none">{Math.round(data.tempC)}°</span>
+          </div>
+          <div className="text-[11px] text-secondary mt-1">
+            {info.label}{data.feelsC != null ? ` · 체감 ${Math.round(data.feelsC)}°` : ''}
+          </div>
+          <div className="text-[10px] text-muted truncate max-w-[130px]">{loc.label}</div>
+        </>
+      ) : <span className="text-[11px] text-muted">날씨 불러오는 중…</span>}
+    </button>
   );
 }
 
@@ -453,10 +559,11 @@ export function WidgetDashboard() {
         {/* 본문 */}
         <div className="flex-1 overflow-y-auto p-3 space-y-3">
           <div
-            className="rounded-2xl border border-default p-4"
+            className="rounded-2xl border border-default p-4 flex items-start gap-3"
             style={{ background: 'linear-gradient(135deg, var(--accent-soft), var(--bg-surface) 65%)' }}
           >
             <Clock />
+            <Weather />
           </div>
           <NowPlaying />
           <ActiveWindows />

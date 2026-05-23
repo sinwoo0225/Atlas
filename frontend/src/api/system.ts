@@ -98,4 +98,18 @@ export const systemApi = {
   startUpdateDownload: () => api.post<UpdateStatus>('/system/update/download', {}),
   launchUpdate: () => api.post<{ launched: boolean }>('/system/update/launch', {}),
   revealUpdate: () => api.post<{ revealed: boolean }>('/system/update/reveal', {}),
+  // 날씨 — 위젯 전용. silent(폴링·실패해도 토스트 없음).
+  geocodeWeather: (q: string) =>
+    api.get<{ results: GeoResult[]; error?: string }>(`/system/weather/geocode?q=${encodeURIComponent(q)}`, { silent: true }),
+  getWeather: (lat: number, lon: number) =>
+    api.get<WeatherNow>(`/system/weather?lat=${lat}&lon=${lon}`, { silent: true }),
 };
+
+export interface GeoResult { name: string; label: string; lat: number; lon: number; }
+export interface WeatherNow {
+  tempC: number;
+  feelsC: number | null;
+  code: number;
+  isDay: boolean;
+  at: string;
+}

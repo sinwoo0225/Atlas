@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.Sqlite;
 using ProjectManager.AppHost.Services;
@@ -209,6 +210,71 @@ public class SystemController : ControllerBase
         if (!string.Equals(BootstrapConfig.Load().Mode, "Local", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { error = "Local 모드에서만 가능합니다." });
         return updates.RevealDownloaded() ? Ok(new { revealed = true }) : BadRequest(new { error = "파일을 찾을 수 없습니다." });
+    }
+
+    // ===== 날씨 (위젯) — open-meteo(키 불필요) 프록시 + 30분 캐시. 위치는 사용자가 도시로 설정(옵트인). =====
+    private static readonly HttpClient WeatherHttp = new() { Timeout = TimeSpan.FromSeconds(8) };
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (DateTime at, string json)> WeatherCache = new();
+
+    // 도시명 → 좌표 후보. 위젯에서 위치 설정 시 사용.
+    [HttpGet("weather/geocode")]
+    public async Task<IActionResult> GeocodeWeather([FromQuery] string q)
+    {
+        q = (q ?? string.Empty).Trim();
+        if (q.Length < 1) return Ok(new { results = Array.Empty<object>() });
+        try
+        {
+            var url = $"https://geocoding-api.open-meteo.com/v1/search?name={Uri.EscapeDataString(q)}&count=5&language=ko&format=json";
+            using var doc = JsonDocument.Parse(await WeatherHttp.GetStringAsync(url, HttpContext.RequestAborted));
+            var list = new List<object>();
+            if (doc.RootElement.TryGetProperty("results", out var arr) && arr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var r in arr.EnumerateArray())
+                {
+                    var name = r.GetProperty("name").GetString();
+                    var lat = r.GetProperty("latitude").GetDouble();
+                    var lon = r.GetProperty("longitude").GetDouble();
+                    string? admin1 = r.TryGetProperty("admin1", out var a1) ? a1.GetString() : null;
+                    string? country = r.TryGetProperty("country", out var c) ? c.GetString() : null;
+                    var label = string.Join(", ", new[] { name, admin1, country }.Where(x => !string.IsNullOrEmpty(x)));
+                    list.Add(new { name, label, lat, lon });
+                }
+            }
+            return Ok(new { results = list });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new { results = Array.Empty<object>(), error = ex.Message });
+        }
+    }
+
+    // 현재 날씨(좌표). WMO weather_code 는 프론트가 아이콘·라벨로 매핑.
+    [HttpGet("weather")]
+    public async Task<IActionResult> Weather([FromQuery] double lat, [FromQuery] double lon)
+    {
+        var key = $"{Math.Round(lat, 2)},{Math.Round(lon, 2)}";
+        if (WeatherCache.TryGetValue(key, out var cached) && (DateTime.UtcNow - cached.at) < TimeSpan.FromMinutes(30))
+            return Content(cached.json, "application/json");
+        try
+        {
+            var url = $"https://api.open-meteo.com/v1/forecast?latitude={lat:F4}&longitude={lon:F4}&current=temperature_2m,apparent_temperature,weather_code,is_day&timezone=auto";
+            using var doc = JsonDocument.Parse(await WeatherHttp.GetStringAsync(url, HttpContext.RequestAborted));
+            var cur = doc.RootElement.GetProperty("current");
+            var payload = JsonSerializer.Serialize(new
+            {
+                tempC = cur.GetProperty("temperature_2m").GetDouble(),
+                feelsC = cur.TryGetProperty("apparent_temperature", out var f) ? f.GetDouble() : (double?)null,
+                code = cur.GetProperty("weather_code").GetInt32(),
+                isDay = cur.TryGetProperty("is_day", out var d) && d.GetInt32() == 1,
+                at = DateTime.UtcNow,
+            });
+            WeatherCache[key] = (DateTime.UtcNow, payload);
+            return Content(payload, "application/json");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(502, new { error = ex.Message });
+        }
     }
 
     private static bool CheckWritable(string path)
