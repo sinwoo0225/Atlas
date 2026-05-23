@@ -28,6 +28,7 @@ export const MENU_ICON_SLOTS: { slot: string; label: string; default: string }[]
   { slot: '/monitoring', label: '통합 모니터링', default: 'BarChart3' },
   { slot: '/activity', label: '전체 활동', default: 'Activity' },
   { slot: '/resources', label: '리소스 관리', default: 'Users' },
+  { slot: '/wbs-templates', label: '일정 템플릿', default: 'ClipboardList' },
   { slot: 'dashboard', label: '대시보드', default: 'LayoutDashboard' },
   { slot: 'wbs', label: '일정/WBS', default: 'CalendarDays' },
   { slot: 'worklog', label: '업무일지', default: 'NotebookPen' },

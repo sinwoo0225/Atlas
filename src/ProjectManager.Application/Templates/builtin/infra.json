@@ -1,0 +1,48 @@
+{
+  "name": "인프라/시스템 도입",
+  "description": "요건정의부터 운영이관까지 인프라/시스템 도입 일정.",
+  "category": "구축",
+  "nodes": [
+    {
+      "name": "요건정의",
+      "assignee": "PM",
+      "children": [
+        { "name": "현행 인프라 분석", "assignee": "PM" },
+        { "name": "도입 요건 정의", "assignee": "PM", "importance": 3 }
+      ]
+    },
+    {
+      "name": "아키텍처 설계",
+      "assignee": "개발",
+      "children": [
+        { "name": "구성도 설계", "assignee": "개발" },
+        { "name": "용량/네트워크 설계", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "구매/설치",
+      "assignee": "운영",
+      "children": [
+        { "name": "장비/라이선스 구매", "assignee": "PM" },
+        { "name": "설치/랙킹", "assignee": "운영" }
+      ]
+    },
+    {
+      "name": "구성/마이그레이션",
+      "assignee": "운영",
+      "children": [
+        { "name": "환경 구성", "assignee": "운영", "importance": 3 },
+        { "name": "데이터 마이그레이션", "assignee": "운영" },
+        { "name": "전환 완료", "assignee": "운영", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "안정화/운영이관",
+      "assignee": "운영",
+      "children": [
+        { "name": "안정화 모니터링", "assignee": "운영" },
+        { "name": "운영 이관", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    }
+  ]
+}

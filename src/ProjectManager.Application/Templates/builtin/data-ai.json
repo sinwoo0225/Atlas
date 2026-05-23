@@ -1,0 +1,49 @@
+{
+  "name": "데이터/AI 모델 개발",
+  "description": "데이터 수집부터 서빙·배포까지 데이터/AI 모델 개발 일정.",
+  "category": "데이터/AI",
+  "nodes": [
+    {
+      "name": "데이터 수집",
+      "assignee": "개발",
+      "children": [
+        { "name": "데이터 소스 확보", "assignee": "개발" },
+        { "name": "수집 파이프라인", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "전처리/EDA",
+      "assignee": "개발",
+      "children": [
+        { "name": "데이터 정제", "assignee": "개발" },
+        { "name": "탐색적 분석(EDA)", "assignee": "개발" },
+        { "name": "피처 정의", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "모델 학습",
+      "assignee": "개발",
+      "children": [
+        { "name": "베이스라인 학습", "assignee": "개발", "importance": 3 },
+        { "name": "실험 반복", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "평가/튜닝",
+      "assignee": "개발",
+      "children": [
+        { "name": "성능 평가", "assignee": "개발" },
+        { "name": "하이퍼파라미터 튜닝", "assignee": "개발" },
+        { "name": "모델 확정", "assignee": "개발", "isMilestone": true, "importance": 3 }
+      ]
+    },
+    {
+      "name": "서빙/배포",
+      "assignee": "운영",
+      "children": [
+        { "name": "서빙 API 구성", "assignee": "운영" },
+        { "name": "운영 배포/모니터링", "assignee": "운영" }
+      ]
+    }
+  ]
+}

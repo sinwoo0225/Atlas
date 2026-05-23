@@ -19,6 +19,7 @@ const navItems = [
   { path: '/monitoring', label: '통합 모니터링' },
   { path: '/activity', label: '전체 활동' },
   { path: '/resources', label: '리소스 관리' },
+  { path: '/wbs-templates', label: '일정 템플릿' },
 ];
 
 const projectNavItems = [

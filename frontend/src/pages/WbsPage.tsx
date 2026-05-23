@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter } from 'lucide-react';
+import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
   closestCenter, useSensor, useSensors,
@@ -10,6 +10,8 @@ import {
 } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { wbsApi } from '../api/wbs';
+import { wbsTemplatesApi } from '../api/wbsTemplates';
+import { WbsTemplatePicker, type TemplateApplySelection } from '../components/WbsTemplatePicker';
 import { resourcesApi } from '../api/resources';
 import { changeLogsApi } from '../api/changelogs';
 import { Button, Card, Modal, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
@@ -484,6 +486,11 @@ export function WbsPage() {
   const [matchOnly, setMatchOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  // 일정 템플릿 — 적용 피커 + '현재 WBS를 템플릿으로 저장' 모달.
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
+  const [saveTemplateForm, setSaveTemplateForm] = useState<{ name: string; description: string; category: string } | null>(null);
+  const [savingTemplate, setSavingTemplate] = useState(false);
 
   useGlobalShortcut('mod+n', () => { setEditing(null); setAddingChildOf(undefined); setShowForm(true); });
 
@@ -674,6 +681,35 @@ export function WbsPage() {
     setShowVersionForm(false);
   };
 
+  const handleApplyTemplate = async (sel: TemplateApplySelection) => {
+    setApplyingTemplate(true);
+    try {
+      const r = await wbsTemplatesApi.apply(pid, { ...sel, versionId: currentVersion ?? null });
+      toast.success(`작업 ${r.createdCount}개를 추가했어요.`);
+      setShowTemplatePicker(false);
+      refresh();
+    } catch { /* client.ts 토스트 처리 */ }
+    finally { setApplyingTemplate(false); }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!saveTemplateForm) return;
+    if (!saveTemplateForm.name.trim()) { toast.error('템플릿 이름을 입력하세요.'); return; }
+    setSavingTemplate(true);
+    try {
+      await wbsTemplatesApi.fromProject({
+        projectId: pid,
+        name: saveTemplateForm.name.trim(),
+        description: saveTemplateForm.description,
+        category: saveTemplateForm.category,
+        versionId: currentVersion ?? null,
+      });
+      toast.success('현재 WBS를 템플릿으로 저장했어요.');
+      setSaveTemplateForm(null);
+    } catch { /* client.ts 토스트 처리 */ }
+    finally { setSavingTemplate(false); }
+  };
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
@@ -698,6 +734,24 @@ export function WbsPage() {
               간트
             </Button>
           </div>
+          {items.length > 0 && (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => setShowTemplatePicker(true)}
+                leadingIcon={<LayoutTemplate size={16} />}
+              >
+                템플릿 적용
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setSaveTemplateForm({ name: '', description: '', category: '' })}
+                leadingIcon={<Save size={16} />}
+              >
+                템플릿으로 저장
+              </Button>
+            </>
+          )}
           <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
             작업 추가
           </Button>
@@ -865,7 +919,12 @@ export function WbsPage() {
           <EmptyState
             icon={<CalendarDays size={40} />}
             title="작업이 없습니다."
-            description="우측 상단 '작업 추가' 버튼으로 첫 작업을 만들어보세요."
+            description="'작업 추가' 버튼으로 첫 작업을 만들거나, 일정 템플릿으로 빠르게 시작하세요."
+            action={
+              <Button variant="primary" size="sm" onClick={() => setShowTemplatePicker(true)} leadingIcon={<LayoutTemplate size={14} />}>
+                템플릿에서 시작
+              </Button>
+            }
           />
         </Card>
       ) : (
@@ -963,6 +1022,63 @@ export function WbsPage() {
           onSave={() => { setDateEditing(null); refresh(); }}
           onCancel={() => setDateEditing(null)}
         />
+      )}
+
+      <WbsTemplatePicker
+        open={showTemplatePicker}
+        onClose={() => setShowTemplatePicker(false)}
+        onApply={handleApplyTemplate}
+        busy={applyingTemplate}
+        hasExisting={items.length > 0}
+      />
+
+      {saveTemplateForm && (
+        <Modal
+          open
+          onClose={() => setSaveTemplateForm(null)}
+          title="현재 WBS를 템플릿으로 저장"
+          size="md"
+          showCloseButton
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setSaveTemplateForm(null)} leadingIcon={<X size={16} />}>
+                취소
+              </Button>
+              <Button variant="primary" onClick={handleSaveTemplate} leadingIcon={<Save size={16} />} disabled={savingTemplate}>
+                {savingTemplate ? '저장 중...' : '저장'}
+              </Button>
+            </>
+          }
+        >
+          <div className="space-y-3">
+            <p className="text-xs text-muted">
+              현재 작업 트리를 템플릿으로 저장합니다. 날짜는 가장 이른 시작일을 기준으로 한 상대 일정으로 변환돼요.
+            </p>
+            <FormField label="템플릿 이름" required>
+              <input
+                value={saveTemplateForm.name}
+                onChange={(e) => setSaveTemplateForm((f) => f && { ...f, name: e.target.value })}
+                className={inputClass}
+                autoFocus
+              />
+            </FormField>
+            <FormField label="분류">
+              <input
+                value={saveTemplateForm.category}
+                onChange={(e) => setSaveTemplateForm((f) => f && { ...f, category: e.target.value })}
+                className={inputClass}
+                placeholder="예: 개발, 운영"
+              />
+            </FormField>
+            <FormField label="설명">
+              <input
+                value={saveTemplateForm.description}
+                onChange={(e) => setSaveTemplateForm((f) => f && { ...f, description: e.target.value })}
+                className={inputClass}
+              />
+            </FormField>
+          </div>
+        </Modal>
       )}
     </div>
   );

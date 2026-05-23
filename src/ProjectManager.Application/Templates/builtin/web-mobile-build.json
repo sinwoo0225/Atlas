@@ -1,0 +1,51 @@
+{
+  "name": "웹/모바일 신규 서비스 구축",
+  "description": "기획·디자인부터 오픈까지 신규 웹/모바일 서비스 구축 일정.",
+  "category": "개발",
+  "nodes": [
+    {
+      "name": "기획/와이어프레임",
+      "assignee": "기획",
+      "importance": 3,
+      "children": [
+        { "name": "서비스 기획", "assignee": "기획" },
+        { "name": "정보구조/와이어프레임", "assignee": "기획" },
+        { "name": "기획 확정", "assignee": "기획", "isMilestone": true, "importance": 3 }
+      ]
+    },
+    {
+      "name": "UI 디자인",
+      "assignee": "디자인",
+      "children": [
+        { "name": "디자인 시스템", "assignee": "디자인" },
+        { "name": "화면 디자인", "assignee": "디자인" },
+        { "name": "디자인 확정", "assignee": "디자인", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "프론트/백엔드 개발",
+      "assignee": "개발",
+      "children": [
+        { "name": "API/백엔드 개발", "assignee": "개발", "importance": 3 },
+        { "name": "프론트엔드 개발", "assignee": "개발", "importance": 3 },
+        { "name": "기능 연동", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "통합 테스트",
+      "assignee": "QA",
+      "children": [
+        { "name": "통합/회귀 테스트", "assignee": "QA" },
+        { "name": "버그 수정", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "오픈",
+      "assignee": "운영",
+      "children": [
+        { "name": "배포 준비", "assignee": "운영" },
+        { "name": "서비스 오픈", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    }
+  ]
+}

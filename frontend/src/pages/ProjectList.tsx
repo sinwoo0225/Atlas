@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users } from 'lucide-react';
+import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users, LayoutTemplate } from 'lucide-react';
 import { projectsApi } from '../api/projects';
+import { wbsTemplatesApi } from '../api/wbsTemplates';
 import { startPageApi } from '../api/startPage';
 import { useProjectStore } from '../store/useProjectStore';
 import { ProjectStatusBadge } from '../components/ProjectStatusBadge';
+import { WbsTemplatePicker, type TemplateApplySelection } from '../components/WbsTemplatePicker';
 import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { StartPageWidgets } from './projectList/StartPageWidgets';
@@ -25,10 +27,13 @@ const categoryOptions: ProjectCategory[] = ['과제', '내부', '사업', '유�
 function ProjectForm({
   initial,
   onSave,
+  onSaveWithTemplate,
   onCancel,
 }: {
   initial?: Partial<Project>;
   onSave: (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => void;
+  // 생성 모드에서만 — 프로젝트 생성 후 템플릿 선택 플로우로 이어감.
+  onSaveWithTemplate?: (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }) {
   const initialForm = {
@@ -49,15 +54,15 @@ function ProjectForm({
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  const handleSave = () => {
-    onSave({
-      ...form,
-      budget: form.budget ? parseFloat(form.budget) : undefined,
-      startDate: form.startDate || undefined,
-      endDate: form.endDate || undefined,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 폼 문자열 budget/date 를 변환한 payload, onSave 타입과 구조 동일
-    } as any);
-  };
+  const buildPayload = () => ({
+    ...form,
+    budget: form.budget ? parseFloat(form.budget) : undefined,
+    startDate: form.startDate || undefined,
+    endDate: form.endDate || undefined,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 폼 문자열 budget/date 를 변환한 payload, onSave 타입과 구조 동일
+  } as any);
+
+  const handleSave = () => onSave(buildPayload());
 
   return (
     <Modal
@@ -72,6 +77,11 @@ function ProjectForm({
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>
             취소
           </Button>
+          {onSaveWithTemplate && (
+            <Button variant="secondary" onClick={() => onSaveWithTemplate(buildPayload())} leadingIcon={<LayoutTemplate size={16} />}>
+              템플릿에서 시작
+            </Button>
+          )}
           <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>
             저장
           </Button>
@@ -159,6 +169,9 @@ export function ProjectList() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importPreview, setImportPreview] = useState<ImportPreviewItem[] | null>(null);
   const [importing, setImporting] = useState(false);
+  // 새 프로젝트 생성 후 템플릿 적용 플로우 — 생성된 프로젝트를 들고 피커를 띄운다.
+  const [templateTarget, setTemplateTarget] = useState<Project | null>(null);
+  const [applyingTemplate, setApplyingTemplate] = useState(false);
 
   useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
 
@@ -181,6 +194,30 @@ export function ProjectList() {
       setShowForm(false);
       toast.success(p.name ? `새 프로젝트 '${p.name}' 이(가) 추가됐어요` : '새 프로젝트가 추가됐어요');
     } catch { setError('프로젝트 생성 실패'); }
+  };
+
+  // 프로젝트 생성 후 곧바로 템플릿 피커를 띄운다.
+  const handleCreateWithTemplate = async (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      const p = await projectsApi.create(data);
+      addProject(p);
+      setShowForm(false);
+      setTemplateTarget(p);
+    } catch { setError('프로젝트 생성 실패'); }
+  };
+
+  const handleApplyTemplate = async (sel: TemplateApplySelection) => {
+    if (!templateTarget) return;
+    setApplyingTemplate(true);
+    try {
+      const r = await wbsTemplatesApi.apply(templateTarget.id, sel);
+      toast.success(`'${templateTarget.name}' 에 작업 ${r.createdCount}개를 추가했어요.`);
+      const id = templateTarget.id;
+      setTemplateTarget(null);
+      selectProject(id);
+      navigate(`/projects/${id}/wbs`);
+    } catch { /* client.ts 토스트 처리 */ }
+    finally { setApplyingTemplate(false); }
   };
 
   const handleUpdate = async (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => {
@@ -381,8 +418,22 @@ export function ProjectList() {
         </div>
       )}
 
-      {showForm && <ProjectForm onSave={handleCreate} onCancel={() => setShowForm(false)} />}
+      {showForm && (
+        <ProjectForm
+          onSave={handleCreate}
+          onSaveWithTemplate={handleCreateWithTemplate}
+          onCancel={() => setShowForm(false)}
+        />
+      )}
       {editing && <ProjectForm initial={editing} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
+
+      <WbsTemplatePicker
+        open={templateTarget !== null}
+        onClose={() => setTemplateTarget(null)}
+        onApply={handleApplyTemplate}
+        defaultAnchorDate={templateTarget?.startDate ?? ''}
+        busy={applyingTemplate}
+      />
 
       {importPreview && (
         <Modal

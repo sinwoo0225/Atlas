@@ -1,0 +1,47 @@
+{
+  "name": "일반 프로젝트 5단계",
+  "description": "착수·계획·실행·점검·종료의 범용 프로젝트 5단계 일정.",
+  "category": "일반",
+  "nodes": [
+    {
+      "name": "착수",
+      "assignee": "PM",
+      "children": [
+        { "name": "목표/범위 정의", "assignee": "PM", "importance": 3 },
+        { "name": "킥오프", "assignee": "PM", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "계획",
+      "assignee": "PM",
+      "children": [
+        { "name": "일정/자원 계획", "assignee": "PM" },
+        { "name": "리스크 식별", "assignee": "PM" }
+      ]
+    },
+    {
+      "name": "실행",
+      "assignee": "개발",
+      "children": [
+        { "name": "주요 작업 수행", "assignee": "개발", "importance": 3 },
+        { "name": "산출물 작성", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "점검/검수",
+      "assignee": "QA",
+      "children": [
+        { "name": "품질 점검", "assignee": "QA" },
+        { "name": "검수", "assignee": "PM", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "종료",
+      "assignee": "PM",
+      "children": [
+        { "name": "결과 보고", "assignee": "PM" },
+        { "name": "회고/마무리", "assignee": "PM" }
+      ]
+    }
+  ]
+}

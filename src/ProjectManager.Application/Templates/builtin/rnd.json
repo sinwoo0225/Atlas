@@ -1,0 +1,47 @@
+{
+  "name": "연구과제(R&D)",
+  "description": "착수·계획부터 최종보고·평가까지 연구개발 과제 일정.",
+  "category": "연구",
+  "nodes": [
+    {
+      "name": "착수/계획",
+      "assignee": "PM",
+      "children": [
+        { "name": "연구 계획서 작성", "assignee": "PM", "importance": 3 },
+        { "name": "착수 보고", "assignee": "PM", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "선행연구",
+      "assignee": "개발",
+      "children": [
+        { "name": "문헌/사례 조사", "assignee": "개발" },
+        { "name": "기술 검토", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "시제품 개발",
+      "assignee": "개발",
+      "children": [
+        { "name": "프로토타입 설계", "assignee": "개발" },
+        { "name": "프로토타입 구현", "assignee": "개발", "importance": 3 }
+      ]
+    },
+    {
+      "name": "성능검증",
+      "assignee": "QA",
+      "children": [
+        { "name": "검증 실험", "assignee": "QA" },
+        { "name": "결과 분석", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "최종보고/평가",
+      "assignee": "PM",
+      "children": [
+        { "name": "최종 보고서 작성", "assignee": "PM" },
+        { "name": "최종 평가", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    }
+  ]
+}

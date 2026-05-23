@@ -1,0 +1,50 @@
+{
+  "name": "애자일 스프린트",
+  "description": "백로그 정리부터 회고까지 한 스프린트 사이클 기준 일정.",
+  "category": "개발",
+  "nodes": [
+    {
+      "name": "백로그 정리",
+      "assignee": "PM",
+      "children": [
+        { "name": "사용자 스토리 작성", "assignee": "PM" },
+        { "name": "우선순위/추정", "assignee": "PM" }
+      ]
+    },
+    {
+      "name": "스프린트 계획",
+      "assignee": "PM",
+      "children": [
+        { "name": "스프린트 목표 설정", "assignee": "PM", "importance": 3 },
+        { "name": "작업 분배", "assignee": "개발" },
+        { "name": "스프린트 시작", "assignee": "PM", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "개발",
+      "assignee": "개발",
+      "children": [
+        { "name": "기능 구현", "assignee": "개발", "importance": 3 },
+        { "name": "코드 리뷰", "assignee": "개발" },
+        { "name": "데일리 스탠드업", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "리뷰/QA",
+      "assignee": "QA",
+      "children": [
+        { "name": "스프린트 리뷰(데모)", "assignee": "PM" },
+        { "name": "QA/버그 수정", "assignee": "QA" },
+        { "name": "스프린트 종료", "assignee": "PM", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "회고",
+      "assignee": "PM",
+      "children": [
+        { "name": "회고 진행", "assignee": "PM" },
+        { "name": "개선안 정리", "assignee": "PM" }
+      ]
+    }
+  ]
+}

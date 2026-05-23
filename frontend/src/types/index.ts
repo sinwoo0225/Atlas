@@ -114,6 +114,44 @@ export interface WbsVersion {
   isCurrent: boolean;
 }
 
+// WBS/일정 템플릿 — 새 프로젝트의 WBS 초기 세팅 재사용.
+// 날짜는 절대값이 아니라 앵커(프로젝트 시작일) 기준 상대 오프셋. 빌트인은 보통 offset/duration 이 null(구조만).
+export interface WbsTemplateNode {
+  name: string;
+  assignee: string;
+  offsetStartDays?: number | null;
+  durationDays?: number | null;
+  isMilestone: boolean;
+  importance: number;
+  notes: string;
+  children: WbsTemplateNode[];
+}
+
+// 목록용 — 노드 트리 제외. isBuiltIn 이면 id 는 null, builtinKey 로 식별.
+export interface WbsTemplateSummary {
+  id: number | null;
+  builtinKey: string | null;
+  isBuiltIn: boolean;
+  name: string;
+  description: string;
+  category: string;
+  nodeCount: number;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+export interface WbsTemplate {
+  id: number | null;
+  builtinKey: string | null;
+  isBuiltIn: boolean;
+  name: string;
+  description: string;
+  category: string;
+  nodes: WbsTemplateNode[];
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 export interface ChangeLog {
   id: number;
   projectId: number;

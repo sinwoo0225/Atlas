@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ProjectManager.Application.Activity;
 using ProjectManager.Application.Search;
 using ProjectManager.Application.Services;
+using ProjectManager.Application.Templates;
 using ProjectManager.AppHost.Services;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;
@@ -43,6 +44,7 @@ public static class AppServicesRegistration
 
         services.AddScoped<IProjectRepository, ProjectRepository>();
         services.AddScoped<IWbsRepository, WbsRepository>();
+        services.AddScoped<IWbsTemplateRepository, WbsTemplateRepository>();
         services.AddScoped<IChangeLogRepository, ChangeLogRepository>();
         services.AddScoped<IMeetingRepository, MeetingRepository>();
         services.AddScoped<IDevInfoRepository, DevInfoRepository>();
@@ -52,8 +54,10 @@ public static class AppServicesRegistration
         services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
         services.AddScoped<IIssueWbsLinkRepository, IssueWbsLinkRepository>();
 
+        services.AddSingleton<BuiltInTemplateProvider>();
         services.AddScoped<ProjectService>();
         services.AddScoped<WbsService>();
+        services.AddScoped<WbsTemplateService>();
         services.AddScoped<ChangeLogService>();
         services.AddScoped<MeetingService>();
         services.AddScoped<DevInfoService>();

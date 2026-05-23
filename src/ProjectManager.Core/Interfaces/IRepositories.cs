@@ -29,6 +29,16 @@ public interface IWbsRepository
     Task<IEnumerable<WbsItem>> GetOpenAcrossProjectsAsync();
 }
 
+public interface IWbsTemplateRepository
+{
+    Task<IEnumerable<WbsTemplate>> GetAllAsync();
+    Task<WbsTemplate?> GetByIdAsync(int id);
+    Task<WbsTemplate> CreateAsync(WbsTemplate template);
+    // expectedUpdatedAt 이 있으면 concurrency token 비교 — 불일치 시 DbUpdateConcurrencyException → 409.
+    Task<WbsTemplate> UpdateAsync(WbsTemplate template, DateTime? expectedUpdatedAt = null);
+    Task DeleteAsync(int id);
+}
+
 public interface IChangeLogRepository
 {
     Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId);

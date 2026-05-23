@@ -1,0 +1,47 @@
+{
+  "name": "유지보수/하자보수 운영",
+  "description": "접수·분류부터 완료보고까지 유지보수 처리 사이클 일정.",
+  "category": "운영",
+  "nodes": [
+    {
+      "name": "접수/분류",
+      "assignee": "운영",
+      "children": [
+        { "name": "요청 접수", "assignee": "운영" },
+        { "name": "유형/우선순위 분류", "assignee": "운영" }
+      ]
+    },
+    {
+      "name": "원인분석",
+      "assignee": "개발",
+      "children": [
+        { "name": "재현/로그 분석", "assignee": "개발" },
+        { "name": "원인 확정", "assignee": "개발", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "수정/패치",
+      "assignee": "개발",
+      "children": [
+        { "name": "코드 수정", "assignee": "개발", "importance": 3 },
+        { "name": "패치 작성", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "회귀 테스트",
+      "assignee": "QA",
+      "children": [
+        { "name": "회귀 테스트", "assignee": "QA" },
+        { "name": "영향도 확인", "assignee": "QA" }
+      ]
+    },
+    {
+      "name": "배포/완료보고",
+      "assignee": "운영",
+      "children": [
+        { "name": "운영 반영", "assignee": "운영" },
+        { "name": "완료 보고", "assignee": "PM", "isMilestone": true }
+      ]
+    }
+  ]
+}

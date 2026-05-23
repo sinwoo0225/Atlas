@@ -13,6 +13,7 @@ public class AppDbContext(
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<WbsItem> WbsItems => Set<WbsItem>();
     public DbSet<WbsVersion> WbsVersions => Set<WbsVersion>();
+    public DbSet<WbsTemplate> WbsTemplates => Set<WbsTemplate>();
     public DbSet<ChangeLog> ChangeLogs => Set<ChangeLog>();
     public DbSet<Meeting> Meetings => Set<Meeting>();
     public DbSet<DevInfoItem> DevInfoItems => Set<DevInfoItem>();
@@ -50,6 +51,18 @@ public class AppDbContext(
             // Project cascade-delete 시 SQLite 가 부모/자식 순서 무관하게 처리할 수 있어야 Project 삭제가 성공한다 (Restrict 면 FK 위반).
             e.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Version).WithMany(x => x.WbsItems).HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<WbsTemplate>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).IsRequired().HasMaxLength(200);
+            e.Property(x => x.Category).HasMaxLength(64).HasDefaultValue("");
+            // 작업 트리 직렬화 — JSON-in-TEXT (ActivityLog.ChangesJson 관례).
+            e.Property(x => x.NodesJson).HasColumnType("TEXT");
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
         });
 
         modelBuilder.Entity<ChangeLog>(e =>

@@ -1,0 +1,47 @@
+{
+  "name": "제품 출시",
+  "description": "시장조사부터 마케팅·런칭까지 제품 출시(GTM) 일정.",
+  "category": "기획",
+  "nodes": [
+    {
+      "name": "시장조사",
+      "assignee": "기획",
+      "children": [
+        { "name": "시장/경쟁 분석", "assignee": "기획" },
+        { "name": "타겟 정의", "assignee": "기획" }
+      ]
+    },
+    {
+      "name": "기획",
+      "assignee": "기획",
+      "children": [
+        { "name": "제품 컨셉/사양", "assignee": "기획", "importance": 3 },
+        { "name": "출시 계획 확정", "assignee": "PM", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "제작",
+      "assignee": "개발",
+      "children": [
+        { "name": "제품 제작/개발", "assignee": "개발", "importance": 3 },
+        { "name": "패키징/콘텐츠", "assignee": "디자인" }
+      ]
+    },
+    {
+      "name": "검수",
+      "assignee": "QA",
+      "children": [
+        { "name": "품질 검수", "assignee": "QA" },
+        { "name": "보완", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "마케팅/런칭",
+      "assignee": "기획",
+      "children": [
+        { "name": "마케팅 집행", "assignee": "기획" },
+        { "name": "출시(런칭)", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    }
+  ]
+}

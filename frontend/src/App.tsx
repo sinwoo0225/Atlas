@@ -12,6 +12,7 @@ import { DevInfoPage } from './pages/DevInfoPage';
 import { ProjectMapPage } from './pages/ProjectMapPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ResourcesPage } from './pages/ResourcesPage';
+import { WbsTemplatesPage } from './pages/WbsTemplatesPage';
 import { MonitoringPage } from './pages/MonitoringPage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
@@ -88,6 +89,7 @@ export default function App() {
           <Route path="/" element={<ProjectList />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
           <Route path="/resources" element={<ResourcesPage />} />
+          <Route path="/wbs-templates" element={<WbsTemplatesPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/projects/:projectId/dashboard" element={<Dashboard />} />
           <Route path="/projects/:projectId/wbs" element={<WbsPage />} />

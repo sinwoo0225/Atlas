@@ -1,0 +1,55 @@
+{
+  "name": "SI/SE 구축 사업",
+  "description": "제안·착수부터 인수·검수까지 SI/시스템 구축 사업 표준 일정.",
+  "category": "구축",
+  "nodes": [
+    {
+      "name": "제안/착수",
+      "assignee": "PM",
+      "children": [
+        { "name": "착수계 작성", "assignee": "PM" },
+        { "name": "킥오프", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    },
+    {
+      "name": "분석",
+      "assignee": "PM",
+      "children": [
+        { "name": "현행 분석", "assignee": "PM" },
+        { "name": "요구사항 정의", "assignee": "PM", "importance": 3 }
+      ]
+    },
+    {
+      "name": "설계",
+      "assignee": "개발",
+      "children": [
+        { "name": "아키텍처/응용 설계", "assignee": "개발" },
+        { "name": "DB/인터페이스 설계", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "구현",
+      "assignee": "개발",
+      "children": [
+        { "name": "프로그램 개발", "assignee": "개발", "importance": 3 },
+        { "name": "단위 테스트", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "통합시험",
+      "assignee": "QA",
+      "children": [
+        { "name": "통합 시험", "assignee": "QA" },
+        { "name": "사용자 시험(UAT)", "assignee": "QA" }
+      ]
+    },
+    {
+      "name": "인수/검수",
+      "assignee": "PM",
+      "children": [
+        { "name": "산출물 정리", "assignee": "PM" },
+        { "name": "검수 완료", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "name": "소프트웨어 워터폴",
+  "description": "요구분석부터 배포까지 단계별로 진행하는 전통적 워터폴 개발 일정.",
+  "category": "개발",
+  "nodes": [
+    {
+      "name": "요구사항 분석",
+      "assignee": "PM",
+      "importance": 3,
+      "children": [
+        { "name": "요구사항 수집", "assignee": "PM" },
+        { "name": "요구사항 명세서 작성", "assignee": "PM" },
+        { "name": "요구사항 확정", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    },
+    {
+      "name": "설계",
+      "assignee": "개발",
+      "children": [
+        { "name": "아키텍처 설계", "assignee": "개발", "importance": 3 },
+        { "name": "DB/화면 설계", "assignee": "개발" },
+        { "name": "설계 검토 완료", "assignee": "개발", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "개발",
+      "assignee": "개발",
+      "children": [
+        { "name": "공통/기반 모듈 개발", "assignee": "개발" },
+        { "name": "기능 개발", "assignee": "개발", "importance": 3 },
+        { "name": "단위 테스트", "assignee": "개발" }
+      ]
+    },
+    {
+      "name": "테스트",
+      "assignee": "QA",
+      "children": [
+        { "name": "통합 테스트", "assignee": "QA" },
+        { "name": "결함 수정", "assignee": "개발" },
+        { "name": "테스트 완료", "assignee": "QA", "isMilestone": true }
+      ]
+    },
+    {
+      "name": "배포/안정화",
+      "assignee": "운영",
+      "children": [
+        { "name": "운영 배포", "assignee": "운영", "importance": 3 },
+        { "name": "안정화/모니터링", "assignee": "운영" },
+        { "name": "오픈", "assignee": "PM", "isMilestone": true, "importance": 3 }
+      ]
+    }
+  ]
+}
