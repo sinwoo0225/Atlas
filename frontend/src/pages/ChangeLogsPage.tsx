@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 import ReactECharts from 'echarts-for-react';
 import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
@@ -17,6 +18,7 @@ import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { findItemName } from '../utils/wbsHelpers';
+import { applyTextareaTab } from '../utils/textareaTab';
 import type { ChangeLog, ImpactLevel, Meeting, Issue, WbsItem } from '../types';
 
 const impactColor: Record<ImpactLevel, string> = {
@@ -145,6 +147,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
   const [sourceWbsItemId, setSourceWbsItemId] = useState<number | null>(initial?.sourceWbsItemId ?? null);
   const [issuePickerOpen, setIssuePickerOpen] = useState(false);
   const [wbsPickerOpen, setWbsPickerOpen] = useState(false);
+  // 변경 내용 마크다운 미리보기 토글 (회의록 논의내용 패턴). 표시 토글일 뿐 dirty 와 무관.
+  const [contentEditing, setContentEditing] = useState(false);
   // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
   // dirty 가드 — 모달 닫기 시 변경 손실 확인. [서버 값 보기] 시 setInitialSnapshot 으로 새 기준 적용.
@@ -255,7 +259,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
       open
       onClose={onCancel}
       title={initial ? '변경 이력 수정' : '변경 이력 추가'}
-      size="lg"
+      size="wide"
       fixedHeight
       dirty={dirty}
       footer={
@@ -265,154 +269,168 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
         </>
       }
     >
-      {/* 콘텐츠 영역 — flex col 로 회의록 영역이 남은 공간 채워 picker 펼침이
-          모달 전체에 스크롤 안 만들고 회의록 영역만 압축 */}
-      <div className="flex-1 min-h-0 flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-3 shrink-0">
-          <FormField label="날짜">
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
-          </FormField>
-          <FormField label="영향도">
-            <select value={impact} onChange={(e) => setImpact(e.target.value as ImpactLevel)} className={inputClass}>
-              {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
-          </FormField>
-        </div>
+      {/* 회의록 폼 패턴 — 2단: 좌측 메타/연관, 우측 변경 내용(세로 가득 + 마크다운 미리보기) */}
+      <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] gap-4 min-h-full">
+          {/* 좌측 — 날짜·영향도·링크·출처·관련 회의록 */}
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label="날짜">
+                <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+              </FormField>
+              <FormField label="영향도">
+                <select value={impact} onChange={(e) => setImpact(e.target.value as ImpactLevel)} className={inputClass}>
+                  {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </FormField>
+            </div>
 
-        <FormField label="변경 내용" required className="shrink-0">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            rows={4}
-            className={`${inputClass} resize-none`}
-          />
-        </FormField>
+            <FormField label="관련 문서 링크 (한 줄에 하나)">
+              <textarea
+                value={otherLinks}
+                onChange={(e) => setOtherLinks(e.target.value)}
+                rows={2}
+                className={`${inputClass} resize-none`}
+              />
+            </FormField>
 
-        <FormField label="관련 문서 링크 (한 줄에 하나)" className="shrink-0">
-          <textarea
-            value={otherLinks}
-            onChange={(e) => setOtherLinks(e.target.value)}
-            rows={2}
-            className={`${inputClass} resize-none`}
-          />
-        </FormField>
-
-        {/* 출처 — 이 변경의 원인이 된 Issue / WBS. 둘 다 nullable 독립. */}
-        <div className="grid grid-cols-2 gap-3 shrink-0">
-          <FormField label="출처 Issue">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setIssuePickerOpen((v) => {
-                    const next = !v;
-                    if (next) onRefreshIssues();
-                    return next;
-                  });
-                }}
-                className={`${inputClass} text-left flex items-center justify-between flex-1`}
-              >
-                <span className={sourceIssueLabel ? 'text-primary truncate' : 'text-muted'}>
-                  {sourceIssueLabel ?? '(없음)'}
-                </span>
-                {issuePickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
-              </button>
-              {sourceIssueId != null && (
+            {/* 출처 — 이 변경의 원인이 된 Issue / WBS. 둘 다 nullable 독립. */}
+            <FormField label="출처 Issue">
+              <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => setSourceIssueId(null)}
-                  className="p-1 text-on-danger hover:opacity-80 transition-opacity"
-                  title="출처 해제"
-                  aria-label="출처 이슈 해제"
+                  onClick={() => {
+                    setIssuePickerOpen((v) => {
+                      const next = !v;
+                      if (next) onRefreshIssues();
+                      return next;
+                    });
+                  }}
+                  className={`${inputClass} text-left flex items-center justify-between flex-1`}
                 >
-                  <X size={14} />
+                  <span className={sourceIssueLabel ? 'text-primary truncate' : 'text-muted'}>
+                    {sourceIssueLabel ?? '(없음)'}
+                  </span>
+                  {issuePickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
                 </button>
-              )}
-            </div>
-            {issuePickerOpen && (
-              <div className="mt-2 h-56">
-                <IssuePicker
-                  items={issues}
-                  excludeIds={new Set()}
-                  onSelect={(id) => { setSourceIssueId(id); setIssuePickerOpen(false); }}
-                />
+                {sourceIssueId != null && (
+                  <button
+                    type="button"
+                    onClick={() => setSourceIssueId(null)}
+                    className="p-1 text-on-danger hover:opacity-80 transition-opacity"
+                    title="출처 해제"
+                    aria-label="출처 이슈 해제"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
               </div>
-            )}
-          </FormField>
-          <FormField label="출처 WBS 작업">
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => setWbsPickerOpen((v) => !v)}
-                className={`${inputClass} text-left flex items-center justify-between flex-1`}
-              >
-                <span className={sourceWbsLabel ? 'text-primary truncate' : 'text-muted'}>
-                  {sourceWbsLabel ?? '(없음)'}
-                </span>
-                {wbsPickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
-              </button>
-              {sourceWbsItemId != null && (
-                <button
-                  type="button"
-                  onClick={() => setSourceWbsItemId(null)}
-                  className="p-1 text-on-danger hover:opacity-80 transition-opacity"
-                  title="출처 해제"
-                  aria-label="출처 WBS 해제"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-            {wbsPickerOpen && (
-              <div className="mt-2 h-56">
-                <WbsTreePicker
-                  items={wbsItems}
-                  selectedId={sourceWbsItemId}
-                  excludeIds={new Set()}
-                  showRoot={false}
-                  onSelect={(id) => { if (id != null) { setSourceWbsItemId(id); setWbsPickerOpen(false); } }}
-                />
-              </div>
-            )}
-          </FormField>
-        </div>
-
-        <div className="flex-1 min-h-0 flex flex-col">
-          <div className="flex items-center justify-between mb-1 shrink-0">
-            <label className="block text-xs text-muted font-medium">관련 회의록</label>
-            <span className="text-xs text-muted">
-              {selectedMeetings.length}개 선택 / {meetings.length}개 중
-            </span>
-          </div>
-          <input
-            value={meetingKeyword}
-            onChange={(e) => setMeetingKeyword(e.target.value)}
-            placeholder="회의록 검색 (주제/날짜)"
-            className={`${inputClass} mb-2 shrink-0`}
-          />
-          {meetings.length === 0 ? (
-            <p className="text-xs text-muted">회의록이 없습니다.</p>
-          ) : (
-            <div className="flex-1 min-h-0 overflow-y-auto border border-default rounded-md p-2 space-y-1">
-              {filteredMeetings.length === 0 ? (
-                <p className="text-xs text-muted text-center py-2">검색 결과 없음</p>
-              ) : filteredMeetings.map((m) => (
-                <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-surface-2 px-2 py-1 rounded transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={selectedMeetings.includes(m.id)}
-                    onChange={() => toggleMeeting(m.id)}
+              {issuePickerOpen && (
+                <div className="mt-2 h-56">
+                  <IssuePicker
+                    items={issues}
+                    excludeIds={new Set()}
+                    onSelect={(id) => { setSourceIssueId(id); setIssuePickerOpen(false); }}
                   />
-                  <span className="text-xs text-muted">{m.date.slice(0, 10)}</span>
-                  <span className="text-sm text-secondary truncate">{m.topic}</span>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
+                </div>
+              )}
+            </FormField>
+            <FormField label="출처 WBS 작업">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setWbsPickerOpen((v) => !v)}
+                  className={`${inputClass} text-left flex items-center justify-between flex-1`}
+                >
+                  <span className={sourceWbsLabel ? 'text-primary truncate' : 'text-muted'}>
+                    {sourceWbsLabel ?? '(없음)'}
+                  </span>
+                  {wbsPickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
+                </button>
+                {sourceWbsItemId != null && (
+                  <button
+                    type="button"
+                    onClick={() => setSourceWbsItemId(null)}
+                    className="p-1 text-on-danger hover:opacity-80 transition-opacity"
+                    title="출처 해제"
+                    aria-label="출처 WBS 해제"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+              {wbsPickerOpen && (
+                <div className="mt-2 h-56">
+                  <WbsTreePicker
+                    items={wbsItems}
+                    selectedId={sourceWbsItemId}
+                    excludeIds={new Set()}
+                    showRoot={false}
+                    onSelect={(id) => { if (id != null) { setSourceWbsItemId(id); setWbsPickerOpen(false); } }}
+                  />
+                </div>
+              )}
+            </FormField>
 
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs text-muted font-medium">관련 회의록</label>
+                <span className="text-xs text-muted">
+                  {selectedMeetings.length}개 선택 / {meetings.length}개 중
+                </span>
+              </div>
+              <input
+                value={meetingKeyword}
+                onChange={(e) => setMeetingKeyword(e.target.value)}
+                placeholder="회의록 검색 (주제/날짜)"
+                className={`${inputClass} mb-2`}
+              />
+              {meetings.length === 0 ? (
+                <p className="text-xs text-muted">회의록이 없습니다.</p>
+              ) : (
+                <div className="max-h-48 overflow-y-auto border border-default rounded-md p-2 space-y-1">
+                  {filteredMeetings.length === 0 ? (
+                    <p className="text-xs text-muted text-center py-2">검색 결과 없음</p>
+                  ) : filteredMeetings.map((m) => (
+                    <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-surface-2 px-2 py-1 rounded transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={selectedMeetings.includes(m.id)}
+                        onChange={() => toggleMeeting(m.id)}
+                      />
+                      <span className="text-xs text-muted">{m.date.slice(0, 10)}</span>
+                      <span className="text-sm text-secondary truncate">{m.topic}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 우측 — 변경 내용 (마크다운). 모달 우측 공간 끝까지 채움. */}
+          <FormField label="변경 내용 (마크다운 지원, 포커스 아웃 시 렌더링)" required className="flex-1 flex flex-col min-h-0">
+            {contentEditing || !content ? (
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                onKeyDown={(e) => applyTextareaTab(e, setContent)}
+                onFocus={() => setContentEditing(true)}
+                onBlur={() => setContentEditing(false)}
+                className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
+                autoFocus={contentEditing}
+              />
+            ) : (
+              <div
+                onClick={() => setContentEditing(true)}
+                className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+              >
+                <ReactMarkdown>{content}</ReactMarkdown>
+              </div>
+            )}
+          </FormField>
+        </div>
       </div>{/* 콘텐츠 영역 끝 */}
     </Modal>
   );
@@ -446,6 +464,8 @@ export function ChangeLogsPage() {
   const filterSourceWbs = searchParams.get('sourceWbs');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  // 목록 인라인 펼치기 — 단일 확장 id (회의록 패턴).
+  const [expanded, setExpanded] = useState<number | null>(null);
 
   // 위 lazy init 으로 소비한 쿼리는 URL 에서 제거 (시각적 위생). 외부 시스템(URL) 동기화이므로 effect OK.
   useEffect(() => {
@@ -675,6 +695,14 @@ export function ChangeLogsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => setExpanded(expanded === log.id ? null : log.id)}
+                    className="px-2 text-xs text-muted hover:text-primary transition-colors"
+                    aria-expanded={expanded === log.id}
+                    aria-label={`변경이력 ${expanded === log.id ? '접기' : '펼치기'} — ${log.date.slice(0, 10)}`}
+                  >
+                    {expanded === log.id ? '접기' : '펼치기'}
+                  </button>
                   <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`변경이력 수정 — ${log.date.slice(0, 10)}`}>
                     <Pencil size={14} />
                   </button>
@@ -683,7 +711,13 @@ export function ChangeLogsPage() {
                   </button>
                 </div>
               </div>
-              <p className="text-sm text-secondary mt-2 line-clamp-2">{log.content}</p>
+              {expanded === log.id ? (
+                <div className="markdown-body mt-2" onClick={(e) => e.stopPropagation()}>
+                  <ReactMarkdown>{log.content}</ReactMarkdown>
+                </div>
+              ) : (
+                <p className="text-sm text-secondary mt-2 line-clamp-2">{log.content}</p>
+              )}
 
               {(otherLinks.length > 0 || linkedMeetings.length > 0) && (
                 <div
