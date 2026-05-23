@@ -128,7 +128,8 @@ public class ProjectService(
             Budget = dto.Budget,
             Participants = dto.Participants,
             Deliverables = dto.Deliverables,
-            RelatedLinks = dto.RelatedLinks
+            RelatedLinks = dto.RelatedLinks,
+            GitRepoPath = dto.GitRepoPath ?? string.Empty
         };
         project.FolderPath = pathResolver.GetProjectFolder(project.Name);
         return ToDto(await projectRepo.CreateAsync(project));
@@ -149,6 +150,7 @@ public class ProjectService(
         project.Participants = dto.Participants;
         project.Deliverables = dto.Deliverables;
         project.RelatedLinks = dto.RelatedLinks;
+        project.GitRepoPath = dto.GitRepoPath ?? string.Empty;
         return ToDto(await projectRepo.UpdateAsync(project));
     }
 
@@ -232,7 +234,7 @@ public class ProjectService(
         p.Id, p.Name, p.Category, p.Description, p.Goal, p.Status,
         p.StartDate, p.EndDate, p.Budget,
         p.Participants, p.Deliverables, p.RelatedLinks,
-        p.FolderPath, p.CreatedAt, p.UpdatedAt);
+        p.FolderPath, p.GitRepoPath, p.CreatedAt, p.UpdatedAt);
 
     internal static WbsItemDto WbsToDto(WbsItem w) => new(
         w.Id, w.ProjectId, w.VersionId, w.ParentId,

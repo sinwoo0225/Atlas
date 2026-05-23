@@ -18,6 +18,7 @@ export interface Project {
   deliverables: string;
   relatedLinks: string;
   folderPath: string;
+  gitRepoPath: string;
   createdAt: string;
   updatedAt: string;
 }

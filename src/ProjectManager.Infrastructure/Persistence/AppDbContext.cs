@@ -30,6 +30,7 @@ public class AppDbContext(
             e.HasKey(x => x.Id);
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
             e.Property(x => x.Category).HasMaxLength(32).HasDefaultValue("");
+            e.Property(x => x.GitRepoPath).HasMaxLength(500).HasDefaultValue("");
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);

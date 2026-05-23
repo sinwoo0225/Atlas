@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users, LayoutTemplate } from 'lucide-react';
+import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users, LayoutTemplate, FolderGit2, Check, AlertCircle } from 'lucide-react';
 import { projectsApi } from '../api/projects';
+import { gitApi } from '../api/git';
+import { isHostBridgeAvailable, pickFolder, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 import { wbsTemplatesApi } from '../api/wbsTemplates';
 import { startPageApi } from '../api/startPage';
 import { useProjectStore } from '../store/useProjectStore';
@@ -48,11 +50,37 @@ function ProjectForm({
     participants: initial?.participants ?? '',
     deliverables: initial?.deliverables ?? '',
     relatedLinks: initial?.relatedLinks ?? '',
+    gitRepoPath: initial?.gitRepoPath ?? '',
   };
   const [form, setForm] = useState(initialForm);
   const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  // Git 저장소 경로 — 폴더 선택기(데스크톱) + .git 유효성 검증.
+  const bridgeAvailable = isHostBridgeAvailable();
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('Local');
+  useEffect(() => { getConnectionConfig().then((c) => { if (c) setConnectionMode(c.mode); }); }, []);
+  const isClientMode = connectionMode === 'Client';
+  const [gitCheck, setGitCheck] = useState<{ valid: boolean; error: string | null } | null>(null);
+  const [gitChecking, setGitChecking] = useState(false);
+
+  const validateGitPath = async (path: string) => {
+    const p = path.trim();
+    if (!p) { setGitCheck(null); return; }
+    setGitChecking(true);
+    try {
+      // validate 는 프로젝트와 무관(경로만 검사)하므로 신규 모드면 id 0 사용.
+      const r = await gitApi.validate(initial?.id ?? 0, p);
+      setGitCheck(r);
+    } catch { setGitCheck(null); }
+    finally { setGitChecking(false); }
+  };
+
+  const handlePickGitFolder = async () => {
+    const picked = await pickFolder(form.gitRepoPath || undefined);
+    if (picked) { set('gitRepoPath', picked); validateGitPath(picked); }
+  };
 
   const buildPayload = () => ({
     ...form,
@@ -129,6 +157,41 @@ function ProjectForm({
             </FormField>
             <FormField label="관련 링크">
               <input value={form.relatedLinks} onChange={(e) => set('relatedLinks', e.target.value)} className={inputClass} />
+            </FormField>
+            <FormField label="Git 저장소 경로">
+              <div className="flex gap-2">
+                <input
+                  value={form.gitRepoPath}
+                  onChange={(e) => { set('gitRepoPath', e.target.value); setGitCheck(null); }}
+                  onBlur={(e) => validateGitPath(e.target.value)}
+                  placeholder=".git 이 있는 소스코드 폴더 경로"
+                  className={inputClass}
+                />
+                {bridgeAvailable && !isClientMode && (
+                  <Button variant="secondary" onClick={handlePickGitFolder} leadingIcon={<FolderGit2 size={16} />} className="shrink-0">
+                    찾기
+                  </Button>
+                )}
+              </div>
+              {isClientMode ? (
+                <p className="text-xs text-muted mt-1">
+                  Client 모드에서는 서버 머신 기준 경로여야 하며 Git 이력 보기는 Local 모드에서만 동작합니다.
+                </p>
+              ) : gitChecking ? (
+                <p className="text-xs text-muted mt-1">확인 중…</p>
+              ) : gitCheck ? (
+                gitCheck.valid ? (
+                  <p className="text-xs text-on-success mt-1 flex items-center gap-1">
+                    <Check size={12} /> 유효한 git 저장소입니다. 변경 이력 → Git 이력 탭에서 확인하세요.
+                  </p>
+                ) : (
+                  <p className="text-xs text-on-danger mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} /> {gitCheck.error}
+                  </p>
+                )
+              ) : (
+                <p className="text-xs text-muted mt-1">변경 이력 → Git 이력 탭에서 이 저장소의 커밋 그래프를 봅니다.</p>
+              )}
             </FormField>
           </div>
 

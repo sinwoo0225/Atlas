@@ -17,6 +17,9 @@ public class Project : IAuditable
     public string Deliverables { get; set; } = string.Empty;
     public string RelatedLinks { get; set; } = string.Empty;
     public string FolderPath { get; set; } = string.Empty;
+    // 연결된 소스코드 저장소(.git)의 로컬 절대 경로. 비어 있으면 Git 이력 기능 미사용.
+    // FolderPath(Atlas 데이터 폴더)와는 별개 — 사용자의 실제 코드 작업 폴더.
+    public string GitRepoPath { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
