@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- WinRT(Windows.Media.Control SMTC) 사용을 위해 Windows SDK TFM 지정 — 위젯 음악 제어. -->
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
     <UseWPF>true</UseWPF>
     <!-- 위젯 창은 WinForms Form 으로 호스팅 — Form.Opacity 가 WebView2 콘텐츠까지 반투명 처리(WPF 창은 불가). -->
     <UseWindowsForms>true</UseWindowsForms>

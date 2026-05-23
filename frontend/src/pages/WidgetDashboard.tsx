@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'sonner';
-import { GripHorizontal, Pin, PinOff, X, Plus, Check } from 'lucide-react';
+import { GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward } from 'lucide-react';
 import { monitoringApi } from '../api/monitoring';
 import { issuesApi } from '../api/issues';
 import { projectsApi } from '../api/projects';
@@ -10,6 +10,7 @@ import { applyAppearance, loadSettings } from '../store/settings';
 import { isCustomDark } from '../utils/themeCustom';
 import {
   isHostBridgeAvailable, beginWidgetDrag, setWidgetOpacity, setWidgetPinned, closeWidget,
+  onMediaUpdate, mediaControl, mediaSeek, requestMedia, type MediaState,
 } from '../utils/hostBridge';
 
 const WD = ['일', '월', '화', '수', '목', '금', '토'];
@@ -227,6 +228,97 @@ function QuickCreateIssue() {
   );
 }
 
+function fmtTime(s: number): string {
+  if (!isFinite(s) || s < 0) s = 0;
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function NowPlaying() {
+  const [media, setMedia] = useState<MediaState | null>(null);
+  const [pos, setPos] = useState(0);
+
+  useEffect(() => {
+    const off = onMediaUpdate((m) => {
+      setMedia(m);
+      setPos(m.position ?? 0);
+    });
+    requestMedia();
+    return off;
+  }, []);
+
+  // 재생 중이면 1초마다 로컬 위치를 진행(서버 푸시는 가끔 오므로 보간). mediaUpdate 마다 재동기화.
+  useEffect(() => {
+    if (!media?.hasSession || !media.playing || !media.hasTimeline) return;
+    const id = setInterval(() => {
+      setPos((p) => Math.min(p + 1, media.duration ?? p + 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [media?.hasSession, media?.playing, media?.hasTimeline, media?.duration]);
+
+  if (!media?.hasSession) return null;
+
+  const dur = media.duration ?? 0;
+  const pct = media.hasTimeline && dur > 0 ? Math.min(100, (pos / dur) * 100) : 0;
+
+  const onSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!media.hasTimeline || dur <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    setPos(frac * dur);
+    mediaSeek(frac * dur);
+  };
+
+  return (
+    <section className="rounded-xl border border-default bg-surface p-3.5">
+      <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">
+        <Music size={12} /> 재생 중
+      </h4>
+      <div className="flex items-center gap-3">
+        <div className="w-14 h-14 rounded-lg shrink-0 overflow-hidden bg-surface-3 flex items-center justify-center">
+          {media.thumbnail
+            ? <img src={media.thumbnail} alt="" className="w-full h-full object-cover" />
+            : <Music size={22} className="text-muted" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-primary truncate">{media.title || '재생 중 아님'}</div>
+          <div className="text-[11px] text-muted truncate">{media.artist || ''}</div>
+        </div>
+      </div>
+
+      {media.hasTimeline && (
+        <div className="mt-3">
+          <div className="h-1 rounded-full bg-surface-3 relative cursor-pointer" onClick={onSeek}>
+            <div className="absolute left-0 top-0 bottom-0 rounded-full bg-accent" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="flex justify-between mt-1 text-[10px] tabular-nums text-muted">
+            <span>{fmtTime(pos)}</span><span>{fmtTime(dur)}</span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-center gap-4 mt-2.5">
+        <button
+          onClick={() => mediaControl('prev')} disabled={!media.canPrev}
+          className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-surface-2 disabled:opacity-30"
+          title="이전" aria-label="이전"
+        ><SkipBack size={18} fill="currentColor" /></button>
+        <button
+          onClick={() => mediaControl('playpause')}
+          className="w-10 h-10 flex items-center justify-center rounded-full bg-accent text-on-accent hover:bg-accent-hover"
+          title={media.playing ? '일시정지' : '재생'} aria-label={media.playing ? '일시정지' : '재생'}
+        >{media.playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
+        <button
+          onClick={() => mediaControl('next')} disabled={!media.canNext}
+          className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-surface-2 disabled:opacity-30"
+          title="다음" aria-label="다음"
+        ><SkipForward size={18} fill="currentColor" /></button>
+      </div>
+    </section>
+  );
+}
+
 export function WidgetDashboard() {
   const settings = loadSettings();
   const toasterTheme = settings.theme === 'custom'
@@ -297,6 +389,7 @@ export function WidgetDashboard() {
           >
             <Clock />
           </div>
+          <NowPlaying />
           <TodayTasks />
           <QuickCreateIssue />
         </div>

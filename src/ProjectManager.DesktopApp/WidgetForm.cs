@@ -18,6 +18,7 @@ public sealed class WidgetForm : Form
     private readonly Func<HttpClient?> _apiClient;
     private readonly string _wwwroot;
     private readonly Microsoft.Web.WebView2.WinForms.WebView2 _webView;
+    private MediaController? _media;
     private bool _initialized;
     private double _widgetOpacity = 0.92;
 
@@ -48,7 +49,7 @@ public sealed class WidgetForm : Form
         _webView = new Microsoft.Web.WebView2.WinForms.WebView2 { Dock = DockStyle.Fill };
         Controls.Add(_webView);
 
-        FormClosing += (_, _) => PersistState();
+        FormClosing += (_, _) => { PersistState(); _media?.Dispose(); _media = null; };
     }
 
     private Point ComputeLocation(BootstrapConfig c)
@@ -72,6 +73,10 @@ public sealed class WidgetForm : Form
             new WebViewServer(_webView.CoreWebView2, _apiClient, _wwwroot).Attach();
             _webView.CoreWebView2.WebMessageReceived += OnWidgetMessage;
             _webView.CoreWebView2.Navigate(WidgetUrl);
+
+            // SMTC 미디어 컨트롤러 — 상태 변화를 위젯으로 push(UI 스레드 마샬링).
+            _media = new MediaController(PushToWeb);
+            await _media.InitAsync();
         }
         catch (System.Exception ex)
         {
@@ -121,6 +126,16 @@ public sealed class WidgetForm : Form
                 case "beginWidgetDrag":
                     BeginNativeDrag();
                     break;
+                case "mediaControl":
+                    _ = _media?.ControlAsync(doc.RootElement.TryGetProperty("action", out var aEl) ? aEl.GetString() : null);
+                    break;
+                case "mediaSeek":
+                    if (_media is not null && doc.RootElement.TryGetProperty("seconds", out var skEl))
+                        _ = _media.SeekAsync(skEl.GetDouble());
+                    break;
+                case "mediaRequest":
+                    _ = _media?.RequestAsync();
+                    break;
                 case "hideWidget":
                 case "closeWidget":
                     Hide();
@@ -132,6 +147,23 @@ public sealed class WidgetForm : Form
         {
             DesktopLog.Write($"[widget-bridge-err] {ex.GetType().Name}: {ex.Message}");
         }
+    }
+
+    // 네이티브(임의 스레드) → 위젯 WebView2 로 JSON push. WebView2 호출은 생성 스레드(UI)에서만 가능.
+    private void PushToWeb(string json)
+    {
+        if (IsDisposed) return;
+        try
+        {
+            if (InvokeRequired) BeginInvoke(() => SafePost(json));
+            else SafePost(json);
+        }
+        catch { /* 폼 종료 중 등 */ }
+    }
+
+    private void SafePost(string json)
+    {
+        try { _webView.CoreWebView2?.PostWebMessageAsJson(json); } catch { }
     }
 
     // 프레임리스 창을 웹 타이틀바 영역에서 끌어 이동 — 표준 WM_NCLBUTTONDOWN(HTCAPTION) 드래그 루프.

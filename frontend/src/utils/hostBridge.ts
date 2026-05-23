@@ -262,6 +262,56 @@ export function beginWidgetDrag(): void {
   bridge.postMessage({ type: 'beginWidgetDrag' });
 }
 
+// ===== 시스템 미디어(SMTC) — 위젯 Now Playing =====
+export interface MediaState {
+  hasSession: boolean;
+  title?: string;
+  artist?: string;
+  thumbnail?: string | null;
+  playing?: boolean;
+  canPlay?: boolean;
+  canPause?: boolean;
+  canNext?: boolean;
+  canPrev?: boolean;
+  hasTimeline?: boolean;
+  position?: number; // seconds
+  duration?: number; // seconds
+}
+
+// 미디어 상태 변화 구독. 반환값 호출로 해제. 호스트 브릿지 없으면 no-op(해제도 no-op).
+export function onMediaUpdate(cb: (m: MediaState) => void): () => void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return () => {};
+  const handler = (e: MessageEvent) => {
+    const data = e.data as (MediaState & { type?: string }) | null | undefined;
+    if (!data || typeof data !== 'object' || data.type !== 'mediaUpdate') return;
+    cb(data);
+  };
+  bridge.addEventListener('message', handler);
+  return () => bridge.removeEventListener('message', handler);
+}
+
+export type MediaAction = 'play' | 'pause' | 'playpause' | 'next' | 'prev';
+export function mediaControl(action: MediaAction): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'mediaControl', action });
+}
+
+// 타임라인 시작 기준 상대 위치(초)로 시크.
+export function mediaSeek(seconds: number): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'mediaSeek', seconds });
+}
+
+// 위젯 마운트 시 현재 상태 재요청(초기 구독 누락 방지).
+export function requestMedia(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'mediaRequest' });
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;
