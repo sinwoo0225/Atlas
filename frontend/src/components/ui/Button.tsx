@@ -15,7 +15,7 @@ const variantCls: Record<Variant, string> = {
   primary:   'bg-accent hover:bg-accent-hover text-on-accent border-transparent',
   secondary: 'bg-surface-2 hover:bg-surface-3 text-secondary hover:text-primary border-default',
   ghost:     'bg-transparent hover:bg-surface-2 text-secondary hover:text-primary border-transparent',
-  danger:    'bg-red-600 hover:bg-red-500 text-white border-transparent',
+  danger:    'btn-danger border-transparent',
 };
 
 const sizeCls: Record<Size, string> = {

@@ -47,6 +47,12 @@
   --text-on-neutral: #cfd3dc;
   --text-on-accent:  #0f172a;     /* 다크의 --accent (밝은 steel blue) 위 어두운 글씨 — WCAG AAA */
 
+  /* Danger 버튼 *채움* 색 — --danger(#f87171)는 전경(아이콘·텍스트)용이라 흰 글씨 대비 부족.
+     파괴적 동작은 테마와 무관하게 인식 가능한 빨강 유지(관습·안전). 커스텀 테마가 덮어쓰지 않으면 이 기본값 사용. */
+  --btn-danger-bg:       #dc2626;
+  --btn-danger-bg-hover: #ef4444;
+  --btn-danger-fg:       #ffffff;
+
   /* Wordmark — Atlas "At" steel blue / "las" warm gold. logo 전용, 일반 색으로 재사용 금지. */
   --logo-primary:    #7c8db5;
   --logo-accent:     #c9a96b;
@@ -138,6 +144,8 @@ body {
 .bg-surface-3  { background-color: var(--bg-surface-3); }
 .bg-accent      { background-color: var(--accent); }
 .bg-accent-soft { background-color: var(--accent-soft); }
+.btn-danger       { background-color: var(--btn-danger-bg); color: var(--btn-danger-fg); }
+.btn-danger:hover { background-color: var(--btn-danger-bg-hover); }
 
 .text-primary   { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
@@ -210,6 +218,17 @@ html.light .cmd-hit mark {
 @keyframes modal-slide-up {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* 접근성(WCAG 2.3.3): OS '동작 줄이기'(prefers-reduced-motion) 설정 시 애니메이션·트랜지션 최소화.
+   전정기관 민감 사용자 보호. 0 이 아닌 0.01ms 로 둬 onTransitionEnd 등 이벤트는 보존. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ========== Heading hierarchy =========
