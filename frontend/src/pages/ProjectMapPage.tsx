@@ -3,11 +3,12 @@
 // 캐스팅이 누적된다. GanttChart·MonitoringChartGrid 등 차트 파일과 동일하게 파일 단위로 any 룰 끔.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import cytoscape from 'cytoscape';
 // @ts-expect-error - cytoscape-dagre has no types
 import dagre from 'cytoscape-dagre';
 import type { Core, ElementDefinition, NodeSingular } from 'cytoscape';
-import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Minus, Network, Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, CalendarDays, CalendarRange, Code2, FileText, GitBranch, Maximize2, Minus, Network, Plus, Search, X, ChevronRight } from 'lucide-react';
 import { Spinner } from '../components/ui';
 import { useThemeMode } from '../utils/themeColors';
 import { projectsApi } from '../api/projects';
@@ -186,6 +187,7 @@ export function ProjectMapPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const pid = parseInt(projectId!);
+  const project = useCurrentProject();
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<Core | null>(null);
@@ -669,9 +671,15 @@ export function ProjectMapPage() {
   return (
     <div className="p-6 h-full flex flex-col gap-3">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="h-page flex items-center gap-2">
-          <Network size={18} className="text-muted" />
-          프로젝트 맵
+        <h1 className="h-page flex items-center gap-2 min-w-0">
+          <Network size={18} className="text-muted shrink-0" />
+          {project && (
+            <>
+              <span className="text-muted font-normal truncate">{project.name}</span>
+              <ChevronRight size={14} className="text-muted shrink-0" />
+            </>
+          )}
+          <span className="shrink-0">프로젝트 맵</span>
         </h1>
         <div className="flex gap-2 flex-wrap items-center">
           <div className="inline-flex rounded-md border border-default overflow-hidden bg-surface-2">

@@ -21,6 +21,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import type { Meeting } from '../types';
 
 // 논의내용 상단에 삽입하는 'AI 요약' 블록. 재요약 시 기존 블록을 걷어내고 새로 prepend (중복 방지).
@@ -650,6 +651,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
 export function MeetingsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const project = useCurrentProject();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [keyword, setKeyword] = useState('');
   const [dateFrom, setDateFrom] = useState('');
@@ -714,6 +716,7 @@ export function MeetingsPage() {
     <div className="p-6 space-y-4">
       <PageHeader
         icon={<FileText size={18} />}
+        breadcrumb={project?.name}
         title="회의록"
         actions={
           <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>

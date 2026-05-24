@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate } from 'lucide-react';
@@ -463,6 +464,7 @@ function DateEditModal({
 export function WbsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const project = useCurrentProject();
   const [items, setItems] = useState<WbsItem[]>([]);
   const [versions, setVersions] = useState<WbsVersion[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -713,9 +715,15 @@ export function WbsPage() {
   return (
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="h-page flex items-center gap-2">
-          <CalendarDays size={18} className="text-muted" />
-          일정 / WBS
+        <h1 className="h-page flex items-center gap-2 min-w-0">
+          <CalendarDays size={18} className="text-muted shrink-0" />
+          {project && (
+            <>
+              <span className="text-muted font-normal truncate">{project.name}</span>
+              <ChevronRight size={14} className="text-muted shrink-0" />
+            </>
+          )}
+          <span className="shrink-0">일정 / WBS</span>
         </h1>
         <div className="flex gap-2">
           <div className="flex bg-surface border border-default rounded-md p-1 gap-1">

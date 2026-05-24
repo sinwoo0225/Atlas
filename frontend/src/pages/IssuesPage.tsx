@@ -17,6 +17,7 @@ import { applyTextareaTab } from '../utils/textareaTab';
 import { toIsoDate } from '../utils/wbsSpan';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import type { Issue, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
 import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
 
@@ -33,6 +34,7 @@ const PRIORITY_OPTIONS: BadgeMenuOption<IssuePriority>[] = PRIORITY_VALUES.map((
 export function IssuesPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const project = useCurrentProject();
   const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
@@ -182,7 +184,7 @@ export function IssuesPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <PageHeader icon={<AlertTriangle size={18} />} title="이슈 관리" />
+        <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title="이슈 관리" />
         <Card padding="spacious">
           <Skeleton height={18} width="30%" />
           <div className="mt-4 space-y-2">
@@ -196,7 +198,7 @@ export function IssuesPage() {
   if (error) {
     return (
       <div className="p-6 space-y-4">
-        <PageHeader icon={<AlertTriangle size={18} />} title="이슈 관리" />
+        <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title="이슈 관리" />
         <Card padding="spacious">
           <EmptyState error={error} onRetry={load} />
         </Card>
@@ -206,7 +208,7 @@ export function IssuesPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <PageHeader icon={<AlertTriangle size={18} />} title="이슈 관리" />
+      <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title="이슈 관리" />
 
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap items-center">
@@ -401,7 +403,8 @@ function IssueRow({
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => onUpdate(issue.id, 'title', title)}
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                className="w-full bg-transparent text-sm text-primary font-medium focus:outline-none focus:bg-surface-2 rounded pl-1.5 pr-5 py-1 transition-colors border border-transparent focus:border-default"
+                title="클릭하여 제목 편집"
+                className="w-full bg-transparent text-sm text-primary font-medium focus:outline-none hover:bg-surface-3 focus:bg-surface-2 rounded pl-1.5 pr-5 py-1 transition-colors border border-transparent hover:border-default focus:border-default cursor-text"
               />
               <DirtyDot visible={title !== issue.title} className="absolute top-1/2 right-2 -translate-y-1/2" />
             </div>

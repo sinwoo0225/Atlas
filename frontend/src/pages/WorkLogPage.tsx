@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { ChevronLeft, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
@@ -43,6 +44,7 @@ type FieldKey = 'done' | 'plan' | 'issues';
 export function WorkLogPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number(projectId);
+  const project = useCurrentProject();
   const [searchParams, setSearchParams] = useSearchParams();
   // 검색 결과에서 ?date=YYYY-MM-DD 로 들어오면 해당 주를 초기 weekStart 로.
   const initialWeekStart = useMemo(() => {
@@ -152,9 +154,15 @@ export function WorkLogPage() {
   return (
     <div className="p-6 space-y-4">
       <header className="flex items-center gap-3 flex-wrap">
-        <h1 className="h-page flex items-center gap-2">
-          <CalendarDays size={18} className="text-muted" />
-          업무 일지
+        <h1 className="h-page flex items-center gap-2 min-w-0">
+          <CalendarDays size={18} className="text-muted shrink-0" />
+          {project && (
+            <>
+              <span className="text-muted font-normal truncate">{project.name}</span>
+              <ChevronRight size={14} className="text-muted shrink-0" />
+            </>
+          )}
+          <span className="shrink-0">업무 일지</span>
         </h1>
         <div className="ml-4 flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={goPrev} title="이전 주" leadingIcon={<ChevronLeft size={16} />} />

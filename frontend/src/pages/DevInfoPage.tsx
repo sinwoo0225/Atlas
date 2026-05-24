@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown } from 'lucide-react';
+import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
@@ -436,9 +436,15 @@ export function DevInfoPage() {
   return (
     <div className="p-6 h-full flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="h-page flex items-center gap-2">
-          <Code2 size={18} className="text-muted" />
-          개발 정보
+        <h1 className="h-page flex items-center gap-2 min-w-0">
+          <Code2 size={18} className="text-muted shrink-0" />
+          {project && (
+            <>
+              <span className="text-muted font-normal truncate">{project.name}</span>
+              <ChevronRight size={14} className="text-muted shrink-0" />
+            </>
+          )}
+          <span className="shrink-0">개발 정보</span>
         </h1>
         <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
           정보 추가

@@ -17,6 +17,7 @@ import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import { findItemName } from '../utils/wbsHelpers';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { GitHistoryView } from '../components/GitHistoryView';
@@ -440,6 +441,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
 export function ChangeLogsPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
+  const project = useCurrentProject();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [logs, setLogs] = useState<ChangeLog[]>([]);
@@ -557,6 +559,7 @@ export function ChangeLogsPage() {
     <div className="p-6 space-y-4">
       <PageHeader
         icon={<GitBranch size={18} />}
+        breadcrumb={project?.name}
         title="변경 이력"
         actions={
           tab === 'changelog' ? (
