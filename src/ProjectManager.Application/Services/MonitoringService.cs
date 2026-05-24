@@ -355,20 +355,31 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     // 주간 업무일지 통합에 붙일 '이슈 목록' — 전 프로젝트의 미해결(Open·InProgress) 이슈를 프로젝트별로 묶음.
     public async Task<IReadOnlyList<OpenIssuesByProjectDto>> GetOpenIssuesByProjectAsync()
     {
-        var issues = await db.Issues
+        // 전체 Issue 엔티티 그래프(Project·AssigneeResource 네비게이션 + 변경추적)를 적재하는 대신
+        // 필요한 스칼라만 SQL 로 투영하고 정렬도 DB 에 위임 — 데이터 多 시 메모리/추적 비용 제거.
+        // 프로젝트별 묶음(중첩 컬렉션)은 EF 의 그룹 투영이 약해 C# 에서 그룹핑하되, 가벼운 행만 다룬다.
+        var rows = await db.Issues
             .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
-            .Include(i => i.AssigneeResource)
-            .Include(i => i.Project)
+            .OrderBy(i => i.Project.Name)
+            .ThenByDescending(i => i.Priority)
+            .ThenBy(i => i.Id)
+            .Select(i => new
+            {
+                i.ProjectId,
+                ProjectName = i.Project.Name,
+                i.Id,
+                i.Title,
+                i.Description,
+                AssigneeName = i.AssigneeResource != null ? i.AssigneeResource.Name : null,
+            })
             .ToListAsync();
 
-        return issues
-            .GroupBy(i => new { i.ProjectId, ProjectName = i.Project.Name })
+        return rows
+            .GroupBy(r => new { r.ProjectId, r.ProjectName })
             .Select(g => new OpenIssuesByProjectDto(
                 g.Key.ProjectId,
                 g.Key.ProjectName,
-                g.OrderByDescending(i => i.Priority).ThenBy(i => i.Id)
-                 .Select(i => new OpenIssueDto(i.Id, i.Title, i.Description, i.AssigneeResource?.Name))
-                 .ToList()))
+                g.Select(r => new OpenIssueDto(r.Id, r.Title, r.Description, r.AssigneeName)).ToList()))
             .OrderBy(p => p.ProjectName)
             .ToList();
     }

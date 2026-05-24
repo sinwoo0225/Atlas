@@ -52,6 +52,9 @@ public class AppDbContext(
             // Project cascade-delete 시 SQLite 가 부모/자식 순서 무관하게 처리할 수 있어야 Project 삭제가 성공한다 (Restrict 면 FK 위반).
             e.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Version).WithMany(x => x.WbsItems).HasForeignKey(x => x.VersionId).OnDelete(DeleteBehavior.SetNull);
+            // 모니터링 집계가 EndDate 범위·마일스톤으로 across-project 스캔 (MonitoringService 히트맵/차트) → 데이터 多 시 인덱스.
+            e.HasIndex(x => x.EndDate);
+            e.HasIndex(x => x.IsMilestone);
         });
 
         modelBuilder.Entity<WbsTemplate>(e =>
@@ -118,6 +121,8 @@ public class AppDbContext(
             e.HasOne(x => x.AssigneeResource).WithMany().HasForeignKey(x => x.AssigneeResourceId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => x.ProjectId);
             e.HasIndex(x => x.AssigneeResourceId);
+            // 히트맵·모니터링이 DueDate 범위로 across-project 필터 (MonitoringService) → 데이터 多 시 인덱스.
+            e.HasIndex(x => x.DueDate);
         });
 
         modelBuilder.Entity<IssueWbsLink>(e =>
@@ -131,6 +136,8 @@ public class AppDbContext(
             e.HasOne(x => x.Issue).WithMany().HasForeignKey(x => x.IssueId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.WbsItem).WithMany().HasForeignKey(x => x.WbsItemId).OnDelete(DeleteBehavior.Cascade);
             // 중복 링크 방지 + by-issue / by-wbs 조회 모두 인덱스 활용.
+            // 복합 unique 의 선두 컬럼이 IssueId 라 by-issue 조회(IssuesPage by-project 의 묵시 조인 포함)는
+            // 이 인덱스로 커버된다 → IssueId 단독 인덱스 불필요. WbsItemId 는 별도(후행 컬럼이라 미커버).
             e.HasIndex(x => new { x.IssueId, x.WbsItemId }).IsUnique();
             e.HasIndex(x => x.WbsItemId);
         });
