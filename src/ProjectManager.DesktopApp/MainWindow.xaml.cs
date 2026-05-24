@@ -273,7 +273,7 @@ public partial class MainWindow : Window
                 var iconDataUrl = doc.RootElement.TryGetProperty("iconDataUrl", out var icEl) ? icEl.GetString() : null;
                 ApplyBrand(primaryText, accentText, primaryColor, accentColor, brandTitle);
                 ApplyIcon(iconDataUrl);
-                PersistBrand(primaryText, accentText, primaryColor, accentColor, brandTitle);
+                PersistBrand(primaryText, accentText, primaryColor, accentColor, brandTitle, iconDataUrl);
             }
             else if (type == "toggleWidget")
             {
@@ -364,6 +364,8 @@ public partial class MainWindow : Window
         {
             var c = BootstrapConfig.Load();
             ApplyBrand(c.BrandPrimaryText, c.BrandAccentText, c.BrandPrimaryColor, c.BrandAccentColor, c.BrandTitle);
+            // 저장된 앱 아이콘이 있으면 프론트 로드 전에 미리 창 아이콘으로 적용 (작업표시줄 깜빡임 제거).
+            if (!string.IsNullOrWhiteSpace(c.BrandIconDataUrl)) ApplyIcon(c.BrandIconDataUrl);
         }
         catch (System.Exception ex)
         {
@@ -373,20 +375,21 @@ public partial class MainWindow : Window
 
     // 프론트가 보낸 브랜드를 config.json 에 저장 — 다음 실행 시 ApplyPersistedBrand 가 읽음.
     // 값이 그대로면 디스크를 건드리지 않는다(setBrand 는 부팅·저장마다 발화하므로 churn 방지).
-    private void PersistBrand(string? primaryText, string? accentText, string? primaryColor, string? accentColor, string? title)
+    private void PersistBrand(string? primaryText, string? accentText, string? primaryColor, string? accentColor, string? title, string? iconDataUrl)
     {
         try
         {
             var c = BootstrapConfig.Load();
             if (c.BrandPrimaryText == primaryText && c.BrandAccentText == accentText
                 && c.BrandPrimaryColor == primaryColor && c.BrandAccentColor == accentColor
-                && c.BrandTitle == title)
+                && c.BrandTitle == title && c.BrandIconDataUrl == iconDataUrl)
                 return;
             c.BrandPrimaryText = primaryText;
             c.BrandAccentText = accentText;
             c.BrandPrimaryColor = primaryColor;
             c.BrandAccentColor = accentColor;
             c.BrandTitle = title;
+            c.BrandIconDataUrl = iconDataUrl;
             BootstrapConfig.Save(c);
         }
         catch (System.Exception ex)
@@ -523,6 +526,14 @@ public partial class MainWindow : Window
         WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
+
+    // 최대화/복원 상태에 따라 캡션 글리프 토글 (Windows 표준 동작). E922 = 최대화, E923 = 복원.
+    protected override void OnStateChanged(System.EventArgs e)
+    {
+        base.OnStateChanged(e);
+        if (MaximizeButton is not null)
+            MaximizeButton.Content = WindowState == WindowState.Maximized ? "" : "";
+    }
 
     // ---------- 전역 단축키 (Ctrl+Alt+W → 위젯 토글) ----------
     private IntPtr _hwnd;

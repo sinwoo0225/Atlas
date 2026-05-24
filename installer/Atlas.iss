@@ -51,9 +51,11 @@ Source: "..\publish\ATLAS-CLI-USAGE.md"; DestDir: "{app}"; Flags: ignoreversion 
 Source: "..\publish\wwwroot\*";          DestDir: "{app}\wwwroot"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{group}\Atlas";                       Filename: "{app}\{#MyAppExeName}"
+; AppUserModelID 는 App.xaml.cs 의 SetCurrentProcessExplicitAppUserModelID 와 동일해야 한다 —
+; 바로가기와 실행 프로세스의 작업표시줄 정체성을 일치시켜 핀 고정·아이콘 갱신이 일관되게 동작.
+Name: "{group}\Atlas";                       Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "SlnU.Atlas"
 Name: "{group}\{cm:UninstallProgram,Atlas}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\Atlas";                 Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autodesktop}\Atlas";                 Filename: "{app}\{#MyAppExeName}"; AppUserModelID: "SlnU.Atlas"; Tasks: desktopicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,Atlas}"; Flags: nowait postinstall skipifsilent

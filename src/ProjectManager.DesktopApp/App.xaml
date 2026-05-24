@@ -7,8 +7,9 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#9ca3af"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
+            <!-- Windows 표준 캡션 글리프(Segoe MDL2 Assets) — 최소/최대/복원/닫기가 동일 메트릭·정사각 정렬. 권장 크기 10. -->
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -30,8 +31,8 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="Foreground" Value="#9ca3af"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="10"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>

@@ -74,6 +74,11 @@ public sealed class BootstrapConfig
     [JsonPropertyName("brandTitle")]
     public string? BrandTitle { get; set; }
 
+    // 앱(작업표시줄/창) 아이콘 data URL. 프론트가 setBrand 로 보내면 저장 → 다음 실행 시 프론트 로드 전에
+    // ApplyPersistedBrand 가 창 아이콘으로 미리 적용해, 부팅 직후 작업표시줄이 기본 아이콘으로 깜빡이는 갭 제거.
+    [JsonPropertyName("brandIconDataUrl")]
+    public string? BrandIconDataUrl { get; set; }
+
     // ===== 위젯 모드 (데스크톱 보조 always-on-top 창) =====
     // 창 위치·크기·투명도·고정상태를 보존. 0 이면 미설정 → 화면 우측 상단 기본 배치.
     [JsonPropertyName("widgetX")]

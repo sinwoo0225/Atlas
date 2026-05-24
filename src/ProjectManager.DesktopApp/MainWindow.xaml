@@ -32,15 +32,16 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
                             VerticalAlignment="Center" Margin="0,0,4,0">
-                    <Button x:Name="MinimizeButton" Content="&#x2500;" Width="40" Height="40"
+                    <!-- 캡션 글리프: 최소화 E921 / 최대화 E922 (복원 E923 은 StateChanged 에서 토글) / 닫기 E8BB -->
+                    <Button x:Name="MinimizeButton" Content="&#xE921;" Width="40" Height="40"
                             Style="{StaticResource ChromeButtonStyle}"
                             Click="MinimizeButton_Click"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button x:Name="MaximizeButton" Content="&#x25A1;" Width="40" Height="40"
+                    <Button x:Name="MaximizeButton" Content="&#xE922;" Width="40" Height="40"
                             Style="{StaticResource ChromeButtonStyle}"
                             Click="MaximizeButton_Click"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"/>
-                    <Button x:Name="CloseButton" Content="&#x2715;" Width="40" Height="40"
+                    <Button x:Name="CloseButton" Content="&#xE8BB;" Width="40" Height="40"
                             Style="{StaticResource ChromeCloseButtonStyle}"
                             Click="CloseButton_Click"
                             shell:WindowChrome.IsHitTestVisibleInChrome="True"/>

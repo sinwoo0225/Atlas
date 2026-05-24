@@ -15,8 +15,16 @@ public partial class App : System.Windows.Application
     // 프로세스 수명 동안 보유해야 하므로 필드로 — GC 가 회수해 뮤텍스가 풀리지 않게.
     private Mutex? _mutex;
 
+    // 명시적 AppUserModelID — 인스톨러 바로가기로 실행돼도 작업표시줄 버튼이 바로가기/exe 임베드
+    // 아이콘이 아닌 *프로세스 자신*에 묶이게 해, 런타임에 ApplyIcon 으로 바꾼 창 아이콘이 작업표시줄에
+    // 반영되도록 한다. Inno 바로가기(Atlas.iss [Icons])도 같은 AUMID 를 선언해 일관성 유지.
+    private const string AppUserModelId = "SlnU.Atlas";
+
     protected override void OnStartup(StartupEventArgs e)
     {
+        try { SetCurrentProcessExplicitAppUserModelID(AppUserModelId); }
+        catch { /* 구형 Windows 등에서 실패해도 앱 시작은 막지 않음 */ }
+
         _mutex = new Mutex(initiallyOwned: true, MutexName, out bool createdNew);
         if (!createdNew)
         {
@@ -63,4 +71,8 @@ public partial class App : System.Windows.Application
 
     [DllImport("user32.dll")]
     private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
+    private static extern void SetCurrentProcessExplicitAppUserModelID(
+        [MarshalAs(UnmanagedType.LPWStr)] string appID);
 }
