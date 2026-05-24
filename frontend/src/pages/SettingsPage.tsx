@@ -61,10 +61,23 @@ const BRAND_ICON_PRESETS: { file: string; label: string }[] = [
   { file: 'atlas-v2-cute-hills.png', label: '큐트 언덕' },
 ];
 
+type SettingsTab = 'appearance' | 'behavior' | 'system' | 'backup';
+const SETTINGS_TABS: { id: SettingsTab; label: string; icon: typeof Palette }[] = [
+  { id: 'appearance', label: '모양', icon: Palette },
+  { id: 'behavior', label: '동작', icon: Keyboard },
+  { id: 'system', label: '시스템', icon: Server },
+  { id: 'backup', label: '백업·관리', icon: Download },
+];
+const SETTINGS_TAB_KEY = 'atlas-settings-tab';
+
 export function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings());
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
+  const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
+    const saved = localStorage.getItem(SETTINGS_TAB_KEY);
+    return saved === 'behavior' || saved === 'system' || saved === 'backup' ? saved : 'appearance';
+  });
   const { projects } = useProjectStore();
 
   useEffect(() => {
@@ -240,6 +253,30 @@ export function SettingsPage() {
         </div>
       </div>
 
+      {/* 카테고리 탭 — 12개 섹션을 모양/동작/시스템/백업·관리로 그룹화. 선택은 localStorage 에 보존. */}
+      <div className="flex gap-1 border-b border-default -mt-2">
+        {SETTINGS_TABS.map(({ id, label, icon: Icon }) => {
+          const active = activeTab === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => { setActiveTab(id); localStorage.setItem(SETTINGS_TAB_KEY, id); }}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 -mb-px transition-colors ${
+                active
+                  ? 'border-accent text-accent font-medium'
+                  : 'border-transparent text-secondary hover:text-primary'
+              }`}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === 'appearance' && (<>
       <Section title="외관">
         <FormField label="테마">
           <div className="flex gap-2">
@@ -460,7 +497,9 @@ export function SettingsPage() {
           </div>
         </FormField>
       </Section>
+      </>)}
 
+      {activeTab === 'behavior' && (<>
       <Section title="기본 동작">
         <FormField
           label="앱 시작 시 마지막 프로젝트 자동 선택"
@@ -542,7 +581,9 @@ export function SettingsPage() {
           </Button>
         </FormField>
       </Section>
+      </>)}
 
+      {activeTab === 'system' && (<>
       <ConnectionModeSection onModeChanged={setConnectionMode} />
 
       {connectionMode === 'Local' && <DataFolderSection />}
@@ -556,7 +597,10 @@ export function SettingsPage() {
           </p>
         </Section>
       )}
+      </>)}
 
+      {/* 아이콘은 '모양' 탭에 속하지만 Local/Client 조건 섹션 뒤에 위치 — 조건부 렌더라 탭 전환 시 올바른 그룹에 표시됨. */}
+      {activeTab === 'appearance' && (
       <Section title="아이콘">
         <FormField label="메뉴 아이콘" hint="사이드바 내비게이션 아이콘. 클릭해 교체할 수 있습니다.">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -597,7 +641,9 @@ export function SettingsPage() {
           </div>
         </FormField>
       </Section>
+      )}
 
+      {activeTab === 'backup' && (<>
       <Section title="설정 백업">
         <FormField
           label="저장 위치"
@@ -646,6 +692,7 @@ export function SettingsPage() {
           <Button variant="danger" onClick={handleReset}>설정 초기화</Button>
         </FormField>
       </Section>
+      </>)}
 
       {iconPicker && (
         <IconPickerModal
