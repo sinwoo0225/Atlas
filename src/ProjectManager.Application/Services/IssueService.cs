@@ -27,7 +27,8 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
             Status = dto.Status,
             Priority = dto.Priority,
             AssigneeResourceId = dto.AssigneeResourceId,
-            DueDate = dto.DueDate
+            DueDate = dto.DueDate,
+            OccurredOn = dto.OccurredOn
         };
         var created = await repo.CreateAsync(issue);
         return ToDto((await repo.GetByIdAsync(created.Id))!);
@@ -45,6 +46,7 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         issue.Priority = dto.Priority;
         issue.AssigneeResourceId = dto.AssigneeResourceId;
         issue.DueDate = dto.DueDate;
+        issue.OccurredOn = dto.OccurredOn;
         var updated = await repo.UpdateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(updated.Id))!;
         if (!wasCompleted && IsCompleted(updated.Status))
@@ -64,7 +66,7 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         if (issue is null) return false;
         if (issue.Status == status) return true;
         var dto = new UpdateIssueDto(
-            issue.Title, issue.Description, status, issue.Priority, issue.AssigneeResourceId, issue.DueDate);
+            issue.Title, issue.Description, status, issue.Priority, issue.AssigneeResourceId, issue.DueDate, issue.OccurredOn);
         await UpdateAsync(id, dto);
         return true;
     }
@@ -84,5 +86,5 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         i.Id, i.ProjectId, i.Title, i.Description,
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
-        i.DueDate, i.CreatedAt, i.UpdatedAt);
+        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt);
 }

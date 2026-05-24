@@ -264,7 +264,7 @@ public class ProjectService(
         i.Id, i.ProjectId, i.Title, i.Description,
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
-        i.DueDate, i.CreatedAt, i.UpdatedAt);
+        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt);
 
     // ============== Import (백업 zip → 단일 프로젝트 머지) ==============
     // 백업 zip 안 db/projectmanager.db 에서 import 가능한 프로젝트 목록 미리보기.
@@ -684,6 +684,7 @@ public class ProjectService(
                 Priority = i.Priority,
                 AssigneeResourceId = assignee,
                 DueDate = i.DueDate,
+                OccurredOn = i.OccurredOn,
             };
         }).ToList();
         db.Issues.AddRange(newIssues);

@@ -14,6 +14,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
+import { toIsoDate } from '../utils/wbsSpan';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { Issue, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
@@ -155,6 +156,8 @@ export function IssuesPage() {
       priority: 'Medium',
       assigneeResourceId: null,
       dueDate: undefined,
+      // 발생일자 기본값 = 오늘(로컬). 대개 발생 당일 등록하므로 프리필하고, 필요 시 행에서 수정.
+      occurredOn: toIsoDate(Date.now()),
     });
     setNewTitle('');
     refreshIssues();
@@ -287,6 +290,7 @@ export function IssuesPage() {
               <th className="text-left py-3 px-3 font-medium w-28">상태</th>
               <th className="text-left py-3 px-3 font-medium w-24">우선순위</th>
               <th className="text-left py-3 px-3 font-medium w-48">담당자</th>
+              <th className="text-left py-3 px-3 font-medium w-36">발생일</th>
               <th className="text-left py-3 px-3 font-medium w-36">마감일</th>
               <th className="text-left py-3 px-3 font-medium w-16"></th>
             </tr>
@@ -297,7 +301,7 @@ export function IssuesPage() {
               <td className="py-2 px-4 text-muted">
                 <Plus size={14} />
               </td>
-              <td className="py-2 px-3" colSpan={5}>
+              <td className="py-2 px-3" colSpan={6}>
                 <input
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
@@ -316,7 +320,7 @@ export function IssuesPage() {
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-0">
+                <td colSpan={8} className="p-0">
                   <EmptyState
                     icon={<AlertTriangle size={36} />}
                     title="이슈가 없습니다."
@@ -370,9 +374,11 @@ function IssueRow({
   const navigate = useNavigate();
   const [title, setTitle] = useState(issue.title);
   const [dueDate, setDueDate] = useState(issue.dueDate?.slice(0, 10) ?? '');
+  const [occurredOn, setOccurredOn] = useState(issue.occurredOn?.slice(0, 10) ?? '');
 
   useEffect(() => { setTitle(issue.title); }, [issue.title]);
   useEffect(() => { setDueDate(issue.dueDate?.slice(0, 10) ?? ''); }, [issue.dueDate]);
+  useEffect(() => { setOccurredOn(issue.occurredOn?.slice(0, 10) ?? ''); }, [issue.occurredOn]);
 
   return (
     <>
@@ -456,6 +462,21 @@ function IssueRow({
               </option>
             ))}
           </select>
+        </td>
+        <td className="py-2 px-3">
+          <div className="relative">
+            <input
+              type="date"
+              value={occurredOn}
+              onChange={(e) => setOccurredOn(e.target.value)}
+              onBlur={() => onUpdate(issue.id, 'occurredOn', occurredOn || undefined)}
+              className={`${inputClass} py-1 text-xs pr-6`}
+            />
+            <DirtyDot
+              visible={occurredOn !== (issue.occurredOn?.slice(0, 10) ?? '')}
+              className="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none"
+            />
+          </div>
         </td>
         <td className="py-2 px-3">
           <div className="relative">

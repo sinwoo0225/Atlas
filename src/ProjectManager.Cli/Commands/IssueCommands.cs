@@ -60,9 +60,10 @@ internal static class IssueCommands
         var prioOpt = new Option<IssuePriority?>("--priority", "Low|Medium(기본)|High");
         var assignOpt = new Option<int?>("--assignee", "Resource ID (담당자)");
         var dueOpt = new Option<DateTime?>("--due", "마감일 YYYY-MM-DD");
+        var occurredOpt = new Option<DateTime?>("--occurred", "발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)");
 
         var c = new Command("create", "이슈 생성")
-        { projOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt };
+        { projOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -73,7 +74,8 @@ internal static class IssueCommands
                 Status: pr.GetValueForOption(statusOpt) ?? IssueStatus.Open,
                 Priority: pr.GetValueForOption(prioOpt) ?? IssuePriority.Medium,
                 AssigneeResourceId: pr.GetValueForOption(assignOpt),
-                DueDate: pr.GetValueForOption(dueOpt));
+                DueDate: pr.GetValueForOption(dueOpt),
+                OccurredOn: pr.GetValueForOption(occurredOpt));
             var svc = services.GetRequiredService<IssueService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -89,9 +91,10 @@ internal static class IssueCommands
         var prioOpt = new Option<IssuePriority?>("--priority", "Low|Medium|High");
         var assignOpt = new Option<int?>("--assignee", "Resource ID (담당자)");
         var dueOpt = new Option<DateTime?>("--due", "마감일 YYYY-MM-DD");
+        var occurredOpt = new Option<DateTime?>("--occurred", "발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)");
 
         var c = new Command("update", "이슈 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt };
+        { idOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -105,7 +108,8 @@ internal static class IssueCommands
                 Status: pr.GetValueForOption(statusOpt) ?? existing.Status,
                 Priority: pr.GetValueForOption(prioOpt) ?? existing.Priority,
                 AssigneeResourceId: pr.GetValueForOption(assignOpt) ?? existing.AssigneeResourceId,
-                DueDate: pr.GetValueForOption(dueOpt) ?? existing.DueDate);
+                DueDate: pr.GetValueForOption(dueOpt) ?? existing.DueDate,
+                OccurredOn: pr.GetValueForOption(occurredOpt) ?? existing.OccurredOn);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;

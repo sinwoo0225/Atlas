@@ -239,6 +239,7 @@ export interface Issue {
   assigneeResourceId?: number | null;
   assigneeName?: string | null;
   dueDate?: string;
+  occurredOn?: string;
   createdAt: string;
   updatedAt: string;
 }

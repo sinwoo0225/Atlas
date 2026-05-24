@@ -39,7 +39,8 @@ public static class IssueTools
         [Description("Open|InProgress|Resolved|Closed (기본 Open)")] IssueStatus? status = null,
         [Description("Low|Medium|High (기본 Medium)")] IssuePriority? priority = null,
         [Description("담당자 Resource ID")] int? assigneeResourceId = null,
-        [Description("마감일 YYYY-MM-DD")] DateTime? dueDate = null) =>
+        [Description("마감일 YYYY-MM-DD")] DateTime? dueDate = null,
+        [Description("발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)")] DateTime? occurredOn = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateIssueDto(
             ProjectId: projectId,
             Title: title,
@@ -47,7 +48,8 @@ public static class IssueTools
             Status: status ?? IssueStatus.Open,
             Priority: priority ?? IssuePriority.Medium,
             AssigneeResourceId: assigneeResourceId,
-            DueDate: dueDate)));
+            DueDate: dueDate,
+            OccurredOn: occurredOn)));
 
     [McpServerTool(Name = "atlas_issue_update"),
      Description("이슈 부분 갱신 — null 인 필드는 기존 값 유지")]
@@ -55,7 +57,8 @@ public static class IssueTools
         IssueService svc, int id,
         string? title = null, string? description = null,
         IssueStatus? status = null, IssuePriority? priority = null,
-        int? assigneeResourceId = null, DateTime? dueDate = null)
+        int? assigneeResourceId = null, DateTime? dueDate = null,
+        DateTime? occurredOn = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Issue {id} 없음");
@@ -65,7 +68,8 @@ public static class IssueTools
             Status: status ?? existing.Status,
             Priority: priority ?? existing.Priority,
             AssigneeResourceId: assigneeResourceId ?? existing.AssigneeResourceId,
-            DueDate: dueDate ?? existing.DueDate)));
+            DueDate: dueDate ?? existing.DueDate,
+            OccurredOn: occurredOn ?? existing.OccurredOn)));
     }
 
     [McpServerTool(Name = "atlas_issue_delete"),
