@@ -365,7 +365,10 @@ public partial class MainWindow : Window
             var c = BootstrapConfig.Load();
             ApplyBrand(c.BrandPrimaryText, c.BrandAccentText, c.BrandPrimaryColor, c.BrandAccentColor, c.BrandTitle);
             // 저장된 앱 아이콘이 있으면 프론트 로드 전에 미리 창 아이콘으로 적용 (작업표시줄 깜빡임 제거).
+            // 없으면 기본 아이콘을 *큰 프레임*으로 명시 적용 — XAML 의 Icon=atlas.ico 는 16px 프레임이
+            // 집혀 작업표시줄에서 작게 보이므로 시작 시 교정.
             if (!string.IsNullOrWhiteSpace(c.BrandIconDataUrl)) ApplyIcon(c.BrandIconDataUrl);
+            else ApplyIcon(null);
         }
         catch (System.Exception ex)
         {
@@ -409,7 +412,25 @@ public partial class MainWindow : Window
         catch { return null; }
     }
 
-    // 작업표시줄/창 아이콘 갱신. data URL 이면 디코드해 적용, 비어 있으면 기본 atlas.ico 복귀.
+    // 기본 atlas.ico 의 *가장 큰* 프레임을 창 아이콘으로 반환.
+    // atlas.ico 는 16px 부터 멀티사이즈인데 BitmapImage(pack uri) 는 첫(16px) 프레임만 집어,
+    // 명시적 AppUserModelID(사이클 71) 로 작업표시줄이 exe 임베드 아이콘 대신 *창 아이콘*을 쓰게 된 뒤
+    // 작업표시줄(대형 슬롯)에서 아이콘이 작게 보였다. 큰 프레임을 주면 타이틀바용 소형은 WPF 가
+    // 자동 축소해 양쪽 다 또렷하다.
+    private static System.Windows.Media.ImageSource LoadDefaultAppIcon()
+    {
+        var uri = new Uri("pack://application:,,,/Resources/atlas.ico");
+        var decoder = System.Windows.Media.Imaging.BitmapDecoder.Create(
+            uri,
+            System.Windows.Media.Imaging.BitmapCreateOptions.None,
+            System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+        var best = decoder.Frames[0];
+        foreach (var f in decoder.Frames)
+            if (f.PixelWidth > best.PixelWidth) best = f;
+        return best;
+    }
+
+    // 작업표시줄/창 아이콘 갱신. data URL 이면 디코드해 적용, 비어 있으면 기본 atlas.ico(큰 프레임) 복귀.
     // exe 파일 임베드 아이콘(<ApplicationIcon>)과 별개 — 실행 중인 창 아이콘만 바뀐다.
     private void ApplyIcon(string? dataUrl)
     {
@@ -417,8 +438,7 @@ public partial class MainWindow : Window
         {
             if (string.IsNullOrWhiteSpace(dataUrl))
             {
-                Icon = new System.Windows.Media.Imaging.BitmapImage(
-                    new Uri("pack://application:,,,/Resources/atlas.ico"));
+                Icon = LoadDefaultAppIcon();
                 return;
             }
 
