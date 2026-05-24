@@ -220,15 +220,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {!collapsed && (
-          <>
-            <div className="px-3 pt-3">
-              <SearchTrigger />
-            </div>
-
-            <div className="px-3 pt-2">
-              <ProjectSwitcher />
-            </div>
-          </>
+          <div className="px-3 pt-3">
+            <SearchTrigger />
+          </div>
         )}
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
@@ -247,6 +241,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          {/* 프로젝트 선택 드롭다운 — 루트 메뉴와 프로젝트 메뉴 사이. 아래 프로젝트 메뉴를 제어함을 시각적으로 연결. */}
+          {!collapsed && (
+            <div className="px-1 pt-3">
+              <ProjectSwitcher />
+            </div>
+          )}
 
           {selectedProject && (
             <>
