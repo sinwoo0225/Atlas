@@ -439,7 +439,6 @@ public partial class MainWindow : Window
             if (string.IsNullOrWhiteSpace(dataUrl))
             {
                 Icon = LoadDefaultAppIcon();
-                RefreshTaskbarIcon();
                 return;
             }
 
@@ -455,50 +454,12 @@ public partial class MainWindow : Window
             bmp.EndInit();
             bmp.Freeze();
             Icon = bmp;
-            RefreshTaskbarIcon();
         }
         catch (System.Exception ex)
         {
             TryLog($"[apply-icon-err] {ex.GetType().Name}: {ex.Message}");
         }
     }
-
-    // 작업표시줄 버튼은 *이미 만들어진 뒤*엔 라이브 아이콘 변경(WPF Icon→WM_SETICON)을 다시 읽지 않는다
-    // (Alt+Tab·시작 시점은 읽음). 명시적 AppUserModelID 환경에서 특히 그렇다. 탭을 삭제→재추가해
-    // 셸이 현재 창 아이콘을 다시 읽게 강제한다. HWND 재생성이 없어 호스팅 중인 WebView2 에 안전.
-    // 시작(_hwnd 미생성) 시엔 호출 안 함 — 그땐 버튼 생성 시점에 Icon 을 읽으므로 불필요.
-    private void RefreshTaskbarIcon()
-    {
-        if (_hwnd == IntPtr.Zero) return;
-        try
-        {
-            var tbl = (ITaskbarList)new TaskbarListCoClass();
-            tbl.HrInit();
-            tbl.DeleteTab(_hwnd);
-            tbl.AddTab(_hwnd);
-            Marshal.ReleaseComObject(tbl);
-        }
-        catch (System.Exception ex)
-        {
-            TryLog($"[taskbar-refresh-err] {ex.Message}");
-        }
-    }
-
-    [ComImport]
-    [Guid("56FDF342-FD6D-11d0-958A-006097C9A090")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    private interface ITaskbarList
-    {
-        void HrInit();
-        void AddTab(IntPtr hwnd);
-        void DeleteTab(IntPtr hwnd);
-        void ActivateTab(IntPtr hwnd);
-        void SetActiveAlt(IntPtr hwnd);
-    }
-
-    [ComImport]
-    [Guid("56FDF344-FD6D-11d0-958A-006097C9A090")]
-    private class TaskbarListCoClass { }
 
     private async Task TestServerConnectionAsync(string? requestId, string? url, string? apiKey)
     {
