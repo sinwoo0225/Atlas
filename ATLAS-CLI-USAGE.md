@@ -55,7 +55,8 @@ atlas-cli project get --id N
 atlas-cli project create --name "..." [--category 과제|내부|사업|유지보수/하자보수
                                        --description ... --goal ... --status Planned|Waiting|InProgress|Done
                                        --start YYYY-MM-DD --end YYYY-MM-DD --budget DEC
-                                       --participants "..." --deliverables "..." --links "..."]
+                                       --participants "..." --deliverables "..." --links "..."
+                                       --git "C:\path\to\repo"]   # git 이력용 경로(열람은 데스크톱 앱 전용)
 atlas-cli project update --id N [위 옵션 중 변경할 것만]
 atlas-cli project delete --id N
 
@@ -75,6 +76,20 @@ atlas-cli wbs create --project N --name "..." [--parent N --version V --assignee
 atlas-cli wbs update --id N [...]
 atlas-cli wbs move --id N (--parent N | --root)       # subtree 이동, Order 자동 재계산
 atlas-cli wbs delete --id N
+
+atlas-cli template list                                                   # 빌트인 + 커스텀 (nodeCount 만)
+atlas-cli template get (--id N | --builtin KEY)                           # 노드 트리 포함
+atlas-cli template create --name "..." --nodes-file PATH|-                # 노드 트리 JSON (배열)
+                          [--description ... --category ...]
+atlas-cli template update --id N [--name ... --description ... --category ...
+                                  --nodes-file PATH|-]                    # 미지정 시 기존 트리 유지
+atlas-cli template delete --id N                                          # 커스텀만 (빌트인 불가)
+atlas-cli template apply --project N (--id N | --builtin KEY)             # 프로젝트 WBS 로 인스턴스화(기존 뒤 추가)
+                         [--anchor YYYY-MM-DD --version V --skip-weekends]
+atlas-cli template from-project --project N --name "..."                  # 기존 WBS → 커스텀 템플릿
+                                [--description ... --category ... --version V]
+# 노드 JSON: [{name,assignee,offsetStartDays,durationDays,isMilestone,importance,notes,children:[...]}]
+#   offsetStartDays=앵커(프로젝트 시작일) 기준 일수, durationDays=기간(마일스톤=0)
 
 atlas-cli meeting list --project N [--keyword "..."]
 atlas-cli meeting get --id N
@@ -287,13 +302,14 @@ Claude Code 재시작 후:
 
 → `atlas` 서버 connected + 21 tools listed (`atlas_project_list`, `atlas_issue_create`, ...).
 
-## 도구 목록 (40 개 — CLI verb 와 1:1)
+## 도구 목록 (47 개 — CLI verb 와 1:1)
 
 | 도구 | 설명 |
 |---|---|
-| `atlas_project_list` / `_get` / `_create` / `_update` / `_delete` | 프로젝트 CRUD (5) |
+| `atlas_project_list` / `_get` / `_create` / `_update` / `_delete` | 프로젝트 CRUD (5). create/update 에 `gitRepoPath` |
 | `atlas_issue_list` (project + status?) / `_get` / `_create` / `_update` / `_delete` | 이슈 CRUD (5) |
 | `atlas_wbs_list` (project + version?) / `_get` / `_create` / `_update` / `_move` / `_delete` | WBS CRUD + 트리 이동 (6) |
+| `atlas_template_list` / `_get` (id?/builtinKey?) / `_create` / `_update` / `_delete` / `_apply` (projectId) / `_from_project` | WBS/일정 템플릿 (7). create/update 는 `nodesJson` 트리 |
 | `atlas_meeting_list` (project + keyword?) / `_get` / `_create` / `_update` / `_delete` | 회의록 CRUD (5) |
 | `atlas_changelog_list` (project) / `_get` / `_create` / `_update` / `_delete` | 변경이력 CRUD (5) |
 | `atlas_worklog_week` (project + weekStart?) / `_upsert` (project + date) | 업무일지 — Upsert 도메인 (2) |

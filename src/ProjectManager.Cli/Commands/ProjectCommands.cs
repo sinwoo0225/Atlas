@@ -58,9 +58,10 @@ internal static class ProjectCommands
         var partOpt = new Option<string?>("--participants", "참여자");
         var delivOpt = new Option<string?>("--deliverables", "산출물");
         var linksOpt = new Option<string?>("--links", "관련 링크");
+        var gitOpt = new Option<string?>("--git", "git 저장소 경로 (git 이력 보기용, 절대 경로). 열람은 데스크톱 앱 전용.");
 
         var c = new Command("create", "프로젝트 생성")
-        { nameOpt, categoryOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt };
+        { nameOpt, categoryOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt, gitOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -75,7 +76,8 @@ internal static class ProjectCommands
                 Budget: pr.GetValueForOption(budgetOpt),
                 Participants: pr.GetValueForOption(partOpt) ?? string.Empty,
                 Deliverables: pr.GetValueForOption(delivOpt) ?? string.Empty,
-                RelatedLinks: pr.GetValueForOption(linksOpt) ?? string.Empty);
+                RelatedLinks: pr.GetValueForOption(linksOpt) ?? string.Empty,
+                GitRepoPath: pr.GetValueForOption(gitOpt));
             var svc = services.GetRequiredService<ProjectService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -97,9 +99,10 @@ internal static class ProjectCommands
         var partOpt = new Option<string?>("--participants", "참여자");
         var delivOpt = new Option<string?>("--deliverables", "산출물");
         var linksOpt = new Option<string?>("--links", "관련 링크");
+        var gitOpt = new Option<string?>("--git", "git 저장소 경로 (절대 경로). 미지정 시 기존 값 유지.");
 
         var c = new Command("update", "프로젝트 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, categoryOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt };
+        { idOpt, nameOpt, categoryOpt, descOpt, goalOpt, statusOpt, startOpt, endOpt, budgetOpt, partOpt, delivOpt, linksOpt, gitOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -118,7 +121,8 @@ internal static class ProjectCommands
                 Budget: pr.GetValueForOption(budgetOpt) ?? existing.Budget,
                 Participants: pr.GetValueForOption(partOpt) ?? existing.Participants,
                 Deliverables: pr.GetValueForOption(delivOpt) ?? existing.Deliverables,
-                RelatedLinks: pr.GetValueForOption(linksOpt) ?? existing.RelatedLinks);
+                RelatedLinks: pr.GetValueForOption(linksOpt) ?? existing.RelatedLinks,
+                GitRepoPath: pr.GetValueForOption(gitOpt) ?? existing.GitRepoPath);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;

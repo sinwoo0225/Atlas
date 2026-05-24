@@ -36,7 +36,8 @@ public static class ProjectTools
         [Description("예산")] decimal? budget = null,
         [Description("참여자 (자유 문자열)")] string? participants = null,
         [Description("산출물")] string? deliverables = null,
-        [Description("관련 링크 (줄바꿈 구분)")] string? relatedLinks = null) =>
+        [Description("관련 링크 (줄바꿈 구분)")] string? relatedLinks = null,
+        [Description("git 저장소 경로 (git 이력 보기용, 절대 경로). 열람은 데스크톱 앱 전용.")] string? gitRepoPath = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateProjectDto(
             Name: name,
             Category: category ?? string.Empty,
@@ -48,7 +49,8 @@ public static class ProjectTools
             Budget: budget,
             Participants: participants ?? string.Empty,
             Deliverables: deliverables ?? string.Empty,
-            RelatedLinks: relatedLinks ?? string.Empty)));
+            RelatedLinks: relatedLinks ?? string.Empty,
+            GitRepoPath: gitRepoPath)));
 
     [McpServerTool(Name = "atlas_project_update"),
      Description("프로젝트 부분 갱신 — null 인 필드는 기존 값 유지")]
@@ -58,7 +60,8 @@ public static class ProjectTools
         ProjectStatus? status = null,
         DateTime? startDate = null, DateTime? endDate = null,
         decimal? budget = null,
-        string? participants = null, string? deliverables = null, string? relatedLinks = null)
+        string? participants = null, string? deliverables = null, string? relatedLinks = null,
+        [Description("git 저장소 경로 (미지정 시 기존 값 유지)")] string? gitRepoPath = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Project {id} 없음");
@@ -73,7 +76,8 @@ public static class ProjectTools
             Budget: budget ?? existing.Budget,
             Participants: participants ?? existing.Participants,
             Deliverables: deliverables ?? existing.Deliverables,
-            RelatedLinks: relatedLinks ?? existing.RelatedLinks)));
+            RelatedLinks: relatedLinks ?? existing.RelatedLinks,
+            GitRepoPath: gitRepoPath ?? existing.GitRepoPath)));
     }
 
     [McpServerTool(Name = "atlas_project_delete"),
