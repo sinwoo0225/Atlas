@@ -63,8 +63,8 @@ const DARK_CHART_COLORS: ChartColors = {
   accentBar:     '#9eb2ce',
   mutedBar:      '#545b6e',                       // --border-strong (Planned 막대 톤)
   ganttBarPlanned:    '#545b6e',
-  ganttBarInProgress: '#f5b955',                  // --warning
-  ganttBarDone:       '#4ade80',                  // --success
+  ganttBarInProgress: '#e69a3b',                  // --warning (v3 amber-orange)
+  ganttBarDone:       '#5cbf92',                  // --success (v3 teal-green)
   ganttBarParent:     'rgba(158, 178, 206, 0.35)',  // accent rgba
   ganttMilestone:     '#e6b552',                  // --accent-2 (warm gold)
   ganttToday:         '#f87171',                  // --danger

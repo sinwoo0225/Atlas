@@ -47,10 +47,10 @@
   --accent-hover:    #b2c2d8;   /* --accent 보다 살짝 밝게 — primary 버튼 hover */
   --accent-2:        #e6b552;   /* warm gold (v2) — 다크 cool surface 와 짝 */
   --accent-soft:     rgba(158, 178, 206, 0.18);
-  --success:         #4ade80;
-  --warning:         #f5b955;
-  --danger:          #f87171;
-  --info:            #7eb6ff;
+  --success:         #5cbf92;   /* v3: 채도↓ teal-green — brand(steel/gold) 톤 정렬 */
+  --warning:         #e69a3b;   /* v3: amber-orange — gold accent-2(#e6b552)와 분리 */
+  --danger:          #f87171;   /* 유지 — 경보색 의미 보존 */
+  --info:            #93b6dc;   /* v3: steel-blue 계열로 정렬 */
   --code-bg:         #1c2028;
   --code-fg:         #f5cf61;
   --scroll-track:    #181b22;
@@ -58,17 +58,17 @@
   --scroll-hover:    #545b6e;
 
   /* Status soft backgrounds — 배지/얇은 강조 영역 */
-  --bg-success-soft: rgba(74, 222, 128, 0.16);
-  --bg-warning-soft: rgba(245, 185, 85, 0.18);
+  --bg-success-soft: rgba(92, 191, 146, 0.16);
+  --bg-warning-soft: rgba(230, 154, 59, 0.18);
   --bg-danger-soft:  rgba(248, 113, 113, 0.16);
-  --bg-info-soft:    rgba(126, 182, 255, 0.16);
+  --bg-info-soft:    rgba(147, 182, 220, 0.16);
   --bg-neutral-soft: rgba(168, 174, 189, 0.18);
 
   /* Text on status soft — 배지 라벨 텍스트 */
-  --text-on-success: #86efac;
-  --text-on-warning: #fbd57a;
+  --text-on-success: #9ed9bb;
+  --text-on-warning: #f2c987;
   --text-on-danger:  #fca5a5;
-  --text-on-info:    #a8c8ff;
+  --text-on-info:    #bcd6ec;
   --text-on-neutral: #cfd3dc;
   --text-on-accent:  #0f172a;     /* 다크의 --accent (밝은 steel blue) 위 어두운 글씨 — WCAG AAA */
 

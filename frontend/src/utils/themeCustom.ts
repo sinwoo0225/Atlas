@@ -43,10 +43,10 @@ export const DARK_BASE: BaseColors = {
   borderDefault: '#3a4051',
   accent: '#9eb2ce',
   accent2: '#e6b552',
-  success: '#4ade80',
-  warning: '#f5b955',
+  success: '#5cbf92',
+  warning: '#e69a3b',
   danger: '#f87171',
-  info: '#7eb6ff',
+  info: '#93b6dc',
 };
 
 // index.css html.light 미러 — 커스텀 시드.
