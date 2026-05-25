@@ -47,6 +47,11 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
     public async Task<IActionResult> Trends([FromQuery] int weeks = 12, [FromQuery] int activityDays = 30)
         => Ok(await svc.GetTrendsAsync(Math.Clamp(weeks, 4, 52), Math.Clamp(activityDays, 7, 120)));
 
+    // Phase 3 예측·고급 번들 — CFD/Monte Carlo/간이 예상완료/부서 롤업. 추세 탭 '실험' 섹션 지연 로드.
+    [HttpGet("forecast")]
+    public async Task<IActionResult> Forecast([FromQuery] int weeks = 12)
+        => Ok(await svc.GetForecastAsync(Math.Clamp(weeks, 4, 52)));
+
     // '프로젝트별 활동량' 위젯 — 기본 30일 / 상위 20개. days/top 은 안전 범위로 clamp.
     [HttpGet("activity-by-project")]
     public async Task<IActionResult> ActivityByProject([FromQuery] int days = 30, [FromQuery] int top = 20)

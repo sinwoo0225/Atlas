@@ -1,6 +1,6 @@
 import { api } from './client';
 import type {
-  ActivityByProject, AgingWipItem, CalendarEvent, CategoryCount, KanbanColumn, KanbanItem,
+  ActivityByProject, AgingWipItem, CalendarEvent, CategoryCount, ForecastBundle, KanbanColumn, KanbanItem,
   MonitoringCharts, MonitoringData, MonitoringRisk, MonitoringTrends, OpenIssuesByProject,
   ResourceHeatmap, StaleProject, WorkloadOverview,
 } from '../types';
@@ -18,6 +18,8 @@ export const monitoringApi = {
   // Phase 2 추세 번들 — 추세/담당자 탭 지연 로드.
   getTrends: (weeks = 12, activityDays = 30) =>
     api.get<MonitoringTrends>(`/monitoring/trends?weeks=${weeks}&activityDays=${activityDays}`),
+  // Phase 3 예측·고급 번들 — 추세 탭 '실험' 섹션 지연 로드.
+  getForecast: (weeks = 12) => api.get<ForecastBundle>(`/monitoring/forecast?weeks=${weeks}`),
   // 프로젝트별 활동량 위젯 — 최근 N일(기본 30) top 20.
   getActivityByProject: (days = 30) =>
     api.get<ActivityByProject[]>(`/monitoring/activity-by-project?days=${days}`),

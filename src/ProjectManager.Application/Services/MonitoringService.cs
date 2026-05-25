@@ -560,6 +560,179 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         return new MonitoringTrendsDto(throughput, issueFlow, cycleTime, activityTrend, assigneeThroughput, assigneeCycleTime);
     }
 
+    // ===== Phase 3: 예측·고급 (CFD · Monte Carlo · 간이 예상완료 · 부서 롤업) — 후순위·실험 =====
+    public async Task<ForecastBundleDto> GetForecastAsync(int weeks = 12)
+    {
+        var today = DateTime.Today;
+        var events = await GetCompletionEventsAsync();
+
+        // --- D-1 CFD: 비-마일스톤 WBS 의 일별 상태 누적 (전이로그 전방 재구성) ---
+        var days = weeks * 7;
+        var day0 = today.AddDays(-(days - 1));
+        var wbsAll = await db.WbsItems
+            .Where(w => !w.IsMilestone)
+            .Select(w => new { w.Id, w.Status, w.CreatedAt })
+            .ToListAsync();
+
+        var logs = await db.ActivityLogs
+            .Where(a => a.Action == ActivityAction.Update && a.EntityType == "WbsItem"
+                && a.ChangesJson != null && a.ChangesJson.Contains("Status"))
+            .Select(a => new { a.EntityId, a.Timestamp, a.ChangesJson })
+            .ToListAsync();
+        var transitions = new Dictionary<int, List<(DateTime Ts, WbsStatus New, WbsStatus Old)>>();
+        foreach (var l in logs)
+        {
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, ActivityChangeValue>>(l.ChangesJson!, ChangesJsonOptions);
+                if (dict is null) continue;
+                ActivityChangeValue? st = null;
+                foreach (var kv in dict) if (string.Equals(kv.Key, "Status", StringComparison.OrdinalIgnoreCase)) { st = kv.Value; break; }
+                if (st is null) continue;
+                if (!Enum.TryParse<WbsStatus>(st.New, out var newS) || !Enum.TryParse<WbsStatus>(st.Old, out var oldS)) continue;
+                if (!transitions.TryGetValue(l.EntityId, out var list)) { list = new(); transitions[l.EntityId] = list; }
+                list.Add((l.Timestamp, newS, oldS));
+            }
+            catch { /* malformed — skip */ }
+        }
+        foreach (var list in transitions.Values) list.Sort((a, b) => a.Ts.CompareTo(b.Ts));
+
+        WbsStatus StateAt(int id, WbsStatus current, DateTime day)
+        {
+            if (!transitions.TryGetValue(id, out var list) || list.Count == 0) return current;
+            WbsStatus? last = null;
+            foreach (var t in list) if (t.Ts.ToLocalTime().Date <= day) last = t.New;
+            return last ?? list[0].Old; // 첫 전이 이전 = 생성 당시 상태
+        }
+
+        var cfd = new List<CfdPointDto>(days);
+        for (var i = 0; i < days; i++)
+        {
+            var d = day0.AddDays(i);
+            int p = 0, ip = 0, dn = 0;
+            foreach (var w in wbsAll)
+            {
+                if (w.CreatedAt.ToLocalTime().Date > d) continue;
+                switch (StateAt(w.Id, w.Status, d))
+                {
+                    case WbsStatus.Planned: p++; break;
+                    case WbsStatus.InProgress: ip++; break;
+                    default: dn++; break;
+                }
+            }
+            cfd.Add(new CfdPointDto(IsoDate(d), p, ip, dn));
+        }
+
+        // --- D-2 Monte Carlo: 전체 미완 WBS 백로그 소진 예측 (주간 WBS 처리량 리샘플링) ---
+        var week0 = WorkLogService.StartOfWeek(today).AddDays(-(weeks - 1) * 7);
+        var wkSample = new int[weeks];
+        foreach (var e in events.Where(e => e.Kind == "wbs"))
+        {
+            var idx = (int)((e.CompletedAt.ToLocalTime().Date - week0).TotalDays / 7);
+            if (idx >= 0 && idx < weeks) wkSample[idx]++;
+        }
+        var completedTotal = wkSample.Sum();
+        var remaining = await db.WbsItems.CountAsync(w => !w.IsMilestone && w.Status != WbsStatus.Done);
+
+        MonteCarloDto monteCarlo;
+        if (completedTotal < 5 || remaining <= 0 || !wkSample.Any(s => s > 0))
+        {
+            monteCarlo = new MonteCarloDto(false, remaining, Array.Empty<MonteCarloBucketDto>(), 0, 0, null, null);
+        }
+        else
+        {
+            var rnd = new Random(12345); // 고정 시드 — 재로드 안정성
+            const int trials = 1000;
+            var results = new List<int>(trials);
+            for (var t = 0; t < trials; t++)
+            {
+                int done = 0, w = 0;
+                while (done < remaining && w < 200) { done += wkSample[rnd.Next(weeks)]; w++; }
+                results.Add(w);
+            }
+            results.Sort();
+            int Pw(double q) => results[(int)Math.Floor(q * (results.Count - 1))];
+            var p50 = Pw(0.5);
+            var p85 = Pw(0.85);
+            var hist = results.GroupBy(x => x).OrderBy(g => g.Key)
+                .Select(g => new MonteCarloBucketDto(g.Key, g.Count())).ToList();
+            monteCarlo = new MonteCarloDto(true, remaining, hist, p50, p85,
+                IsoDate(today.AddDays(p50 * 7)), IsoDate(today.AddDays(p85 * 7)));
+        }
+
+        // --- D-3 간이 예상완료 (프로젝트별 처리율 외삽) ---
+        var activeProjects = await db.Projects
+            .Where(p => p.Status == ProjectStatus.InProgress || p.Status == ProjectStatus.Waiting)
+            .Select(p => new { p.Id, p.Name, p.EndDate })
+            .ToListAsync();
+        var remainingByProject = (await db.WbsItems
+            .Where(w => !w.IsMilestone && w.Status != WbsStatus.Done)
+            .GroupBy(w => w.ProjectId)
+            .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+            .ToListAsync())
+            .ToDictionary(x => x.ProjectId, x => x.Count);
+        var doneByProject = events
+            .Where(e => e.Kind == "wbs" && e.CompletedAt.ToLocalTime().Date >= week0)
+            .GroupBy(e => e.ProjectId)
+            .ToDictionary(g => g.Key, g => g.Count());
+        var projectForecasts = activeProjects
+            .Select(p =>
+            {
+                var rem = remainingByProject.GetValueOrDefault(p.Id);
+                var rate = (double)doneByProject.GetValueOrDefault(p.Id) / weeks;
+                double? projected = rate > 0 ? Math.Round(rem / rate, 1) : null;
+                double? toDeadline = p.EndDate.HasValue ? Math.Round((p.EndDate.Value.Date - today).TotalDays / 7.0, 1) : null;
+                var atRisk = projected.HasValue && toDeadline.HasValue && projected.Value > toDeadline.Value;
+                return new ProjectForecastDto(p.Id, p.Name, rem, projected, toDeadline, atRisk);
+            })
+            .Where(f => f.Remaining > 0)
+            .OrderByDescending(f => f.AtRisk).ThenByDescending(f => f.Remaining)
+            .ToList();
+
+        // --- B-6 부서 롤업 (Resource.Department) ---
+        var persons = await db.Resources
+            .Where(r => r.Type == ResourceType.Person)
+            .Select(r => new { r.Name, r.Department })
+            .ToListAsync();
+        var deptByName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in persons)
+            if (!string.IsNullOrWhiteSpace(r.Name))
+                deptByName[r.Name.Trim()] = string.IsNullOrWhiteSpace(r.Department) ? "기타" : r.Department.Trim();
+
+        var departmentRollup = new List<DepartmentRollupDto>();
+        if (persons.Any(r => !string.IsNullOrWhiteSpace(r.Department)))
+        {
+            var openWbsAssignees = await db.WbsItems
+                .Where(w => !w.IsMilestone && w.Status != WbsStatus.Done)
+                .Select(w => w.Assignee).ToListAsync();
+            var openIssueNames = await db.Issues
+                .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
+                .Select(i => i.AssigneeResource != null ? i.AssigneeResource.Name : null).ToListAsync();
+
+            var deptItems = new Dictionary<string, int>();
+            var deptPeople = new Dictionary<string, HashSet<string>>();
+            void AddItem(string? name)
+            {
+                if (string.IsNullOrWhiteSpace(name)) return;
+                var key = name.Trim();
+                var dept = deptByName.GetValueOrDefault(key, "기타");
+                deptItems[dept] = deptItems.GetValueOrDefault(dept) + 1;
+                if (!deptPeople.TryGetValue(dept, out var set)) { set = new(StringComparer.OrdinalIgnoreCase); deptPeople[dept] = set; }
+                set.Add(key);
+            }
+            foreach (var a in openWbsAssignees) foreach (var name in SplitAssignees(a)) AddItem(name);
+            foreach (var n in openIssueNames) AddItem(n);
+
+            departmentRollup = deptItems
+                .Select(kv => new DepartmentRollupDto(kv.Key, kv.Value, deptPeople[kv.Key].Count))
+                .OrderByDescending(d => d.OpenItems)
+                .ThenBy(d => d.Department, StringComparer.CurrentCulture)
+                .ToList();
+        }
+
+        return new ForecastBundleDto(cfd, monteCarlo, projectForecasts, departmentRollup);
+    }
+
     // D-1 리소스 히트맵: 이번 주 월요일부터 8주, 담당자별 미완료 항목 마감 카운트.
     // WBS Assignee 는 콤마 분리 문자열, Issue 는 AssigneeResource FK — 같은 문자열이면 같은 행으로 합산.
     // 담당자 미지정 항목은 행에서 제외하고 UnassignedItems 카운트로만 노출.

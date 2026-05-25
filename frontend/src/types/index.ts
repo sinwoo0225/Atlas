@@ -523,6 +523,36 @@ export interface MonitoringTrends {
   assigneeCycleTime: AssigneeCycleTime[];
 }
 
+// ===== Phase 3 인사이트 (예측·고급 — 실험) =====
+export interface CfdPoint { date: string; planned: number; inProgress: number; done: number; }
+export interface MonteCarloBucket { weeks: number; count: number; }
+export interface MonteCarlo {
+  sufficient: boolean;
+  remaining: number;
+  histogram: MonteCarloBucket[];
+  p50Weeks: number;
+  p85Weeks: number;
+  p50Date: string | null;
+  p85Date: string | null;
+}
+export interface ProjectForecast {
+  projectId: number;
+  projectName: string;
+  remaining: number;
+  projectedWeeks: number | null;
+  weeksToDeadline: number | null;
+  atRisk: boolean;
+}
+export interface DepartmentRollup { department: string; openItems: number; people: number; }
+
+// 예측 번들 — 추세 탭 '실험(Phase 3)' 섹션 지연 로드.
+export interface ForecastBundle {
+  cfd: CfdPoint[];
+  monteCarlo: MonteCarlo;
+  projectForecasts: ProjectForecast[];
+  departmentRollup: DepartmentRollup[];
+}
+
 export type ActivityEntityType =
   | 'Project'
   | 'WbsItem'

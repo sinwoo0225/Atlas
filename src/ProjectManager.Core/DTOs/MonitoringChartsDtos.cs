@@ -168,3 +168,29 @@ public record MonitoringTrendsDto(
     IReadOnlyList<ActivityTrendDayDto> ActivityTrend,
     AssigneeThroughputDto AssigneeThroughput,
     IReadOnlyList<AssigneeCycleTimeDto> AssigneeCycleTime);
+
+// ===== Phase 3 인사이트 (예측·고급 — 후순위·실험, 데이터량 의존) =====
+
+// D-1 CFD: 일별 WBS 상태 누적(비-마일스톤). 전이로그로 역사 재구성 — 인터셉터 이전 구간 불완전.
+public record CfdPointDto(string Date, int Planned, int InProgress, int Done);
+
+// D-2 Monte Carlo: 전체 미완 WBS 백로그 소진 예측. Sufficient=false 면 표본 부족(참고 불가).
+public record MonteCarloBucketDto(int Weeks, int Count);
+public record MonteCarloDto(
+    bool Sufficient, int Remaining,
+    IReadOnlyList<MonteCarloBucketDto> Histogram,
+    double P50Weeks, double P85Weeks, string? P50Date, string? P85Date);
+
+// D-3 간이 예상완료(프로젝트별): 현재 처리율 외삽. ProjectedWeeks=null 이면 추정 불가(완료율 0).
+public record ProjectForecastDto(
+    int ProjectId, string ProjectName, int Remaining,
+    double? ProjectedWeeks, double? WeeksToDeadline, bool AtRisk);
+
+// B-6 부서 롤업: Resource.Department 기준 미완 항목·인원. 부서 미입력이면 빈 리스트.
+public record DepartmentRollupDto(string Department, int OpenItems, int People);
+
+public record ForecastBundleDto(
+    IReadOnlyList<CfdPointDto> Cfd,
+    MonteCarloDto MonteCarlo,
+    IReadOnlyList<ProjectForecastDto> ProjectForecasts,
+    IReadOnlyList<DepartmentRollupDto> DepartmentRollup);

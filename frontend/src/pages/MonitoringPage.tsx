@@ -21,6 +21,7 @@ import type {
   ActivityByProject,
   AgingWipItem,
   CategoryCount,
+  ForecastBundle,
   MonitoringCharts as MonitoringChartsData,
   MonitoringRisk,
   MonitoringTrends,
@@ -117,11 +118,16 @@ export function MonitoringPage() {
   // Phase 2 추세 번들 — 추세/담당자 탭 첫 진입 시 지연 로드(완료 전이 재구성이 무거워 개요와 분리).
   const [trends, setTrends] = useState<MonitoringTrends | null>(null);
   const [trendsLoading, setTrendsLoading] = useState(false);
+  // Phase 3 예측 번들 — 추세 탭 '실험' 섹션 전용 지연 로드(CFD 가 무거워 담당자 탭은 미로드).
+  const [forecast, setForecast] = useState<ForecastBundle | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
     setTrends(null); // 새로고침 시 추세 번들도 무효화 → 해당 탭 재진입/체류 시 재로드
     setTrendsLoading(false);
+    setForecast(null);
+    setForecastLoading(false);
     const thisMon = startOfWeek(new Date());
     const lastMon = addDays(thisMon, -7);
     Promise.all([
@@ -168,6 +174,17 @@ export function MonitoringPage() {
         .finally(() => setTrendsLoading(false));
     }
   }, [tab, trends, trendsLoading]);
+
+  // 추세 탭 '실험(Phase 3)' 섹션 — 예측 번들 지연 로드(추세 탭 전용).
+  useEffect(() => {
+    if (tab === 'trends' && forecast === null && !forecastLoading) {
+      setForecastLoading(true);
+      monitoringApi.getForecast()
+        .then(setForecast)
+        .catch(() => { /* 예측은 실험·보조 */ })
+        .finally(() => setForecastLoading(false));
+    }
+  }, [tab, forecast, forecastLoading]);
 
   const grouped = useMemo(() => {
     const map = new Map<number, { projectName: string; items: TodayWbs[] }>();
@@ -229,7 +246,7 @@ export function MonitoringPage() {
       )}
 
       {tab === 'trends' && (
-        <TrendsTab data={trends} loading={trendsLoading} />
+        <TrendsTab data={trends} loading={trendsLoading} forecast={forecast} forecastLoading={forecastLoading} />
       )}
 
       {tab === 'tasks' && (
