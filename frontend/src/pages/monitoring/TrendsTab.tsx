@@ -33,23 +33,39 @@ export function TrendsTab({
   return (
     <div className="space-y-5">
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard icon={<TrendingUp size={16} />} title="주간 처리량" subtitle="완료(WBS Done · Issue 해결)">
+        <ChartCard
+          icon={<TrendingUp size={16} />}
+          title="주간 처리량"
+          subtitle="완료(WBS Done · Issue 해결)"
+          desc="매주 끝낸 작업·이슈 수입니다. 막대가 높을수록 그 주에 많이 완료했다는 뜻 — 꾸준한 산출 속도를 봅니다."
+        >
           {chartBody(loading, !!data && data.throughput.length > 0, () => <ReactECharts option={throughputOption(data!.throughput, ch)} style={{ height: H }} />)}
         </ChartCard>
 
-        <ChartCard icon={<GitCompareArrows size={16} />} title="이슈 순증감" subtitle="누적 발생 vs 해결">
+        <ChartCard
+          icon={<GitCompareArrows size={16} />}
+          title="이슈 순증감"
+          subtitle="누적 발생 vs 해결"
+          desc="새로 생긴 이슈(누적)와 해결한 이슈(누적)입니다. 두 선의 간격이 벌어지면 처리보다 발생이 많아 밀리는 중입니다."
+        >
           {chartBody(loading, !!data && data.issueFlow.length > 0, () => <ReactECharts option={issueFlowOption(data!.issueFlow, ch)} style={{ height: H }} />)}
         </ChartCard>
 
         <ChartCard
           icon={<Timer size={16} />}
           title="사이클타임 분포"
-          subtitle={data ? `완료까지 소요일 · 50/85/95 백분위${data.cycleTime.approxCount > 0 ? ` · ${data.cycleTime.approxCount}건 근사(참고용)` : ''}` : '완료까지 소요일'}
+          subtitle={data ? `50/85/95 백분위${data.cycleTime.approxCount > 0 ? ` · ${data.cycleTime.approxCount}건 근사` : ''}` : ''}
+          desc="작업 하나가 시작부터 완료까지 걸린 일수입니다. 점 하나가 작업 하나. '85% 선'은 대부분의 작업이 그 안에 끝난다는 기준 — 일정 추정에 씁니다."
         >
           {chartBody(loading, !!data && data.cycleTime.points.length > 0, () => <ReactECharts option={cycleTimeOption(data!.cycleTime, ch)} style={{ height: H }} />)}
         </ChartCard>
 
-        <ChartCard icon={<Activity size={16} />} title="활동량 추세" subtitle="일별 활동 기록 수">
+        <ChartCard
+          icon={<Activity size={16} />}
+          title="활동량 추세"
+          subtitle="일별 변경 기록 수"
+          desc="날마다 기록된 변경(생성·수정·완료 등)의 수입니다. 최근 얼마나 활발하게 움직였는지 보는 지표입니다."
+        >
           {chartBody(loading, !!data && data.activityTrend.length > 0, () => <ReactECharts option={activityTrendOption(data!.activityTrend, ch)} style={{ height: H }} />)}
         </ChartCard>
       </section>
@@ -65,23 +81,43 @@ function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBund
     <div className="pt-4 border-t border-default">
       <div className="flex items-center gap-2 mb-3">
         <FlaskConical size={15} className="text-accent" />
-        <h2 className="h-section">실험 · 예측·고급</h2>
-        <span className="text-[11px] text-muted">(Phase 3 — 데이터 누적될수록 정확, 참고용)</span>
+        <h2 className="h-section">예측·고급</h2>
+        <span className="text-[11px] text-muted">데이터가 쌓일수록 정확해집니다 (참고용)</span>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard icon={<Layers size={16} />} title="누적 흐름도 (CFD)" subtitle="WBS 상태 누적 · 과거 구간 불완전" wide>
+        <ChartCard
+          icon={<Layers size={16} />}
+          title="누적 흐름도 (CFD)"
+          subtitle="WBS 상태별 누적"
+          desc="날짜별로 예정·진행중·완료 작업이 얼마나 쌓였는지 띠로 보여줍니다. 가운데 '진행중' 띠가 계속 두꺼우면 일이 한곳에 막혀 있다는 신호입니다."
+        >
           {chartBody(loading, !!forecast && forecast.cfd.length > 0, () => <ReactECharts option={cfdOption(forecast!.cfd, ch)} style={{ height: H }} />)}
         </ChartCard>
 
-        <ChartCard icon={<Dices size={16} />} title="완료일 예측 (Monte Carlo)" subtitle={monteCarloSubtitle(forecast)}>
-          {chartBody(loading, !!forecast && forecast.monteCarlo.sufficient, () => <ReactECharts option={monteCarloOption(forecast!.monteCarlo, ch)} style={{ height: H }} />, '데이터 부족 — 완료 표본이 더 쌓이면 표시됩니다')}
+        <ChartCard
+          icon={<Dices size={16} />}
+          title="완료일 예측"
+          subtitle={monteCarloSubtitle(forecast)}
+          desc="지금까지의 완료 속도로 남은 작업이 언제 끝날지 시뮬레이션한 결과입니다. 50%·85%는 그 날까지 끝날 가능성을 뜻합니다."
+        >
+          {chartBody(loading, !!forecast && forecast.monteCarlo.sufficient, () => <ReactECharts option={monteCarloOption(forecast!.monteCarlo, ch)} style={{ height: H }} />, '완료 기록이 더 쌓이면 예측이 표시됩니다')}
         </ChartCard>
 
-        <ChartCard icon={<CalendarClock size={16} />} title="프로젝트 예상 완료" subtitle="현재 처리율 외삽 vs 마감">
+        <ChartCard
+          icon={<CalendarClock size={16} />}
+          title="프로젝트 예상 완료"
+          subtitle="예상 소요 vs 마감"
+          desc="현재 처리 속도로 각 프로젝트가 며칠 걸릴지(예상)와 마감까지 남은 기간을 비교합니다. 예상이 마감보다 길면 빨강(위험)입니다."
+        >
           {chartBody(loading, !!forecast && forecast.projectForecasts.length > 0, () => <ReactECharts option={projectForecastOption(forecast!.projectForecasts, ch)} style={{ height: H }} />, '잔여 작업 있는 활성 프로젝트 없음')}
         </ChartCard>
 
-        <ChartCard icon={<Building2 size={16} />} title="부서별 부하" subtitle="미완 항목 · Resource.Department">
+        <ChartCard
+          icon={<Building2 size={16} />}
+          title="부서별 부하"
+          subtitle="미완 항목 수"
+          desc="부서별로 끝나지 않은 작업이 얼마나 몰려 있는지 보여줍니다. 리소스에 부서를 입력하면 표시됩니다."
+        >
           {chartBody(loading, !!forecast && forecast.departmentRollup.length > 0, () => <ReactECharts option={departmentOption(forecast!.departmentRollup, ch)} style={{ height: H }} />, '부서 정보 없음 — 리소스에 부서 입력 시 표시')}
         </ChartCard>
       </div>
@@ -89,13 +125,14 @@ function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBund
   );
 }
 
-function ChartCard({ icon, title, subtitle, children, wide }: { icon: React.ReactNode; title: string; subtitle: string; children: React.ReactNode; wide?: boolean }) {
+function ChartCard({ icon, title, subtitle, desc, children, wide }: { icon: React.ReactNode; title: string; subtitle: string; desc?: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <Card padding="normal" className={wide ? 'lg:col-span-2' : undefined}>
       <h3 className="h-card flex items-center gap-2 mb-1">
         <span className="text-muted">{icon}</span>
         {title} <span className="text-xs font-normal text-muted">{subtitle}</span>
       </h3>
+      {desc && <p className="text-[11px] text-muted leading-snug mb-2">{desc}</p>}
       <div style={{ height: H }}>{children}</div>
     </Card>
   );
