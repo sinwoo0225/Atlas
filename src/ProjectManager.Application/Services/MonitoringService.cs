@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -398,6 +399,165 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             .OrderByDescending(x => x.Count)
             .ThenBy(x => x.Category, StringComparer.CurrentCulture)
             .ToList();
+    }
+
+    // ===== Phase 2: 흐름·추세 (ActivityLog 상태전이 재구성) =====
+
+    private static readonly JsonSerializerOptions ChangesJsonOptions = new() { PropertyNameCaseInsensitive = true };
+    private static readonly HashSet<string> DoneStatusNames = new(StringComparer.OrdinalIgnoreCase) { "Done", "Resolved", "Closed" };
+
+    // 현재 완료 상태(WBS Done / Issue Resolved·Closed)인 항목 + 완료 시점.
+    // 완료 시점 = ActivityLog 의 Status→완료 전이 중 최신 Timestamp(UTC). 전이 기록 없으면 UpdatedAt 근사.
+    // Assignee 귀속은 엔티티 필드(WBS 콤마 split / Issue AssigneeResource), Actor 아님.
+    private sealed record CompletionEvent(
+        string Kind, int Id, int ProjectId, string ProjectName, string Title,
+        DateTime CreatedAt, DateTime CompletedAt, bool Approximate, IReadOnlyList<string> Assignees);
+
+    private async Task<List<CompletionEvent>> GetCompletionEventsAsync()
+    {
+        // 1) 완료 전이 시각 맵: ChangesJson 의 "Status" New 값이 완료 상태인 Update 로그 중 (type,id)별 최신.
+        var raw = await db.ActivityLogs
+            .Where(a => a.Action == ActivityAction.Update
+                && (a.EntityType == "WbsItem" || a.EntityType == "Issue")
+                && a.ChangesJson != null && a.ChangesJson.Contains("Status"))
+            .Select(a => new { a.EntityType, a.EntityId, a.Timestamp, a.ChangesJson })
+            .ToListAsync();
+
+        var transition = new Dictionary<(string, int), DateTime>();
+        foreach (var r in raw)
+        {
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, ActivityChangeValue>>(r.ChangesJson!, ChangesJsonOptions);
+                if (dict == null) continue;
+                ActivityChangeValue? status = null;
+                foreach (var kv in dict)
+                    if (string.Equals(kv.Key, "Status", StringComparison.OrdinalIgnoreCase)) { status = kv.Value; break; }
+                if (status is null || !DoneStatusNames.Contains(status.New)) continue;
+                var key = (r.EntityType, r.EntityId);
+                if (!transition.TryGetValue(key, out var existing) || r.Timestamp > existing)
+                    transition[key] = r.Timestamp;
+            }
+            catch { /* malformed diff — skip */ }
+        }
+
+        var events = new List<CompletionEvent>();
+
+        var wbs = await db.WbsItems
+            .Where(w => w.Status == WbsStatus.Done)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+        foreach (var x in wbs)
+        {
+            var hasT = transition.TryGetValue(("WbsItem", x.w.Id), out var ts);
+            events.Add(new CompletionEvent("wbs", x.w.Id, x.w.ProjectId, x.p.Name, x.w.Name,
+                x.w.CreatedAt, hasT ? ts : x.w.UpdatedAt, !hasT, SplitAssignees(x.w.Assignee).ToList()));
+        }
+
+        var issues = await db.Issues
+            .Where(i => i.Status == IssueStatus.Resolved || i.Status == IssueStatus.Closed)
+            .Include(i => i.AssigneeResource)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+        foreach (var x in issues)
+        {
+            var hasT = transition.TryGetValue(("Issue", x.i.Id), out var ts);
+            var assignees = string.IsNullOrWhiteSpace(x.i.AssigneeResource?.Name)
+                ? (IReadOnlyList<string>)Array.Empty<string>()
+                : new[] { x.i.AssigneeResource!.Name.Trim() };
+            events.Add(new CompletionEvent("issue", x.i.Id, x.i.ProjectId, x.p.Name, x.i.Title,
+                x.i.CreatedAt, hasT ? ts : x.i.UpdatedAt, !hasT, assignees));
+        }
+
+        return events;
+    }
+
+    private static double Percentile(IReadOnlyList<double> sortedAsc, double q)
+        => sortedAsc.Count == 0 ? 0 : Math.Round(sortedAsc[(int)Math.Floor(q * (sortedAsc.Count - 1))], 1);
+
+    // 추세 번들 — 완료 전이 추출 1회로 C-1~C-4 + B-3·B-4 모두 파생. weeks 주, activityDays 일.
+    public async Task<MonitoringTrendsDto> GetTrendsAsync(int weeks = 12, int activityDays = 30)
+    {
+        var events = await GetCompletionEventsAsync();
+        var week0 = WorkLogService.StartOfWeek(DateTime.Today).AddDays(-(weeks - 1) * 7);
+        int WeekIdx(DateTime utc) => (int)((utc.ToLocalTime().Date - week0).TotalDays / 7);
+
+        // C-1 주간 처리량
+        var tp = new (int wbs, int issue)[weeks];
+        foreach (var e in events)
+        {
+            var i = WeekIdx(e.CompletedAt);
+            if (i < 0 || i >= weeks) continue;
+            if (e.Kind == "wbs") tp[i].wbs++; else tp[i].issue++;
+        }
+        var throughput = Enumerable.Range(0, weeks)
+            .Select(i => new ThroughputWeekDto(IsoDate(week0.AddDays(i * 7)), tp[i].wbs, tp[i].issue)).ToList();
+
+        // C-2 이슈 순증감 (발생 = Issue.CreatedAt, 해결 = 완료 전이)
+        var issueCreated = await db.Issues.Select(i => i.CreatedAt).ToListAsync();
+        var opened = new int[weeks];
+        foreach (var c in issueCreated) { var i = WeekIdx(c); if (i >= 0 && i < weeks) opened[i]++; }
+        var resolved = new int[weeks];
+        foreach (var e in events.Where(e => e.Kind == "issue")) { var i = WeekIdx(e.CompletedAt); if (i >= 0 && i < weeks) resolved[i]++; }
+        var issueFlow = Enumerable.Range(0, weeks)
+            .Select(i => new IssueFlowWeekDto(IsoDate(week0.AddDays(i * 7)), opened[i], resolved[i])).ToList();
+
+        // C-3 사이클타임 + 백분위
+        var points = events
+            .Select(e => new CycleTimePointDto(e.Kind, e.Id, e.ProjectId, e.ProjectName, e.Title,
+                Math.Max(0, Math.Round((e.CompletedAt - e.CreatedAt).TotalDays, 1)),
+                IsoDate(e.CompletedAt.ToLocalTime()), e.Approximate))
+            .OrderBy(p => p.CompletedAt, StringComparer.Ordinal).ToList();
+        var daysSorted = points.Select(p => p.Days).OrderBy(d => d).ToList();
+        var cycleTime = new CycleTimeDto(points,
+            Percentile(daysSorted, 0.5), Percentile(daysSorted, 0.85), Percentile(daysSorted, 0.95),
+            points.Count(p => p.Approximate));
+
+        // C-4 활동량 추세 (일별, 로컬 날짜 버킷)
+        var since = DateTime.UtcNow.AddDays(-(activityDays + 1));
+        var stamps = await db.ActivityLogs.Where(a => a.Timestamp >= since).Select(a => a.Timestamp).ToListAsync();
+        var dayCount = new Dictionary<DateTime, int>();
+        foreach (var t in stamps) { var d = t.ToLocalTime().Date; dayCount[d] = dayCount.GetValueOrDefault(d) + 1; }
+        var startDay = DateTime.Today.AddDays(-(activityDays - 1));
+        var activityTrend = Enumerable.Range(0, activityDays)
+            .Select(i => { var d = startDay.AddDays(i); return new ActivityTrendDayDto(IsoDate(d), dayCount.GetValueOrDefault(d)); })
+            .ToList();
+
+        // B-3 담당자별 주간 처리량
+        var weekStarts = Enumerable.Range(0, weeks).Select(i => IsoDate(week0.AddDays(i * 7))).ToList();
+        var atRows = new Dictionary<string, int[]>(StringComparer.OrdinalIgnoreCase);
+        var atName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in events)
+        {
+            var wi = WeekIdx(e.CompletedAt);
+            if (wi < 0 || wi >= weeks) continue;
+            foreach (var name in e.Assignees)
+            {
+                if (!atRows.TryGetValue(name, out var arr)) { arr = new int[weeks]; atRows[name] = arr; atName[name] = name; }
+                arr[wi]++;
+            }
+        }
+        var assigneeThroughput = new AssigneeThroughputDto(weekStarts, atRows
+            .Select(kv => new AssigneeThroughputRow(atName[kv.Key], kv.Value, kv.Value.Sum()))
+            .OrderByDescending(r => r.Total).ThenBy(r => r.Assignee, StringComparer.CurrentCulture).ToList());
+
+        // B-4 담당자별 사이클타임 (중앙값·85p)
+        var ctByName = new Dictionary<string, List<double>>(StringComparer.OrdinalIgnoreCase);
+        var ctName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var e in events)
+        {
+            var days = Math.Max(0, (e.CompletedAt - e.CreatedAt).TotalDays);
+            foreach (var name in e.Assignees)
+            {
+                if (!ctByName.TryGetValue(name, out var list)) { list = new(); ctByName[name] = list; ctName[name] = name; }
+                list.Add(days);
+            }
+        }
+        var assigneeCycleTime = ctByName
+            .Select(kv => { var s = kv.Value.OrderBy(x => x).ToList(); return new AssigneeCycleTimeDto(ctName[kv.Key], s.Count, Percentile(s, 0.5), Percentile(s, 0.85)); })
+            .OrderByDescending(a => a.Count).ThenBy(a => a.Assignee, StringComparer.CurrentCulture).ToList();
+
+        return new MonitoringTrendsDto(throughput, issueFlow, cycleTime, activityTrend, assigneeThroughput, assigneeCycleTime);
     }
 
     // D-1 리소스 히트맵: 이번 주 월요일부터 8주, 담당자별 미완료 항목 마감 카운트.

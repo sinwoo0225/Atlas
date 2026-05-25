@@ -41,6 +41,12 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
     [HttpGet("category-breakdown")]
     public async Task<IActionResult> CategoryBreakdown() => Ok(await svc.GetCategoryBreakdownAsync());
 
+    // Phase 2 추세 번들 — Throughput/이슈순증감/사이클타임/활동추세 + 담당자별 처리량·사이클타임.
+    // weeks 4~52, activityDays 7~120 으로 clamp. 추세/담당자 탭 지연 로드용.
+    [HttpGet("trends")]
+    public async Task<IActionResult> Trends([FromQuery] int weeks = 12, [FromQuery] int activityDays = 30)
+        => Ok(await svc.GetTrendsAsync(Math.Clamp(weeks, 4, 52), Math.Clamp(activityDays, 7, 120)));
+
     // '프로젝트별 활동량' 위젯 — 기본 30일 / 상위 20개. days/top 은 안전 범위로 clamp.
     [HttpGet("activity-by-project")]
     public async Task<IActionResult> ActivityByProject([FromQuery] int days = 30, [FromQuery] int top = 20)

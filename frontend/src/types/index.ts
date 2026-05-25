@@ -488,6 +488,41 @@ export interface CategoryCount {
   count: number;
 }
 
+// ===== Phase 2 인사이트 (흐름·추세) =====
+export interface ThroughputWeek { weekStart: string; wbs: number; issue: number; }
+export interface IssueFlowWeek { weekStart: string; opened: number; resolved: number; }
+export interface CycleTimePoint {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  days: number;
+  completedAt: string; // yyyy-MM-dd
+  approximate: boolean; // 전이기록 없어 UpdatedAt 근사
+}
+export interface CycleTime {
+  points: CycleTimePoint[];
+  p50: number;
+  p85: number;
+  p95: number;
+  approxCount: number;
+}
+export interface ActivityTrendDay { date: string; count: number; }
+export interface AssigneeThroughputRow { assignee: string; counts: number[]; total: number; }
+export interface AssigneeThroughput { weekStarts: string[]; rows: AssigneeThroughputRow[]; }
+export interface AssigneeCycleTime { assignee: string; count: number; median: number; p85: number; }
+
+// 추세 번들 — 추세/담당자 탭 지연 로드.
+export interface MonitoringTrends {
+  throughput: ThroughputWeek[];
+  issueFlow: IssueFlowWeek[];
+  cycleTime: CycleTime;
+  activityTrend: ActivityTrendDay[];
+  assigneeThroughput: AssigneeThroughput;
+  assigneeCycleTime: AssigneeCycleTime[];
+}
+
 export type ActivityEntityType =
   | 'Project'
   | 'WbsItem'

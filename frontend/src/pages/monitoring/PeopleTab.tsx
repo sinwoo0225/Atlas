@@ -3,11 +3,13 @@
 // (MonitoringChartGrid 와 같은 관행).
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
-import { Users, Scale, ShieldAlert, UserPlus } from 'lucide-react';
+import { Users, Scale, ShieldAlert, UserPlus, Trophy, Timer } from 'lucide-react';
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark } from '../../utils/themeColors';
 import { ResourceHeatmapCard } from './ResourceHeatmapCard';
-import type { AssigneeWorkload, ResourceHeatmap, UnassignedItem, WorkloadOverview } from '../../types';
+import type {
+  AssigneeCycleTime, AssigneeThroughput, AssigneeWorkload, ResourceHeatmap, UnassignedItem, WorkloadOverview,
+} from '../../types';
 
 const CHART_HEIGHT = 280;
 
@@ -15,11 +17,15 @@ interface Props {
   workload: WorkloadOverview | null;
   heatmap: ResourceHeatmap | null;
   loading: boolean;
+  // Phase 2 (추세 번들 지연 로드) — 담당자별 처리량·사이클타임.
+  assigneeThroughput: AssigneeThroughput | null;
+  assigneeCycleTime: AssigneeCycleTime[];
+  trendsLoading: boolean;
 }
 
-// '담당자' 탭 — 관리자 렌즈. 여러 담당자의 업무 부하·위험·미할당을 한 화면에.
+// '담당자' 탭 — 관리자 렌즈. 여러 담당자의 업무 부하·위험·미할당·처리량·사이클타임을 한 화면에.
 // 귀속은 엔티티 Assignee/AssigneeResource(백엔드), Actor 아님.
-export function PeopleTab({ workload, heatmap, loading }: Props) {
+export function PeopleTab({ workload, heatmap, loading, assigneeThroughput, assigneeCycleTime, trendsLoading }: Props) {
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -29,6 +35,10 @@ export function PeopleTab({ workload, heatmap, loading }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <UnassignedQueueCard data={workload?.unassigned ?? []} loading={loading} />
         <ResourceHeatmapCard data={heatmap} loading={loading} height={CHART_HEIGHT} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PersonThroughputCard data={assigneeThroughput} loading={trendsLoading} />
+        <PersonCycleTimeCard data={assigneeCycleTime} loading={trendsLoading} />
       </div>
     </section>
   );
@@ -200,6 +210,98 @@ function UnassignedQueueCard({ data, loading }: { data: UnassignedItem[]; loadin
           ))}
         </ul>
       )}
+      </div>
+    </Card>
+  );
+}
+
+// 담당자별 처리량(B-3) — 완료 엔티티의 Assignee 귀속(Actor 아님). 최근 N주 합계 가로막대.
+function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | null; loading: boolean }) {
+  const theme = useThemeMode();
+  const ch = getChartColors(theme);
+  const rows = (data?.rows ?? []).slice(0, 15);
+  const weeks = data?.weekStarts.length ?? 0;
+  return (
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <Trophy size={16} className="text-muted" />
+        담당자별 처리량 <span className="text-xs font-normal text-muted">(최근 {weeks}주 완료)</span>
+      </h3>
+      <div style={{ height: CHART_HEIGHT }}>
+        {loading ? (
+          <Skeleton height={CHART_HEIGHT} />
+        ) : rows.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <EmptyState icon={<Trophy size={28} />} title="완료 기록 없음" description="완료 항목이 쌓이면 표시됩니다" />
+          </div>
+        ) : (
+          <ReactECharts
+            option={{
+              backgroundColor: 'transparent',
+              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText } },
+              grid: { left: 90, right: 32, top: 8, bottom: 20 },
+              xAxis: { type: 'value', minInterval: 1, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
+              yAxis: {
+                type: 'category', inverse: true, data: rows.map((r) => r.assignee),
+                axisLine: { lineStyle: { color: ch.axisLine } },
+                axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
+              },
+              series: [{
+                type: 'bar', barWidth: 12, data: rows.map((r) => r.total),
+                itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] },
+                label: { show: true, position: 'right', color: ch.axisText, fontSize: 9 },
+              }],
+            }}
+            style={{ height: CHART_HEIGHT }}
+          />
+        )}
+      </div>
+    </Card>
+  );
+}
+
+// 담당자별 사이클타임(B-4) — 완료시점−생성 중앙값·85p. 표본 적으면 참고용.
+function PersonCycleTimeCard({ data, loading }: { data: AssigneeCycleTime[]; loading: boolean }) {
+  const theme = useThemeMode();
+  const ch = getChartColors(theme);
+  const rows = data.slice(0, 15);
+  return (
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <Timer size={16} className="text-muted" />
+        담당자별 사이클타임 <span className="text-xs font-normal text-muted">(중앙값·85p, 참고용)</span>
+      </h3>
+      <div style={{ height: CHART_HEIGHT }}>
+        {loading ? (
+          <Skeleton height={CHART_HEIGHT} />
+        ) : rows.length === 0 ? (
+          <div className="h-full flex items-center justify-center">
+            <EmptyState icon={<Timer size={28} />} title="완료 기록 없음" />
+          </div>
+        ) : (
+          <ReactECharts
+            option={{
+              backgroundColor: 'transparent',
+              tooltip: {
+                trigger: 'axis', backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
+                formatter: (ps: any) => { const i = ps[0].dataIndex as number; const r = rows[i]; return `${r.assignee} (${r.count}건)<br/>중앙값 ${r.median}일 · 85p ${r.p85}일`; },
+              },
+              legend: { data: ['중앙값', '85p'], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
+              grid: { left: 90, right: 24, top: 24, bottom: 20 },
+              xAxis: { type: 'value', name: '일', nameTextStyle: { color: ch.axisText, fontSize: 9 }, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
+              yAxis: {
+                type: 'category', inverse: true, data: rows.map((r) => r.assignee),
+                axisLine: { lineStyle: { color: ch.axisLine } },
+                axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
+              },
+              series: [
+                { name: '중앙값', type: 'bar', barGap: '-30%', barWidth: 8, data: rows.map((r) => r.median), itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] } },
+                { name: '85p', type: 'bar', barWidth: 8, data: rows.map((r) => r.p85), itemStyle: { color: ch.ganttBarInProgress, borderRadius: [0, 3, 3, 0] } },
+              ],
+            }}
+            style={{ height: CHART_HEIGHT }}
+          />
+        )}
       </div>
     </Card>
   );

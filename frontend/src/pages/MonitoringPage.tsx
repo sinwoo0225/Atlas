@@ -16,12 +16,14 @@ import { AgingWipCard } from './monitoring/AgingWipCard';
 import { CategoryBreakdownCard } from './monitoring/CategoryBreakdownCard';
 import { OverviewKpiCard } from './monitoring/OverviewKpiCard';
 import { PeopleTab } from './monitoring/PeopleTab';
+import { TrendsTab } from './monitoring/TrendsTab';
 import type {
   ActivityByProject,
   AgingWipItem,
   CategoryCount,
   MonitoringCharts as MonitoringChartsData,
   MonitoringRisk,
+  MonitoringTrends,
   OpenIssuesByProject,
   ResourceHeatmap,
   StaleProject,
@@ -36,15 +38,16 @@ const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
   { key: 'issues', label: '이슈' },
 ];
 
-type MonitoringTab = 'overview' | 'people' | 'tasks' | 'logs';
+type MonitoringTab = 'overview' | 'people' | 'trends' | 'tasks' | 'logs';
 const TABS: { value: MonitoringTab; label: string }[] = [
   { value: 'overview', label: '개요' },
   { value: 'people',   label: '담당자' },
+  { value: 'trends',   label: '추세' },
   { value: 'tasks',    label: '작업' },
   { value: 'logs',     label: '일지' },
 ];
 function isTab(v: string | null): v is MonitoringTab {
-  return v === 'overview' || v === 'people' || v === 'tasks' || v === 'logs';
+  return v === 'overview' || v === 'people' || v === 'trends' || v === 'tasks' || v === 'logs';
 }
 
 // '작업' 탭 내부 뷰 — 배열에 항목만 추가하면 확장.
@@ -111,9 +114,14 @@ export function MonitoringPage() {
   const [agingWip, setAgingWip] = useState<AgingWipItem[]>([]);
   const [workload, setWorkload] = useState<WorkloadOverview | null>(null);
   const [categories, setCategories] = useState<CategoryCount[]>([]);
+  // Phase 2 추세 번들 — 추세/담당자 탭 첫 진입 시 지연 로드(완료 전이 재구성이 무거워 개요와 분리).
+  const [trends, setTrends] = useState<MonitoringTrends | null>(null);
+  const [trendsLoading, setTrendsLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
+    setTrends(null); // 새로고침 시 추세 번들도 무효화 → 해당 탭 재진입/체류 시 재로드
+    setTrendsLoading(false);
     const thisMon = startOfWeek(new Date());
     const lastMon = addDays(thisMon, -7);
     Promise.all([
@@ -149,6 +157,17 @@ export function MonitoringPage() {
   };
 
   useEffect(() => { load(); }, []);
+
+  // 추세/담당자 탭 첫 진입(또는 새로고침 후 재진입) 시 추세 번들 지연 로드.
+  useEffect(() => {
+    if ((tab === 'trends' || tab === 'people') && trends === null && !trendsLoading) {
+      setTrendsLoading(true);
+      monitoringApi.getTrends()
+        .then(setTrends)
+        .catch(() => { /* 추세는 보조 — 실패해도 페이지 유지 */ })
+        .finally(() => setTrendsLoading(false));
+    }
+  }, [tab, trends, trendsLoading]);
 
   const grouped = useMemo(() => {
     const map = new Map<number, { projectName: string; items: TodayWbs[] }>();
@@ -199,7 +218,18 @@ export function MonitoringPage() {
       )}
 
       {tab === 'people' && (
-        <PeopleTab workload={workload} heatmap={heatmap} loading={loading} />
+        <PeopleTab
+          workload={workload}
+          heatmap={heatmap}
+          loading={loading}
+          assigneeThroughput={trends?.assigneeThroughput ?? null}
+          assigneeCycleTime={trends?.assigneeCycleTime ?? []}
+          trendsLoading={trendsLoading}
+        />
+      )}
+
+      {tab === 'trends' && (
+        <TrendsTab data={trends} loading={trendsLoading} />
       )}
 
       {tab === 'tasks' && (

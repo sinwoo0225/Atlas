@@ -132,3 +132,39 @@ public record AgingWipItemDto(
 
 // 카테고리별 프로젝트 분포(개요 도넛). Category 자유 문자열, 공백은 "미분류"로 합산.
 public record CategoryCountDto(string Category, int Count);
+
+// ===== Phase 2 인사이트 (흐름·추세 — ActivityLog 상태전이 재구성) =====
+// 완료 시점은 ActivityLog 의 Status→Done/Resolved/Closed 전이 Timestamp(UTC). 전이 기록이 없는 항목은
+// 엔티티 UpdatedAt 으로 근사(Approximate 표기). 모든 주(Week)는 월요일 시작 ISO(yyyy-MM-dd).
+
+// C-1 주간 처리량: 주별 완료 건수(WBS Done / Issue Resolved·Closed).
+public record ThroughputWeekDto(string WeekStart, int Wbs, int Issue);
+
+// C-2 이슈 순증감: 주별 신규 발생(Issue.CreatedAt) vs 해결(완료 전이). 프론트가 누적선 계산.
+public record IssueFlowWeekDto(string WeekStart, int Opened, int Resolved);
+
+// C-3 사이클타임: 완료 항목별 소요일(완료−생성) + 50/85/95 백분위. ApproxCount = UpdatedAt 근사 건수.
+public record CycleTimePointDto(
+    string Kind, int Id, int ProjectId, string ProjectName, string Title,
+    double Days, string CompletedAt, bool Approximate);
+public record CycleTimeDto(
+    IReadOnlyList<CycleTimePointDto> Points, double P50, double P85, double P95, int ApproxCount);
+
+// C-4 활동량 추세: 일별 ActivityLog 카운트(빈 날 0 채움).
+public record ActivityTrendDayDto(string Date, int Count);
+
+// B-3 담당자별 주간 처리량: WeekStarts 길이 N, Rows[i].Counts 길이 N.
+public record AssigneeThroughputRow(string Assignee, int[] Counts, int Total);
+public record AssigneeThroughputDto(IReadOnlyList<string> WeekStarts, IReadOnlyList<AssigneeThroughputRow> Rows);
+
+// B-4 담당자별 사이클타임: 완료 표본 수 + 중앙값·85p(일).
+public record AssigneeCycleTimeDto(string Assignee, int Count, double Median, double P85);
+
+// 추세 번들 — 완료 전이 추출 1회로 C-1~C-4 + B-3·B-4 한 번에. 추세/담당자 탭 지연 로드.
+public record MonitoringTrendsDto(
+    IReadOnlyList<ThroughputWeekDto> Throughput,
+    IReadOnlyList<IssueFlowWeekDto> IssueFlow,
+    CycleTimeDto CycleTime,
+    IReadOnlyList<ActivityTrendDayDto> ActivityTrend,
+    AssigneeThroughputDto AssigneeThroughput,
+    IReadOnlyList<AssigneeCycleTimeDto> AssigneeCycleTime);

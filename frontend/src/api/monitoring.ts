@@ -1,7 +1,7 @@
 import { api } from './client';
 import type {
   ActivityByProject, AgingWipItem, CalendarEvent, CategoryCount, KanbanColumn, KanbanItem,
-  MonitoringCharts, MonitoringData, MonitoringRisk, OpenIssuesByProject,
+  MonitoringCharts, MonitoringData, MonitoringRisk, MonitoringTrends, OpenIssuesByProject,
   ResourceHeatmap, StaleProject, WorkloadOverview,
 } from '../types';
 
@@ -15,6 +15,9 @@ export const monitoringApi = {
   getWorkload: () => api.get<WorkloadOverview>('/monitoring/workload'),
   getAgingWip: () => api.get<AgingWipItem[]>('/monitoring/aging-wip'),
   getCategoryBreakdown: () => api.get<CategoryCount[]>('/monitoring/category-breakdown'),
+  // Phase 2 추세 번들 — 추세/담당자 탭 지연 로드.
+  getTrends: (weeks = 12, activityDays = 30) =>
+    api.get<MonitoringTrends>(`/monitoring/trends?weeks=${weeks}&activityDays=${activityDays}`),
   // 프로젝트별 활동량 위젯 — 최근 N일(기본 30) top 20.
   getActivityByProject: (days = 30) =>
     api.get<ActivityByProject[]>(`/monitoring/activity-by-project?days=${days}`),
