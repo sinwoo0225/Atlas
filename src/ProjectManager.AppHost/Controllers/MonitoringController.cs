@@ -20,6 +20,27 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
     [HttpGet("resource-heatmap")]
     public async Task<IActionResult> ResourceHeatmap() => Ok(await svc.GetResourceHeatmapAsync());
 
+    // 개요 Risk Radar — 전 프로젝트 마감 초과/임박 WBS + High Open 이슈.
+    [HttpGet("risk")]
+    public async Task<IActionResult> Risk() => Ok(await svc.GetRiskOverviewAsync());
+
+    // 방치된 프로젝트 — 활성인데 days일 이상 무활동. days 는 1~120 으로 clamp.
+    [HttpGet("stale")]
+    public async Task<IActionResult> Stale([FromQuery] int days = 14)
+        => Ok(await svc.GetStaleProjectsAsync(Math.Clamp(days, 1, 120)));
+
+    // 담당자별 워크로드+위험 + 미할당 큐 (관리자 렌즈).
+    [HttpGet("workload")]
+    public async Task<IActionResult> Workload() => Ok(await svc.GetWorkloadByAssigneeAsync());
+
+    // Aging WIP — 진행중 항목의 나이 내림차순.
+    [HttpGet("aging-wip")]
+    public async Task<IActionResult> AgingWip() => Ok(await svc.GetAgingWipAsync());
+
+    // 카테고리별 프로젝트 분포 (개요 도넛).
+    [HttpGet("category-breakdown")]
+    public async Task<IActionResult> CategoryBreakdown() => Ok(await svc.GetCategoryBreakdownAsync());
+
     // '프로젝트별 활동량' 위젯 — 기본 30일 / 상위 20개. days/top 은 안전 범위로 clamp.
     [HttpGet("activity-by-project")]
     public async Task<IActionResult> ActivityByProject([FromQuery] int days = 30, [FromQuery] int top = 20)

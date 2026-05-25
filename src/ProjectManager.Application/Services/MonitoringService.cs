@@ -201,6 +201,205 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         return rows.Select(r => new ActivityByProjectDto(r.ProjectId, r.ProjectName, r.Count));
     }
 
+    // === Phase 1: 개요 Risk Radar — 전 프로젝트의 마감 초과/임박 WBS + High Open 이슈 ===
+    // ProjectService.GetDashboardAsync 의 RiskSignals 로직을 프로젝트 필터 없이 재현. 각 그룹 cap 20.
+    public async Task<MonitoringRiskDto> GetRiskOverviewAsync()
+    {
+        const int cap = 20;
+        var today = DateTime.Now.Date;
+        var dueSoonCutoff = today.AddDays(7);
+
+        var wbs = await db.WbsItems
+            .Where(w => w.EndDate.HasValue && w.Status != WbsStatus.Done
+                && w.EndDate.Value.Date <= dueSoonCutoff)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .OrderBy(x => x.w.EndDate)
+            .ToListAsync();
+
+        var overdue = new List<RiskItemDto>();
+        var dueSoon = new List<RiskItemDto>();
+        foreach (var x in wbs)
+        {
+            var d = x.w.EndDate!.Value.Date;
+            var item = new RiskItemDto("wbs", x.w.Id, x.w.ProjectId, x.p.Name, x.w.Name,
+                string.IsNullOrWhiteSpace(x.w.Assignee) ? null : x.w.Assignee, IsoDate(d), null);
+            if (d < today) { if (overdue.Count < cap) overdue.Add(item); }
+            else if (dueSoon.Count < cap) dueSoon.Add(item);
+        }
+
+        var highOpen = (await db.Issues
+                .Where(i => i.Priority == IssuePriority.High
+                    && (i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress))
+                .Include(i => i.AssigneeResource)
+                .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+                .OrderBy(x => x.i.DueDate ?? DateTime.MaxValue)
+                .Take(cap)
+                .ToListAsync())
+            .Select(x => new RiskItemDto("issue", x.i.Id, x.i.ProjectId, x.p.Name, x.i.Title,
+                x.i.AssigneeResource != null ? x.i.AssigneeResource.Name : null,
+                x.i.DueDate.HasValue ? IsoDate(x.i.DueDate.Value) : null,
+                x.i.Priority.ToString()))
+            .ToList();
+
+        return new MonitoringRiskDto(overdue, dueSoon, highOpen);
+    }
+
+    // === Phase 1: 방치된 프로젝트 — 활성인데 최근 활동이 days일 이상 없음 ===
+    // 활동 기록이 전무한 프로젝트는 생성일(CreatedAt, UTC) 기준 경과로 판단.
+    public async Task<IReadOnlyList<StaleProjectDto>> GetStaleProjectsAsync(int days)
+    {
+        var now = DateTime.UtcNow;
+
+        var lastByProject = (await db.ActivityLogs
+                .Where(a => a.ProjectId != null)
+                .GroupBy(a => a.ProjectId!.Value)
+                .Select(g => new { ProjectId = g.Key, Last = g.Max(a => a.Timestamp) })
+                .ToListAsync())
+            .ToDictionary(x => x.ProjectId, x => x.Last);
+
+        var projects = await db.Projects
+            .Where(p => p.Status == ProjectStatus.InProgress || p.Status == ProjectStatus.Waiting)
+            .Select(p => new { p.Id, p.Name, p.Status, p.CreatedAt })
+            .ToListAsync();
+
+        var result = new List<StaleProjectDto>();
+        foreach (var p in projects)
+        {
+            DateTime? last = lastByProject.TryGetValue(p.Id, out var l) ? l : null;
+            var baseline = last ?? p.CreatedAt;
+            var daysSince = (int)Math.Floor((now - baseline).TotalDays);
+            if (daysSince >= days)
+                result.Add(new StaleProjectDto(p.Id, p.Name, p.Status,
+                    last.HasValue ? IsoDate(last.Value) : null, daysSince));
+        }
+        return result.OrderByDescending(r => r.DaysSince).ToList();
+    }
+
+    // === Phase 1: 담당자별 워크로드 + 위험 (관리자 렌즈) + 미할당 큐 ===
+    // 귀속은 엔티티 Assignee(WBS, 콤마 split) / AssigneeResource(Issue) — Actor 아님.
+    // 담당자명은 대소문자 무시로 정규화(동일인 중복 방지), 표시명은 첫 등장.
+    public async Task<WorkloadOverviewDto> GetWorkloadByAssigneeAsync()
+    {
+        var today = DateTime.Now.Date;
+        var dueSoonCutoff = today.AddDays(7);
+
+        var wbs = await db.WbsItems
+            .Where(w => w.Status != WbsStatus.Done && !w.IsMilestone)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+        var issues = await db.Issues
+            .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
+            .Include(i => i.AssigneeResource)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+
+        var rows = new Dictionary<string, AssigneeAccum>(StringComparer.OrdinalIgnoreCase);
+        AssigneeAccum Row(string name)
+        {
+            if (!rows.TryGetValue(name, out var r)) { r = new AssigneeAccum { DisplayName = name }; rows[name] = r; }
+            return r;
+        }
+        var unassigned = new List<UnassignedItemDto>();
+
+        foreach (var x in wbs)
+        {
+            var overdue = x.w.EndDate.HasValue && x.w.EndDate.Value.Date < today;
+            var dueSoon = x.w.EndDate.HasValue && x.w.EndDate.Value.Date >= today && x.w.EndDate.Value.Date <= dueSoonCutoff;
+            var assignees = SplitAssignees(x.w.Assignee).ToList();
+            if (assignees.Count == 0)
+            {
+                unassigned.Add(new UnassignedItemDto("wbs", x.w.Id, x.w.ProjectId, x.p.Name, x.w.Name,
+                    x.w.EndDate.HasValue ? IsoDate(x.w.EndDate.Value) : null));
+                continue;
+            }
+            foreach (var name in assignees)
+            {
+                var r = Row(name);
+                r.OpenWbs++;
+                if (overdue) r.Overdue++; else if (dueSoon) r.DueSoon++;
+            }
+        }
+
+        foreach (var x in issues)
+        {
+            var overdue = x.i.DueDate.HasValue && x.i.DueDate.Value.Date < today;
+            var dueSoon = x.i.DueDate.HasValue && x.i.DueDate.Value.Date >= today && x.i.DueDate.Value.Date <= dueSoonCutoff;
+            var high = x.i.Priority == IssuePriority.High;
+            var name = x.i.AssigneeResource?.Name?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                unassigned.Add(new UnassignedItemDto("issue", x.i.Id, x.i.ProjectId, x.p.Name, x.i.Title,
+                    x.i.DueDate.HasValue ? IsoDate(x.i.DueDate.Value) : null));
+                continue;
+            }
+            var r = Row(name);
+            r.OpenIssues++;
+            if (overdue) r.Overdue++; else if (dueSoon) r.DueSoon++;
+            if (high) r.HighOpen++;
+        }
+
+        var assigneesOut = rows.Values
+            .Select(a => new AssigneeWorkloadDto(a.DisplayName, a.OpenWbs, a.OpenIssues, a.Overdue, a.DueSoon, a.HighOpen))
+            .OrderByDescending(a => a.OpenWbs + a.OpenIssues)
+            .ThenBy(a => a.Assignee, StringComparer.CurrentCulture)
+            .ToList();
+
+        var unassignedOut = unassigned
+            .OrderBy(u => u.DueDate == null)
+            .ThenBy(u => u.DueDate, StringComparer.Ordinal)
+            .Take(20)
+            .ToList();
+
+        return new WorkloadOverviewDto(assigneesOut, unassignedOut);
+    }
+
+    private sealed class AssigneeAccum
+    {
+        public string DisplayName = string.Empty;
+        public int OpenWbs, OpenIssues, Overdue, DueSoon, HighOpen;
+    }
+
+    // === Phase 1: Aging WIP — 진행중 항목의 나이(CreatedAt→오늘, UTC) 내림차순 cap 30 ===
+    public async Task<IReadOnlyList<AgingWipItemDto>> GetAgingWipAsync()
+    {
+        var now = DateTime.UtcNow;
+
+        var wbs = await db.WbsItems
+            .Where(w => w.Status == WbsStatus.InProgress)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+        var issues = await db.Issues
+            .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
+            .Include(i => i.AssigneeResource)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+
+        var items = new List<AgingWipItemDto>(wbs.Count + issues.Count);
+        items.AddRange(wbs.Select(x => new AgingWipItemDto(
+            "wbs", x.w.Id, x.w.ProjectId, x.p.Name, x.w.Name,
+            string.IsNullOrWhiteSpace(x.w.Assignee) ? null : x.w.Assignee,
+            Math.Max(0, (int)(now - x.w.CreatedAt).TotalDays), IsoDate(x.w.CreatedAt))));
+        items.AddRange(issues.Select(x => new AgingWipItemDto(
+            "issue", x.i.Id, x.i.ProjectId, x.p.Name, x.i.Title,
+            x.i.AssigneeResource != null ? x.i.AssigneeResource.Name : null,
+            Math.Max(0, (int)(now - x.i.CreatedAt).TotalDays), IsoDate(x.i.CreatedAt))));
+
+        return items.OrderByDescending(i => i.AgeDays).Take(30).ToList();
+    }
+
+    // === Phase 1: 카테고리별 프로젝트 분포 (개요 도넛) ===
+    // Category 는 자유 문자열 — 공백/대소문자 정규화 후 합산, 빈 값은 "미분류".
+    public async Task<IReadOnlyList<CategoryCountDto>> GetCategoryBreakdownAsync()
+    {
+        var raw = await db.Projects.Select(p => p.Category).ToListAsync();
+        return raw
+            .GroupBy(c => string.IsNullOrWhiteSpace(c) ? "미분류" : c.Trim(), StringComparer.CurrentCultureIgnoreCase)
+            .Select(g => new CategoryCountDto(g.Key, g.Count()))
+            .OrderByDescending(x => x.Count)
+            .ThenBy(x => x.Category, StringComparer.CurrentCulture)
+            .ToList();
+    }
+
     // D-1 리소스 히트맵: 이번 주 월요일부터 8주, 담당자별 미완료 항목 마감 카운트.
     // WBS Assignee 는 콤마 분리 문자열, Issue 는 AssigneeResource FK — 같은 문자열이면 같은 행으로 합산.
     // 담당자 미지정 항목은 행에서 제외하고 UnassignedItems 카운트로만 노출.

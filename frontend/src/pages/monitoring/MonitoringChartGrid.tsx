@@ -6,13 +6,11 @@ import { PieChart, AlertTriangle, Diamond, BarChart3, Activity } from 'lucide-re
 import { Card, Skeleton, Badge } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark, type ChartColors } from '../../utils/themeColors';
 import { projectStatusBadge } from '../../utils/statusMaps';
-import { ResourceHeatmapCard } from './ResourceHeatmapCard';
 import type {
   ActivityByProject,
   IssuePriority, IssueStatus,
   MonitoringCharts as MonitoringChartsData,
   ProjectStatusItem,
-  ResourceHeatmap,
 } from '../../types';
 
 const STATUS_KEYS: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
@@ -30,14 +28,15 @@ const CHART_HEIGHT = 280;
 interface Props {
   data: MonitoringChartsData | null;
   activityByProject: ActivityByProject[];
-  heatmap: ResourceHeatmap | null;
   loading: boolean;
   onProjectClick: (id: number) => void;
   onActivityProjectClick: (id: number) => void;
+  /** 그리드 끝에 같은 3열 그리드 안으로 이어 붙일 추가 카드(개요 Stale·Aging 등). */
+  children?: React.ReactNode;
 }
 
 export function MonitoringChartGrid({
-  data, activityByProject, heatmap, loading, onProjectClick, onActivityProjectClick,
+  data, activityByProject, loading, onProjectClick, onActivityProjectClick, children,
 }: Props) {
   const theme = useThemeMode();
   const colors = getChartColors(theme);
@@ -145,7 +144,7 @@ export function MonitoringChartGrid({
         )}
       </Card>
 
-      <ResourceHeatmapCard data={heatmap} loading={loading} height={CHART_HEIGHT} />
+      {children}
     </section>
   );
 }

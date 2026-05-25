@@ -1,13 +1,20 @@
 import { api } from './client';
 import type {
-  ActivityByProject, CalendarEvent, KanbanColumn, KanbanItem,
-  MonitoringCharts, MonitoringData, OpenIssuesByProject, ResourceHeatmap,
+  ActivityByProject, AgingWipItem, CalendarEvent, CategoryCount, KanbanColumn, KanbanItem,
+  MonitoringCharts, MonitoringData, MonitoringRisk, OpenIssuesByProject,
+  ResourceHeatmap, StaleProject, WorkloadOverview,
 } from '../types';
 
 export const monitoringApi = {
   getToday: () => api.get<MonitoringData>('/monitoring/today'),
   getCharts: () => api.get<MonitoringCharts>('/monitoring/charts'),
   getResourceHeatmap: () => api.get<ResourceHeatmap>('/monitoring/resource-heatmap'),
+  // Phase 1 인사이트 — 개요 Risk Radar / 방치 프로젝트 / 담당자 워크로드 / Aging WIP.
+  getRisk: () => api.get<MonitoringRisk>('/monitoring/risk'),
+  getStale: (days = 14) => api.get<StaleProject[]>(`/monitoring/stale?days=${days}`),
+  getWorkload: () => api.get<WorkloadOverview>('/monitoring/workload'),
+  getAgingWip: () => api.get<AgingWipItem[]>('/monitoring/aging-wip'),
+  getCategoryBreakdown: () => api.get<CategoryCount[]>('/monitoring/category-breakdown'),
   // 프로젝트별 활동량 위젯 — 최근 N일(기본 30) top 20.
   getActivityByProject: (days = 30) =>
     api.get<ActivityByProject[]>(`/monitoring/activity-by-project?days=${days}`),

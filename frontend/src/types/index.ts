@@ -416,6 +416,78 @@ export interface KanbanItem {
   dueDate: string | null; // yyyy-MM-dd
 }
 
+// ===== Phase 1 인사이트 (개요 위험·예외 + 담당자) =====
+
+// Risk Radar(개요 상단 전역 위험 패널) 항목.
+export interface RiskItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  assignee: string | null;
+  dueDate: string | null; // yyyy-MM-dd
+  priority: string | null; // 이슈 전용
+}
+
+export interface MonitoringRisk {
+  overdueWbs: RiskItem[];
+  dueSoonWbs: RiskItem[];
+  highOpenIssues: RiskItem[];
+}
+
+// 방치된 프로젝트 — 활성인데 lastActivity 가 daysSince 일 전. lastActivity 전무면 null.
+export interface StaleProject {
+  projectId: number;
+  projectName: string;
+  status: ProjectStatus;
+  lastActivity: string | null; // yyyy-MM-dd
+  daysSince: number;
+}
+
+// 담당자별 워크로드 + 위험 (관리자 렌즈).
+export interface AssigneeWorkload {
+  assignee: string;
+  openWbs: number;
+  openIssues: number;
+  overdue: number;
+  dueSoon: number;
+  highOpen: number;
+}
+
+// 미할당 작업 큐 — 담당자 미지정 미완 항목.
+export interface UnassignedItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  dueDate: string | null;
+}
+
+export interface WorkloadOverview {
+  assignees: AssigneeWorkload[];
+  unassigned: UnassignedItem[];
+}
+
+// Aging WIP — 진행중 항목의 나이(일).
+export interface AgingWipItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  assignee: string | null;
+  ageDays: number;
+  createdAt: string; // yyyy-MM-dd
+}
+
+// 카테고리별 프로젝트 분포(개요 도넛).
+export interface CategoryCount {
+  category: string;
+  count: number;
+}
+
 export type ActivityEntityType =
   | 'Project'
   | 'WbsItem'

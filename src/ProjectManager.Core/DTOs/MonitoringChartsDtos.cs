@@ -83,3 +83,52 @@ public record KanbanItemDto(
     string? Priority,
     string? Assignee,
     string? DueDate);
+
+// ===== Phase 1 인사이트 (개요 위험·예외 + 담당자) =====
+
+// Risk Radar(개요 상단 전역 위험 패널): 전 프로젝트의 마감 초과/임박 WBS + High Open 이슈.
+// ProjectService.GetDashboardAsync 의 RiskSignals 를 across-project 로 확장한 것.
+public record RiskItemDto(
+    string Kind,        // "wbs" | "issue"
+    int Id,
+    int ProjectId,
+    string ProjectName,
+    string Title,
+    string? Assignee,
+    string? DueDate,    // yyyy-MM-dd (WBS EndDate / Issue DueDate)
+    string? Priority);  // issue 전용 (wbs 는 null)
+
+public record MonitoringRiskDto(
+    IReadOnlyList<RiskItemDto> OverdueWbs,
+    IReadOnlyList<RiskItemDto> DueSoonWbs,
+    IReadOnlyList<RiskItemDto> HighOpenIssues);
+
+// 방치된 프로젝트: 활성(InProgress/Waiting)인데 최근 활동이 days일 이상 없는 프로젝트.
+// LastActivity 는 ActivityLog 의 마지막 Timestamp(yyyy-MM-dd). 활동 기록 전무면 null(생성일 기준 경과).
+public record StaleProjectDto(
+    int ProjectId, string ProjectName, ProjectStatus Status,
+    string? LastActivity, int DaysSince);
+
+// 담당자별 워크로드 + 위험(관리자 렌즈). 미완 WBS(Assignee split) + 미완 이슈(AssigneeResource)를
+// 담당자명 대소문자 무시로 합산. 한 위젯이 워크로드 막대(OpenWbs/OpenIssues)와 위험 매트릭스(Overdue/DueSoon/HighOpen)를 모두 공급.
+public record AssigneeWorkloadDto(
+    string Assignee,
+    int OpenWbs, int OpenIssues,
+    int Overdue, int DueSoon, int HighOpen);
+
+// 미할당 작업 큐(관리자 배정 액션 아이템): 담당자 미지정 미완 항목, 마감 임박순.
+public record UnassignedItemDto(
+    string Kind, int Id, int ProjectId, string ProjectName,
+    string Title, string? DueDate);
+
+public record WorkloadOverviewDto(
+    IReadOnlyList<AssigneeWorkloadDto> Assignees,
+    IReadOnlyList<UnassignedItemDto> Unassigned);
+
+// Aging WIP: 진행중(WBS InProgress / 이슈 Open·InProgress) 항목의 나이(CreatedAt→오늘, UTC) 내림차순.
+public record AgingWipItemDto(
+    string Kind, int Id, int ProjectId, string ProjectName,
+    string Title, string? Assignee, int AgeDays, string CreatedAt);
+
+// 카테고리별 프로젝트 분포(개요 도넛). Category 자유 문자열, 공백은 "미분류"로 합산.
+public record CategoryCountDto(string Category, int Count);

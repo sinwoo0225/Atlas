@@ -120,13 +120,15 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
       {loading || !data ? (
         <Skeleton height={height} />
       ) : sortedRows.length === 0 ? (
-        <EmptyState
-          icon={<CalendarCheck size={28} />}
-          title={data.unassignedItems > 0 ? '할당된 마감 없음' : '다가오는 마감 없음'}
-          description={data.unassignedItems > 0
-            ? `미할당 ${data.unassignedItems}건만 있음 — 담당자 배정 후 히트맵에 표시됩니다`
-            : '앞으로 8주간 미완료 마감 없음'}
-        />
+        <div className="flex items-center justify-center" style={{ height }}>
+          <EmptyState
+            icon={<CalendarCheck size={28} />}
+            title={data.unassignedItems > 0 ? '할당된 마감 없음' : '다가오는 마감 없음'}
+            description={data.unassignedItems > 0
+              ? `미할당 ${data.unassignedItems}건만 있음 — 담당자 배정 후 히트맵에 표시됩니다`
+              : '앞으로 8주간 미완료 마감 없음'}
+          />
+        </div>
       ) : (
         <ReactECharts
           option={option!}

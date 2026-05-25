@@ -10,12 +10,23 @@ import { wbsStatusBadge } from '../utils/statusMaps';
 import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
 import { DeadlineCalendar } from './monitoring/DeadlineCalendar';
 import { KanbanBoard } from './monitoring/KanbanBoard';
+import { MonitoringRiskCard } from './monitoring/MonitoringRiskCard';
+import { StaleProjectsCard } from './monitoring/StaleProjectsCard';
+import { AgingWipCard } from './monitoring/AgingWipCard';
+import { CategoryBreakdownCard } from './monitoring/CategoryBreakdownCard';
+import { OverviewKpiCard } from './monitoring/OverviewKpiCard';
+import { PeopleTab } from './monitoring/PeopleTab';
 import type {
   ActivityByProject,
+  AgingWipItem,
+  CategoryCount,
   MonitoringCharts as MonitoringChartsData,
+  MonitoringRisk,
   OpenIssuesByProject,
   ResourceHeatmap,
+  StaleProject,
   TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
+  WorkloadOverview,
 } from '../types';
 
 // 통합 모니터링에는 '한 일'·'이슈'만 노출한다. '계획' 은 프로젝트별 업무일지에서 본다.
@@ -25,14 +36,15 @@ const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
   { key: 'issues', label: '이슈' },
 ];
 
-type MonitoringTab = 'overview' | 'tasks' | 'logs';
+type MonitoringTab = 'overview' | 'people' | 'tasks' | 'logs';
 const TABS: { value: MonitoringTab; label: string }[] = [
   { value: 'overview', label: '개요' },
+  { value: 'people',   label: '담당자' },
   { value: 'tasks',    label: '작업' },
   { value: 'logs',     label: '일지' },
 ];
 function isTab(v: string | null): v is MonitoringTab {
-  return v === 'overview' || v === 'tasks' || v === 'logs';
+  return v === 'overview' || v === 'people' || v === 'tasks' || v === 'logs';
 }
 
 // '작업' 탭 내부 뷰 — 배열에 항목만 추가하면 확장.
@@ -94,6 +106,11 @@ export function MonitoringPage() {
   const [heatmap, setHeatmap] = useState<ResourceHeatmap | null>(null);
   const [activityByProject, setActivityByProject] = useState<ActivityByProject[]>([]);
   const [openIssues, setOpenIssues] = useState<OpenIssuesByProject[]>([]);
+  const [risk, setRisk] = useState<MonitoringRisk | null>(null);
+  const [stale, setStale] = useState<StaleProject[]>([]);
+  const [agingWip, setAgingWip] = useState<AgingWipItem[]>([]);
+  const [workload, setWorkload] = useState<WorkloadOverview | null>(null);
+  const [categories, setCategories] = useState<CategoryCount[]>([]);
 
   const load = () => {
     setLoading(true);
@@ -107,8 +124,13 @@ export function MonitoringPage() {
       monitoringApi.getResourceHeatmap(),
       monitoringApi.getActivityByProject(30),
       monitoringApi.openIssues(),
+      monitoringApi.getRisk(),
+      monitoringApi.getStale(),
+      monitoringApi.getAgingWip(),
+      monitoringApi.getWorkload(),
+      monitoringApi.getCategoryBreakdown(),
     ])
-      .then(([today, thisW, lastW, ch, hm, abp, oi]) => {
+      .then(([today, thisW, lastW, ch, hm, abp, oi, rk, st, aw, wl, cat]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
@@ -116,6 +138,11 @@ export function MonitoringPage() {
         setHeatmap(hm);
         setActivityByProject(abp);
         setOpenIssues(oi);
+        setRisk(rk);
+        setStale(st);
+        setAgingWip(aw);
+        setWorkload(wl);
+        setCategories(cat);
       })
       .catch(() => setError('모니터링 데이터를 불러올 수 없습니다.'))
       .finally(() => setLoading(false));
@@ -154,14 +181,25 @@ export function MonitoringPage() {
       <TabBar value={tab} onChange={setTab} />
 
       {tab === 'overview' && (
-        <MonitoringChartGrid
-          data={charts}
-          activityByProject={activityByProject}
-          heatmap={heatmap}
-          loading={loading}
-          onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)}
-          onActivityProjectClick={(id) => navigate(`/activity?projectId=${id}`)}
-        />
+        <div className="space-y-4">
+          <MonitoringRiskCard risk={risk} />
+          <MonitoringChartGrid
+            data={charts}
+            activityByProject={activityByProject}
+            loading={loading}
+            onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)}
+            onActivityProjectClick={(id) => navigate(`/activity?projectId=${id}`)}
+          >
+            <CategoryBreakdownCard data={categories} loading={loading} />
+            <OverviewKpiCard charts={charts} openIssues={openIssues} loading={loading} />
+            <StaleProjectsCard data={stale} loading={loading} />
+            <AgingWipCard data={agingWip} loading={loading} />
+          </MonitoringChartGrid>
+        </div>
+      )}
+
+      {tab === 'people' && (
+        <PeopleTab workload={workload} heatmap={heatmap} loading={loading} />
       )}
 
       {tab === 'tasks' && (
