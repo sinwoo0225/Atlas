@@ -23,14 +23,14 @@ public static class ProjectTools
     }
 
     [McpServerTool(Name = "atlas_project_create"),
-     Description("프로젝트 생성. status 는 Planned|Waiting|InProgress|Done (기본 Planned)")]
+     Description("프로젝트 생성. status 는 Waiting(대기/보류)|InProgress|Done|Maintenance (기본 Waiting)")]
     public static async Task<string> Create(
         ProjectService svc,
         [Description("프로젝트 이름")] string name,
-        [Description("프로젝트 구분 (과제|내부|사업|유지보수/하자보수 등 자유 문자열)")] string? category = null,
+        [Description("프로젝트 구분 (과제|내부|사업 등 자유 문자열)")] string? category = null,
         [Description("설명")] string? description = null,
         [Description("목표")] string? goal = null,
-        [Description("상태 Planned|Waiting|InProgress|Done")] ProjectStatus? status = null,
+        [Description("상태 Waiting(대기/보류)|InProgress|Done|Maintenance(하자보수/유지보수)")] ProjectStatus? status = null,
         [Description("시작일 YYYY-MM-DD")] DateTime? startDate = null,
         [Description("종료일 YYYY-MM-DD")] DateTime? endDate = null,
         [Description("예산")] decimal? budget = null,
@@ -43,7 +43,7 @@ public static class ProjectTools
             Category: category ?? string.Empty,
             Description: description ?? string.Empty,
             Goal: goal ?? string.Empty,
-            Status: status ?? ProjectStatus.Planned,
+            Status: status ?? ProjectStatus.Waiting,
             StartDate: startDate,
             EndDate: endDate,
             Budget: budget,

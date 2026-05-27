@@ -350,10 +350,11 @@ function Badge({ children, tone }: { children: React.ReactNode; tone: Tone }) {
 
 function projectStatusTone(s: string): Tone {
   switch (s) {
-    case 'Planned': return 'gray';
+    case 'Planned': return 'amber';   // '대기/보류'로 통합
     case 'Waiting': return 'amber';
     case 'InProgress': return 'blue';
     case 'Done': return 'green';
+    case 'Maintenance': return 'red';
     default: return 'gray';
   }
 }

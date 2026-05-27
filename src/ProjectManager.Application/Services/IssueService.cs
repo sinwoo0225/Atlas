@@ -31,7 +31,11 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
             OccurredOn = dto.OccurredOn
         };
         var created = await repo.CreateAsync(issue);
-        return ToDto((await repo.GetByIdAsync(created.Id))!);
+        var reloaded = (await repo.GetByIdAsync(created.Id))!;
+        // 신규 이슈는 등록 당일 업무일지의 '이슈' 필드에 자동 추가.
+        await workLogService.AppendIssuesAsync(reloaded.ProjectId, DateTime.Today,
+            WorkLogService.FormatIssueLine(reloaded.Title, reloaded.AssigneeResource?.Name));
+        return ToDto(reloaded);
     }
 
     public async Task<IssueDto?> UpdateAsync(int id, UpdateIssueDto dto)

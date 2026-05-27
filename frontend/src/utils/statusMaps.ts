@@ -2,10 +2,12 @@ import type { BadgeVariant } from '../components/ui/Badge';
 import type { ProjectStatus, WbsStatus, ImpactLevel, IssueStatus, IssuePriority, DevInfoType } from '../types';
 
 export const projectStatusBadge: Record<ProjectStatus, { label: string; variant: BadgeVariant }> = {
-  Planned:    { label: '계획', variant: 'neutral' },
-  Waiting:    { label: '대기', variant: 'info' },
-  InProgress: { label: '진행', variant: 'warning' },
-  Done:       { label: '완료', variant: 'success' },
+  // Planned 는 '대기/보류'로 통합 — 잔존 데이터도 같은 라벨로 표시.
+  Planned:     { label: '대기/보류', variant: 'info' },
+  Waiting:     { label: '대기/보류', variant: 'info' },
+  InProgress:  { label: '진행', variant: 'warning' },
+  Done:        { label: '완료', variant: 'success' },
+  Maintenance: { label: '하자보수/유지보수', variant: 'danger' },
 };
 
 export const wbsStatusBadge: Record<WbsStatus, { label: string; variant: BadgeVariant }> = {

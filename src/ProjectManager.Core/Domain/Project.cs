@@ -1,6 +1,8 @@
 namespace ProjectManager.Core.Domain;
 
-public enum ProjectStatus { Planned, Waiting, InProgress, Done }
+// int 서수로 저장(EF 컨버전 없음). 순서를 바꾸면 기존 행이 어긋나므로 신규 값은 끝에만 추가.
+// Planned(0) 는 '대기/보류'(Waiting)로 통합돼 UI 에서는 더 이상 노출하지 않음 — 기존 데이터 호환 위해 멤버는 유지.
+public enum ProjectStatus { Planned, Waiting, InProgress, Done, Maintenance }
 
 public class Project : IAuditable
 {
@@ -9,7 +11,7 @@ public class Project : IAuditable
     public string Category { get; set; } = string.Empty;   // 프로젝트 구분: 과제·내부·사업·유지보수/하자보수 (자유 문자열)
     public string Description { get; set; } = string.Empty;
     public string Goal { get; set; } = string.Empty;
-    public ProjectStatus Status { get; set; } = ProjectStatus.Planned;
+    public ProjectStatus Status { get; set; } = ProjectStatus.Waiting;
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public decimal? Budget { get; set; }

@@ -24,6 +24,16 @@ import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
 const PRIORITY_VALUES: IssuePriority[] = ['High', 'Medium', 'Low'];
 
+// 목록 정렬 순서: 진행 → 열림 → 해결됨 → 닫힘.
+const STATUS_SORT_RANK: Record<IssueStatus, number> = {
+  InProgress: 0, Open: 1, Resolved: 2, Closed: 3,
+};
+
+// 이슈 행 인라인 편집 필드 — 평상시엔 평문처럼(투명 테두리), 호버·포커스 시에만 편집칸으로 강조.
+// 전역 input 스타일(surface-2 배경 + 기본 테두리)을 bg-transparent/border-transparent 로 덮어쓴다.
+const ghostFieldClass =
+  'w-full bg-transparent border border-transparent rounded px-1.5 py-1 transition-colors hover:border-default focus:border-default focus:bg-surface-2 focus:outline-none';
+
 const STATUS_OPTIONS: BadgeMenuOption<IssueStatus>[] = STATUS_VALUES.map((s) => ({
   value: s, label: issueStatusBadge[s].label, variant: issueStatusBadge[s].variant,
 }));
@@ -178,7 +188,9 @@ export function IssuesPage() {
         if (!hay.includes(kw)) return false;
       }
       return true;
-    });
+    })
+      // 상태순(진행→열림→해결됨→닫힘) 정렬. 동일 상태 내 순서는 안정 정렬로 기존(반환) 순서 유지.
+      .sort((a, b) => STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status]);
   }, [issues, filter, priorityFilter, assigneeFilter, keyword]);
 
   if (loading) {
@@ -456,7 +468,7 @@ function IssueRow({
           <select
             value={issue.assigneeResourceId ?? ''}
             onChange={(e) => onUpdate(issue.id, 'assigneeResourceId', e.target.value ? Number(e.target.value) : null)}
-            className={`${inputClass} py-1 text-xs`}
+            className={`${ghostFieldClass} text-xs`}
           >
             <option value="">-- 미지정 --</option>
             {resources.map((r) => (
@@ -473,7 +485,7 @@ function IssueRow({
               value={occurredOn}
               onChange={(e) => setOccurredOn(e.target.value)}
               onBlur={() => onUpdate(issue.id, 'occurredOn', occurredOn || undefined)}
-              className={`${inputClass} py-1 text-xs pr-6`}
+              className={`${ghostFieldClass} text-xs pr-6`}
             />
             <DirtyDot
               visible={occurredOn !== (issue.occurredOn?.slice(0, 10) ?? '')}
@@ -488,7 +500,7 @@ function IssueRow({
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               onBlur={() => onUpdate(issue.id, 'dueDate', dueDate || undefined)}
-              className={`${inputClass} py-1 text-xs pr-6`}
+              className={`${ghostFieldClass} text-xs pr-6`}
             />
             <DirtyDot
               visible={dueDate !== (issue.dueDate?.slice(0, 10) ?? '')}

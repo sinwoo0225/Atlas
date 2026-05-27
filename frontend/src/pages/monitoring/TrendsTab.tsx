@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // ECharts tooltip 이 복잡한 union 타입을 받아 이 파일 안에서만 any 허용 (MonitoringChartGrid 와 같은 관행).
+import { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { TrendingUp, GitCompareArrows, Timer, Activity, FlaskConical, Layers, Dices, CalendarClock, Building2 } from 'lucide-react';
 import { Card, Skeleton, EmptyState } from '../../components/ui';
@@ -29,7 +30,12 @@ export function TrendsTab({
   forecastLoading: boolean;
 }) {
   const theme = useThemeMode();
-  const ch = getChartColors(theme);
+  // option 들을 메모이즈 — forecast 번들 도착 등 무관한 리렌더에서 같은 참조를 넘겨 재그리기 방지.
+  const ch = useMemo(() => getChartColors(theme), [theme]);
+  const throughputOpt = useMemo(() => (data ? throughputOption(data.throughput, ch) : null), [data, ch]);
+  const issueFlowOpt = useMemo(() => (data ? issueFlowOption(data.issueFlow, ch) : null), [data, ch]);
+  const cycleTimeOpt = useMemo(() => (data ? cycleTimeOption(data.cycleTime, ch) : null), [data, ch]);
+  const activityTrendOpt = useMemo(() => (data ? activityTrendOption(data.activityTrend, ch) : null), [data, ch]);
   return (
     <div className="space-y-5">
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -39,7 +45,7 @@ export function TrendsTab({
           subtitle="완료(WBS Done · Issue 해결)"
           desc="매주 끝낸 작업·이슈 수입니다. 막대가 높을수록 그 주에 많이 완료했다는 뜻 — 꾸준한 산출 속도를 봅니다."
         >
-          {chartBody(loading, !!data && data.throughput.length > 0, () => <ReactECharts option={throughputOption(data!.throughput, ch)} style={{ height: H }} />)}
+          {chartBody(loading, !!data && data.throughput.length > 0, () => <ReactECharts option={throughputOpt!} style={{ height: H }} />)}
         </ChartCard>
 
         <ChartCard
@@ -48,7 +54,7 @@ export function TrendsTab({
           subtitle="누적 발생 vs 해결"
           desc="새로 생긴 이슈(누적)와 해결한 이슈(누적)입니다. 두 선의 간격이 벌어지면 처리보다 발생이 많아 밀리는 중입니다."
         >
-          {chartBody(loading, !!data && data.issueFlow.length > 0, () => <ReactECharts option={issueFlowOption(data!.issueFlow, ch)} style={{ height: H }} />)}
+          {chartBody(loading, !!data && data.issueFlow.length > 0, () => <ReactECharts option={issueFlowOpt!} style={{ height: H }} />)}
         </ChartCard>
 
         <ChartCard
@@ -57,7 +63,7 @@ export function TrendsTab({
           subtitle={data ? `50/85/95 백분위${data.cycleTime.approxCount > 0 ? ` · ${data.cycleTime.approxCount}건 근사` : ''}` : ''}
           desc="작업 하나가 시작부터 완료까지 걸린 일수입니다. 점 하나가 작업 하나. '85% 선'은 대부분의 작업이 그 안에 끝난다는 기준 — 일정 추정에 씁니다."
         >
-          {chartBody(loading, !!data && data.cycleTime.points.length > 0, () => <ReactECharts option={cycleTimeOption(data!.cycleTime, ch)} style={{ height: H }} />)}
+          {chartBody(loading, !!data && data.cycleTime.points.length > 0, () => <ReactECharts option={cycleTimeOpt!} style={{ height: H }} />)}
         </ChartCard>
 
         <ChartCard
@@ -66,7 +72,7 @@ export function TrendsTab({
           subtitle="일별 변경 기록 수"
           desc="날마다 기록된 변경(생성·수정·완료 등)의 수입니다. 최근 얼마나 활발하게 움직였는지 보는 지표입니다."
         >
-          {chartBody(loading, !!data && data.activityTrend.length > 0, () => <ReactECharts option={activityTrendOption(data!.activityTrend, ch)} style={{ height: H }} />)}
+          {chartBody(loading, !!data && data.activityTrend.length > 0, () => <ReactECharts option={activityTrendOpt!} style={{ height: H }} />)}
         </ChartCard>
       </section>
 
@@ -77,6 +83,11 @@ export function TrendsTab({
 
 // 실험(Phase 3) — 예측·고급. 데이터(완료 전이·표본) 누적될수록 정확. 상단 추세와 구분선·배지로 분리.
 function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBundle | null; loading: boolean; ch: Ch }) {
+  // 예측 차트 option 메모이즈 — ch(상위에서 메모됨)와 forecast 가 같으면 동일 참조 유지.
+  const cfdOpt = useMemo(() => (forecast ? cfdOption(forecast.cfd, ch) : null), [forecast, ch]);
+  const monteCarloOpt = useMemo(() => (forecast ? monteCarloOption(forecast.monteCarlo, ch) : null), [forecast, ch]);
+  const projectForecastOpt = useMemo(() => (forecast ? projectForecastOption(forecast.projectForecasts, ch) : null), [forecast, ch]);
+  const departmentOpt = useMemo(() => (forecast ? departmentOption(forecast.departmentRollup, ch) : null), [forecast, ch]);
   return (
     <div className="pt-4 border-t border-default">
       <div className="flex items-center gap-2 mb-3">
@@ -91,7 +102,7 @@ function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBund
           subtitle="WBS 상태별 누적"
           desc="날짜별로 예정·진행중·완료 작업이 얼마나 쌓였는지 띠로 보여줍니다. 가운데 '진행중' 띠가 계속 두꺼우면 일이 한곳에 막혀 있다는 신호입니다."
         >
-          {chartBody(loading, !!forecast && forecast.cfd.length > 0, () => <ReactECharts option={cfdOption(forecast!.cfd, ch)} style={{ height: H }} />)}
+          {chartBody(loading, !!forecast && forecast.cfd.length > 0, () => <ReactECharts option={cfdOpt!} style={{ height: H }} />)}
         </ChartCard>
 
         <ChartCard
@@ -100,7 +111,7 @@ function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBund
           subtitle={monteCarloSubtitle(forecast)}
           desc="지금까지의 완료 속도로 남은 작업이 언제 끝날지 시뮬레이션한 결과입니다. 50%·85%는 그 날까지 끝날 가능성을 뜻합니다."
         >
-          {chartBody(loading, !!forecast && forecast.monteCarlo.sufficient, () => <ReactECharts option={monteCarloOption(forecast!.monteCarlo, ch)} style={{ height: H }} />, '완료 기록이 더 쌓이면 예측이 표시됩니다')}
+          {chartBody(loading, !!forecast && forecast.monteCarlo.sufficient, () => <ReactECharts option={monteCarloOpt!} style={{ height: H }} />, '완료 기록이 더 쌓이면 예측이 표시됩니다')}
         </ChartCard>
 
         <ChartCard
@@ -109,7 +120,7 @@ function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBund
           subtitle="예상 소요 vs 마감"
           desc="현재 처리 속도로 각 프로젝트가 며칠 걸릴지(예상)와 마감까지 남은 기간을 비교합니다. 예상이 마감보다 길면 빨강(위험)입니다."
         >
-          {chartBody(loading, !!forecast && forecast.projectForecasts.length > 0, () => <ReactECharts option={projectForecastOption(forecast!.projectForecasts, ch)} style={{ height: H }} />, '잔여 작업 있는 활성 프로젝트 없음')}
+          {chartBody(loading, !!forecast && forecast.projectForecasts.length > 0, () => <ReactECharts option={projectForecastOpt!} style={{ height: H }} />, '잔여 작업 있는 활성 프로젝트 없음')}
         </ChartCard>
 
         <ChartCard
@@ -118,7 +129,7 @@ function ExperimentalSection({ forecast, loading, ch }: { forecast: ForecastBund
           subtitle="미완 항목 수"
           desc="부서별로 끝나지 않은 작업이 얼마나 몰려 있는지 보여줍니다. 리소스에 부서를 입력하면 표시됩니다."
         >
-          {chartBody(loading, !!forecast && forecast.departmentRollup.length > 0, () => <ReactECharts option={departmentOption(forecast!.departmentRollup, ch)} style={{ height: H }} />, '부서 정보 없음 — 리소스에 부서 입력 시 표시')}
+          {chartBody(loading, !!forecast && forecast.departmentRollup.length > 0, () => <ReactECharts option={departmentOpt!} style={{ height: H }} />, '부서 정보 없음 — 리소스에 부서 입력 시 표시')}
         </ChartCard>
       </div>
     </div>

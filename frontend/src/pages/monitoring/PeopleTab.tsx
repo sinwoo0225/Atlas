@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // ECharts tooltip/onEvents 가 복잡한 union 타입을 받아 이 파일 안에서만 any 허용
 // (MonitoringChartGrid 와 같은 관행).
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Users, Scale, ShieldAlert, UserPlus, Trophy, Timer } from 'lucide-react';
@@ -47,8 +48,9 @@ export function PeopleTab({ workload, heatmap, loading, assigneeThroughput, assi
 // 담당자별 워크로드 밸런스 — 미완 WBS + 이슈를 사람별 스택 가로막대로. 부하 합계순(과부하 상단).
 function WorkloadBalanceCard({ data, loading }: { data: AssigneeWorkload[]; loading: boolean }) {
   const theme = useThemeMode();
-  const ch = getChartColors(theme);
-  const top = data.slice(0, 15);
+  // option 을 메모이즈 — 추세 번들 도착 등 무관한 부모 리렌더에서 같은 참조를 넘겨 재그리기 방지.
+  const ch = useMemo(() => getChartColors(theme), [theme]);
+  const option = useMemo(() => buildWorkloadOption(data.slice(0, 15), ch), [data, ch]);
 
   return (
     <Card padding="normal">
@@ -58,12 +60,12 @@ function WorkloadBalanceCard({ data, loading }: { data: AssigneeWorkload[]; load
       </h3>
       {loading ? (
         <Skeleton height={CHART_HEIGHT} />
-      ) : top.length === 0 ? (
+      ) : data.length === 0 ? (
         <div className="flex items-center justify-center" style={{ height: CHART_HEIGHT }}>
           <EmptyState icon={<Users size={28} />} title="배정된 미완료 작업 없음" />
         </div>
       ) : (
-        <ReactECharts option={buildWorkloadOption(top, ch)} style={{ height: CHART_HEIGHT }} />
+        <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
       )}
     </Card>
   );
@@ -106,8 +108,10 @@ function buildWorkloadOption(items: AssigneeWorkload[], ch: ReturnType<typeof ge
 // 담당자별 위험 매트릭스 — 사람 × {마감초과·임박·High Open}. 위험 0인 담당자는 제외.
 function PersonRiskCard({ data, loading }: { data: AssigneeWorkload[]; loading: boolean }) {
   const theme = useThemeMode();
-  const ch = getChartColors(theme);
-  const atRisk = data.filter((a) => a.overdue + a.dueSoon + a.highOpen > 0).slice(0, 15);
+  const ch = useMemo(() => getChartColors(theme), [theme]);
+  const ld = effectiveLightDark(theme);
+  const atRisk = useMemo(() => data.filter((a) => a.overdue + a.dueSoon + a.highOpen > 0).slice(0, 15), [data]);
+  const option = useMemo(() => buildPersonRiskOption(atRisk, ch, ld), [atRisk, ch, ld]);
 
   return (
     <Card padding="normal">
@@ -122,7 +126,7 @@ function PersonRiskCard({ data, loading }: { data: AssigneeWorkload[]; loading: 
           <EmptyState icon={<ShieldAlert size={28} />} title="위험 신호 있는 담당자 없음" description="마감 초과·임박·High 이슈 없음" />
         </div>
       ) : (
-        <ReactECharts option={buildPersonRiskOption(atRisk, ch, effectiveLightDark(theme))} style={{ height: CHART_HEIGHT }} />
+        <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
       )}
     </Card>
   );
@@ -218,9 +222,25 @@ function UnassignedQueueCard({ data, loading }: { data: UnassignedItem[]; loadin
 // 담당자별 처리량(B-3) — 완료 엔티티의 Assignee 귀속(Actor 아님). 최근 N주 합계 가로막대.
 function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | null; loading: boolean }) {
   const theme = useThemeMode();
-  const ch = getChartColors(theme);
-  const rows = (data?.rows ?? []).slice(0, 15);
+  const ch = useMemo(() => getChartColors(theme), [theme]);
+  const rows = useMemo(() => (data?.rows ?? []).slice(0, 15), [data]);
   const weeks = data?.weekStarts.length ?? 0;
+  const option = useMemo(() => ({
+    backgroundColor: 'transparent',
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText } },
+    grid: { left: 90, right: 32, top: 8, bottom: 20 },
+    xAxis: { type: 'value', minInterval: 1, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
+    yAxis: {
+      type: 'category', inverse: true, data: rows.map((r) => r.assignee),
+      axisLine: { lineStyle: { color: ch.axisLine } },
+      axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
+    },
+    series: [{
+      type: 'bar', barWidth: 12, data: rows.map((r) => r.total),
+      itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] },
+      label: { show: true, position: 'right', color: ch.axisText, fontSize: 9 },
+    }],
+  }), [rows, ch]);
   return (
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
@@ -235,25 +255,7 @@ function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | nu
             <EmptyState icon={<Trophy size={28} />} title="완료 기록 없음" description="완료 항목이 쌓이면 표시됩니다" />
           </div>
         ) : (
-          <ReactECharts
-            option={{
-              backgroundColor: 'transparent',
-              tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText } },
-              grid: { left: 90, right: 32, top: 8, bottom: 20 },
-              xAxis: { type: 'value', minInterval: 1, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
-              yAxis: {
-                type: 'category', inverse: true, data: rows.map((r) => r.assignee),
-                axisLine: { lineStyle: { color: ch.axisLine } },
-                axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
-              },
-              series: [{
-                type: 'bar', barWidth: 12, data: rows.map((r) => r.total),
-                itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] },
-                label: { show: true, position: 'right', color: ch.axisText, fontSize: 9 },
-              }],
-            }}
-            style={{ height: CHART_HEIGHT }}
-          />
+          <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
         )}
       </div>
     </Card>
@@ -263,8 +265,27 @@ function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | nu
 // 담당자별 사이클타임(B-4) — 완료시점−생성 중앙값·85p. 표본 적으면 참고용.
 function PersonCycleTimeCard({ data, loading }: { data: AssigneeCycleTime[]; loading: boolean }) {
   const theme = useThemeMode();
-  const ch = getChartColors(theme);
-  const rows = data.slice(0, 15);
+  const ch = useMemo(() => getChartColors(theme), [theme]);
+  const rows = useMemo(() => data.slice(0, 15), [data]);
+  const option = useMemo(() => ({
+    backgroundColor: 'transparent',
+    tooltip: {
+      trigger: 'axis', backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
+      formatter: (ps: any) => { const i = ps[0].dataIndex as number; const r = rows[i]; return `${r.assignee} (${r.count}건)<br/>중앙값 ${r.median}일 · 85p ${r.p85}일`; },
+    },
+    legend: { data: ['중앙값', '85p'], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
+    grid: { left: 90, right: 24, top: 24, bottom: 20 },
+    xAxis: { type: 'value', name: '일', nameTextStyle: { color: ch.axisText, fontSize: 9 }, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
+    yAxis: {
+      type: 'category', inverse: true, data: rows.map((r) => r.assignee),
+      axisLine: { lineStyle: { color: ch.axisLine } },
+      axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
+    },
+    series: [
+      { name: '중앙값', type: 'bar', barGap: '-30%', barWidth: 8, data: rows.map((r) => r.median), itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] } },
+      { name: '85p', type: 'bar', barWidth: 8, data: rows.map((r) => r.p85), itemStyle: { color: ch.ganttBarInProgress, borderRadius: [0, 3, 3, 0] } },
+    ],
+  }), [rows, ch]);
   return (
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
@@ -279,28 +300,7 @@ function PersonCycleTimeCard({ data, loading }: { data: AssigneeCycleTime[]; loa
             <EmptyState icon={<Timer size={28} />} title="완료 기록 없음" />
           </div>
         ) : (
-          <ReactECharts
-            option={{
-              backgroundColor: 'transparent',
-              tooltip: {
-                trigger: 'axis', backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
-                formatter: (ps: any) => { const i = ps[0].dataIndex as number; const r = rows[i]; return `${r.assignee} (${r.count}건)<br/>중앙값 ${r.median}일 · 85p ${r.p85}일`; },
-              },
-              legend: { data: ['중앙값', '85p'], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
-              grid: { left: 90, right: 24, top: 24, bottom: 20 },
-              xAxis: { type: 'value', name: '일', nameTextStyle: { color: ch.axisText, fontSize: 9 }, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
-              yAxis: {
-                type: 'category', inverse: true, data: rows.map((r) => r.assignee),
-                axisLine: { lineStyle: { color: ch.axisLine } },
-                axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
-              },
-              series: [
-                { name: '중앙값', type: 'bar', barGap: '-30%', barWidth: 8, data: rows.map((r) => r.median), itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] } },
-                { name: '85p', type: 'bar', barWidth: 8, data: rows.map((r) => r.p85), itemStyle: { color: ch.ganttBarInProgress, borderRadius: [0, 3, 3, 0] } },
-              ],
-            }}
-            style={{ height: CHART_HEIGHT }}
-          />
+          <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
         )}
       </div>
     </Card>

@@ -1,8 +1,9 @@
 export type WbsStatus = 'Planned' | 'InProgress' | 'Done';
 export type ImpactLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type DevInfoType = 'Markdown' | 'File' | 'Link';
-export type ProjectStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done';
-export type ProjectCategory = '과제' | '내부' | '사업' | '유지보수/하자보수';
+// Planned 는 '대기/보류'(Waiting)로 통합 — 기존 데이터 호환 위해 타입엔 남기되 UI 옵션에선 미노출.
+export type ProjectStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done' | 'Maintenance';
+export type ProjectCategory = '과제' | '내부' | '사업';
 
 export interface Project {
   id: number;
@@ -314,6 +315,7 @@ export interface ProjectStatusBreakdown {
   waiting: number;
   inProgress: number;
   done: number;
+  maintenance: number;
 }
 
 export interface IssueMatrixCell {

@@ -4,8 +4,9 @@ namespace ProjectManager.Core.DTOs;
 
 // 통합 모니터링 페이지 상단의 종합 시각화에 쓰는 집계 DTO들.
 
+// Planned 는 '대기/보류'(Waiting)로 통합돼 항상 0 — Waiting 에 합산해 집계. Maintenance = 하자보수/유지보수.
 public record ProjectStatusBreakdownDto(
-    int Planned, int Waiting, int InProgress, int Done);
+    int Planned, int Waiting, int InProgress, int Done, int Maintenance);
 
 // 상태 분포 위젯의 우측 리스트 — 도넛 옆에 프로젝트별 진행률·마감 표시.
 // progressPercent 는 WBS 진행률과 동일 계산 (마일스톤 제외, total 0 이면 0).

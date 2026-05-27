@@ -18,13 +18,13 @@ import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { ImportPreviewItem, Project, ProjectCategory, ProjectStatus, StartPageData } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
-  { value: 'Planned', label: '계획' },
-  { value: 'Waiting', label: '대기' },
+  { value: 'Waiting', label: '대기/보류' },
   { value: 'InProgress', label: '진행' },
   { value: 'Done', label: '완료' },
+  { value: 'Maintenance', label: '하자보수/유지보수' },
 ];
 
-const categoryOptions: ProjectCategory[] = ['과제', '내부', '사업', '유지보수/하자보수'];
+const categoryOptions: ProjectCategory[] = ['과제', '내부', '사업'];
 
 function ProjectForm({
   initial,
@@ -43,7 +43,7 @@ function ProjectForm({
     category: initial?.category ?? '',
     description: initial?.description ?? '',
     goal: initial?.goal ?? '',
-    status: (initial?.status ?? 'Planned') as ProjectStatus,
+    status: (initial?.status ?? 'Waiting') as ProjectStatus,
     startDate: initial?.startDate?.slice(0, 10) ?? '',
     endDate: initial?.endDate?.slice(0, 10) ?? '',
     budget: initial?.budget?.toString() ?? '',

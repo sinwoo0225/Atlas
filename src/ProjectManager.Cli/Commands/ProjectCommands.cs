@@ -48,10 +48,10 @@ internal static class ProjectCommands
     private static Command BuildCreate(IServiceProvider services)
     {
         var nameOpt = new Option<string>("--name", "이름") { IsRequired = true };
-        var categoryOpt = new Option<string?>("--category", "프로젝트 구분 (과제|내부|사업|유지보수/하자보수 등)");
+        var categoryOpt = new Option<string?>("--category", "프로젝트 구분 (과제|내부|사업 등)");
         var descOpt = new Option<string?>("--description", "설명");
         var goalOpt = new Option<string?>("--goal", "목표");
-        var statusOpt = new Option<ProjectStatus?>("--status", "Planned|Waiting|InProgress|Done");
+        var statusOpt = new Option<ProjectStatus?>("--status", "Waiting(대기/보류)|InProgress|Done|Maintenance(하자보수/유지보수)");
         var startOpt = new Option<DateTime?>("--start", "시작일 YYYY-MM-DD");
         var endOpt = new Option<DateTime?>("--end", "종료일 YYYY-MM-DD");
         var budgetOpt = new Option<decimal?>("--budget", "예산");
@@ -70,7 +70,7 @@ internal static class ProjectCommands
                 Category: pr.GetValueForOption(categoryOpt) ?? string.Empty,
                 Description: pr.GetValueForOption(descOpt) ?? string.Empty,
                 Goal: pr.GetValueForOption(goalOpt) ?? string.Empty,
-                Status: pr.GetValueForOption(statusOpt) ?? ProjectStatus.Planned,
+                Status: pr.GetValueForOption(statusOpt) ?? ProjectStatus.Waiting,
                 StartDate: pr.GetValueForOption(startOpt),
                 EndDate: pr.GetValueForOption(endOpt),
                 Budget: pr.GetValueForOption(budgetOpt),
@@ -89,10 +89,10 @@ internal static class ProjectCommands
         // null 인 옵션은 기존 값 유지 — Update 는 "지정한 필드만 덮어쓰기" 패턴.
         var idOpt = new Option<int>("--id", "프로젝트 ID") { IsRequired = true };
         var nameOpt = new Option<string?>("--name", "이름");
-        var categoryOpt = new Option<string?>("--category", "프로젝트 구분 (과제|내부|사업|유지보수/하자보수 등)");
+        var categoryOpt = new Option<string?>("--category", "프로젝트 구분 (과제|내부|사업 등)");
         var descOpt = new Option<string?>("--description", "설명");
         var goalOpt = new Option<string?>("--goal", "목표");
-        var statusOpt = new Option<ProjectStatus?>("--status", "Planned|Waiting|InProgress|Done");
+        var statusOpt = new Option<ProjectStatus?>("--status", "Waiting(대기/보류)|InProgress|Done|Maintenance(하자보수/유지보수)");
         var startOpt = new Option<DateTime?>("--start", "시작일 YYYY-MM-DD");
         var endOpt = new Option<DateTime?>("--end", "종료일 YYYY-MM-DD");
         var budgetOpt = new Option<decimal?>("--budget", "예산");

@@ -150,7 +150,7 @@ export function SortableWbsRow({
             )}
           </div>
         </td>
-        <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={item.assignee || undefined}>{item.assignee}</td>
+        <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={hasChildren ? undefined : (item.assignee || undefined)}>{hasChildren ? '' : item.assignee}</td>
         <td
           className={`py-2 px-3 text-xs whitespace-nowrap ${startIsComputed ? 'text-muted opacity-60 italic' : 'text-muted'}`}
           title={startIsComputed ? '자식 작업에서 계산된 시작일' : undefined}
@@ -163,20 +163,23 @@ export function SortableWbsRow({
         >
           {showEnd?.slice(0, 10)}
         </td>
+        {/* 하위 항목이 있는 부모 행은 그루핑 역할 — 중요도·상태는 빈 셀로(자식 값으로 흐려지지 않게). */}
         <td className="py-2 px-3 whitespace-nowrap">
-          <Badge variant={importance.variant} size="sm">{importance.label}</Badge>
+          {!hasChildren && <Badge variant={importance.variant} size="sm">{importance.label}</Badge>}
         </td>
         <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-          <BadgeMenu<WbsStatus>
-            value={item.status}
-            options={[
-              { value: 'Planned',    label: '예정', variant: 'neutral' },
-              { value: 'InProgress', label: '진행', variant: 'warning' },
-              { value: 'Done',       label: '완료', variant: 'success' },
-            ]}
-            onChange={(next) => onStatusChange(item, next)}
-            title="상태 변경"
-          />
+          {!hasChildren && (
+            <BadgeMenu<WbsStatus>
+              value={item.status}
+              options={[
+                { value: 'Planned',    label: '예정', variant: 'neutral' },
+                { value: 'InProgress', label: '진행', variant: 'warning' },
+                { value: 'Done',       label: '완료', variant: 'success' },
+              ]}
+              onChange={(next) => onStatusChange(item, next)}
+              title="상태 변경"
+            />
+          )}
         </td>
         <td className="py-2 px-3 whitespace-nowrap">
           <div className="flex items-center gap-1">

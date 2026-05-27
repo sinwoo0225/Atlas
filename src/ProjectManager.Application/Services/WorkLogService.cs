@@ -23,6 +23,16 @@ public class WorkLogService(IWorkLogRepository repo)
         return $"- [완료] ({kind}) {name}{who}, {date:yyyy-MM-dd}";
     }
 
+    /// <summary>
+    /// 신규 이슈 등록 줄 포맷: "- (이슈) 제목 - 담당자". 담당자가 비어있으면 " - 담당자" 부분을 생략.
+    /// 업무일지 '이슈' 필드에 추가(이슈 생성 시).
+    /// </summary>
+    public static string FormatIssueLine(string title, string? assignee)
+    {
+        var who = string.IsNullOrWhiteSpace(assignee) ? string.Empty : $" - {assignee.Trim()}";
+        return $"- (이슈) {title}{who}";
+    }
+
     public async Task<IEnumerable<WorkLogDto>> GetWeekAsync(int projectId, DateTime weekStart) =>
         (await repo.GetByProjectWeekAsync(projectId, StartOfWeek(weekStart))).Select(ToDto);
 
@@ -39,10 +49,22 @@ public class WorkLogService(IWorkLogRepository repo)
         return ToDto(await repo.UpsertAsync(log));
     }
 
+    private enum LogField { Done, Issues }
+
     /// <summary>
-    /// 지정 날짜의 Done 필드 끝에 line 을 추가. 이미 같은 줄이 있으면 skip.
+    /// 지정 날짜의 Done 필드 끝에 line 을 추가. 이미 같은 줄이 있으면 skip. (이슈/WBS 완료 전환 시)
     /// </summary>
-    public async Task AppendDoneAsync(int projectId, DateTime date, string line)
+    public Task AppendDoneAsync(int projectId, DateTime date, string line) =>
+        AppendLineAsync(projectId, date, line, LogField.Done);
+
+    /// <summary>
+    /// 지정 날짜의 Issues 필드 끝에 line 을 추가. 이미 같은 줄이 있으면 skip. (신규 이슈 등록 시)
+    /// </summary>
+    public Task AppendIssuesAsync(int projectId, DateTime date, string line) =>
+        AppendLineAsync(projectId, date, line, LogField.Issues);
+
+    // Done / Issues 필드 끝에 line 추가 — 없으면 신규 WorkLog 생성, 같은 줄이 이미 있으면 skip.
+    private async Task AppendLineAsync(int projectId, DateTime date, string line, LogField field)
     {
         if (string.IsNullOrWhiteSpace(line)) return;
         var d = date.Date;
@@ -52,16 +74,19 @@ public class WorkLogService(IWorkLogRepository repo)
             await repo.UpsertAsync(new WorkLog
             {
                 ProjectId = projectId, Date = d,
-                Done = line, Plan = string.Empty, Issues = string.Empty,
+                Done = field == LogField.Done ? line : string.Empty,
+                Plan = string.Empty,
+                Issues = field == LogField.Issues ? line : string.Empty,
             });
             return;
         }
-        var lines = (existing.Done ?? string.Empty).Replace("\r\n", "\n").Split('\n');
+        var current = (field == LogField.Done ? existing.Done : existing.Issues) ?? string.Empty;
+        var lines = current.Replace("\r\n", "\n").Split('\n');
         var trimmed = line.Trim();
         foreach (var existingLine in lines)
             if (existingLine.Trim() == trimmed) return;
-        var done = string.IsNullOrWhiteSpace(existing.Done) ? line : existing.Done.TrimEnd() + "\n" + line;
-        existing.Done = done;
+        var next = string.IsNullOrWhiteSpace(current) ? line : current.TrimEnd() + "\n" + line;
+        if (field == LogField.Done) existing.Done = next; else existing.Issues = next;
         await repo.UpsertAsync(existing);
     }
 

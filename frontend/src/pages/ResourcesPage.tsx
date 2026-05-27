@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building } from 'lucide-react';
+import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building, ChevronDown, ChevronRight } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, CopyButton, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
@@ -93,10 +93,59 @@ function ResourceForm({ initial, onSave, onCancel }: {
   );
 }
 
+function AssignmentCard({ a }: { a: ResourceAssignment }) {
+  const status = wbsStatusBadge[a.status];
+  return (
+    <Card padding="tight" variant="subtle">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-primary font-medium">{a.wbsItemName}</p>
+          <div className="flex gap-3 mt-1 text-xs text-muted">
+            <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
+          </div>
+        </div>
+        <Badge variant={status.variant} size="sm">{status.label}</Badge>
+      </div>
+    </Card>
+  );
+}
+
+// 한 프로젝트의 할당 작업 그룹 — 진행/예정은 항상, 완료(Done)는 접힌 섹션으로(기본 접힘).
+function AssignmentProjectGroup({ projectName, active, done }: {
+  projectName: string; active: ResourceAssignment[]; done: ResourceAssignment[];
+}) {
+  const [showDone, setShowDone] = useState(false);
+  return (
+    <div className="space-y-2">
+      <p className="text-xs text-muted font-medium">{projectName}</p>
+      {active.map((a) => <AssignmentCard key={a.wbsItemId} a={a} />)}
+      {active.length === 0 && (
+        <p className="text-xs text-muted/70 pl-1">진행 중인 작업 없음</p>
+      )}
+      {done.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowDone((v) => !v)}
+            className="flex items-center gap-1 text-xs text-muted hover:text-primary transition-colors"
+            aria-expanded={showDone}
+          >
+            {showDone ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            완료 {done.length}건
+          </button>
+          {showDone && done.map((a) => <AssignmentCard key={a.wbsItemId} a={a} />)}
+        </>
+      )}
+    </div>
+  );
+}
+
 function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: () => void }) {
   const [items, setItems] = useState<ResourceAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  // 활성(진행 중 작업이 있는) 프로젝트만 보기 — 기본 ON. 프로젝트가 늘어도 완료만 남은 그룹은 숨겨 화면을 가볍게.
+  const [activeOnly, setActiveOnly] = useState(true);
 
   useEffect(() => {
     resourcesApi.getAssignments(resource.id)
@@ -104,6 +153,23 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
       .catch(() => setError('할당 작업을 불러올 수 없습니다.'))
       .finally(() => setLoading(false));
   }, [resource.id]);
+
+  // 프로젝트별 그룹 — 진행/예정(active) vs 완료(done) 분리. activeOnly 면 active 없는 그룹 제외.
+  const groups = useMemo(() => {
+    const byProject = new Map<number, { name: string; active: ResourceAssignment[]; done: ResourceAssignment[] }>();
+    for (const a of items) {
+      let g = byProject.get(a.projectId);
+      if (!g) { g = { name: a.projectName, active: [], done: [] }; byProject.set(a.projectId, g); }
+      (a.status === 'Done' ? g.done : g.active).push(a);
+    }
+    let list = [...byProject.values()];
+    if (activeOnly) list = list.filter((g) => g.active.length > 0);
+    return list.sort((x, y) => x.name.localeCompare(y.name, 'ko'));
+  }, [items, activeOnly]);
+
+  const hiddenCount = items.length === 0
+    ? 0
+    : items.filter((a) => a.status === 'Done').length; // 참고용(완료 총건수)
 
   return (
     <Modal
@@ -120,24 +186,25 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
       ) : items.length === 0 ? (
         <p className="text-sm text-muted py-6 text-center">할당된 작업이 없습니다.</p>
       ) : (
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-          {items.map((a) => {
-            const status = wbsStatusBadge[a.status];
-            return (
-              <Card key={a.wbsItemId} padding="tight" variant="subtle">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted mb-1">{a.projectName}</p>
-                    <p className="text-sm text-primary font-medium">{a.wbsItemName}</p>
-                    <div className="flex gap-3 mt-1 text-xs text-muted">
-                      <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
-                    </div>
-                  </div>
-                  <Badge variant={status.variant} size="sm">{status.label}</Badge>
-                </div>
-              </Card>
-            );
-          })}
+        <div className="space-y-3">
+          <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={activeOnly}
+              onChange={(e) => setActiveOnly(e.target.checked)}
+              className="w-auto"
+            />
+            진행 중인 작업이 있는 프로젝트만 보기 (완료 {hiddenCount}건은 그룹별 ‘완료’ 섹션에서 펼치기)
+          </label>
+          {groups.length === 0 ? (
+            <p className="text-sm text-muted py-6 text-center">진행 중인 작업이 없습니다. 체크를 해제하면 완료만 있는 프로젝트도 보입니다.</p>
+          ) : (
+            <div className="space-y-4 max-h-[55vh] overflow-y-auto">
+              {groups.map((g) => (
+                <AssignmentProjectGroup key={g.name} projectName={g.name} active={g.active} done={g.done} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </Modal>

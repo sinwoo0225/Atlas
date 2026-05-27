@@ -224,16 +224,17 @@ function dDay(endDate?: string): string {
 function buildProjectStatusOption(data: MonitoringChartsData, ch: ChartColors, theme: 'dark' | 'light') {
   const ps = data.projectStatus;
   const COLORS = {
-    Planned:    ch.mutedBar,
-    Waiting:    theme === 'light' ? '#1d4ed8' : '#7eb6ff',   // --info v2
-    InProgress: ch.ganttBarInProgress,
-    Done:       ch.ganttBarDone,
+    Waiting:     theme === 'light' ? '#1d4ed8' : '#7eb6ff',   // --info v2 ('대기/보류')
+    InProgress:  ch.ganttBarInProgress,
+    Done:        ch.ganttBarDone,
+    Maintenance: theme === 'light' ? '#dc2626' : '#f87171',   // danger ('하자보수/유지보수')
   };
+  // Planned 는 '대기/보류'(Waiting)로 통합 — 백엔드가 합산해 보내므로 한 슬라이스로 표시.
   const points = [
-    { name: '계획', value: ps.planned,    itemStyle: { color: COLORS.Planned } },
-    { name: '대기', value: ps.waiting,    itemStyle: { color: COLORS.Waiting } },
-    { name: '진행', value: ps.inProgress, itemStyle: { color: COLORS.InProgress } },
-    { name: '완료', value: ps.done,       itemStyle: { color: COLORS.Done } },
+    { name: '대기/보류',        value: ps.waiting + ps.planned, itemStyle: { color: COLORS.Waiting } },
+    { name: '진행',             value: ps.inProgress,           itemStyle: { color: COLORS.InProgress } },
+    { name: '완료',             value: ps.done,                 itemStyle: { color: COLORS.Done } },
+    { name: '하자보수/유지보수', value: ps.maintenance,          itemStyle: { color: COLORS.Maintenance } },
   ].filter((d) => d.value > 0);
 
   return {
