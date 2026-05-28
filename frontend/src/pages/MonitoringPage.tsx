@@ -17,6 +17,7 @@ import { CategoryBreakdownCard } from './monitoring/CategoryBreakdownCard';
 import { OverviewKpiCard } from './monitoring/OverviewKpiCard';
 import { PeopleTab } from './monitoring/PeopleTab';
 import { TrendsTab } from './monitoring/TrendsTab';
+import { WeeklyReviewCard } from './monitoring/WeeklyReviewCard';
 import type {
   ActivityByProject,
   AgingWipItem,
@@ -28,7 +29,7 @@ import type {
   OpenIssuesByProject,
   ResourceHeatmap,
   StaleProject,
-  TodayWbs, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
+  TodayWbs, WeeklyReview, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
   WorkloadOverview,
 } from '../types';
 
@@ -121,6 +122,9 @@ export function MonitoringPage() {
   // Phase 3 예측 번들 — 추세 탭 '실험' 섹션 전용 지연 로드(CFD 가 무거워 담당자 탭은 미로드).
   const [forecast, setForecast] = useState<ForecastBundle | null>(null);
   const [forecastLoading, setForecastLoading] = useState(false);
+  // 주간 회고 다이제스트 — '일지' 탭 첫 진입 시 지연 로드(완료 전이 재구성이 무거워 개요와 분리).
+  const [review, setReview] = useState<WeeklyReview | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -128,6 +132,8 @@ export function MonitoringPage() {
     setTrendsLoading(false);
     setForecast(null);
     setForecastLoading(false);
+    setReview(null); // 새로고침 시 회고도 무효화 → '일지' 탭 재진입 시 재로드
+    setReviewLoading(false);
     const thisMon = startOfWeek(new Date());
     const lastMon = addDays(thisMon, -7);
     Promise.all([
@@ -185,6 +191,17 @@ export function MonitoringPage() {
         .finally(() => setForecastLoading(false));
     }
   }, [tab, forecast, forecastLoading]);
+
+  // '일지' 탭 첫 진입(또는 새로고침 후 재진입) 시 주간 회고 다이제스트 지연 로드.
+  useEffect(() => {
+    if (tab === 'logs' && review === null && !reviewLoading) {
+      setReviewLoading(true);
+      monitoringApi.getWeeklyReview()
+        .then(setReview)
+        .catch(() => { /* 회고는 보조 — 실패해도 일지 탭 유지 */ })
+        .finally(() => setReviewLoading(false));
+    }
+  }, [tab, review, reviewLoading]);
 
   const grouped = useMemo(() => {
     const map = new Map<number, { projectName: string; items: TodayWbs[] }>();
@@ -341,6 +358,7 @@ export function MonitoringPage() {
 
       {tab === 'logs' && (
         <div className="space-y-4">
+          <WeeklyReviewCard review={review} loading={reviewLoading} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <WeeklySection
               title="지난 주 업무일지"
@@ -358,6 +376,7 @@ export function MonitoringPage() {
               variant="current"
               exportable
               openIssues={openIssues}
+              review={review}
             />
           </div>
           <OpenIssuesSection
@@ -429,7 +448,22 @@ function oneLine(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
-function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = []): string {
+// 회고 다이제스트 섹션 — 완료한 항목 / 놓친 마감 / 다음 주 예정. md 내보내기 상단에 첨부.
+function buildReviewMarkdown(review: WeeklyReview): string {
+  const lines: string[] = ['## 주간 회고', ''];
+  const section = (heading: string, items: string[]) => {
+    lines.push(`### ${heading} (${items.length})`);
+    if (items.length === 0) lines.push('- _(없음)_');
+    else lines.push(...items);
+    lines.push('');
+  };
+  section('완료한 항목', review.completed.map((c) => `- [${c.projectName}] ${c.title} (${c.completedAt})`));
+  section('놓친 마감', review.missedDeadlines.map((d) => `- [${d.projectName}] ${d.title} — 마감 ${d.dueDate}`));
+  section('다음 주 마감 예정', review.upcomingNextWeek.map((d) => `- [${d.projectName}] ${d.title} — 마감 ${d.dueDate}`));
+  return lines.join('\n');
+}
+
+function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null): string {
   const weekStart = data.weekStart.slice(0, 10);
   // 종료일 = 주 시작 + 4일 (월~금)
   const start = new Date(weekStart);
@@ -446,6 +480,11 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProjec
   const lines: string[] = [];
   lines.push(`# 업무일지 (${weekStart} ~ ${endIso})`);
   lines.push('');
+
+  if (review) {
+    lines.push(buildReviewMarkdown(review));
+    lines.push('');
+  }
 
   if (data.projects.length === 0) {
     lines.push('_(기록 없음)_');
@@ -487,8 +526,8 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProjec
   return lines.join('\n');
 }
 
-function downloadWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = []) {
-  const md = buildWeeklyMarkdown(data, openIssues);
+function downloadWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null) {
+  const md = buildWeeklyMarkdown(data, openIssues, review);
   const weekStart = data.weekStart.slice(0, 10);
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -504,7 +543,7 @@ function downloadWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByPro
 type WeeklyVariant = 'current' | 'muted';
 
 function WeeklySection({
-  title, data, loading, onProjectClick, variant = 'current', exportable = false, openIssues = [],
+  title, data, loading, onProjectClick, variant = 'current', exportable = false, openIssues = [], review = null,
 }: {
   title: string;
   data: WeeklyWorkLog | null;
@@ -513,11 +552,14 @@ function WeeklySection({
   variant?: WeeklyVariant;
   exportable?: boolean;
   openIssues?: OpenIssuesByProject[];
+  review?: WeeklyReview | null;
 }) {
   const muted = variant === 'muted';
   const titleCls = muted ? 'text-secondary' : 'text-primary';
   const iconCls = muted ? 'text-muted' : 'text-accent';
-  const canExport = exportable && data && data.projects.length > 0;
+  const reviewHasContent = !!review
+    && review.completed.length + review.missedDeadlines.length + review.upcomingNextWeek.length > 0;
+  const canExport = exportable && !!data && (data.projects.length > 0 || reviewHasContent);
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -534,9 +576,9 @@ function WeeklySection({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => downloadWeeklyMarkdown(data!, openIssues)}
+            onClick={() => downloadWeeklyMarkdown(data!, openIssues, review)}
             leadingIcon={<Download size={14} />}
-            title="md 파일로 내보내기 (미해결 이슈 목록 포함)"
+            title="md 파일로 내보내기 (주간 회고 + 미해결 이슈 목록 포함)"
           >
             md 내보내기
           </Button>

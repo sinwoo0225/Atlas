@@ -14,6 +14,7 @@ import { isHostBridgeAvailable, toggleWidget } from '../utils/hostBridge';
 import { MenuIcon } from '../utils/iconRegistry';
 import { useRecentTracker } from '../hooks/useRecentTracker';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useActiveProjectId } from '../hooks/useActiveProjectId';
 
 // path = iconRegistry 의 메뉴 슬롯키. 아이콘은 getMenuIcon(slot) 으로 조회(커스터마이즈 가능).
 const navItems = [
@@ -149,14 +150,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   };
   useGlobalShortcut('mod+b', toggleCollapsed);
 
-  // G+X 시퀀스 — 페이지 이동. projectId 가 필요한 페이지는 URL → store → lastProjectId 순으로 fallback.
-  // pid 없으면 silent 무시 (네비게이션 단축키가 toast 띄우면 거슬림).
-  const resolveProjectId = (): number | null => {
-    const urlMatch = location.pathname.match(/^\/projects\/(\d+)\//);
-    if (urlMatch) return Number(urlMatch[1]);
-    if (selectedProjectId !== null) return selectedProjectId;
-    return loadSettings().lastProjectId;
-  };
+  // G+X 시퀀스 — 페이지 이동. projectId 가 필요한 페이지는 URL → store → lastProjectId 순으로 fallback
+  // (useActiveProjectId — 명령 팔레트와 공유). pid 없으면 silent 무시 (네비게이션 단축키가 toast 띄우면 거슬림).
+  const resolveProjectId = useActiveProjectId();
   useGlobalShortcut('g d', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/dashboard`); });
   useGlobalShortcut('g i', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/issues`); });
   useGlobalShortcut('g w', () => { const pid = resolveProjectId(); if (pid) navigate(`/projects/${pid}/wbs`); });

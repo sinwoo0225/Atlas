@@ -20,7 +20,7 @@ import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCreateForm } from '../hooks/useCreateForm';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import type { Meeting } from '../types';
 
@@ -662,7 +662,7 @@ export function MeetingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
 
-  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
+  useCreateForm(() => { setEditing(null); setShowForm(true); });
 
   // 전체 회의록을 한 번에 가져오고 클라이언트사이드에서 필터링. 본문(Discussion / Decisions / ActionItems)
   // 검색을 위해 백엔드 검색 대신 클라이언트 필터로 통합.

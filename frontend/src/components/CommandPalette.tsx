@@ -5,6 +5,8 @@ import { Search, X } from 'lucide-react';
 import { search, type SearchEntityType, type SearchHit } from '../api/search';
 import { EntityIcon } from '../utils/iconRegistry';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useActiveProjectId } from '../hooks/useActiveProjectId';
+import { filterCommands, type CommandContext } from '../data/commands';
 
 const DEBOUNCE_MS = 200;
 const RESULT_LIMIT = 30;
@@ -49,8 +51,17 @@ export function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const prevFocusRef = useRef<HTMLElement | null>(null);
   const navigate = useNavigate();
+  const resolveProjectId = useActiveProjectId();
 
   useGlobalShortcut('mod+k', () => setOpen((v) => !v));
+
+  // 모드: 빈 입력 또는 '>' 접두사 → 명령 모드, 그 외 → 엔티티 검색(기존 동작).
+  const trimmed = query.trim();
+  const commandMode = trimmed === '' || trimmed.startsWith('>');
+  const commandFilter = trimmed.startsWith('>') ? trimmed.slice(1) : '';
+  const commandCtx: CommandContext = { navigate, projectId: resolveProjectId(), close: () => setOpen(false) };
+  const commands = commandMode ? filterCommands(commandFilter, commandCtx) : [];
+  const listLen = commandMode ? commands.length : results.length;
 
   useEffect(() => {
     if (!open) {
@@ -71,10 +82,14 @@ export function CommandPalette() {
     };
   }, [open]);
 
+  // 입력이 바뀌면 활성 인덱스 초기화 (명령/검색 양 모드 공통, 범위 초과 방지).
+  useEffect(() => { setActiveIndex(0); }, [query]);
+
   useEffect(() => {
     if (!open) return;
     const q = query.trim();
-    if (q === '') {
+    // 명령 모드(빈 입력 / '>' 접두사)에서는 검색 API 를 호출하지 않는다.
+    if (q === '' || q.startsWith('>')) {
       setResults([]);
       setLoading(false);
       return;
@@ -100,19 +115,27 @@ export function CommandPalette() {
       setOpen(false);
       return;
     }
-    if (results.length === 0) return;
+    if (listLen === 0) return;
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex((i) => (i + 1) % results.length);
+      setActiveIndex((i) => (i + 1) % listLen);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIndex((i) => (i - 1 + results.length) % results.length);
+      setActiveIndex((i) => (i - 1 + listLen) % listLen);
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      const hit = results[activeIndex];
-      if (hit) {
-        navigate(urlFor(hit));
-        setOpen(false);
+      if (commandMode) {
+        const cmd = commands[activeIndex];
+        if (cmd) {
+          setOpen(false);
+          cmd.run(commandCtx);
+        }
+      } else {
+        const hit = results[activeIndex];
+        if (hit) {
+          navigate(urlFor(hit));
+          setOpen(false);
+        }
       }
     }
   };
@@ -146,7 +169,9 @@ export function CommandPalette() {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="프로젝트·WBS·이슈·회의록·변경·개발정보·업무일지 검색"
+            placeholder={commandMode
+              ? "명령 실행 (이동·생성·토글) — 텍스트 입력 시 전체 검색"
+              : "프로젝트·WBS·이슈·회의록·변경·개발정보·업무일지 검색"}
             className="flex-1 bg-transparent outline-none text-primary placeholder:text-muted text-sm"
           />
           {loading && <span className="text-xs text-muted shrink-0">검색 중…</span>}
@@ -161,20 +186,42 @@ export function CommandPalette() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {query.trim() === '' && (
-            <div className="px-4 py-8 text-center text-sm text-muted">
-              검색어를 입력하세요.
-              <div className="mt-2 text-xs">↑↓ 이동 · Enter 선택 · Esc 닫기</div>
-            </div>
+          {commandMode && (
+            commands.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-muted">일치하는 명령이 없습니다.</div>
+            ) : (
+              <ul className="py-1">
+                {commands.map((cmd, i) => {
+                  const Icon = cmd.icon;
+                  const active = i === activeIndex;
+                  return (
+                    <li key={cmd.id}>
+                      <button
+                        type="button"
+                        onMouseEnter={() => setActiveIndex(i)}
+                        onClick={() => { setOpen(false); cmd.run(commandCtx); }}
+                        className={`w-full text-left px-4 py-2 flex items-center gap-3 transition-colors ${
+                          active ? 'bg-surface-3' : 'hover:bg-surface-2'
+                        }`}
+                      >
+                        <Icon size={16} className="shrink-0 text-secondary" />
+                        <span className="flex-1 min-w-0 text-sm text-primary truncate">{cmd.label}</span>
+                        <span className="text-xs text-muted shrink-0">{cmd.group}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )
           )}
 
-          {query.trim() !== '' && !loading && results.length === 0 && (
+          {!commandMode && !loading && results.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted">
               검색 결과가 없습니다.
             </div>
           )}
 
-          {results.length > 0 && (
+          {!commandMode && results.length > 0 && (
             <ul className="py-1">
               {results.map((hit, i) => {
                 const meta = TYPE_META[hit.type];
@@ -222,12 +269,10 @@ export function CommandPalette() {
           )}
         </div>
 
-        {groupedHint && (
-          <div className="px-4 py-2 border-t border-default text-[11px] text-muted flex justify-between">
-            <span>{groupedHint}</span>
-            <span>↑↓ 이동 · Enter 선택 · Esc 닫기</span>
-          </div>
-        )}
+        <div className="px-4 py-2 border-t border-default text-[11px] text-muted flex justify-between">
+          <span>{commandMode ? `명령 ${commands.length}` : (groupedHint ?? '')}</span>
+          <span>↑↓ 이동 · Enter {commandMode ? '실행' : '선택'} · Esc 닫기</span>
+        </div>
       </div>
     </div>,
     document.body,

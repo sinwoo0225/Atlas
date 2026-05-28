@@ -12,7 +12,7 @@ import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCreateForm } from '../hooks/useCreateForm';
 import { TagSuggestionInput } from '../components/TagSuggestionInput';
 import { TagManageModal } from '../components/devinfo/TagManageModal';
 import { parseTagTokens } from '../utils/devInfoTagTokens';
@@ -340,7 +340,7 @@ export function DevInfoPage() {
   const [editing, setEditing] = useState<DevInfoItem | null>(null);
   const [selected, setSelected] = useState<DevInfoItem | null>(null);
 
-  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
+  useCreateForm(() => { setEditing(null); setShowForm(true); });
   const [filterType, setFilterType] = useState<DevInfoType | ''>('');
   const [keyword, setKeyword] = useState('');
   const [availableTags, setAvailableTags] = useState<string[]>([]);

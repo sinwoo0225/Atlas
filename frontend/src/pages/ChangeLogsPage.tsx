@@ -16,7 +16,7 @@ import { WbsTreePicker } from '../components/WbsTreePicker';
 import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
-import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCreateForm } from '../hooks/useCreateForm';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import { findItemName } from '../utils/wbsHelpers';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -460,7 +460,7 @@ export function ChangeLogsPage() {
   // '변경 이력'(수기 기록) ↔ 'Git 이력'(연결된 .git 커밋 그래프) 탭 전환.
   const [tab, setTab] = useState<'changelog' | 'git'>('changelog');
 
-  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
+  useCreateForm(() => { setEditing(null); setShowForm(true); });
   const [keyword, setKeyword] = useState('');
   const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'withSource' | 'noSource'>('all');

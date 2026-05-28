@@ -195,3 +195,23 @@ public record ForecastBundleDto(
     MonteCarloDto MonteCarlo,
     IReadOnlyList<ProjectForecastDto> ProjectForecasts,
     IReadOnlyList<DepartmentRollupDto> DepartmentRollup);
+
+// ===== 주간 회고 다이제스트 ('일지' 탭 상단) =====
+// 한 주[weekStart(월요일), +7일) 기준. 완료한 항목 / 놓친 마감(이번 주 마감 지남·미완) / 다음 주 마감 예정.
+// 완료 시점·근사 표기는 Phase 2 완료 전이 로직(GetCompletionEventsAsync) 재사용. 마감 판정은 WBS EndDate / Issue DueDate.
+
+// 이번 주 완료된 항목. CompletedAt 은 yyyy-MM-dd(로컬). Approximate=전이 기록 없어 UpdatedAt 근사.
+public record ReviewCompletedItemDto(
+    string Kind, int Id, int ProjectId, string ProjectName, string Title,
+    string CompletedAt, bool Approximate);
+
+// 마감 기준 항목(놓친 마감 / 다음 주 예정). DueDate 는 yyyy-MM-dd, Priority 는 issue 전용(wbs 는 null).
+public record ReviewDeadlineItemDto(
+    string Kind, int Id, int ProjectId, string ProjectName, string Title,
+    string? Assignee, string DueDate, string? Priority);
+
+public record WeeklyReviewDto(
+    string WeekStart,
+    IReadOnlyList<ReviewCompletedItemDto> Completed,
+    IReadOnlyList<ReviewDeadlineItemDto> MissedDeadlines,
+    IReadOnlyList<ReviewDeadlineItemDto> UpcomingNextWeek);

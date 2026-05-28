@@ -310,6 +310,35 @@ export interface OpenIssuesByProject {
   issues: OpenIssue[];
 }
 
+// 주간 회고 다이제스트 ('일지' 탭 상단) — 완료한 항목 / 놓친 마감 / 다음 주 마감 예정.
+export interface ReviewCompletedItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  completedAt: string;
+  approximate: boolean;
+}
+
+export interface ReviewDeadlineItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  projectId: number;
+  projectName: string;
+  title: string;
+  assignee?: string | null;
+  dueDate: string;
+  priority?: string | null;
+}
+
+export interface WeeklyReview {
+  weekStart: string;
+  completed: ReviewCompletedItem[];
+  missedDeadlines: ReviewDeadlineItem[];
+  upcomingNextWeek: ReviewDeadlineItem[];
+}
+
 export interface ProjectStatusBreakdown {
   planned: number;
   waiting: number;

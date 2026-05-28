@@ -14,7 +14,7 @@ import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '.
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { StartPageWidgets } from './projectList/StartPageWidgets';
 import { getRecent, type RecentItem } from '../utils/recentItems';
-import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { useCreateForm } from '../hooks/useCreateForm';
 import type { ImportPreviewItem, Project, ProjectCategory, ProjectStatus, StartPageData } from '../types';
 
 const statusOptions: { value: ProjectStatus; label: string }[] = [
@@ -236,7 +236,7 @@ export function ProjectList() {
   const [templateTarget, setTemplateTarget] = useState<Project | null>(null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
 
-  useGlobalShortcut('mod+n', () => { setEditing(null); setShowForm(true); });
+  useCreateForm(() => { setEditing(null); setShowForm(true); });
 
   useEffect(() => {
     projectsApi.getAll().then(setProjects).catch(() => setError('프로젝트 목록을 불러올 수 없습니다.'));

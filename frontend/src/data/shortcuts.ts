@@ -13,7 +13,7 @@ export const SHORTCUT_REGISTRY: ShortcutGroup[] = [
   {
     group: '전역',
     items: [
-      { keys: ['Ctrl', 'K'], desc: '검색 팔레트 열기' },
+      { keys: ['Ctrl', 'K'], desc: '검색·명령 팔레트 열기 (빈 입력/> 로 명령)' },
       { keys: ['Ctrl', 'B'], desc: '사이드바 접기/펼치기' },
       { keys: ['?'], desc: '단축키 도움말 열기' },
       { keys: ['Esc'], desc: '열린 모달/팔레트 닫기' },

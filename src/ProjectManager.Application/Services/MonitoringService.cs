@@ -936,4 +936,81 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             .OrderBy(p => p.ProjectName)
             .ToList();
     }
+
+    // ===== 주간 회고 다이제스트 ('일지' 탭 상단) =====
+    // 한 주[weekStart(월요일), +7일) 기준으로 3개 버킷을 조립:
+    //   완료한 항목 = 완료 전이(또는 근사) 시각이 이번 주에 드는 것 (Phase 2 GetCompletionEventsAsync 재사용)
+    //   놓친 마감   = 마감일이 이번 주에 속하고 오늘 기준 이미 지났으며 미완료
+    //   다음 주 예정 = 마감일이 다음 주 범위이고 미완료
+    public async Task<WeeklyReviewDto> GetWeeklyReviewAsync(DateTime weekStart)
+    {
+        var start = WorkLogService.StartOfWeek(weekStart);
+        var weekEndExclusive = start.AddDays(7);
+        var nextWeekEndExclusive = start.AddDays(14);
+        var parentWbsIds = await GetParentWbsIdsAsync();
+
+        var events = await GetCompletionEventsAsync();
+        var completed = events
+            .Where(e =>
+            {
+                var d = e.CompletedAt.ToLocalTime().Date;
+                return d >= start && d < weekEndExclusive;
+            })
+            .OrderBy(e => e.CompletedAt)
+            .Select(e => new ReviewCompletedItemDto(
+                e.Kind, e.Id, e.ProjectId, e.ProjectName, e.Title,
+                IsoDate(e.CompletedAt.ToLocalTime()), e.Approximate))
+            .ToList();
+
+        var missed = await GetDeadlineItemsAsync(start, weekEndExclusive, onlyPast: true, parentWbsIds);
+        var upcoming = await GetDeadlineItemsAsync(weekEndExclusive, nextWeekEndExclusive, onlyPast: false, parentWbsIds);
+
+        return new WeeklyReviewDto(IsoDate(start), completed, missed, upcoming);
+    }
+
+    // 마감일이 [fromInclusive, toExclusive) 인 미완료 WBS·이슈를 ReviewDeadlineItemDto 로.
+    // onlyPast=true 면 마감일이 오늘 이전인 것만(놓친 마감). 마감일 오름차순 정렬.
+    private async Task<List<ReviewDeadlineItemDto>> GetDeadlineItemsAsync(
+        DateTime fromInclusive, DateTime toExclusive, bool onlyPast, List<int> parentWbsIds)
+    {
+        var today = DateTime.Now.Date;
+
+        var wbs = await db.WbsItems
+            .Where(w => !parentWbsIds.Contains(w.Id) && w.Status != WbsStatus.Done
+                && w.EndDate.HasValue
+                && w.EndDate.Value.Date >= fromInclusive && w.EndDate.Value.Date < toExclusive)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+
+        var issues = await db.Issues
+            .Where(i => (i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
+                && i.DueDate.HasValue
+                && i.DueDate.Value.Date >= fromInclusive && i.DueDate.Value.Date < toExclusive)
+            .Include(i => i.AssigneeResource)
+            .Join(db.Projects, i => i.ProjectId, p => p.Id, (i, p) => new { i, p })
+            .ToListAsync();
+
+        var list = new List<ReviewDeadlineItemDto>(wbs.Count + issues.Count);
+        foreach (var x in wbs)
+        {
+            var d = x.w.EndDate!.Value.Date;
+            if (onlyPast && d >= today) continue;
+            list.Add(new ReviewDeadlineItemDto("wbs", x.w.Id, x.w.ProjectId, x.p.Name, x.w.Name,
+                string.IsNullOrWhiteSpace(x.w.Assignee) ? null : x.w.Assignee, IsoDate(d), null));
+        }
+        foreach (var x in issues)
+        {
+            var d = x.i.DueDate!.Value.Date;
+            if (onlyPast && d >= today) continue;
+            list.Add(new ReviewDeadlineItemDto("issue", x.i.Id, x.i.ProjectId, x.p.Name, x.i.Title,
+                x.i.AssigneeResource != null ? x.i.AssigneeResource.Name : null, IsoDate(d),
+                x.i.Priority.ToString()));
+        }
+
+        return list
+            .OrderBy(i => i.DueDate, StringComparer.Ordinal)
+            .ThenBy(i => i.Kind, StringComparer.Ordinal)
+            .ThenBy(i => i.Id)
+            .ToList();
+    }
 }
