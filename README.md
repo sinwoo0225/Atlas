@@ -114,6 +114,8 @@ cd frontend; npm install; cd ..
 
 MIT — 자세한 내용은 [`LICENSE`](./LICENSE) 참고. Copyright (c) 2026 SlnU.
 
+개인정보 처리방침은 [`PRIVACY.md`](./PRIVACY.md) 참고.
+
 ---
 
 ## English
@@ -229,3 +231,5 @@ cd frontend; npm install; cd ..
 ### License
 
 MIT — see [`LICENSE`](./LICENSE). Copyright (c) 2026 SlnU.
+
+See [`PRIVACY.md`](./PRIVACY.md) for the privacy policy.
