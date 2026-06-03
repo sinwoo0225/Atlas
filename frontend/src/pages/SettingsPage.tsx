@@ -143,10 +143,10 @@ export function SettingsPage() {
     setAiTesting(true);
     try {
       const r = await aiApi.claudeCheck();
-      if (r.available) toast.success(`Claude CLI 연결 OK${r.sample ? ` — "${r.sample.slice(0, 40)}"` : ''}`);
-      else toast.error(r.error || 'Claude CLI 호출 실패');
+      if (r.available) toast.success(t('settings:behavior.claudeOk') + (r.sample ? ` — "${r.sample.slice(0, 40)}"` : ''));
+      else toast.error(r.error || t('settings:behavior.claudeCallFailed'));
     } catch {
-      toast.error('Claude CLI 테스트 실패 — 백엔드/CLI 설치 확인');
+      toast.error(t('settings:behavior.claudeTestFailed'));
     } finally {
       setAiTesting(false);
     }
@@ -162,9 +162,9 @@ export function SettingsPage() {
 
   const handleReset = async () => {
     if (!await confirmDialog({
-      title: '설정 초기화',
-      message: '모든 설정을 초기 상태로 되돌립니다. 테마·커스텀 색·브랜드·아이콘·작성자 이름·마지막 프로젝트 등이 사라집니다.',
-      confirmLabel: '초기화',
+      title: t('settings:reset.title'),
+      message: t('settings:reset.message'),
+      confirmLabel: t('settings:reset.confirm'),
       danger: true,
     })) return;
     localStorage.removeItem('pm-hub-settings');
@@ -203,9 +203,9 @@ export function SettingsPage() {
       setSettings(merged);
       applyAppearance(merged);
       window.dispatchEvent(new CustomEvent('atlas:settings-changed'));
-      toast.success('설정을 가져왔습니다.');
+      toast.success(t('settings:backup.imported'));
     } catch {
-      toast.error('가져오기 실패 — 올바른 atlas-settings.json 인지 확인하세요.');
+      toast.error(t('settings:backup.importFailed'));
     }
   };
 
@@ -216,15 +216,15 @@ export function SettingsPage() {
     reader.onload = () => {
       const dataUrl = String(reader.result || '');
       if (!dataUrl.startsWith('data:image/')) {
-        toast.error('이미지 파일만 사용할 수 있습니다.');
+        toast.error(t('settings:brand.iconOnlyImage'));
         return;
       }
       if (dataUrl.length > 256 * 1024) {
-        toast.warning('아이콘이 큽니다(>256KB). 작은 PNG/ICO 를 권장합니다.');
+        toast.warning(t('settings:brand.iconTooBig'));
       }
       update('brandIcon', dataUrl);
     };
-    reader.onerror = () => toast.error('이미지를 읽지 못했습니다.');
+    reader.onerror = () => toast.error(t('settings:brand.iconReadFail'));
     reader.readAsDataURL(file);
   };
 
@@ -238,7 +238,7 @@ export function SettingsPage() {
       reader.onload = () => update('brandIcon', String(reader.result || ''));
       reader.readAsDataURL(blob);
     } catch {
-      toast.error('프리셋 아이콘을 불러오지 못했습니다.');
+      toast.error(t('settings:brand.presetLoadFail'));
     }
   };
 
@@ -253,12 +253,12 @@ export function SettingsPage() {
       <div className="flex items-center justify-between">
         <h1 className="h-page flex items-center gap-2">
           <SettingsIcon size={18} className="text-muted" />
-          설정
+          {t('settings:page.title')}
         </h1>
         <div className="flex items-center gap-3">
-          {savedAt && <span className="text-sm text-on-success">저장되었습니다.</span>}
+          {savedAt && <span className="text-sm text-on-success">{t('settings:page.saved')}</span>}
           <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>
-            저장
+            {t('common:save')}
           </Button>
         </div>
       </div>
@@ -287,17 +287,17 @@ export function SettingsPage() {
       </div>
 
       {activeTab === 'appearance' && (<>
-      <Section title="외관">
-        <FormField label="테마">
+      <Section title={t('settings:appearance.title')}>
+        <FormField label={t('settings:appearance.theme')}>
           <div className="flex gap-2">
-            {(['dark', 'light', 'custom'] as ThemeMode[]).map((t) => (
+            {(['dark', 'light', 'custom'] as ThemeMode[]).map((m) => (
               <Button
-                key={t}
-                variant={settings.theme === t ? 'primary' : 'secondary'}
+                key={m}
+                variant={settings.theme === m ? 'primary' : 'secondary'}
                 size="md"
-                onClick={() => update('theme', t)}
+                onClick={() => update('theme', m)}
               >
-                {t === 'dark' ? '다크' : t === 'light' ? '라이트' : '커스텀'}
+                {m === 'dark' ? t('settings:appearance.themeDark') : m === 'light' ? t('settings:appearance.themeLight') : t('settings:appearance.themeCustom')}
               </Button>
             ))}
           </div>
@@ -305,16 +305,16 @@ export function SettingsPage() {
 
         {settings.theme === 'custom' && (
           <FormField
-            label="커스텀 색상 (12종)"
-            hint="핵심 12색을 지정하면 나머지 톤(표면 단계·muted·soft 배경·포커스링 등)은 자동 파생됩니다."
+            label={t('settings:appearance.customColors')}
+            hint={t('settings:appearance.customColorsHint')}
           >
             <div className="space-y-3">
               <div className="flex gap-2 flex-wrap">
                 <Button variant="secondary" size="sm" onClick={() => seedColors(DARK_BASE)} leadingIcon={<Palette size={13} />}>
-                  다크에서 시드
+                  {t('settings:appearance.seedFromDark')}
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => seedColors(LIGHT_BASE)} leadingIcon={<Palette size={13} />}>
-                  라이트에서 시드
+                  {t('settings:appearance.seedFromLight')}
                 </Button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
@@ -344,14 +344,14 @@ export function SettingsPage() {
         )}
       </Section>
 
-      <Section title="브랜드">
+      <Section title={t('settings:brand.title')}>
         <FormField
-          label="워드마크"
-          hint="사이드바 로고. 두 부분으로 나뉘어 각각 다른 색으로 표시됩니다. (접힌 사이드바는 각 첫 글자)"
+          label={t('settings:brand.wordmark')}
+          hint={t('settings:brand.wordmarkHint')}
         >
           <div className="flex items-end gap-3 flex-wrap">
             <div>
-              <div className="text-xs text-muted mb-1">앞부분 (primary)</div>
+              <div className="text-xs text-muted mb-1">{t('settings:brand.front')}</div>
               <div className="flex items-center gap-2">
                 <input
                   value={settings.brandPrimaryText}
@@ -364,12 +364,12 @@ export function SettingsPage() {
                   value={settings.brandLogoPrimary}
                   onChange={(e) => update('brandLogoPrimary', e.target.value)}
                   className="w-8 h-8 rounded border border-default bg-transparent cursor-pointer"
-                  aria-label="앞부분 색"
+                  aria-label={t('settings:brand.frontColor')}
                 />
               </div>
             </div>
             <div>
-              <div className="text-xs text-muted mb-1">뒷부분 (accent)</div>
+              <div className="text-xs text-muted mb-1">{t('settings:brand.back')}</div>
               <div className="flex items-center gap-2">
                 <input
                   value={settings.brandAccentText}
@@ -382,7 +382,7 @@ export function SettingsPage() {
                   value={settings.brandLogoAccent}
                   onChange={(e) => update('brandLogoAccent', e.target.value)}
                   className="w-8 h-8 rounded border border-default bg-transparent cursor-pointer"
-                  aria-label="뒷부분 색"
+                  aria-label={t('settings:brand.backColor')}
                 />
               </div>
             </div>
@@ -401,11 +401,11 @@ export function SettingsPage() {
                 update('brandLogoAccent', DEFAULT_LOGO_ACCENT);
               }}
             >
-              로고 색 기본값
+              {t('settings:brand.logoColorReset')}
             </Button>
           </div>
         </FormField>
-        <FormField label="탭/창 제목" hint="브라우저 탭과 데스크톱 앱 창의 제목으로 사용됩니다. (저장 시 적용)">
+        <FormField label={t('settings:brand.windowTitle')} hint={t('settings:brand.windowTitleHint')}>
           <input
             value={settings.brandTitle}
             onChange={(e) => update('brandTitle', e.target.value)}
@@ -414,14 +414,14 @@ export function SettingsPage() {
           />
         </FormField>
         <FormField
-          label="앱 아이콘 (작업표시줄)"
-          hint="실행 중 작업표시줄·창 아이콘으로 쓰입니다. 작은 PNG/ICO 권장(SVG 미지원). exe 파일 자체 아이콘과 작업표시줄 고정 아이콘은 바뀌지 않습니다."
+          label={t('settings:brand.appIcon')}
+          hint={t('settings:brand.appIconHint')}
         >
           <div className="flex items-center gap-3 flex-wrap">
             <div className="w-10 h-10 rounded-md border border-default bg-surface-2 flex items-center justify-center overflow-hidden shrink-0">
               {settings.brandIcon
-                ? <img src={settings.brandIcon} alt="앱 아이콘" className="w-full h-full object-contain" />
-                : <span className="text-[10px] text-muted">기본</span>}
+                ? <img src={settings.brandIcon} alt={t('settings:brand.appIconAlt')} className="w-full h-full object-contain" />
+                : <span className="text-[10px] text-muted">{t('settings:brand.iconDefault')}</span>}
             </div>
             <Button
               variant="secondary"
@@ -429,11 +429,11 @@ export function SettingsPage() {
               onClick={() => brandIconInputRef.current?.click()}
               leadingIcon={<Upload size={14} />}
             >
-              이미지 선택
+              {t('settings:brand.pickImage')}
             </Button>
             {settings.brandIcon && (
               <Button variant="ghost" size="sm" leadingIcon={<RotateCcw size={13} />} onClick={() => update('brandIcon', '')}>
-                기본으로
+                {t('settings:brand.toDefault')}
               </Button>
             )}
             <input
@@ -449,7 +449,7 @@ export function SettingsPage() {
             />
           </div>
           <div className="mt-3">
-            <div className="text-xs text-muted mb-1.5">프리셋에서 선택</div>
+            <div className="text-xs text-muted mb-1.5">{t('settings:brand.fromPreset')}</div>
             <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
               {BRAND_ICON_PRESETS.map(({ file, label }) => (
                 <button
@@ -467,10 +467,10 @@ export function SettingsPage() {
         </FormField>
       </Section>
 
-      <Section title="마크다운 뷰어">
+      <Section title={t('settings:markdown.title')}>
         <FormField
-          label={`글자 크기 — ${settings.markdownFontSize}px`}
-          hint="회의록·일지·WBS 상세 등 마크다운 렌더링에 즉시 반영됩니다."
+          label={t('settings:markdown.fontSize', { size: settings.markdownFontSize })}
+          hint={t('settings:markdown.fontSizeHint')}
         >
           <input
             type="range"
@@ -482,7 +482,7 @@ export function SettingsPage() {
             className="w-full accent-current"
           />
         </FormField>
-        <FormField label={`줄간격 — ${settings.markdownLineHeight.toFixed(2)}`}>
+        <FormField label={t('settings:markdown.lineHeight', { value: settings.markdownLineHeight.toFixed(2) })}>
           <input
             type="range"
             min={MARKDOWN_LINE_HEIGHT_RANGE.min}
@@ -493,24 +493,16 @@ export function SettingsPage() {
             className="w-full accent-current"
           />
         </FormField>
-        <FormField label="미리보기">
+        <FormField label={t('settings:markdown.preview')}>
           <div className="markdown-body bg-surface-2 border border-default rounded-md px-3 py-2">
-            <ReactMarkdown>{
-`# 회의록 샘플
-
-이 문단은 **현재 글자 크기**와 *줄간격*을 미리 보여줍니다. 본문 가독성이 화면 거리·해상도에 맞는지 슬라이더로 조정해보세요.
-
-- 한 항목 — 결정 사항 또는 메모.
-- 두 번째 항목 — \`코드 인라인\` 도 포함.
-`
-            }</ReactMarkdown>
+            <ReactMarkdown>{t('settings:markdown.sample')}</ReactMarkdown>
           </div>
         </FormField>
       </Section>
       </>)}
 
       {activeTab === 'behavior' && (<>
-      <Section title="기본 동작">
+      <Section title={t('settings:behavior.title')}>
         <FormField label={t('settings:language.label')} hint={t('settings:language.hint')}>
           <div className="flex gap-2">
             {(['ko', 'en'] as Language[]).map((lng) => (
@@ -527,8 +519,8 @@ export function SettingsPage() {
         </FormField>
 
         <FormField
-          label="앱 시작 시 마지막 프로젝트 자동 선택"
-          hint={`마지막으로 본 프로젝트: ${lastProject ? lastProject.name : '없음'}`}
+          label={t('settings:behavior.autoSelect')}
+          hint={t('settings:behavior.autoSelectHint', { name: lastProject ? lastProject.name : t('settings:behavior.none') })}
         >
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -536,60 +528,59 @@ export function SettingsPage() {
               checked={settings.autoSelectLastProject}
               onChange={(e) => update('autoSelectLastProject', e.target.checked)}
             />
-            <span className="text-sm text-secondary">활성화</span>
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
           </label>
         </FormField>
 
-        <FormField label="기본 작성자 이름">
+        <FormField label={t('settings:behavior.defaultAuthor')}>
           <input
             value={settings.defaultAuthor}
             onChange={(e) => update('defaultAuthor', e.target.value)}
-            placeholder="변경 이력/회의록 등에 미리 채워질 이름"
+            placeholder={t('settings:behavior.defaultAuthorPlaceholder')}
             className={inputClass}
           />
         </FormField>
 
         <FormField
-          label="통합 모니터링 '작업' 탭 기본 보기"
-          hint="작업 탭을 열 때 기본으로 보여줄 뷰입니다."
+          label={t('settings:behavior.defaultTaskView')}
+          hint={t('settings:behavior.defaultTaskViewHint')}
         >
           <select
             value={settings.defaultTaskView}
             onChange={(e) => update('defaultTaskView', e.target.value as AppSettings['defaultTaskView'])}
             className={inputClass}
           >
-            <option value="list">리스트</option>
-            <option value="calendar">캘린더</option>
-            <option value="kanban">칸반</option>
+            <option value="list">{t('settings:behavior.viewList')}</option>
+            <option value="calendar">{t('settings:behavior.viewCalendar')}</option>
+            <option value="kanban">{t('settings:behavior.viewKanban')}</option>
           </select>
         </FormField>
       </Section>
 
-      <Section title="키보드 단축키">
+      <Section title={t('settings:behavior.shortcuts')}>
         <FormField
-          label="단축키 도움말"
-          hint="모든 페이지에서 ? 키로도 열 수 있습니다."
+          label={t('settings:behavior.shortcutsHelp')}
+          hint={t('settings:behavior.shortcutsHelpHint')}
         >
           <Button variant="secondary" onClick={openShortcutsModal} leadingIcon={<Keyboard size={14} />}>
-            도움말 보기 (?)
+            {t('settings:behavior.shortcutsHelpBtn')}
           </Button>
         </FormField>
       </Section>
 
-      <Section title="AI 요약 (로컬 Claude Code)">
+      <Section title={t('settings:behavior.aiTitle')}>
         <div className="flex items-start gap-2 rounded-md bg-warning-soft border border-default px-3 py-2">
           <AlertTriangle size={15} className="text-on-warning shrink-0 mt-0.5" />
           <div className="text-xs text-on-warning space-y-1">
-            <p><strong>사용 시 추가 요금이 발생할 수 있습니다.</strong> 요약은 Claude 구독·API 사용량을 소모합니다.</p>
+            <p><strong>{t('settings:behavior.aiWarnBold')}</strong> {t('settings:behavior.aiWarnText')}</p>
             <p className="text-secondary">
-              로컬에 설치된 <code>claude</code> CLI 를 <code>claude -p</code> (print 모드, 프롬프트는 stdin 전달) 로 호출해 요약을 생성합니다.
-              CLI 가 설치·로그인돼 있어야 동작합니다.
+              {t('settings:behavior.aiCliDesc')}
             </p>
           </div>
         </div>
         <FormField
-          label="회의록 'AI 요약' 버튼 표시"
-          hint="회의록 논의내용을 claude 로 요약하는 버튼을 회의록 폼에 노출합니다."
+          label={t('settings:behavior.aiButtonLabel')}
+          hint={t('settings:behavior.aiButtonHint')}
         >
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -597,12 +588,12 @@ export function SettingsPage() {
               checked={settings.aiSummaryEnabled}
               onChange={(e) => update('aiSummaryEnabled', e.target.checked)}
             />
-            <span className="text-sm text-secondary">활성화 (저장 후 적용)</span>
+            <span className="text-sm text-secondary">{t('settings:behavior.enableAfterSave')}</span>
           </label>
         </FormField>
-        <FormField label="연결 테스트" hint="claude CLI 를 한 번 호출해 설치·인증·응답을 확인합니다.">
+        <FormField label={t('settings:behavior.connTest')} hint={t('settings:behavior.connTestHint')}>
           <Button variant="secondary" onClick={handleClaudeTest} disabled={aiTesting} leadingIcon={<Sparkles size={14} />}>
-            {aiTesting ? '테스트 중…' : '테스트'}
+            {aiTesting ? t('settings:behavior.testing') : t('settings:behavior.test')}
           </Button>
         </FormField>
       </Section>
@@ -615,10 +606,9 @@ export function SettingsPage() {
       {connectionMode === 'Local' && <AutoBackupSection />}
       {connectionMode === 'Local' && <UpdateSection />}
       {connectionMode === 'Client' && (
-        <Section title="데이터">
+        <Section title={t('settings:system.clientDataTitle')}>
           <p className="text-sm text-secondary">
-            Client 모드에서는 데이터 폴더를 서버가 관리합니다. 서버 측 <code>%LOCALAPPDATA%\Atlas\config.json</code> 의
-            <code> dataFolder </code> 를 편집해 변경하세요.
+            {t('settings:system.clientDataText')}
           </p>
         </Section>
       )}
@@ -626,8 +616,8 @@ export function SettingsPage() {
 
       {/* 아이콘은 '모양' 탭에 속하지만 Local/Client 조건 섹션 뒤에 위치 — 조건부 렌더라 탭 전환 시 올바른 그룹에 표시됨. */}
       {activeTab === 'appearance' && (
-      <Section title="아이콘">
-        <FormField label="메뉴 아이콘" hint="사이드바 내비게이션 아이콘. 클릭해 교체할 수 있습니다.">
+      <Section title={t('settings:icons.title')}>
+        <FormField label={t('settings:icons.menuLabel')} hint={t('settings:icons.menuHint')}>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {MENU_ICON_SLOTS.map(({ slot, label, default: def }) => {
               const name = settings.menuIcons[slot] || def;
@@ -646,7 +636,7 @@ export function SettingsPage() {
             })}
           </div>
         </FormField>
-        <FormField label="엔티티 아이콘" hint="활동 피드·검색 결과의 항목 종류 아이콘.">
+        <FormField label={t('settings:icons.entityLabel')} hint={t('settings:icons.entityHint')}>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {ENTITY_ICON_SLOTS.map(({ slot, label, default: def }) => {
               const name = settings.entityIcons[slot] || def;
@@ -669,22 +659,19 @@ export function SettingsPage() {
       )}
 
       {activeTab === 'backup' && (<>
-      <Section title="설정 백업">
+      <Section title={t('settings:backup.title')}>
         <FormField
-          label="저장 위치"
-          hint="앱 설정(외관·브랜드·아이콘·AI 토글 등)은 브라우저 localStorage 키 pm-hub-settings 에 저장됩니다."
+          label={t('settings:backup.location')}
+          hint={t('settings:backup.locationHint')}
         >
           <p className="text-xs text-muted leading-relaxed">
-            데스크톱 앱에서는 이 값이 <code>%LOCALAPPDATA%\Atlas\WebView2\</code> 내부 LevelDB(바이너리)에 들어 있어
-            탐색기에서 직접 파일로 보이지 않습니다. <code>%LOCALAPPDATA%\Atlas\config.json</code> 은 연결/데이터폴더
-            설정만 담고, 실제 DB·첨부파일은 데이터 폴더(<code>Documents\ProjectManager\</code> 등)에 있습니다.
-            아래 내보내기로 설정을 파일로 백업·이전할 수 있습니다.
+            {t('settings:backup.storageNote')}
           </p>
         </FormField>
-        <FormField label="내보내기 / 가져오기">
+        <FormField label={t('settings:backup.exportImport')}>
           <div className="flex items-center gap-2 flex-wrap">
             <Button variant="secondary" size="md" onClick={handleExport} leadingIcon={<Download size={14} />}>
-              내보내기
+              {t('settings:backup.export')}
             </Button>
             <Button
               variant="secondary"
@@ -692,7 +679,7 @@ export function SettingsPage() {
               onClick={() => fileInputRef.current?.click()}
               leadingIcon={<Upload size={14} />}
             >
-              가져오기
+              {t('settings:backup.import')}
             </Button>
             <input
               ref={fileInputRef}
@@ -709,12 +696,12 @@ export function SettingsPage() {
         </FormField>
       </Section>
 
-      <Section title="초기화">
+      <Section title={t('settings:backup.resetTitle')}>
         <FormField
-          label="설정 초기화"
-          hint="테마·커스텀 색·브랜드·아이콘·마지막 선택 프로젝트 등이 기본값으로 돌아갑니다. (DB 데이터에는 영향 없음)"
+          label={t('settings:backup.resetLabel')}
+          hint={t('settings:backup.resetHint')}
         >
-          <Button variant="danger" onClick={handleReset}>설정 초기화</Button>
+          <Button variant="danger" onClick={handleReset}>{t('settings:backup.resetBtn')}</Button>
         </FormField>
       </Section>
       </>)}
@@ -1096,13 +1083,14 @@ function IconPickerModal({
   onReset: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const [q, setQ] = useState('');
   const filtered = q.trim()
     ? SELECTABLE_ICONS.filter((n) => n.toLowerCase().includes(q.trim().toLowerCase()))
     : SELECTABLE_ICONS;
 
   return (
-    <Modal open onClose={onClose} title="아이콘 선택" size="lg" showCloseButton>
+    <Modal open onClose={onClose} title={t('settings:icons.pickTitle')} size="lg" showCloseButton>
       <div className="space-y-3">
         <div className="relative">
           <SearchIcon size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
@@ -1110,7 +1098,7 @@ function IconPickerModal({
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="아이콘 검색 (영문 이름)"
+            placeholder={t('settings:icons.searchPlaceholder')}
             className={`${inputClass} pl-8`}
             spellCheck={false}
           />
@@ -1133,12 +1121,12 @@ function IconPickerModal({
             );
           })}
           {filtered.length === 0 && (
-            <p className="col-span-full text-sm text-muted py-4 text-center">일치하는 아이콘이 없습니다.</p>
+            <p className="col-span-full text-sm text-muted py-4 text-center">{t('settings:icons.noMatch')}</p>
           )}
         </div>
         <div className="flex justify-end">
           <Button variant="ghost" size="sm" leadingIcon={<RotateCcw size={13} />} onClick={onReset}>
-            기본값으로
+            {t('settings:icons.toDefault')}
           </Button>
         </div>
       </div>
