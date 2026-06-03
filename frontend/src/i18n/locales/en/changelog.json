@@ -53,5 +53,24 @@
     "viewServer": "View server value",
     "serverFetched": "Fetched the server value. Edit again and save."
   },
-  "toast": { "created": "New change log entry added" }
+  "toast": { "created": "New change log entry added" },
+  "git": {
+    "unpushed": "unpushed",
+    "aheadTitle": "Commits not yet pushed to remote",
+    "behindTitle": "Commits on remote not yet pulled",
+    "synced": "In sync with remote",
+    "noUpstream": "No tracked remote branch",
+    "dirty": "Uncommitted changes",
+    "loadFailed": "Couldn't load Git history.",
+    "notConfigured": "No Git repository linked.",
+    "notConfiguredDesc": "Edit this project in the project list and set 'Git repository path' to a source folder containing .git.",
+    "invalidRepo": "Couldn't read the Git repository.",
+    "pathLabel": "Path: {{path}}",
+    "clientModeNote": "In Client mode the path must be relative to the server machine. Use Git history in Local mode.",
+    "allBranches": "Show all branches",
+    "commitCount": "{{count}} commits",
+    "noCommits": "No commits.",
+    "noCommitsDesc": "This repository has no commits yet.",
+    "loadMore": "Load more"
+  }
 }

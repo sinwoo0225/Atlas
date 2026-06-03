@@ -69,5 +69,22 @@
     "createdNoName": "New dev info added",
     "openFailed": "Couldn't open the file.{{msg}}",
     "openError": "Error opening the file: {{msg}}"
+  },
+  "tagManage": {
+    "title": "Manage tags",
+    "rename": "Rename",
+    "merge": "Merge",
+    "noTags": "No tags yet.",
+    "oldTag": "Tag to rename",
+    "selectPlaceholder": "— Select —",
+    "newName": "New name",
+    "newNamePlaceholder": "New tag name",
+    "renameBtn": "Rename",
+    "renamed": "{{count}} items: '{{from}}' → '{{to}}'",
+    "mergeSources": "Tags to merge (select multiple)",
+    "mergeTarget": "Merge target name",
+    "mergeTargetPlaceholder": "Target tag name (new or existing)",
+    "mergeBtn": "Merge",
+    "merged": "{{count}} items merged → '{{to}}'"
   }
 }

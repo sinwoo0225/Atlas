@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { parseTagTokens, serializeTagTokens } from '../utils/devInfoTagTokens';
 
@@ -12,6 +13,7 @@ interface Props {
 // 콤마 string 컬럼 (`"API, 설계, 문서"`) 을 칩 UX 로 보여주는 입력.
 // AssigneeTagInput 과 같은 흐름을 단순화 (Resource 객체 → string).
 export function TagSuggestionInput({ value, onChange, suggestions, placeholder }: Props) {
+  const { t } = useTranslation();
   const tokens = useMemo(() => parseTagTokens(value), [value]);
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
@@ -21,7 +23,7 @@ export function TagSuggestionInput({ value, onChange, suggestions, placeholder }
 
   const filtered = useMemo(() => {
     const q = draft.trim().toLowerCase();
-    const taken = new Set(tokens.map((t) => t.toLowerCase()));
+    const taken = new Set(tokens.map((tok) => tok.toLowerCase()));
     return suggestions
       .filter((s) => !taken.has(s.toLowerCase()))
       .filter((s) => (q ? s.toLowerCase().includes(q) : true))
@@ -35,7 +37,7 @@ export function TagSuggestionInput({ value, onChange, suggestions, placeholder }
     const onDocClick = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
         const d = draft.trim();
-        if (d && !tokens.some((t) => t.toLowerCase() === d.toLowerCase())) {
+        if (d && !tokens.some((tok) => tok.toLowerCase() === d.toLowerCase())) {
           onChange(serializeTagTokens([...tokens, d]));
         }
         setDraft('');
@@ -47,13 +49,13 @@ export function TagSuggestionInput({ value, onChange, suggestions, placeholder }
   }, [open, draft, tokens, onChange]);
 
   const commitToken = (name: string) => {
-    const t = name.trim();
-    if (!t) return;
-    if (tokens.some((x) => x.toLowerCase() === t.toLowerCase())) {
+    const tok = name.trim();
+    if (!tok) return;
+    if (tokens.some((x) => x.toLowerCase() === tok.toLowerCase())) {
       setDraft('');
       return;
     }
-    onChange(serializeTagTokens([...tokens, t]));
+    onChange(serializeTagTokens([...tokens, tok]));
     setDraft('');
     setActiveIdx(-1);
   };
@@ -106,12 +108,12 @@ export function TagSuggestionInput({ value, onChange, suggestions, placeholder }
         className="w-full flex flex-wrap items-center gap-1.5 px-2 py-1.5 text-sm rounded-md bg-surface-2 border border-default focus-within:border-strong transition-colors min-h-[38px]"
         onClick={() => inputRef.current?.focus()}
       >
-        {tokens.map((t, i) => (
+        {tokens.map((tok, i) => (
           <span
-            key={`${t}-${i}`}
+            key={`${tok}-${i}`}
             className="inline-flex items-center gap-1 rounded bg-neutral-soft text-on-neutral px-2 py-0.5 text-xs font-medium"
           >
-            {t}
+            {tok}
             <button
               type="button"
               onClick={(e) => {
@@ -119,7 +121,7 @@ export function TagSuggestionInput({ value, onChange, suggestions, placeholder }
                 removeAt(i);
               }}
               className="text-muted hover:text-on-danger transition-colors"
-              aria-label={`${t} 제거`}
+              aria-label={t('common:tagInput.remove', { name: tok })}
             >
               <X size={11} />
             </button>
@@ -134,7 +136,7 @@ export function TagSuggestionInput({ value, onChange, suggestions, placeholder }
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder={tokens.length === 0 ? (placeholder ?? '태그 입력 후 Enter / 콤마') : ''}
+          placeholder={tokens.length === 0 ? (placeholder ?? t('common:tagInput.placeholder')) : ''}
           className="flex-1 min-w-[120px] bg-transparent outline-none text-sm py-0.5"
         />
       </div>

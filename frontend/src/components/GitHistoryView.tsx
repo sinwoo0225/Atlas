@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { GitBranch, GitCommitHorizontal, ArrowUp, ArrowDown, AlertCircle, FolderGit2, Tag, Cloud } from 'lucide-react';
 import { gitApi, type GitStatus, type GitCommit } from '../api/git';
 import { getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
@@ -71,6 +72,7 @@ const xOf = (col: number) => LEFT_PAD + col * LANE_W;
 const cyOf = (row: number) => row * ROW_H + ROW_H / 2;
 
 function CommitGraph({ commits }: { commits: GitCommit[] }) {
+  const { t } = useTranslation();
   const { rows, maxCol } = useMemo(() => buildGraph(commits), [commits]);
   const graphW = LEFT_PAD * 2 + maxCol * LANE_W;
   const svgH = rows.length * ROW_H;
@@ -121,7 +123,7 @@ function CommitGraph({ commits }: { commits: GitCommit[] }) {
               <div className="flex items-center gap-2 min-w-0">
                 {!c.onRemote && (
                   <Badge size="sm" variant="warning" className="shrink-0 flex items-center gap-1">
-                    <Cloud size={11} /> 미push
+                    <Cloud size={11} /> {t('changelog:git.unpushed')}
                   </Badge>
                 )}
                 {c.refs.map((ref) => {
@@ -157,6 +159,7 @@ function CommitGraph({ commits }: { commits: GitCommit[] }) {
 
 // ── 동기화 상태 바 ─────────────────────────────────────────────────────
 function SyncBar({ status }: { status: GitStatus }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-3 flex-wrap text-sm">
       <span className="flex items-center gap-1.5 font-medium text-primary">
@@ -166,24 +169,24 @@ function SyncBar({ status }: { status: GitStatus }) {
       {status.hasUpstream ? (
         <span className="flex items-center gap-2 text-muted">
           {status.ahead > 0 && (
-            <span className="flex items-center gap-0.5 text-on-warning" title="원격에 아직 push 하지 않은 커밋">
+            <span className="flex items-center gap-0.5 text-on-warning" title={t('changelog:git.aheadTitle')}>
               <ArrowUp size={13} /> {status.ahead}
             </span>
           )}
           {status.behind > 0 && (
-            <span className="flex items-center gap-0.5 text-accent" title="원격에 있으나 아직 받지(pull) 않은 커밋">
+            <span className="flex items-center gap-0.5 text-accent" title={t('changelog:git.behindTitle')}>
               <ArrowDown size={13} /> {status.behind}
             </span>
           )}
           {status.ahead === 0 && status.behind === 0 && (
-            <span className="text-on-success">원격과 동기화됨</span>
+            <span className="text-on-success">{t('changelog:git.synced')}</span>
           )}
         </span>
       ) : (
-        <span className="text-xs text-muted">추적 중인 원격 브랜치 없음</span>
+        <span className="text-xs text-muted">{t('changelog:git.noUpstream')}</span>
       )}
       {status.isDirty && (
-        <Badge size="sm" variant="warning">커밋 안 한 변경 있음</Badge>
+        <Badge size="sm" variant="warning">{t('changelog:git.dirty')}</Badge>
       )}
       {status.repoPath && (
         <span className="text-xs text-muted ml-auto truncate max-w-[24rem]" title={status.repoPath}>
@@ -195,6 +198,7 @@ function SyncBar({ status }: { status: GitStatus }) {
 }
 
 export function GitHistoryView({ projectId }: { projectId: number }) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [commits, setCommits] = useState<GitCommit[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,11 +225,11 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
         setHasMore(false);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Git 이력을 불러오지 못했습니다.');
+      setError(e instanceof Error ? e.message : t('changelog:git.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [projectId, all]);
+  }, [projectId, all, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -264,8 +268,8 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
       <Card padding="spacious">
         <EmptyState
           icon={<FolderGit2 size={36} />}
-          title="연결된 Git 저장소가 없습니다."
-          description="프로젝트 목록에서 이 프로젝트를 수정해 'Git 저장소 경로'에 .git 이 있는 소스코드 폴더를 지정하세요."
+          title={t('changelog:git.notConfigured')}
+          description={t('changelog:git.notConfiguredDesc')}
         />
       </Card>
     );
@@ -278,12 +282,12 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
         <div className="flex items-start gap-2 text-sm text-on-danger">
           <AlertCircle size={18} className="shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium">Git 저장소를 읽을 수 없습니다.</p>
+            <p className="font-medium">{t('changelog:git.invalidRepo')}</p>
             {status.error && <p className="text-muted mt-1">{status.error}</p>}
-            {status.repoPath && <p className="text-muted mt-1 text-xs">경로: {status.repoPath}</p>}
+            {status.repoPath && <p className="text-muted mt-1 text-xs">{t('changelog:git.pathLabel', { path: status.repoPath })}</p>}
             {connectionMode === 'Client' && (
               <p className="text-muted mt-2 text-xs">
-                Client 모드에서는 서버 머신 기준 경로여야 합니다. Git 이력은 Local 모드에서 사용하세요.
+                {t('changelog:git.clientModeNote')}
               </p>
             )}
           </div>
@@ -303,14 +307,14 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
       <div className="flex items-center gap-2">
         <label className="flex items-center gap-1.5 text-sm text-muted cursor-pointer select-none">
           <input type="checkbox" checked={all} onChange={(e) => setAll(e.target.checked)} />
-          모든 브랜치 표시
+          {t('changelog:git.allBranches')}
         </label>
-        <span className="text-xs text-muted ml-auto">{commits.length}개 커밋</span>
+        <span className="text-xs text-muted ml-auto">{t('changelog:git.commitCount', { count: commits.length })}</span>
       </div>
 
       {commits.length === 0 ? (
         <Card padding="spacious">
-          <EmptyState icon={<GitCommitHorizontal size={36} />} title="커밋이 없습니다." description="이 저장소에 아직 커밋이 없습니다." />
+          <EmptyState icon={<GitCommitHorizontal size={36} />} title={t('changelog:git.noCommits')} description={t('changelog:git.noCommitsDesc')} />
         </Card>
       ) : (
         <Card padding="none" className="overflow-x-auto">
@@ -321,7 +325,7 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
       {hasMore && (
         <div className="flex justify-center">
           <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? '불러오는 중…' : '더 보기'}
+            {loadingMore ? t('common:loading') : t('changelog:git.loadMore')}
           </Button>
         </div>
       )}

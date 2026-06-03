@@ -69,5 +69,22 @@
     "createdNoName": "새 개발 정보가 추가됐어요",
     "openFailed": "파일을 열 수 없습니다.{{msg}}",
     "openError": "파일 열기 중 오류가 발생했습니다: {{msg}}"
+  },
+  "tagManage": {
+    "title": "태그 관리",
+    "rename": "이름 변경",
+    "merge": "병합",
+    "noTags": "등록된 태그가 없어요.",
+    "oldTag": "바꿀 태그",
+    "selectPlaceholder": "— 선택 —",
+    "newName": "새 이름",
+    "newNamePlaceholder": "새 태그 이름",
+    "renameBtn": "변경",
+    "renamed": "{{count}} 개 항목의 '{{from}}' → '{{to}}'",
+    "mergeSources": "병합할 태그 (여러 개 선택)",
+    "mergeTarget": "합칠 대상 이름",
+    "mergeTargetPlaceholder": "대상 태그 이름 (신규 또는 기존)",
+    "mergeBtn": "병합",
+    "merged": "{{count}} 개 항목 병합됨 → '{{to}}'"
   }
 }

@@ -18,6 +18,10 @@
   "currentProject": "현재 프로젝트",
   "projectMenu": "프로젝트 메뉴",
   "shortcutsTitle": "키보드 단축키",
+  "tagInput": {
+    "placeholder": "태그 입력 후 Enter / 콤마",
+    "remove": "{{name}} 제거"
+  },
   "relative": {
     "justNow": "방금",
     "minutesAgo": "{{count}}분 전",

@@ -18,6 +18,10 @@
   "currentProject": "Current project",
   "projectMenu": "Project menu",
   "shortcutsTitle": "Keyboard shortcuts",
+  "tagInput": {
+    "placeholder": "Add tag, then Enter / comma",
+    "remove": "Remove {{name}}"
+  },
   "relative": {
     "justNow": "just now",
     "minutesAgo": "{{count}}m ago",
