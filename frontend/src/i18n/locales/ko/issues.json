@@ -1,0 +1,59 @@
+{
+  "title": "이슈 관리",
+  "add": "추가",
+  "quickAddPlaceholder": "새 이슈 제목 입력 후 Enter…",
+  "searchPlaceholder": "제목·설명 검색…",
+  "filter": {
+    "all": "전체 ({{count}})",
+    "allPriority": "우선순위 전체",
+    "allAssignee": "담당자 전체",
+    "unassignedOnly": "미지정만",
+    "reset": "필터 초기화"
+  },
+  "th": {
+    "title": "제목",
+    "status": "상태",
+    "priority": "우선순위",
+    "assignee": "담당자",
+    "occurred": "발생일",
+    "due": "마감일"
+  },
+  "empty": {
+    "title": "이슈가 없습니다.",
+    "descNone": "위 빈 행에서 제목을 입력해 빠르게 추가할 수 있습니다.",
+    "descFiltered": "조건에 맞는 이슈가 없습니다. 필터를 초기화해 보세요."
+  },
+  "row": {
+    "expand": "펼치기",
+    "collapse": "접기",
+    "editTitle": "클릭하여 제목 편집",
+    "viewLinkedWbs": "관련 WBS 보기",
+    "viewLinkedWbsAria": "관련 WBS {{count}}건 보기",
+    "viewSourceChangelog": "이 이슈가 출처인 변경이력 보기",
+    "viewSourceChangelogAria": "출처 변경이력 {{count}}건 보기",
+    "changeStatus": "상태 변경",
+    "changePriority": "우선순위 변경",
+    "unassigned": "-- 미지정 --",
+    "descriptionLabel": "설명 (마크다운, 포커스 아웃 시 렌더링)"
+  },
+  "links": {
+    "title": "관련 WBS ({{count}})",
+    "add": "연결 추가",
+    "empty": "연결된 WBS 항목 없음",
+    "changeType": "관계 타입 변경",
+    "relationType": "관계 타입",
+    "removeTitle": "연결 해제",
+    "removeMessage": "'{{name}}' 과(와) 의 연결을 해제하시겠습니까?",
+    "remove": "해제"
+  },
+  "delete": {
+    "title": "이슈 삭제",
+    "message": "이 이슈를 삭제하시겠습니까? 되돌릴 수 없습니다."
+  },
+  "descriptionPlaceholder": "이슈 상세 설명 (마크다운 지원)",
+  "toast": {
+    "created": "새 이슈 '{{title}}' 이(가) 추가됐어요",
+    "closed": "'{{title}}' 닫혔어요. 변경이력에 남길까요?",
+    "addChangelog": "변경이력 추가"
+  }
+}

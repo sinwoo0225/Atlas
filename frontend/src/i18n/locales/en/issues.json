@@ -1,0 +1,59 @@
+{
+  "title": "Issues",
+  "add": "Add",
+  "quickAddPlaceholder": "Type a new issue title and press Enter…",
+  "searchPlaceholder": "Search title / description…",
+  "filter": {
+    "all": "All ({{count}})",
+    "allPriority": "All priorities",
+    "allAssignee": "All assignees",
+    "unassignedOnly": "Unassigned only",
+    "reset": "Reset filters"
+  },
+  "th": {
+    "title": "Title",
+    "status": "Status",
+    "priority": "Priority",
+    "assignee": "Assignee",
+    "occurred": "Occurred",
+    "due": "Due"
+  },
+  "empty": {
+    "title": "No issues.",
+    "descNone": "Type a title in the empty row above to add one quickly.",
+    "descFiltered": "No issues match the filters. Try resetting them."
+  },
+  "row": {
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "editTitle": "Click to edit title",
+    "viewLinkedWbs": "View linked WBS",
+    "viewLinkedWbsAria": "View {{count}} linked WBS",
+    "viewSourceChangelog": "View change log sourced from this issue",
+    "viewSourceChangelogAria": "View {{count}} sourced change log entries",
+    "changeStatus": "Change status",
+    "changePriority": "Change priority",
+    "unassigned": "-- Unassigned --",
+    "descriptionLabel": "Description (markdown, rendered on blur)"
+  },
+  "links": {
+    "title": "Linked WBS ({{count}})",
+    "add": "Add link",
+    "empty": "No linked WBS items",
+    "changeType": "Change relation type",
+    "relationType": "Relation type",
+    "removeTitle": "Remove link",
+    "removeMessage": "Remove the link with '{{name}}'?",
+    "remove": "Remove"
+  },
+  "delete": {
+    "title": "Delete issue",
+    "message": "Delete this issue? This can't be undone."
+  },
+  "descriptionPlaceholder": "Issue details (markdown supported)",
+  "toast": {
+    "created": "New issue '{{title}}' added",
+    "closed": "'{{title}}' closed. Add it to the change log?",
+    "addChangelog": "Add to change log"
+  }
+}

@@ -111,9 +111,9 @@ export function IssuesPage() {
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!await confirmDialog({
-      title: '이슈 삭제',
-      message: '이 이슈를 삭제하시겠습니까? 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('issues:delete.title'),
+      message: t('issues:delete.message'),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     await issuesApi.delete(pid, id);
@@ -140,9 +140,9 @@ export function IssuesPage() {
         const wasOpen = openSet.includes(target.status);
         const nowClosed = closedSet.includes(value as IssueStatus);
         if (wasOpen && nowClosed) {
-          toast(`'${target.title}' 닫혔어요. 변경이력에 남길까요?`, {
+          toast(t('issues:toast.closed', { title: target.title }), {
             action: {
-              label: '변경이력 추가',
+              label: t('issues:toast.addChangelog'),
               onClick: () => navigate(`/projects/${pid}/changelogs?newWithSourceIssue=${id}`),
             },
           });
@@ -170,7 +170,7 @@ export function IssuesPage() {
     });
     setNewTitle('');
     refreshIssues();
-    toast.success(`새 이슈 '${title}' 이(가) 추가됐어요`);
+    toast.success(t('issues:toast.created', { title }));
   };
 
   const filtered = useMemo(() => {
@@ -193,7 +193,7 @@ export function IssuesPage() {
   if (loading) {
     return (
       <div className="p-6 space-y-4">
-        <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title="이슈 관리" />
+        <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title={t('issues:title')} />
         <Card padding="spacious">
           <Skeleton height={18} width="30%" />
           <div className="mt-4 space-y-2">
@@ -207,7 +207,7 @@ export function IssuesPage() {
   if (error) {
     return (
       <div className="p-6 space-y-4">
-        <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title="이슈 관리" />
+        <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title={t('issues:title')} />
         <Card padding="spacious">
           <EmptyState error={error} onRetry={load} />
         </Card>
@@ -217,12 +217,12 @@ export function IssuesPage() {
 
   return (
     <div className="p-6 space-y-4">
-      <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title="이슈 관리" />
+      <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title={t('issues:title')} />
 
       <div className="space-y-2">
         <div className="flex gap-2 flex-wrap items-center">
           <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>
-            전체 ({issues.length})
+            {t('issues:filter.all', { count: issues.length })}
           </Button>
           {(['Open', 'InProgress', 'Resolved', 'Closed'] as IssueStatus[]).map((s) => {
             const count = issues.filter((i) => i.status === s).length;
@@ -244,7 +244,7 @@ export function IssuesPage() {
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="제목·설명 검색…"
+            placeholder={t('issues:searchPlaceholder')}
             leadingIcon={<Search size={14} />}
             fullWidth={false}
             wrapperClassName="w-56"
@@ -255,7 +255,7 @@ export function IssuesPage() {
             onChange={(e) => setPriorityFilter(e.target.value as IssuePriority | 'All')}
             className={`${inputClassNoW} py-1.5 text-sm w-32`}
           >
-            <option value="All">우선순위 전체</option>
+            <option value="All">{t('issues:filter.allPriority')}</option>
             {PRIORITY_VALUES.map((p) => (
               <option key={p} value={p}>{t(issuePriorityBadge[p].labelKey)}</option>
             ))}
@@ -269,8 +269,8 @@ export function IssuesPage() {
             }}
             className={`${inputClassNoW} py-1.5 text-sm w-40`}
           >
-            <option value="All">담당자 전체</option>
-            <option value="Unassigned">미지정만</option>
+            <option value="All">{t('issues:filter.allAssignee')}</option>
+            <option value="Unassigned">{t('issues:filter.unassignedOnly')}</option>
             {resources.map((r) => (
               <option key={r.id} value={r.id}>{r.name}</option>
             ))}
@@ -286,7 +286,7 @@ export function IssuesPage() {
                 setFilter('All');
               }}
             >
-              필터 초기화
+              {t('issues:filter.reset')}
             </Button>
           )}
         </div>
@@ -297,12 +297,12 @@ export function IssuesPage() {
           <thead>
             <tr className="text-xs text-muted border-b border-default">
               <th className="text-left py-3 px-4 font-medium w-10"></th>
-              <th className="text-left py-3 px-3 font-medium">제목</th>
-              <th className="text-left py-3 px-3 font-medium w-28">상태</th>
-              <th className="text-left py-3 px-3 font-medium w-24">우선순위</th>
-              <th className="text-left py-3 px-3 font-medium w-48">담당자</th>
-              <th className="text-left py-3 px-3 font-medium w-36">발생일</th>
-              <th className="text-left py-3 px-3 font-medium w-36">마감일</th>
+              <th className="text-left py-3 px-3 font-medium">{t('issues:th.title')}</th>
+              <th className="text-left py-3 px-3 font-medium w-28">{t('issues:th.status')}</th>
+              <th className="text-left py-3 px-3 font-medium w-24">{t('issues:th.priority')}</th>
+              <th className="text-left py-3 px-3 font-medium w-48">{t('issues:th.assignee')}</th>
+              <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.occurred')}</th>
+              <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.due')}</th>
               <th className="text-left py-3 px-3 font-medium w-16"></th>
             </tr>
           </thead>
@@ -317,14 +317,14 @@ export function IssuesPage() {
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') handleQuickCreate(); }}
-                  placeholder="새 이슈 제목 입력 후 Enter…"
+                  placeholder={t('issues:quickAddPlaceholder')}
                   data-issue-quickadd
                   className="w-full bg-transparent text-sm text-primary placeholder:text-muted/70 focus:outline-none border-none px-0 py-0"
                 />
               </td>
               <td className="py-2 px-3">
                 <Button variant="ghost" size="sm" onClick={handleQuickCreate}>
-                  추가
+                  {t('issues:add')}
                 </Button>
               </td>
             </tr>
@@ -334,11 +334,11 @@ export function IssuesPage() {
                 <td colSpan={8} className="p-0">
                   <EmptyState
                     icon={<AlertTriangle size={36} />}
-                    title="이슈가 없습니다."
+                    title={t('issues:empty.title')}
                     description={
                       filter === 'All' && priorityFilter === 'All' && assigneeFilter === 'All' && !keyword
-                        ? '위 빈 행에서 제목을 입력해 빠르게 추가할 수 있습니다.'
-                        : '조건에 맞는 이슈가 없습니다. 필터를 초기화해 보세요.'
+                        ? t('issues:empty.descNone')
+                        : t('issues:empty.descFiltered')
                     }
                   />
                 </td>
@@ -408,7 +408,7 @@ function IssueRow({
             type="button"
             onClick={onToggleExpand}
             className="text-muted hover:text-primary transition-colors"
-            title={expanded ? '접기' : '펼치기'}
+            title={expanded ? t('issues:row.collapse') : t('issues:row.expand')}
           >
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
@@ -421,7 +421,7 @@ function IssueRow({
                 onChange={(e) => setTitle(e.target.value)}
                 onBlur={() => onUpdate(issue.id, 'title', title)}
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
-                title="클릭하여 제목 편집"
+                title={t('issues:row.editTitle')}
                 className="w-full bg-transparent text-sm text-primary font-medium focus:outline-none hover:bg-surface-3 focus:bg-surface-2 rounded pl-1.5 pr-5 py-1 transition-colors border border-transparent hover:border-default focus:border-default cursor-text"
               />
               <DirtyDot visible={title !== issue.title} className="absolute top-1/2 right-2 -translate-y-1/2" />
@@ -431,8 +431,8 @@ function IssueRow({
                 type="button"
                 onClick={onToggleExpand}
                 className="shrink-0"
-                title="관련 WBS 보기"
-                aria-label={`관련 WBS ${linkCount}건 보기`}
+                title={t('issues:row.viewLinkedWbs')}
+                aria-label={t('issues:row.viewLinkedWbsAria', { count: linkCount })}
               >
                 <Badge variant="neutral" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
                   <LinkIcon size={10} className="mr-0.5" /> {linkCount}
@@ -444,8 +444,8 @@ function IssueRow({
                 type="button"
                 onClick={() => navigate(`/projects/${projectId}/changelogs?sourceIssue=${issue.id}`)}
                 className="shrink-0"
-                title="이 이슈가 출처인 변경이력 보기"
-                aria-label={`출처 변경이력 ${sourceCount}건 보기`}
+                title={t('issues:row.viewSourceChangelog')}
+                aria-label={t('issues:row.viewSourceChangelogAria', { count: sourceCount })}
               >
                 <Badge variant="info" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
                   <FileText size={10} className="mr-0.5" /> {sourceCount}
@@ -459,7 +459,7 @@ function IssueRow({
             value={issue.status}
             options={STATUS_OPTIONS}
             onChange={(next) => onUpdate(issue.id, 'status', next)}
-            title="상태 변경"
+            title={t('issues:row.changeStatus')}
           />
         </td>
         <td className="py-2 px-3">
@@ -467,7 +467,7 @@ function IssueRow({
             value={issue.priority}
             options={PRIORITY_OPTIONS}
             onChange={(next) => onUpdate(issue.id, 'priority', next)}
-            title="우선순위 변경"
+            title={t('issues:row.changePriority')}
           />
         </td>
         <td className="py-2 px-3">
@@ -476,7 +476,7 @@ function IssueRow({
             onChange={(e) => onUpdate(issue.id, 'assigneeResourceId', e.target.value ? Number(e.target.value) : null)}
             className={`${ghostFieldClass} text-xs`}
           >
-            <option value="">-- 미지정 --</option>
+            <option value="">{t('issues:row.unassigned')}</option>
             {resources.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}{r.department ? ` (${r.department})` : ''}
@@ -518,7 +518,7 @@ function IssueRow({
           <button
             onClick={(e) => onDelete(issue.id, e)}
             className="p-1 text-on-danger hover:opacity-80 transition-opacity"
-            title="삭제"
+            title={t('common:delete')}
           >
             <X size={14} />
           </button>
@@ -529,7 +529,7 @@ function IssueRow({
           <td />
           <td colSpan={6} className="py-3 px-3 pr-4 space-y-3">
             <div>
-              <p className="text-xs text-muted font-medium mb-1">설명 (마크다운, 포커스 아웃 시 렌더링)</p>
+              <p className="text-xs text-muted font-medium mb-1">{t('issues:row.descriptionLabel')}</p>
               <DescriptionField
                 value={issue.description ?? ''}
                 onSave={(next) => onUpdate(issue.id, 'description', next)}
@@ -548,6 +548,7 @@ function IssueRow({
 function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
   issueId: number; projectId: number; wbsItems: WbsItem[]; onLinksChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [links, setLinks] = useState<IssueWbsLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -577,9 +578,9 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
 
   const handleRemove = async (wbsItemId: number, name: string) => {
     if (!await confirmDialog({
-      title: '연결 해제',
-      message: `'${name}' 과(와) 의 연결을 해제하시겠습니까?`,
-      confirmLabel: '해제',
+      title: t('issues:links.removeTitle'),
+      message: t('issues:links.removeMessage', { name }),
+      confirmLabel: t('issues:links.remove'),
       danger: false,
     })) return;
     await issueWbsLinksApi.delete(issueId, wbsItemId);
@@ -591,14 +592,14 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
     <div>
       <div className="flex items-center justify-between mb-1">
         <p className="text-xs text-muted font-medium flex items-center gap-1">
-          <ListTree size={12} /> 관련 WBS ({links.length})
+          <ListTree size={12} /> {t('issues:links.title', { count: links.length })}
         </p>
         <Button variant="ghost" size="sm" onClick={() => setPickerOpen((v) => !v)} leadingIcon={<Plus size={12} />}>
-          {pickerOpen ? '닫기' : '연결 추가'}
+          {pickerOpen ? t('common:close') : t('issues:links.add')}
         </Button>
       </div>
       {links.length === 0 && !pickerOpen ? (
-        <p className="text-xs text-muted italic">연결된 WBS 항목 없음</p>
+        <p className="text-xs text-muted italic">{t('issues:links.empty')}</p>
       ) : (
         <ul className="space-y-1">
           {links.map((l) => (
@@ -607,7 +608,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
                 value={l.type}
                 options={LINK_TYPE_OPTIONS}
                 onChange={(next) => handleChangeType(l, next)}
-                title="관계 타입 변경"
+                title={t('issues:links.changeType')}
               />
               <button
                 type="button"
@@ -621,7 +622,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
                 type="button"
                 onClick={() => handleRemove(l.wbsItemId, l.wbsItemName ?? `#${l.wbsItemId}`)}
                 className="p-0.5 text-on-danger hover:opacity-80 transition-opacity"
-                title="해제"
+                title={t('issues:links.remove')}
               >
                 <X size={12} />
               </button>
@@ -632,7 +633,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
       {pickerOpen && (
         <>
           <div className="flex items-center gap-2 mt-2 mb-1 text-xs text-muted">
-            <span>관계 타입</span>
+            <span>{t('issues:links.relationType')}</span>
             <select
               value={pickerType}
               onChange={(e) => setPickerType(e.target.value as IssueWbsLinkType)}
@@ -659,6 +660,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
 }
 
 function DescriptionField({ value, onSave }: { value: string; onSave: (next: string) => void }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 
@@ -676,7 +678,7 @@ function DescriptionField({ value, onSave }: { value: string; onSave: (next: str
           onBlur={() => { setEditing(false); if (draft !== value) onSave(draft); }}
           rows={8}
           className={`${inputClass} resize-y font-mono`}
-          placeholder="이슈 상세 설명 (마크다운 지원)"
+          placeholder={t('issues:descriptionPlaceholder')}
           autoFocus={editing}
         />
       </div>

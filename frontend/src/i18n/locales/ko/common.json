@@ -1,6 +1,8 @@
 {
   "confirm": "확인",
   "cancel": "취소",
+  "delete": "삭제",
+  "close": "닫기",
   "save": "저장",
   "enable": "활성화",
   "saveFailed": "저장 실패",
