@@ -4,7 +4,7 @@
 
 📖 **[Read this in English ↓](#english)**
 
-Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 이력·자료를 한 곳에서 관리하기 위한 Windows 데스크톱 앱입니다. 모든 데이터는 SQLite DB 와 프로젝트별 파일 폴더로 로컬에 저장됩니다 — 기본 위치는 `%USERPROFILE%\Documents\ProjectManager\` 이며, 설정에서 다른 폴더(예: 본인 멀티 디바이스용 외부 드라이브, 사내 SMB 공유 폴더)로 변경할 수 있습니다. 원격 백엔드나 계정 가입은 없습니다. WPF + WebView2 셸 안에서 ASP.NET Core 가 인프로세스로 실행되고 그 위에 React SPA UI 가 올라가는 구조입니다. UI 언어는 한국어.
+Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 이력·자료를 한 곳에서 관리하기 위한 Windows 데스크톱 앱입니다. 모든 데이터는 SQLite DB 와 프로젝트별 파일 폴더로 로컬에 저장됩니다 — 기본 위치는 `%USERPROFILE%\Documents\ProjectManager\` 이며, 설정에서 다른 폴더(예: 본인 멀티 디바이스용 외부 드라이브, 사내 SMB 공유 폴더)로 변경할 수 있습니다. 원격 백엔드나 계정 가입은 없습니다. WPF + WebView2 셸 안에서 ASP.NET Core 가 인프로세스로 실행되고 그 위에 React SPA UI 가 올라가는 구조입니다. UI 언어는 한국어·영어 (설정에서 전환, 기본 한국어).
 
 ## 시작하기 (사용자)
 
@@ -47,7 +47,7 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **프로젝트 맵** — Cytoscape + dagre 그래프로 WBS·이슈·회의·변경·개발 정보 간 관계를 시각화 (정오각형 5 hub 방사형 / 타임라인 레이아웃, 미니맵).
 - **모니터링** — 전 프로젝트 통합 뷰: 종합 시각화 4종 (프로젝트 상태 분포 / 이슈 상태×우선순위 매트릭스 / 다가오는 30일 마일스톤 / 프로젝트별 WBS 진행률), 오늘 예정 마일스톤, 금주·지난주 업무 일지.
 - **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용. 한 작업에 여러 담당자가 있어도 정확히 매칭.
-- **외관·설정** — 다크/라이트 + **커스텀 색 테마**(핵심 12색 지정 → 나머지 자동 파생), **브랜드 워드마크·앱 아이콘 커스터마이즈**, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그), **설정 내보내기/가져오기**(JSON).
+- **외관·설정** — 다크/라이트 + **커스텀 색 테마**(핵심 12색 지정 → 나머지 자동 파생), **브랜드 워드마크·앱 아이콘 커스터마이즈**, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그), **설정 내보내기/가져오기**(JSON), **UI 언어 한국어·영어 전환**, **오픈소스 라이선스 고지**(설정 > 시스템).
 - **자동 백업** — 전체 데이터(DB + 첨부)를 지정 폴더로 주기적으로 zip 백업(보관 개수 관리). 동기화 폴더(OneDrive 등) 지정 시 오프사이트 백업.
 - **자동 업데이트** — 앱이 주기적으로 GitHub 릴리스를 확인해 새 버전이 있으면 알려주고, 설정 > 업데이트 에서 직접 확인·다운로드·설치할 수 있습니다 (다운로드까지만 자동, 설치 실행은 사용자가 직접). 설치형으로 받은 경우에 동작.
 - **위젯 모드** — 데스크톱 한쪽에 항상 떠 있는 컴팩트 플로팅 위젯. 시계·날씨, 시스템 음악 재생 제어(Windows SMTC — 어떤 앱이든 재생 중인 곡의 제목·아트워크·재생/정지/이전/다음·타임라인), 최근 활성 창(머문 시간), 오늘 내 작업, 빠른 작성(이슈·변경이력·리소스). 사이드바 버튼 또는 `Ctrl+Alt+W` 로 토글하고 투명도·항상 위 고정·확장(2열)·크기 조정·드래그를 지원합니다. (데스크톱 전용)
@@ -122,7 +122,7 @@ cd frontend; npm install; cd ..
 
 > *The map of your projects.* — A local-first project management desktop app for a single user.
 
-Atlas is a Windows desktop application that lets one person manage schedules, issues, meetings, change logs, and notes across multiple projects in one place. All data is stored locally as a SQLite database and per-project file folders — the default location is `%USERPROFILE%\Documents\ProjectManager\`, but you can change it from Settings to any other folder (e.g. an external drive for multi-device use, or a corporate SMB share). No remote backend, no account. The shell is WPF + WebView2 hosting ASP.NET Core in-process, with a React SPA on top. The UI is in Korean.
+Atlas is a Windows desktop application that lets one person manage schedules, issues, meetings, change logs, and notes across multiple projects in one place. All data is stored locally as a SQLite database and per-project file folders — the default location is `%USERPROFILE%\Documents\ProjectManager\`, but you can change it from Settings to any other folder (e.g. an external drive for multi-device use, or a corporate SMB share). No remote backend, no account. The shell is WPF + WebView2 hosting ASP.NET Core in-process, with a React SPA on top. The UI is available in Korean and English (switch in Settings; Korean by default).
 
 ### Getting started (end users)
 
@@ -165,7 +165,7 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 - **Project map** — Cytoscape + dagre graph visualising relationships between WBS items, issues, meetings, change logs, and dev info (regular-pentagon 5-hub radial / timeline layouts, minimap).
 - **Monitoring** — Cross-project view: four summary charts (project-status breakdown / issue status×priority matrix / upcoming-30-day milestones / per-project WBS progress), today's milestones, and this/last week's worklogs.
 - **Resources** — People and equipment, used as the autocomplete source for WBS assignees. Matches correctly even when a task has multiple assignees.
-- **Appearance & settings** — Dark / light + **custom color theme** (pick 12 core colors, the rest auto-derived), **brand wordmark & app-icon customization**, Markdown font size and line height, remember last project, change data folder location (native folder picker), **settings export/import** (JSON).
+- **Appearance & settings** — Dark / light + **custom color theme** (pick 12 core colors, the rest auto-derived), **brand wordmark & app-icon customization**, Markdown font size and line height, remember last project, change data folder location (native folder picker), **settings export/import** (JSON), **Korean / English UI toggle**, **open-source license notices** (Settings > System).
 - **Automatic backup** — Periodically zip the full data (DB + attachments) into a folder you choose, with retention. Point it at a synced folder (OneDrive/Dropbox) for off-site backups.
 - **Automatic updates** — The app periodically checks GitHub Releases and notifies you when a newer version exists; you can check, download, and install from Settings > Update (download is automatic, running the installer is up to you). Applies to installer-based setups.
 - **Widget mode** — A compact, always-on-top floating widget. Clock & weather, system media controls (Windows SMTC — title, artwork, play/pause/prev/next, and a seekable timeline for whatever app is playing), recent active windows (with dwell time), today's tasks, and quick-create (issue / change log / resource). Toggle from the sidebar or `Ctrl+Alt+W`; supports adjustable transparency, always-on-top pin, an expanded 2-column layout, resizing, and dragging. (Desktop only.)
