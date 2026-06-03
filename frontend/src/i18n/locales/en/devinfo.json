@@ -1,0 +1,73 @@
+{
+  "title": "Dev info",
+  "newBtn": "Add info",
+  "filterAll": "All",
+  "searchPlaceholder": "Search title / tags / body…",
+  "tagsLabel": "Tags:",
+  "resetTags": "Reset",
+  "tagManage": "Manage tags",
+  "tagSortAria": "Sort tags",
+  "sortAlpha": "A–Z",
+  "sortFreq": "Frequency",
+  "form": {
+    "newTitle": "Add dev info",
+    "editTitle": "Edit info",
+    "title": "Title",
+    "type": "Type",
+    "contentMd": "Content (Markdown)",
+    "contentMdHint": "Saved as a [title].md file in the project folder.",
+    "storageMode": "Storage mode",
+    "copyMode": "Copy to data folder",
+    "copyModeRec": "(recommended — included in backup zip)",
+    "copyModeDesc": "Copies the selected file to the project folder's DevFiles.",
+    "refMode": "Store original path only",
+    "refModeDesc": "Stores only the absolute path without moving the file. Not included in the backup zip; can't be opened if the original is moved/deleted.",
+    "refModeClientWarn": "Not available in Client mode — the server can't open a path picked on the client.",
+    "filePath": "File path",
+    "filePathPlaceholderRef": "C:\\... (absolute path)",
+    "filePathPlaceholderCopy": "Shown automatically after browsing",
+    "uploading": "Uploading...",
+    "browseUpload": "Browse file",
+    "pickFileTitle": "Select original file",
+    "pickFile": "Select file",
+    "nativeOnlyHint": "Native dialogs work only in the desktop app. In the browser, type the path directly.",
+    "url": "URL",
+    "tags": "Tags",
+    "tagsHint": "Add with Enter or comma. ↑/↓ to pick existing tags, Backspace to remove the last chip.",
+    "tagsPlaceholder": "API, Design, Docs",
+    "noFolderInfo": "Can't determine the project folder.",
+    "uploadFailed": "File upload failed"
+  },
+  "preview": {
+    "loadError": "Couldn't load the preview.",
+    "noPath": "No file path.",
+    "imageError": "Couldn't load the image. Check the file path: {{path}}"
+  },
+  "card": {
+    "editAria": "Edit dev info — {{title}}",
+    "deleteAria": "Delete dev info — {{title}}"
+  },
+  "detail": {
+    "selectPrompt": "Select an item to see its details.",
+    "filePath": "File path",
+    "openFile": "Open file",
+    "link": "Link"
+  },
+  "empty": {
+    "titleNone": "No dev info.",
+    "titleFiltered": "No matching items.",
+    "descNone": "Start with the 'Add info' button at the top right.",
+    "descAdjust": "Try adjusting filters / search.",
+    "descEmpty": "No items."
+  },
+  "delete": {
+    "title": "Delete dev info",
+    "message": "Delete this dev info item? This can't be undone."
+  },
+  "toast": {
+    "created": "New dev info '{{title}}' added",
+    "createdNoName": "New dev info added",
+    "openFailed": "Couldn't open the file.{{msg}}",
+    "openError": "Error opening the file: {{msg}}"
+  }
+}

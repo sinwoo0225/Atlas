@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
@@ -47,6 +48,7 @@ function DevInfoForm({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const initialForm = {
     title: initial?.title ?? '',
     type: initial?.type ?? 'Markdown' as DevInfoType,
@@ -79,14 +81,14 @@ function DevInfoForm({
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 리터럴↔CreateDevInfoDto 구조 일치, 캐스트만 필요
       await devInfoApi.create(payload as any);
-      toast.success(form.title.trim() ? `새 개발 정보 '${form.title.trim()}' 이(가) 추가됐어요` : '새 개발 정보가 추가됐어요');
+      toast.success(form.title.trim() ? t('devinfo:toast.created', { title: form.title.trim() }) : t('devinfo:toast.createdNoName'));
     }
     onSave();
   };
 
   const handleFileChosen = async (file: File) => {
     if (!project?.folderPath) {
-      toast.warning('프로젝트 폴더 정보를 알 수 없습니다.');
+      toast.warning(t('devinfo:form.noFolderInfo'));
       return;
     }
     setUploading(true);
@@ -99,7 +101,7 @@ function DevInfoForm({
       const data = await res.json();
       if (data?.filePath) set('filePath', data.filePath);
     } catch {
-      toast.error('파일 업로드 실패');
+      toast.error(t('devinfo:form.uploadFailed'));
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -110,36 +112,36 @@ function DevInfoForm({
     <Modal
       open
       onClose={onCancel}
-      title={initial ? '정보 수정' : '개발 정보 추가'}
+      title={initial ? t('devinfo:form.editTitle') : t('devinfo:form.newTitle')}
       size="xxl"
       fixedHeight
       dirty={dirty}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>{t('common:cancel')}</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>{t('common:save')}</Button>
         </>
       }
     >
       <div className="flex-1 min-h-0 flex flex-col -mx-2 px-2 gap-4">
-        <FormField label="제목" required>
+        <FormField label={t('devinfo:form.title')} required>
           <input value={form.title} onChange={(e) => set('title', e.target.value)} className={inputClass} />
         </FormField>
 
         <div>
-          <label className="block text-xs text-muted font-medium mb-1">타입</label>
+          <label className="block text-xs text-muted font-medium mb-1">{t('devinfo:form.type')}</label>
           <div className="flex gap-2">
-            {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((t) => {
-              const Icon = typeIcon[t];
+            {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((dt) => {
+              const Icon = typeIcon[dt];
               return (
                 <Button
-                  key={t}
-                  variant={form.type === t ? 'primary' : 'secondary'}
+                  key={dt}
+                  variant={form.type === dt ? 'primary' : 'secondary'}
                   size="md"
-                  onClick={() => set('type', t)}
+                  onClick={() => set('type', dt)}
                   leadingIcon={<Icon size={14} />}
                 >
-                  {t}
+                  {dt}
                 </Button>
               );
             })}
@@ -147,7 +149,7 @@ function DevInfoForm({
         </div>
 
         {form.type === 'Markdown' && (
-          <FormField label="내용 (Markdown)" hint="저장 시 프로젝트 폴더에 [제목].md 파일로 저장됩니다." className="flex-1 min-h-0">
+          <FormField label={t('devinfo:form.contentMd')} hint={t('devinfo:form.contentMdHint')} className="flex-1 min-h-0">
             <textarea
               value={form.content}
               onChange={(e) => set('content', e.target.value)}
@@ -159,7 +161,7 @@ function DevInfoForm({
 
         {form.type === 'File' && (
           <>
-            <FormField label="저장 방식">
+            <FormField label={t('devinfo:form.storageMode')}>
               <div className="flex flex-col gap-2">
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
@@ -170,9 +172,9 @@ function DevInfoForm({
                     className="mt-1"
                   />
                   <span className="text-sm">
-                    <span className="text-primary font-medium">데이터 폴더로 카피</span>
-                    <span className="text-xs text-muted ml-2">(권장 — 백업 zip 에 포함됨)</span>
-                    <span className="block text-xs text-muted">선택한 파일을 프로젝트 폴더의 DevFiles 로 복사합니다.</span>
+                    <span className="text-primary font-medium">{t('devinfo:form.copyMode')}</span>
+                    <span className="text-xs text-muted ml-2">{t('devinfo:form.copyModeRec')}</span>
+                    <span className="block text-xs text-muted">{t('devinfo:form.copyModeDesc')}</span>
                   </span>
                 </label>
                 <label className={`flex items-start gap-2 ${referenceForbidden ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
@@ -185,22 +187,22 @@ function DevInfoForm({
                     className="mt-1"
                   />
                   <span className="text-sm">
-                    <span className="text-primary font-medium">원위치 경로만 저장</span>
-                    <span className="block text-xs text-muted">파일을 옮기지 않고 절대경로만 저장합니다. 백업 zip 에 포함되지 않으며, 원본이 이동/삭제되면 열 수 없습니다.</span>
+                    <span className="text-primary font-medium">{t('devinfo:form.refMode')}</span>
+                    <span className="block text-xs text-muted">{t('devinfo:form.refModeDesc')}</span>
                     {referenceForbidden && (
-                      <span className="block text-xs text-on-warning mt-1">Client 모드에서는 사용할 수 없습니다 — 클라이언트가 고른 경로를 서버가 열 수 없기 때문.</span>
+                      <span className="block text-xs text-on-warning mt-1">{t('devinfo:form.refModeClientWarn')}</span>
                     )}
                   </span>
                 </label>
               </div>
             </FormField>
 
-            <FormField label="파일 경로">
+            <FormField label={t('devinfo:form.filePath')}>
               <div className="flex gap-2">
                 <input
                   value={form.filePath}
                   onChange={(e) => set('filePath', e.target.value)}
-                  placeholder={form.storageMode === 'Reference' ? 'C:\\... (절대경로)' : '파일 찾기 후 자동 표시'}
+                  placeholder={form.storageMode === 'Reference' ? t('devinfo:form.filePathPlaceholderRef') : t('devinfo:form.filePathPlaceholderCopy')}
                   className={inputClass}
                   readOnly={form.storageMode === 'Copy'}
                 />
@@ -211,24 +213,24 @@ function DevInfoForm({
                     disabled={uploading}
                     leadingIcon={<Upload size={16} />}
                   >
-                    {uploading ? '업로드 중...' : '파일 찾기'}
+                    {uploading ? t('devinfo:form.uploading') : t('devinfo:form.browseUpload')}
                   </Button>
                 ) : (
                   <Button
                     variant="secondary"
                     onClick={async () => {
-                      const path = await pickFile({ title: '원본 파일 선택' });
+                      const path = await pickFile({ title: t('devinfo:form.pickFileTitle') });
                       if (path) set('filePath', path);
                     }}
                     disabled={!bridgeAvailable}
                     leadingIcon={<FolderOpen size={16} />}
                   >
-                    파일 선택
+                    {t('devinfo:form.pickFile')}
                   </Button>
                 )}
               </div>
               {form.storageMode === 'Reference' && !bridgeAvailable && (
-                <p className="text-xs text-muted mt-1">데스크톱 앱에서만 네이티브 다이얼로그를 쓸 수 있어요. 브라우저에서는 경로를 직접 입력하세요.</p>
+                <p className="text-xs text-muted mt-1">{t('devinfo:form.nativeOnlyHint')}</p>
               )}
               <input
                 ref={fileInputRef}
@@ -244,7 +246,7 @@ function DevInfoForm({
         )}
 
         {form.type === 'Link' && (
-          <FormField label="URL">
+          <FormField label={t('devinfo:form.url')}>
             <input
               value={form.url}
               onChange={(e) => set('url', e.target.value)}
@@ -254,12 +256,12 @@ function DevInfoForm({
           </FormField>
         )}
 
-        <FormField label="태그" hint="Enter 또는 콤마로 추가. ↑/↓ 로 기존 태그 선택, Backspace 로 마지막 칩 제거.">
+        <FormField label={t('devinfo:form.tags')} hint={t('devinfo:form.tagsHint')}>
           <TagSuggestionInput
             value={form.tags}
             onChange={(v) => set('tags', v)}
             suggestions={availableTags}
-            placeholder="API, 설계, 문서"
+            placeholder={t('devinfo:form.tagsPlaceholder')}
           />
         </FormField>
       </div>
@@ -268,6 +270,7 @@ function DevInfoForm({
 }
 
 function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem }) {
+  const { t } = useTranslation();
   const [text, setText] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imgError, setImgError] = useState(false);
@@ -285,17 +288,17 @@ function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem
           const data = await r.json();
           setText(data.text ?? '');
         })
-        .catch(() => setError('미리보기를 불러올 수 없습니다.'));
+        .catch(() => setError(t('devinfo:preview.loadError')));
     }
-  }, [projectId, item.id, item.filePath, ext, item.updatedAt]);
+  }, [projectId, item.id, item.filePath, ext, item.updatedAt, t]);
 
-  if (!item.filePath) return <p className="text-sm text-muted">파일 경로가 없습니다.</p>;
+  if (!item.filePath) return <p className="text-sm text-muted">{t('devinfo:preview.noPath')}</p>;
 
   if (imageExts.includes(ext)) {
     if (imgError) {
       return (
         <p className="text-sm text-on-danger">
-          이미지를 불러올 수 없습니다. 파일 경로를 확인하세요: {item.filePath}
+          {t('devinfo:preview.imageError', { path: item.filePath })}
         </p>
       );
     }
@@ -312,7 +315,7 @@ function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem
 
   if (textExts.includes(ext)) {
     if (error) return <p className="text-sm text-on-danger">{error}</p>;
-    if (text === null) return <p className="text-sm text-muted">불러오는 중...</p>;
+    if (text === null) return <p className="text-sm text-muted">{t('common:loading')}</p>;
     if (ext === 'md') {
       return (
         <div className="markdown-body text-secondary">
@@ -331,6 +334,7 @@ function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem
 }
 
 export function DevInfoPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const [items, setItems] = useState<DevInfoItem[]>([]);
@@ -391,9 +395,9 @@ export function DevInfoPage() {
 
   const handleDelete = async (id: number) => {
     if (!await confirmDialog({
-      title: '개발 정보 삭제',
-      message: '이 개발 정보 항목을 삭제하시겠습니까? 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('devinfo:delete.title'),
+      message: t('devinfo:delete.message'),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     await devInfoApi.delete(pid, id);
@@ -409,10 +413,10 @@ export function DevInfoPage() {
       });
       if (!res.ok) {
         const msg = await res.text().catch(() => '');
-        toast.error(`파일을 열 수 없습니다.${msg ? ` (${msg})` : ''}`);
+        toast.error(t('devinfo:toast.openFailed', { msg: msg ? ` (${msg})` : '' }));
       }
     } catch (e) {
-      toast.error(`파일 열기 중 오류가 발생했습니다: ${(e as Error).message}`);
+      toast.error(t('devinfo:toast.openError', { msg: (e as Error).message }));
     }
   };
 
@@ -444,10 +448,10 @@ export function DevInfoPage() {
               <ChevronRight size={14} className="text-muted shrink-0" />
             </>
           )}
-          <span className="shrink-0">개발 정보</span>
+          <span className="shrink-0">{t('devinfo:title')}</span>
         </h1>
         <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-          정보 추가
+          {t('devinfo:newBtn')}
         </Button>
       </div>
 
@@ -478,19 +482,19 @@ export function DevInfoPage() {
           size="sm"
           onClick={() => setFilterType('')}
         >
-          전체
+          {t('devinfo:filterAll')}
         </Button>
-        {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((t) => {
-          const Icon = typeIcon[t];
+        {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((dt) => {
+          const Icon = typeIcon[dt];
           return (
             <Button
-              key={t}
-              variant={filterType === t ? 'primary' : 'secondary'}
+              key={dt}
+              variant={filterType === dt ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => setFilterType(t === filterType ? '' : t)}
+              onClick={() => setFilterType(dt === filterType ? '' : dt)}
               leadingIcon={<Icon size={14} />}
             >
-              {t}
+              {dt}
             </Button>
           );
         })}
@@ -498,7 +502,7 @@ export function DevInfoPage() {
           type="search"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          placeholder="제목·태그·본문 검색…"
+          placeholder={t('devinfo:searchPlaceholder')}
           leadingIcon={<Search size={14} />}
           fullWidth={false}
           wrapperClassName="ml-auto w-72"
@@ -508,7 +512,7 @@ export function DevInfoPage() {
 
       {availableTags.length > 0 && (
         <div className="flex gap-2 flex-wrap items-center">
-          <span className="text-xs text-muted shrink-0 mr-1">태그:</span>
+          <span className="text-xs text-muted shrink-0 mr-1">{t('devinfo:tagsLabel')}</span>
           {availableTags.map((tag) => {
             const active = selectedTags.includes(tag);
             return (
@@ -528,7 +532,7 @@ export function DevInfoPage() {
           })}
           {selectedTags.length > 0 && (
             <Button variant="ghost" size="sm" onClick={() => setSelectedTags([])}>
-              초기화
+              {t('devinfo:resetTags')}
             </Button>
           )}
           <Button
@@ -538,11 +542,11 @@ export function DevInfoPage() {
             leadingIcon={<TagIcon size={12} />}
             className="ml-auto"
           >
-            태그 관리
+            {t('devinfo:tagManage')}
           </Button>
           <div
             role="group"
-            aria-label="태그 정렬"
+            aria-label={t('devinfo:tagSortAria')}
             className="flex items-center gap-1 text-xs text-muted shrink-0"
           >
             <ArrowUpDown size={12} aria-hidden="true" />
@@ -552,7 +556,7 @@ export function DevInfoPage() {
               className={`px-2 py-0.5 rounded transition-colors ${tagSort === 'alpha' ? 'bg-surface-2 text-primary' : 'hover:text-primary'}`}
               aria-pressed={tagSort === 'alpha'}
             >
-              가나다
+              {t('devinfo:sortAlpha')}
             </button>
             <button
               type="button"
@@ -560,7 +564,7 @@ export function DevInfoPage() {
               className={`px-2 py-0.5 rounded transition-colors ${tagSort === 'freq' ? 'bg-surface-2 text-primary' : 'hover:text-primary'}`}
               aria-pressed={tagSort === 'freq'}
             >
-              빈도
+              {t('devinfo:sortFreq')}
             </button>
           </div>
         </div>
@@ -571,10 +575,10 @@ export function DevInfoPage() {
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Code2 size={36} />}
-              title={items.length === 0 ? '개발 정보가 없습니다.' : '조건에 맞는 항목이 없습니다.'}
+              title={items.length === 0 ? t('devinfo:empty.titleNone') : t('devinfo:empty.titleFiltered')}
               description={items.length === 0
-                ? "우측 상단 '정보 추가' 버튼으로 시작해보세요."
-                : (filterType || keyword || selectedTags.length > 0) ? '필터·검색어를 조정해 보세요.' : '항목이 없습니다.'}
+                ? t('devinfo:empty.descNone')
+                : (filterType || keyword || selectedTags.length > 0) ? t('devinfo:empty.descAdjust') : t('devinfo:empty.descEmpty')}
             />
           ) : filtered.map((item) => {
             const Icon = typeIcon[item.type];
@@ -604,10 +608,10 @@ export function DevInfoPage() {
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => setEditing(item)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`개발 정보 수정 — ${item.title}`}>
+                    <button onClick={() => setEditing(item)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('devinfo:card.editAria', { title: item.title })}>
                       <Pencil size={14} />
                     </button>
-                    <button onClick={() => handleDelete(item.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제" aria-label={`개발 정보 삭제 — ${item.title}`}>
+                    <button onClick={() => handleDelete(item.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('common:delete')} aria-label={t('devinfo:card.deleteAria', { title: item.title })}>
                       <X size={14} />
                     </button>
                   </div>
@@ -620,7 +624,7 @@ export function DevInfoPage() {
         <Card padding="spacious" className="lg:col-span-2 overflow-y-auto">
           {!selected ? (
             <div className="h-full flex items-center justify-center text-muted">
-              <p className="text-sm">항목을 선택하면 상세 내용이 표시됩니다.</p>
+              <p className="text-sm">{t('devinfo:detail.selectPrompt')}</p>
             </div>
           ) : (
             <div>
@@ -638,21 +642,21 @@ export function DevInfoPage() {
               {selected.type === 'File' && (
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-muted mb-1">파일 경로</p>
+                    <p className="text-xs text-muted mb-1">{t('devinfo:detail.filePath')}</p>
                     <p className="text-sm text-secondary font-mono bg-surface-2 px-3 py-2 rounded-md break-all border border-default">
                       {selected.filePath}
                     </p>
                   </div>
                   <FilePreview projectId={pid} item={selected} />
                   <Button variant="secondary" onClick={() => handleOpenFile(selected)} leadingIcon={<Folder size={16} />}>
-                    파일 열기
+                    {t('devinfo:detail.openFile')}
                   </Button>
                 </div>
               )}
 
               {selected.type === 'Link' && (
                 <div className="space-y-2">
-                  <p className="text-xs text-muted">링크</p>
+                  <p className="text-xs text-muted">{t('devinfo:detail.link')}</p>
                   <a href={selected.url} target="_blank" rel="noreferrer" className="text-sm text-secondary hover:text-primary hover:underline break-all transition-colors">
                     {selected.url}
                   </a>
