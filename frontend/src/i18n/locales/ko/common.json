@@ -18,6 +18,9 @@
   "currentProject": "현재 프로젝트",
   "projectMenu": "프로젝트 메뉴",
   "shortcutsTitle": "키보드 단축키",
+  "copy": "복사",
+  "copied": "복사됨",
+  "copyFailed": "복사 실패",
   "selectOption": "옵션 선택",
   "unsavedChanges": "저장 안 된 변경사항",
   "requestInProgress": "요청 진행 중",
@@ -38,6 +41,9 @@
   "toast": {
     "backendVersionMismatch": "Atlas 백엔드 버전이 프론트와 일치하지 않아요 (서버 {{server}} / 프론트 {{front}}). 새로고침 또는 재시작이 필요할 수 있어요.",
     "backendUnreachable": "Atlas 백엔드에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.",
-    "updateAvailable": "새 버전 v{{version}} 사용 가능 — 설정 › 업데이트에서 받을 수 있어요."
+    "updateAvailable": "새 버전 v{{version}} 사용 가능 — 설정 › 업데이트에서 받을 수 있어요.",
+    "apiConflict": "다른 사용자가 방금 수정했습니다. 새로고침 후 다시 시도해 주세요.",
+    "apiServerError": "서버 오류 ({{status}})",
+    "apiRequestFailed": "요청 처리 실패 ({{status}})"
   }
 }

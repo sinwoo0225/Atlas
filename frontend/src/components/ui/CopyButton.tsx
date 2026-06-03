@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,7 +33,9 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function CopyButton({ value, title = '복사', className = '' }: Props) {
+export function CopyButton({ value, title, className = '' }: Props) {
+  const { t } = useTranslation();
+  const label = title ?? t('common:copy');
   const [copied, setCopied] = useState(false);
   const disabled = !value.trim();
 
@@ -41,10 +44,10 @@ export function CopyButton({ value, title = '복사', className = '' }: Props) {
     const ok = await copyText(value);
     if (ok) {
       setCopied(true);
-      toast.success('복사됨');
+      toast.success(t('common:copied'));
       setTimeout(() => setCopied(false), 1500);
     } else {
-      toast.error('복사 실패');
+      toast.error(t('common:copyFailed'));
     }
   };
 
@@ -53,8 +56,8 @@ export function CopyButton({ value, title = '복사', className = '' }: Props) {
       type="button"
       onClick={handleCopy}
       disabled={disabled}
-      title={disabled ? undefined : title}
-      aria-label={title}
+      title={disabled ? undefined : label}
+      aria-label={label}
       className={`shrink-0 p-2 rounded-md border border-default text-muted transition-colors hover:text-primary hover:border-strong disabled:opacity-40 disabled:cursor-not-allowed ${className}`}
     >
       {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}

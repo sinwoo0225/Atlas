@@ -1,6 +1,7 @@
 import { toast } from 'sonner';
 import { loadSettings } from '../store/settings';
 import { progressStart, progressEnd } from '../utils/progressEmitter';
+import i18n from '../i18n';
 
 const BASE_URL = '/api';
 
@@ -35,13 +36,13 @@ async function request<T>(path: string, init?: RequestInit, opts?: RequestOption
       if (!opts?.silent) {
         if (res.status === 409) {
           // 동시 편집 충돌은 사용자 액션 (새로고침/재시도) 필요 — 더 오래 띄움.
-          toast.error(serverMsg || '다른 사용자가 방금 수정했습니다. 새로고침 후 다시 시도해 주세요.', {
+          toast.error(serverMsg || i18n.t('common:toast.apiConflict'), {
             duration: 6000,
           });
         } else if (res.status >= 500) {
-          toast.error(serverMsg || `서버 오류 (${res.status})`);
+          toast.error(serverMsg || i18n.t('common:toast.apiServerError', { status: res.status }));
         } else if (res.status >= 400) {
-          toast.error(serverMsg || `요청 처리 실패 (${res.status})`);
+          toast.error(serverMsg || i18n.t('common:toast.apiRequestFailed', { status: res.status }));
         }
       }
       throw new Error(`API error ${res.status}: ${body || res.statusText}`);

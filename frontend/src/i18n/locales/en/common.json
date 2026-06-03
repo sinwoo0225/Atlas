@@ -18,6 +18,9 @@
   "currentProject": "Current project",
   "projectMenu": "Project menu",
   "shortcutsTitle": "Keyboard shortcuts",
+  "copy": "Copy",
+  "copied": "Copied",
+  "copyFailed": "Copy failed",
   "selectOption": "Select option",
   "unsavedChanges": "Unsaved changes",
   "requestInProgress": "Request in progress",
@@ -38,6 +41,9 @@
   "toast": {
     "backendVersionMismatch": "The Atlas backend version doesn't match the frontend (server {{server}} / frontend {{front}}). A refresh or restart may be needed.",
     "backendUnreachable": "Can't reach the Atlas backend. Make sure it's running.",
-    "updateAvailable": "New version v{{version}} available — get it from Settings › Update."
+    "updateAvailable": "New version v{{version}} available — get it from Settings › Update.",
+    "apiConflict": "Someone just made a change. Refresh and try again.",
+    "apiServerError": "Server error ({{status}})",
+    "apiRequestFailed": "Request failed ({{status}})"
   }
 }
