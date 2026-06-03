@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users, LayoutTemplate, FolderGit2, Check, AlertCircle } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { gitApi } from '../api/git';
@@ -17,13 +18,15 @@ import { getRecent, type RecentItem } from '../utils/recentItems';
 import { useCreateForm } from '../hooks/useCreateForm';
 import type { ImportPreviewItem, Project, ProjectCategory, ProjectStatus, StartPageData } from '../types';
 
-const statusOptions: { value: ProjectStatus; label: string }[] = [
-  { value: 'Waiting', label: '대기/보류' },
-  { value: 'InProgress', label: '진행' },
-  { value: 'Done', label: '완료' },
-  { value: 'Maintenance', label: '하자보수/유지보수' },
+// 라벨은 status 네임스페이스 재사용 — 렌더 시점 t(labelKey).
+const statusOptions: { value: ProjectStatus; labelKey: string }[] = [
+  { value: 'Waiting', labelKey: 'status:project.Waiting' },
+  { value: 'InProgress', labelKey: 'status:project.InProgress' },
+  { value: 'Done', labelKey: 'status:project.Done' },
+  { value: 'Maintenance', labelKey: 'status:project.Maintenance' },
 ];
 
+// 카테고리는 저장 데이터값(한글 enum)이라 그대로 노출(범위 밖) — Phase 2 후속에서 표시 매핑 검토.
 const categoryOptions: ProjectCategory[] = ['과제', '내부', '사업'];
 
 function ProjectForm({
@@ -38,6 +41,7 @@ function ProjectForm({
   onSaveWithTemplate?: (data: Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const initialForm = {
     name: initial?.name ?? '',
     category: initial?.category ?? '',
@@ -96,22 +100,22 @@ function ProjectForm({
     <Modal
       open
       onClose={onCancel}
-      title={initial?.id ? '프로젝트 수정' : '새 프로젝트'}
+      title={initial?.id ? t('projects:form.editTitle') : t('projects:form.newTitle')}
       size="xl"
       fixedHeight
       dirty={dirty}
       footer={
         <>
           <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>
-            취소
+            {t('common:cancel')}
           </Button>
           {onSaveWithTemplate && (
             <Button variant="secondary" onClick={() => onSaveWithTemplate(buildPayload())} leadingIcon={<LayoutTemplate size={16} />}>
-              템플릿에서 시작
+              {t('projects:form.startFromTemplate')}
             </Button>
           )}
           <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>
-            저장
+            {t('common:save')}
           </Button>
         </>
       }
@@ -120,69 +124,69 @@ function ProjectForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 min-h-full">
           {/* 좌측 - 기본 정보 */}
           <div className="space-y-3">
-            <FormField label="프로젝트 구분">
+            <FormField label={t('projects:form.category')}>
               <select value={form.category} onChange={(e) => set('category', e.target.value)} className={inputClass}>
-                <option value="">(미지정)</option>
+                <option value="">{t('projects:form.categoryNone')}</option>
                 {categoryOptions.map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
             </FormField>
-            <FormField label="프로젝트명" required>
+            <FormField label={t('projects:form.name')} required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="상태">
+            <FormField label={t('projects:form.status')}>
               <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
                 {statusOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
+                  <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
                 ))}
               </select>
             </FormField>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="시작일">
+              <FormField label={t('projects:form.startDate')}>
                 <input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="종료일">
+              <FormField label={t('projects:form.endDate')}>
                 <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
               </FormField>
             </div>
-            <FormField label="예산">
+            <FormField label={t('projects:form.budget')}>
               <input type="number" value={form.budget} onChange={(e) => set('budget', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="참여 인원">
+            <FormField label={t('projects:form.participants')}>
               <input value={form.participants} onChange={(e) => set('participants', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="주요 산출물">
+            <FormField label={t('projects:form.deliverables')}>
               <input value={form.deliverables} onChange={(e) => set('deliverables', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="관련 링크">
+            <FormField label={t('projects:form.relatedLinks')}>
               <input value={form.relatedLinks} onChange={(e) => set('relatedLinks', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="Git 저장소 경로">
+            <FormField label={t('projects:form.gitRepoPath')}>
               <div className="flex gap-2">
                 <input
                   value={form.gitRepoPath}
                   onChange={(e) => { set('gitRepoPath', e.target.value); setGitCheck(null); }}
                   onBlur={(e) => validateGitPath(e.target.value)}
-                  placeholder=".git 이 있는 소스코드 폴더 경로"
+                  placeholder={t('projects:form.gitRepoPlaceholder')}
                   className={inputClass}
                 />
                 {bridgeAvailable && !isClientMode && (
                   <Button variant="secondary" onClick={handlePickGitFolder} leadingIcon={<FolderGit2 size={16} />} className="shrink-0">
-                    찾기
+                    {t('projects:form.browse')}
                   </Button>
                 )}
               </div>
               {isClientMode ? (
                 <p className="text-xs text-muted mt-1">
-                  Client 모드에서는 서버 머신 기준 경로여야 하며 Git 이력 보기는 Local 모드에서만 동작합니다.
+                  {t('projects:form.gitClientHint')}
                 </p>
               ) : gitChecking ? (
-                <p className="text-xs text-muted mt-1">확인 중…</p>
+                <p className="text-xs text-muted mt-1">{t('projects:form.gitChecking')}</p>
               ) : gitCheck ? (
                 gitCheck.valid ? (
                   <p className="text-xs text-on-success mt-1 flex items-center gap-1">
-                    <Check size={12} /> 유효한 git 저장소입니다. 변경 이력 → Git 이력 탭에서 확인하세요.
+                    <Check size={12} /> {t('projects:form.gitValid')}
                   </p>
                 ) : (
                   <p className="text-xs text-on-danger mt-1 flex items-center gap-1">
@@ -190,14 +194,14 @@ function ProjectForm({
                   </p>
                 )
               ) : (
-                <p className="text-xs text-muted mt-1">변경 이력 → Git 이력 탭에서 이 저장소의 커밋 그래프를 봅니다.</p>
+                <p className="text-xs text-muted mt-1">{t('projects:form.gitHint')}</p>
               )}
             </FormField>
           </div>
 
           {/* 우측 - 긴 텍스트. 설명 textarea 가 남은 세로 공간 채움 */}
           <div className="flex flex-col gap-3 min-h-0">
-            <FormField label="목표" className="shrink-0">
+            <FormField label={t('projects:form.goal')} className="shrink-0">
               <textarea
                 value={form.goal}
                 onChange={(e) => set('goal', e.target.value)}
@@ -205,7 +209,7 @@ function ProjectForm({
                 className={`${inputClass} resize-none`}
               />
             </FormField>
-            <FormField label="설명" className="flex-1 flex flex-col min-h-0">
+            <FormField label={t('projects:form.description')} className="flex-1 flex flex-col min-h-0">
               <textarea
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
@@ -220,6 +224,7 @@ function ProjectForm({
 }
 
 export function ProjectList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { projects, setProjects, selectProject, addProject, updateProject, removeProject } = useProjectStore();
   const [showForm, setShowForm] = useState(false);
@@ -239,9 +244,9 @@ export function ProjectList() {
   useCreateForm(() => { setEditing(null); setShowForm(true); });
 
   useEffect(() => {
-    projectsApi.getAll().then(setProjects).catch(() => setError('프로젝트 목록을 불러올 수 없습니다.'));
+    projectsApi.getAll().then(setProjects).catch(() => setError(t('projects:error.loadList')));
     startPageApi.get().then(setStartPageData).catch(() => { /* 신규 endpoint — 구버전 서버 호환 위해 무시 */ });
-  }, [setProjects]);
+  }, [setProjects, t]);
 
   // useRecentTracker 가 pushRecent 후 'atlas:recent-updated' 이벤트 발화 — ProjectList 가 listening 해 즉시 갱신.
   useEffect(() => {
@@ -255,8 +260,8 @@ export function ProjectList() {
       const p = await projectsApi.create(data);
       addProject(p);
       setShowForm(false);
-      toast.success(p.name ? `새 프로젝트 '${p.name}' 이(가) 추가됐어요` : '새 프로젝트가 추가됐어요');
-    } catch { setError('프로젝트 생성 실패'); }
+      toast.success(p.name ? t('projects:toast.created', { name: p.name }) : t('projects:toast.createdNoName'));
+    } catch { setError(t('projects:error.createFailed')); }
   };
 
   // 프로젝트 생성 후 곧바로 템플릿 피커를 띄운다.
@@ -266,7 +271,7 @@ export function ProjectList() {
       addProject(p);
       setShowForm(false);
       setTemplateTarget(p);
-    } catch { setError('프로젝트 생성 실패'); }
+    } catch { setError(t('projects:error.createFailed')); }
   };
 
   const handleApplyTemplate = async (sel: TemplateApplySelection) => {
@@ -274,7 +279,7 @@ export function ProjectList() {
     setApplyingTemplate(true);
     try {
       const r = await wbsTemplatesApi.apply(templateTarget.id, sel);
-      toast.success(`'${templateTarget.name}' 에 작업 ${r.createdCount}개를 추가했어요.`);
+      toast.success(t('projects:toast.templateApplied', { name: templateTarget.name, count: r.createdCount }));
       const id = templateTarget.id;
       setTemplateTarget(null);
       selectProject(id);
@@ -289,26 +294,26 @@ export function ProjectList() {
       const p = await projectsApi.update(editing.id, data);
       updateProject(p);
       setEditing(null);
-    } catch { setError('프로젝트 수정 실패'); }
+    } catch { setError(t('projects:error.updateFailed')); }
   };
 
   const handleDelete = async (id: number) => {
     if (!await confirmDialog({
-      title: '프로젝트 삭제',
-      message: '이 프로젝트를 삭제하시겠습니까? WBS, 회의록, 변경 이력 등 하위 데이터도 모두 함께 삭제되며 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('projects:delete.title'),
+      message: t('projects:delete.message'),
+      confirmLabel: t('projects:delete.confirm'),
       danger: true,
     })) return;
     try {
       await projectsApi.delete(id);
       removeProject(id);
-    } catch { setError('프로젝트 삭제 실패'); }
+    } catch { setError(t('projects:error.deleteFailed')); }
   };
 
   const handleBackup = async (project: Project) => {
     try {
       await projectsApi.backup(project.id, project.name);
-    } catch { setError('백업 실패'); }
+    } catch { setError(t('projects:error.backupFailed')); }
   };
 
   const handleImportFileChosen = async (file: File) => {
@@ -318,13 +323,13 @@ export function ProjectList() {
     try {
       const items = await projectsApi.importPreview(file);
       if (items.length === 0) {
-        toast.error('백업 안에 가져올 프로젝트가 없습니다.');
+        toast.error(t('projects:toast.noImportable'));
         setImportFile(null);
       } else {
         setImportPreview(items);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : '백업 zip 분석 실패');
+      toast.error(e instanceof Error ? e.message : t('projects:toast.previewFailed'));
       setImportFile(null);
     } finally {
       setImporting(false);
@@ -338,18 +343,18 @@ export function ProjectList() {
       const result = await projectsApi.import(importFile, sourceId);
       // 결과 토스트 — 매핑/누락 수치 노출.
       const parts = [
-        `이슈 ${result.issuesImported}건 (담당자 매칭 ${result.issuesAssigneeMatched}, 누락 ${result.issuesAssigneeMissing})`,
-        `WBS ${result.wbsItemsImported}건`,
-        `회의 ${result.meetingsImported}건`,
+        t('projects:toast.importIssues', { imported: result.issuesImported, matched: result.issuesAssigneeMatched, missing: result.issuesAssigneeMissing }),
+        t('projects:toast.importWbs', { count: result.wbsItemsImported }),
+        t('projects:toast.importMeetings', { count: result.meetingsImported }),
       ];
-      toast.success(`'${result.newProjectName}' 가져옴 — ${parts.join(', ')}`);
+      toast.success(t('projects:toast.imported', { name: result.newProjectName, summary: parts.join(', ') }));
       for (const w of result.warnings) toast.warning(w, { duration: 8000 });
       // 목록 새로고침.
       projectsApi.getAll().then(setProjects).catch(() => {});
       setImportFile(null);
       setImportPreview(null);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : '가져오기 실패');
+      toast.error(e instanceof Error ? e.message : t('projects:toast.importFailed'));
     } finally {
       setImporting(false);
     }
@@ -368,7 +373,7 @@ export function ProjectList() {
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="h-page">프로젝트 목록</h1>
+        <h1 className="h-page">{t('projects:title')}</h1>
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
@@ -376,7 +381,7 @@ export function ProjectList() {
             leadingIcon={<Upload size={16} />}
             disabled={importing}
           >
-            가져오기
+            {t('projects:importBtn')}
           </Button>
           <input
             ref={importInputRef}
@@ -390,7 +395,7 @@ export function ProjectList() {
             }}
           />
           <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-            새 프로젝트
+            {t('projects:newBtn')}
           </Button>
         </div>
       </div>
@@ -408,8 +413,8 @@ export function ProjectList() {
       {projects.length === 0 ? (
         <EmptyState
           icon={<FolderOpen size={40} />}
-          title="프로젝트가 없습니다."
-          description="새 프로젝트를 만들어보세요."
+          title={t('projects:empty.title')}
+          description={t('projects:empty.desc')}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -434,13 +439,13 @@ export function ProjectList() {
                   </div>
                   <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
-                      <button onClick={() => handleBackup(p)} title="백업" aria-label="백업" className="p-1 text-muted hover:text-primary rounded transition-colors">
+                      <button onClick={() => handleBackup(p)} title={t('projects:card.backup')} aria-label={t('projects:card.backup')} className="p-1 text-muted hover:text-primary rounded transition-colors">
                         <Download size={14} />
                       </button>
-                      <button onClick={() => setEditing(p)} title="수정" aria-label="수정" className="p-1 text-muted hover:text-primary rounded transition-colors">
+                      <button onClick={() => setEditing(p)} title={t('projects:card.edit')} aria-label={t('projects:card.edit')} className="p-1 text-muted hover:text-primary rounded transition-colors">
                         <Pencil size={14} />
                       </button>
-                      <button onClick={() => handleDelete(p.id)} title="삭제" aria-label="삭제" className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
+                      <button onClick={() => handleDelete(p.id)} title={t('projects:card.delete')} aria-label={t('projects:card.delete')} className="p-1 text-on-danger hover:opacity-80 rounded transition-opacity">
                         <X size={14} />
                       </button>
                     </div>
@@ -451,7 +456,7 @@ export function ProjectList() {
                           size="sm"
                           variant={daysLeft < 0 ? 'danger' : daysLeft < 7 ? 'warning' : 'neutral'}
                         >
-                          {daysLeft < 0 ? `${Math.abs(daysLeft)}일 초과` : `D-${daysLeft}`}
+                          {daysLeft < 0 ? t('projects:card.daysOver', { days: Math.abs(daysLeft) }) : t('projects:card.dday', { days: daysLeft })}
                         </Badge>
                       )}
                     </div>
@@ -502,19 +507,18 @@ export function ProjectList() {
         <Modal
           open
           onClose={cancelImport}
-          title="가져올 프로젝트 선택"
+          title={t('projects:importModal.title')}
           size="lg"
           showCloseButton
           footer={
             <Button variant="secondary" onClick={cancelImport} leadingIcon={<X size={16} />}>
-              취소
+              {t('common:cancel')}
             </Button>
           }
         >
           <div className="space-y-1">
             <p className="text-sm text-muted mb-3">
-              백업 zip 안의 프로젝트 중 하나를 골라 현재 데이터에 새 프로젝트로 추가합니다.
-              리소스 마스터는 가져오지 않으며, 이슈 담당자는 이메일로 자동 매칭합니다.
+              {t('projects:importModal.desc')}
             </p>
             <div className="border border-default rounded-md divide-y divide-default max-h-[60vh] overflow-y-auto">
               {importPreview.map((p) => (
@@ -532,15 +536,15 @@ export function ProjectList() {
                       )}
                     </div>
                     <div className="shrink-0 flex items-center gap-2 text-xs text-muted">
-                      <Badge size="sm" variant="neutral">이슈 {p.issueCount}</Badge>
-                      <Badge size="sm" variant="neutral">WBS {p.wbsCount}</Badge>
-                      <Badge size="sm" variant="neutral">회의 {p.meetingCount}</Badge>
+                      <Badge size="sm" variant="neutral">{t('projects:importModal.issueCount', { count: p.issueCount })}</Badge>
+                      <Badge size="sm" variant="neutral">{t('projects:importModal.wbsCount', { count: p.wbsCount })}</Badge>
+                      <Badge size="sm" variant="neutral">{t('projects:importModal.meetingCount', { count: p.meetingCount })}</Badge>
                     </div>
                   </div>
                 </button>
               ))}
             </div>
-            {importing && <div className="text-sm text-muted mt-3">가져오는 중...</div>}
+            {importing && <div className="text-sm text-muted mt-3">{t('projects:importModal.importing')}</div>}
           </div>
         </Modal>
       )}

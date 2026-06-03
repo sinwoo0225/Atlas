@@ -28,11 +28,11 @@ export function Dashboard() {
     setData(null);
     projectsApi.getDashboard(pid)
       .then(setData)
-      .catch((e) => setError(e ?? new Error('대시보드를 불러올 수 없습니다.')));
+      .catch((e) => setError(e ?? new Error(t('dashboard:loadError'))));
     activityApi.getByProject(pid, 20)
       .then(setActivities)
       .catch(() => setActivities([]));
-  }, [projectId]);
+  }, [projectId, t]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -99,49 +99,49 @@ export function Dashboard() {
           <Button
             variant="secondary"
             leadingIcon={<Download size={16} />}
-            title="프로젝트 백업"
+            title={t('dashboard:backupTitle')}
             onClick={async () => {
               try { await projectsApi.backup(p.id, p.name); }
-              catch { toast.error('백업에 실패했습니다.'); }
+              catch { toast.error(t('dashboard:backupFailed')); }
             }}
           >
-            백업
+            {t('dashboard:backup')}
           </Button>
         </div>
 
         {/* KPI 행 (P4-1) — D-day / 업무일지 채움 / 지연 / 임박 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           <div className="border border-default rounded-md p-3">
-            <p className="text-xs text-muted">D-day</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.dday')}</p>
             <p className={`text-2xl font-semibold mt-0.5 ${daysLeftTone}`}>
               {daysLeft === null ? '-' : `${daysLeft < 0 ? '+' : 'D-'}${Math.abs(daysLeft)}`}
             </p>
-            <p className="text-xs text-muted">{daysLeft === null ? '종료일 미설정' : (daysLeft < 0 ? '초과' : '남음')}</p>
+            <p className="text-xs text-muted">{daysLeft === null ? t('dashboard:kpi.noEndDate') : (daysLeft < 0 ? t('dashboard:kpi.over') : t('dashboard:kpi.left'))}</p>
           </div>
           <div className="border border-default rounded-md p-3">
-            <p className="text-xs text-muted">이번 주 업무일지</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.thisWeekWorklog')}</p>
             <p className="text-2xl font-semibold mt-0.5 text-primary">{workLogFilled}<span className="text-sm text-muted">/{workLogTotal}</span></p>
-            <p className="text-xs text-muted">채운 일수</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.filledDays')}</p>
           </div>
           <div className="border border-default rounded-md p-3">
-            <p className="text-xs text-muted">지연된 WBS</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.overdueWbs')}</p>
             <p className={`text-2xl font-semibold mt-0.5 ${overdueCount > 0 ? 'text-on-danger' : 'text-muted'}`}>{overdueCount}</p>
-            <p className="text-xs text-muted">EndDate 초과</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.endDateExceeded')}</p>
           </div>
           <div className="border border-default rounded-md p-3">
-            <p className="text-xs text-muted">임박 마감</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.dueSoon')}</p>
             <p className={`text-2xl font-semibold mt-0.5 ${dueSoonCount > 0 ? 'text-on-warning' : 'text-muted'}`}>{dueSoonCount}</p>
-            <p className="text-xs text-muted">~7일 내</p>
+            <p className="text-xs text-muted">{t('dashboard:kpi.within7days')}</p>
           </div>
         </div>
 
         {/* 보조 정보 (시작일/종료일/예산/참여 인원) — KPI 보다 시각 약화 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 text-xs">
           {[
-            { label: '시작일', value: p.startDate?.slice(0, 10) ?? '-' },
-            { label: '종료일', value: p.endDate?.slice(0, 10) ?? '-' },
-            { label: '예산', value: p.budget ? `${p.budget.toLocaleString()}원` : '-' },
-            { label: '참여 인원', value: p.participants || '-' },
+            { label: t('dashboard:info.startDate'), value: p.startDate?.slice(0, 10) ?? '-' },
+            { label: t('dashboard:info.endDate'), value: p.endDate?.slice(0, 10) ?? '-' },
+            { label: t('dashboard:info.budget'), value: p.budget ? t('dashboard:budgetAmount', { amount: p.budget.toLocaleString() }) : '-' },
+            { label: t('dashboard:info.participants'), value: p.participants || '-' },
           ].map((item) => (
             <div key={item.label} className="flex justify-between items-baseline px-2">
               <span className="text-muted">{item.label}</span>
@@ -158,11 +158,11 @@ export function Dashboard() {
       <RiskAlertCard signals={riskSignals} projectId={pid} />
 
       {/* 액션 필요 — 마일스톤·이슈 (위험 외 핵심 추적 대상) */}
-      <GroupHeader label="액션 필요" />
+      <GroupHeader label={t('dashboard:group.action')} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Section title="주요 마일스톤" Icon={Diamond} to={`/projects/${pid}/wbs`}>
+        <Section title={t('dashboard:section.milestones')} Icon={Diamond} to={`/projects/${pid}/wbs`}>
           {upcomingMilestones.length === 0 ? (
-            <Empty text="예정된 마일스톤 없음" />
+            <Empty text={t('dashboard:empty.milestones')} />
           ) : (
             upcomingMilestones.map((m) => (
               <div
@@ -182,9 +182,9 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="이슈" Icon={AlertTriangle} to={`/projects/${pid}/issues`}>
+        <Section title={t('dashboard:section.issues')} Icon={AlertTriangle} to={`/projects/${pid}/issues`}>
           {recentIssues.length === 0 ? (
-            <Empty text="등록된 이슈 없음" />
+            <Empty text={t('dashboard:empty.issues')} />
           ) : (
             recentIssues.map((i) => (
               <div
@@ -198,7 +198,7 @@ export function Dashboard() {
                   {i.dueDate && <span className="text-xs text-muted">~ {i.dueDate.slice(0, 10)}</span>}
                 </div>
                 <p className="text-sm text-secondary mt-0.5 line-clamp-1">{i.title}</p>
-                {i.assigneeName && <p className="text-xs text-muted mt-0.5">담당: {i.assigneeName}</p>}
+                {i.assigneeName && <p className="text-xs text-muted mt-0.5">{t('dashboard:assignee', { name: i.assigneeName })}</p>}
               </div>
             ))
           )}
@@ -206,11 +206,11 @@ export function Dashboard() {
       </div>
 
       {/* 참고 — 회의록·변경·DevInfo·일지 (조회 빈도 낮은 컨텍스트) */}
-      <GroupHeader label="참고" />
+      <GroupHeader label={t('dashboard:group.reference')} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <Section title="최근 회의록" Icon={FileText} to={`/projects/${pid}/meetings`} compact>
+        <Section title={t('dashboard:section.recentMeetings')} Icon={FileText} to={`/projects/${pid}/meetings`} compact>
           {recentMeetings.length === 0 ? (
-            <Empty text="회의록 없음" />
+            <Empty text={t('dashboard:empty.meetings')} />
           ) : (
             recentMeetings.map((m) => (
               <div
@@ -228,9 +228,9 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="최근 변경 이력" Icon={GitBranch} to={`/projects/${pid}/changelogs`} compact>
+        <Section title={t('dashboard:section.recentChanges')} Icon={GitBranch} to={`/projects/${pid}/changelogs`} compact>
           {recentChanges.length === 0 ? (
-            <Empty text="변경 이력 없음" />
+            <Empty text={t('dashboard:empty.changes')} />
           ) : (
             recentChanges.map((c) => (
               <div
@@ -248,9 +248,9 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="개발 정보" Icon={Code2} to={`/projects/${pid}/devinfo`} compact>
+        <Section title={t('dashboard:section.devInfo')} Icon={Code2} to={`/projects/${pid}/devinfo`} compact>
           {recentDevInfo.length === 0 ? (
-            <Empty text="개발 정보 없음" />
+            <Empty text={t('dashboard:empty.devInfo')} />
           ) : (
             recentDevInfo.map((d) => (
               <div
@@ -265,9 +265,9 @@ export function Dashboard() {
           )}
         </Section>
 
-        <Section title="이번 주 업무일지" Icon={NotebookPen} to={`/projects/${pid}/worklog`} compact>
+        <Section title={t('dashboard:section.thisWeekWorklog')} Icon={NotebookPen} to={`/projects/${pid}/worklog`} compact>
           {!thisWeekWorkLog || thisWeekWorkLog.days.every((d) => !d.done && !d.plan && !d.issues) ? (
-            <Empty text="이번 주 기록 없음" />
+            <Empty text={t('dashboard:empty.thisWeekWorklog')} />
           ) : (
             <div
               className="cursor-pointer hover:bg-surface-2 px-2 -mx-2 py-1 rounded transition-colors"
@@ -280,7 +280,7 @@ export function Dashboard() {
                   return (
                     <div key={d.dayIndex} className="flex items-baseline gap-2 py-1 border-b border-default last:border-0">
                       <span className="text-xs text-muted font-medium shrink-0 w-12">{d.dayLabel} {d.date.slice(5).replace('-', '/')}</span>
-                      <span className="text-sm text-secondary line-clamp-1 flex-1 min-w-0">{firstLine || '_(빈 항목)_'}</span>
+                      <span className="text-sm text-secondary line-clamp-1 flex-1 min-w-0">{firstLine || t('dashboard:emptyEntry')}</span>
                     </div>
                   );
                 })}
@@ -290,9 +290,9 @@ export function Dashboard() {
       </div>
 
       {/* 최근 활동 — 전폭, 그룹 외 */}
-      <Section title="최근 활동" Icon={Activity} to="/activity" compact>
+      <Section title={t('dashboard:section.recentActivity')} Icon={Activity} to="/activity" compact>
         {activities.length === 0 ? (
-          <Empty text="활동 기록 없음" />
+          <Empty text={t('dashboard:empty.activity')} />
         ) : (
           activities.map((a) => <ActivityRow key={a.id} activity={a} />)
         )}
@@ -301,12 +301,12 @@ export function Dashboard() {
       {(p.deliverables || p.relatedLinks) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {p.deliverables && (
-            <Section title="주요 산출물" Icon={Package}>
+            <Section title={t('dashboard:section.deliverables')} Icon={Package}>
               <p className="text-sm text-secondary whitespace-pre-wrap">{p.deliverables}</p>
             </Section>
           )}
           {p.relatedLinks && (
-            <Section title="관련 링크" Icon={LinkIcon}>
+            <Section title={t('dashboard:section.relatedLinks')} Icon={LinkIcon}>
               {p.relatedLinks.split('\n').filter(Boolean).map((link, i) => (
                 <a
                   key={i}

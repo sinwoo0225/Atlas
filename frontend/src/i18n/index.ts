@@ -8,12 +8,16 @@ import koStatus from './locales/ko/status.json';
 import koSettings from './locales/ko/settings.json';
 import koPalette from './locales/ko/palette.json';
 import koShortcuts from './locales/ko/shortcuts.json';
+import koDashboard from './locales/ko/dashboard.json';
+import koProjects from './locales/ko/projects.json';
 import enCommon from './locales/en/common.json';
 import enNav from './locales/en/nav.json';
 import enStatus from './locales/en/status.json';
 import enSettings from './locales/en/settings.json';
 import enPalette from './locales/en/palette.json';
 import enShortcuts from './locales/en/shortcuts.json';
+import enDashboard from './locales/en/dashboard.json';
+import enProjects from './locales/en/projects.json';
 
 export const SUPPORTED_LANGUAGES = ['ko', 'en'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
@@ -21,8 +25,8 @@ export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 // 리소스는 번들에 인라인 — 백엔드 로딩 없이 동기 초기화되므로 Provider/Suspense 불필요.
 // 기본 인스턴스라 컴포넌트는 useTranslation() 만으로 사용한다.
 const resources = {
-  ko: { common: koCommon, nav: koNav, status: koStatus, settings: koSettings, palette: koPalette, shortcuts: koShortcuts },
-  en: { common: enCommon, nav: enNav, status: enStatus, settings: enSettings, palette: enPalette, shortcuts: enShortcuts },
+  ko: { common: koCommon, nav: koNav, status: koStatus, settings: koSettings, palette: koPalette, shortcuts: koShortcuts, dashboard: koDashboard, projects: koProjects },
+  en: { common: enCommon, nav: enNav, status: enStatus, settings: enSettings, palette: enPalette, shortcuts: enShortcuts, dashboard: enDashboard, projects: enProjects },
 } as const;
 
 i18n.use(initReactI18next).init({
@@ -30,7 +34,7 @@ i18n.use(initReactI18next).init({
   lng: loadSettings().language,
   fallbackLng: 'ko',
   defaultNS: 'common',
-  ns: ['common', 'nav', 'status', 'settings', 'palette', 'shortcuts'],
+  ns: ['common', 'nav', 'status', 'settings', 'palette', 'shortcuts', 'dashboard', 'projects'],
   interpolation: { escapeValue: false },
   react: { useSuspense: false },
 });

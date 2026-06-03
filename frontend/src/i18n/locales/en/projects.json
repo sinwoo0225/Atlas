@@ -1,0 +1,72 @@
+{
+  "title": "Projects",
+  "importBtn": "Import",
+  "newBtn": "New project",
+  "empty": {
+    "title": "No projects yet.",
+    "desc": "Create your first project."
+  },
+  "card": {
+    "backup": "Back up",
+    "edit": "Edit",
+    "delete": "Delete",
+    "daysOver": "{{days}}d over",
+    "dday": "D-{{days}}"
+  },
+  "form": {
+    "editTitle": "Edit project",
+    "newTitle": "New project",
+    "startFromTemplate": "Start from template",
+    "category": "Category",
+    "categoryNone": "(none)",
+    "name": "Project name",
+    "status": "Status",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "budget": "Budget",
+    "participants": "Members",
+    "deliverables": "Deliverables",
+    "relatedLinks": "Related links",
+    "gitRepoPath": "Git repository path",
+    "gitRepoPlaceholder": "Path to the source folder containing .git",
+    "browse": "Browse",
+    "gitClientHint": "In Client mode the path must be relative to the server machine, and viewing Git history works only in Local mode.",
+    "gitChecking": "Checking…",
+    "gitValid": "Valid git repository. View it under Change log → Git history.",
+    "gitHint": "View this repository's commit graph under Change log → Git history.",
+    "goal": "Goal",
+    "description": "Description"
+  },
+  "delete": {
+    "title": "Delete project",
+    "message": "Delete this project? All child data — WBS, meetings, change log, etc. — will be deleted too, and this can't be undone.",
+    "confirm": "Delete"
+  },
+  "importModal": {
+    "title": "Choose a project to import",
+    "desc": "Pick one project from the backup zip to add to your current data as a new project. The resource master isn't imported; issue assignees are matched automatically by email.",
+    "issueCount": "Issues {{count}}",
+    "wbsCount": "WBS {{count}}",
+    "meetingCount": "Meetings {{count}}",
+    "importing": "Importing..."
+  },
+  "toast": {
+    "created": "New project '{{name}}' added",
+    "createdNoName": "New project added",
+    "templateApplied": "Added {{count}} tasks to '{{name}}'.",
+    "noImportable": "No importable projects in the backup.",
+    "previewFailed": "Failed to analyze the backup zip",
+    "imported": "Imported '{{name}}' — {{summary}}",
+    "importIssues": "Issues {{imported}} (assignee matched {{matched}}, missing {{missing}})",
+    "importWbs": "WBS {{count}}",
+    "importMeetings": "Meetings {{count}}",
+    "importFailed": "Import failed"
+  },
+  "error": {
+    "loadList": "Couldn't load the project list.",
+    "createFailed": "Failed to create project",
+    "updateFailed": "Failed to update project",
+    "deleteFailed": "Failed to delete project",
+    "backupFailed": "Backup failed"
+  }
+}
