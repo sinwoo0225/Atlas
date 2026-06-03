@@ -4,6 +4,7 @@
 import ReactECharts from 'echarts-for-react';
 import { PieChart, AlertTriangle, Diamond, BarChart3, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Card, Skeleton, Badge } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark, type ChartColors } from '../../utils/themeColors';
 import { projectStatusBadge } from '../../utils/statusMaps';
@@ -16,12 +17,6 @@ import type {
 
 const STATUS_KEYS: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
 const PRIORITY_KEYS: IssuePriority[] = ['High', 'Medium', 'Low'];
-const STATUS_KO: Record<IssueStatus, string> = {
-  Open: '열림', InProgress: '진행중', Resolved: '해결', Closed: '닫힘',
-};
-const PRIORITY_KO: Record<IssuePriority, string> = {
-  High: '높음', Medium: '중간', Low: '낮음',
-};
 
 // 모든 차트 카드를 280px 균등으로 통일 — 3×2 그리드에서 시각 일관성, 가독성 확보.
 const CHART_HEIGHT = 280;
@@ -39,6 +34,7 @@ interface Props {
 export function MonitoringChartGrid({
   data, activityByProject, loading, onProjectClick, onActivityProjectClick, children,
 }: Props) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const colors = getChartColors(theme);
 
@@ -47,7 +43,7 @@ export function MonitoringChartGrid({
       <Card padding="normal">
         <h3 className="h-card flex items-center gap-2 mb-1">
           <PieChart size={16} className="text-muted" />
-          프로젝트 상태 분포
+          {t('monitoring:charts.statusTitle')}
         </h3>
         {loading || !data ? (
           <Skeleton height={CHART_HEIGHT} />
@@ -64,15 +60,15 @@ export function MonitoringChartGrid({
       <Card padding="normal">
         <h3 className="h-card flex items-center gap-2 mb-1">
           <AlertTriangle size={16} className="text-muted" />
-          이슈 상태 × 우선순위
+          {t('monitoring:charts.matrixTitle')}
         </h3>
         {loading || !data ? (
           <Skeleton height={CHART_HEIGHT} />
         ) : data.issueMatrix.every((c) => c.count === 0) ? (
-          <p className="text-sm text-muted py-12 text-center">등록된 이슈 없음</p>
+          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noIssues')}</p>
         ) : (
           <ReactECharts
-            option={buildIssueMatrixOption(data, colors, effectiveLightDark(theme))}
+            option={buildIssueMatrixOption(data, colors, effectiveLightDark(theme), t)}
             style={{ height: CHART_HEIGHT }}
           />
         )}
@@ -81,12 +77,12 @@ export function MonitoringChartGrid({
       <Card padding="normal">
         <h3 className="h-card flex items-center gap-2 mb-1">
           <Diamond size={16} className="text-muted" />
-          다가오는 마일스톤 (30일)
+          {t('monitoring:charts.milestoneTitle')}
         </h3>
         {loading || !data ? (
           <Skeleton height={CHART_HEIGHT} />
         ) : data.upcomingMilestones.length === 0 ? (
-          <p className="text-sm text-muted py-12 text-center">예정된 마일스톤 없음</p>
+          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noMilestones')}</p>
         ) : (
           <ReactECharts
             option={buildMilestoneOption(data, colors)}
@@ -98,15 +94,15 @@ export function MonitoringChartGrid({
       <Card padding="normal">
         <h3 className="h-card flex items-center gap-2 mb-1">
           <Activity size={16} className="text-muted" />
-          프로젝트별 활동량 <span className="text-xs text-muted font-normal">(최근 30일)</span>
+          {t('monitoring:charts.activityTitle')} <span className="text-xs text-muted font-normal">{t('monitoring:charts.activitySub')}</span>
         </h3>
         {loading ? (
           <Skeleton height={CHART_HEIGHT} />
         ) : activityByProject.length === 0 ? (
-          <p className="text-sm text-muted py-12 text-center">최근 활동 없음</p>
+          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noActivity')}</p>
         ) : (
           <ReactECharts
-            option={buildActivityByProjectOption(activityByProject, colors)}
+            option={buildActivityByProjectOption(activityByProject, colors, t)}
             style={{ height: CHART_HEIGHT }}
             onEvents={{
               click: (params: any) => {
@@ -123,12 +119,12 @@ export function MonitoringChartGrid({
       <Card padding="normal">
         <h3 className="h-card flex items-center gap-2 mb-1">
           <BarChart3 size={16} className="text-muted" />
-          프로젝트별 WBS 진행률
+          {t('monitoring:charts.wbsTitle')}
         </h3>
         {loading || !data ? (
           <Skeleton height={CHART_HEIGHT} />
         ) : data.wbsProgress.length === 0 ? (
-          <p className="text-sm text-muted py-12 text-center">WBS 항목 없음</p>
+          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noWbs')}</p>
         ) : (
           <ReactECharts
             option={buildWbsProgressOption(data, colors)}
@@ -160,22 +156,23 @@ function ProjectStatusBreakdownWidget({
   theme: 'dark' | 'light';
   onProjectClick: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const total = data.projects.length;
   return (
     <div className="grid grid-cols-[140px_1fr] gap-3 items-start">
       <div className="relative">
         <ReactECharts
-          option={buildProjectStatusOption(data, colors, theme)}
+          option={buildProjectStatusOption(data, colors, theme, t)}
           style={{ height: 140 }}
         />
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl font-bold text-primary leading-none">{total}</span>
-          <span className="text-[10px] text-muted mt-0.5">프로젝트</span>
+          <span className="text-[10px] text-muted mt-0.5">{t('monitoring:centerUnit')}</span>
         </div>
       </div>
       <div className="max-h-[240px] overflow-y-auto pr-1">
         {data.projects.length === 0 ? (
-          <p className="text-sm text-muted py-2">프로젝트 없음</p>
+          <p className="text-sm text-muted py-2">{t('common:noProjects')}</p>
         ) : (
           <ul className="space-y-1">
             {data.projects.map((p) => (
@@ -223,7 +220,7 @@ function dDay(endDate?: string): string {
   return `D+${-diff}`;
 }
 
-function buildProjectStatusOption(data: MonitoringChartsData, ch: ChartColors, theme: 'dark' | 'light') {
+function buildProjectStatusOption(data: MonitoringChartsData, ch: ChartColors, theme: 'dark' | 'light', t: TFunction) {
   const ps = data.projectStatus;
   const COLORS = {
     Waiting:     theme === 'light' ? '#1d4ed8' : '#7eb6ff',   // --info v2 ('대기/보류')
@@ -233,10 +230,10 @@ function buildProjectStatusOption(data: MonitoringChartsData, ch: ChartColors, t
   };
   // Planned 는 '대기/보류'(Waiting)로 통합 — 백엔드가 합산해 보내므로 한 슬라이스로 표시.
   const points = [
-    { name: '대기/보류',        value: ps.waiting + ps.planned, itemStyle: { color: COLORS.Waiting } },
-    { name: '진행',             value: ps.inProgress,           itemStyle: { color: COLORS.InProgress } },
-    { name: '완료',             value: ps.done,                 itemStyle: { color: COLORS.Done } },
-    { name: '하자보수/유지보수', value: ps.maintenance,          itemStyle: { color: COLORS.Maintenance } },
+    { name: t('status:project.Waiting'),     value: ps.waiting + ps.planned, itemStyle: { color: COLORS.Waiting } },
+    { name: t('status:project.InProgress'),  value: ps.inProgress,           itemStyle: { color: COLORS.InProgress } },
+    { name: t('status:project.Done'),        value: ps.done,                 itemStyle: { color: COLORS.Done } },
+    { name: t('status:project.Maintenance'), value: ps.maintenance,          itemStyle: { color: COLORS.Maintenance } },
   ].filter((d) => d.value > 0);
 
   return {
@@ -258,7 +255,7 @@ function buildProjectStatusOption(data: MonitoringChartsData, ch: ChartColors, t
   };
 }
 
-function buildIssueMatrixOption(data: MonitoringChartsData, ch: ChartColors, theme: 'dark' | 'light') {
+function buildIssueMatrixOption(data: MonitoringChartsData, ch: ChartColors, theme: 'dark' | 'light', t: TFunction) {
   const map = new Map<string, number>();
   for (const c of data.issueMatrix) map.set(`${c.status}|${c.priority}`, c.count);
 
@@ -278,7 +275,11 @@ function buildIssueMatrixOption(data: MonitoringChartsData, ch: ChartColors, the
       position: 'top',
       formatter: (p: any) => {
         const [xi, yi, v] = p.value as [number, number, number];
-        return `${STATUS_KO[STATUS_KEYS[xi]]} × ${PRIORITY_KO[PRIORITY_KEYS[yi]]}: ${v}건`;
+        return t('monitoring:charts.matrixTooltip', {
+          status: t(`status:issue.${STATUS_KEYS[xi]}`),
+          priority: t(`status:priority.${PRIORITY_KEYS[yi]}`),
+          count: v,
+        });
       },
       backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder,
       textStyle: { color: ch.tooltipText },
@@ -286,14 +287,14 @@ function buildIssueMatrixOption(data: MonitoringChartsData, ch: ChartColors, the
     grid: { left: 48, right: 8, top: 8, bottom: 24 },
     xAxis: {
       type: 'category',
-      data: STATUS_KEYS.map((s) => STATUS_KO[s]),
+      data: STATUS_KEYS.map((s) => t(`status:issue.${s}`)),
       axisLine: { lineStyle: { color: ch.axisLine } },
       axisLabel: { color: ch.axisText, fontSize: 10 },
       splitArea: { show: true },
     },
     yAxis: {
       type: 'category',
-      data: PRIORITY_KEYS.map((p) => PRIORITY_KO[p]),
+      data: PRIORITY_KEYS.map((p) => t(`status:priority.${p}`)),
       axisLine: { lineStyle: { color: ch.axisLine } },
       axisLabel: { color: ch.axisText, fontSize: 10 },
       splitArea: { show: true },
@@ -370,7 +371,7 @@ function buildMilestoneOption(data: MonitoringChartsData, ch: ChartColors) {
   };
 }
 
-function buildActivityByProjectOption(items: ActivityByProject[], ch: ChartColors) {
+function buildActivityByProjectOption(items: ActivityByProject[], ch: ChartColors, t: TFunction) {
   // 가로 막대 — 카운트 DESC 가 백엔드 정렬, ECharts 는 yAxis 가 위에서 아래로 그려지므로
   // inverse: true 로 가장 활발한 프로젝트가 상단에 오게 한다.
   // 220px 컴팩트 카드 — top 10 만 표시 (스크롤 없이).
@@ -383,7 +384,7 @@ function buildActivityByProjectOption(items: ActivityByProject[], ch: ChartColor
       formatter: (params: any) => {
         const p = (params as any[])[0];
         const item = top[p.dataIndex as number];
-        return `<b>${item.projectName}</b><br/>${item.count}건`;
+        return `<b>${item.projectName}</b><br/>${t('monitoring:countItems', { count: item.count })}`;
       },
       backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder,
       textStyle: { color: ch.tooltipText },

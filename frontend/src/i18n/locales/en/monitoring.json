@@ -106,5 +106,62 @@
     "worklogTitle": "Work Log",
     "noRecord": "(no records)",
     "issuesTitle": "Issue List"
+  },
+  "charts": {
+    "statusTitle": "Project status breakdown",
+    "matrixTitle": "Issue status × priority",
+    "matrixTooltip": "{{status}} × {{priority}}: {{count}}",
+    "noIssues": "No issues",
+    "milestoneTitle": "Upcoming milestones (30 days)",
+    "noMilestones": "No upcoming milestones",
+    "activityTitle": "Activity by project",
+    "activitySub": "(last 30 days)",
+    "noActivity": "No recent activity",
+    "wbsTitle": "WBS progress by project",
+    "noWbs": "No WBS items"
+  },
+  "kanban": {
+    "filterAll": "All",
+    "filterWbs": "WBS",
+    "filterIssue": "Issues",
+    "colTodo": "To do",
+    "colDoing": "In progress",
+    "colDone": "Done",
+    "doneNote": "last 2 weeks",
+    "empty": "No tasks to show on the board."
+  },
+  "calendar": {
+    "today": "Today",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "legendIssue": "Issue",
+    "legendMilestone": "Milestone",
+    "moreChips": "+{{count}}",
+    "empty": "No deadlines this month.",
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    }
+  },
+  "heatmap": {
+    "title": "Assignee × 8 weeks",
+    "unassigned": "· {{count}} unassigned",
+    "unassignedTip": "Items without an assignee (excluded from heatmap)",
+    "sortTitle": "Sort",
+    "sortDue": "By due date",
+    "sortName": "By name",
+    "sortLoad": "By total load",
+    "emptyAssigned": "No assigned deadlines",
+    "emptyAssignedDesc": "Only {{count}} unassigned — they appear once an assignee is set",
+    "emptyNone": "No upcoming deadlines",
+    "emptyNoneDesc": "No incomplete deadlines in the next 8 weeks",
+    "weekLabel": "{{name}} · W{{week}} (week of {{date}})",
+    "modalTitle": "{{label}} — {{count}}",
+    "cellTooltip": "{{name}} · W{{week}} (week of {{date}}): {{count}}"
   }
 }

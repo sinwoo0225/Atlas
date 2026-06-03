@@ -14,17 +14,17 @@ import { getProjectColor } from '../../utils/projectColor';
 import { useThemeMode, type ThemeMode } from '../../utils/themeColors';
 import type { IssuePriority, KanbanColumn, KanbanItem } from '../../types';
 
-const COLUMNS: { key: KanbanColumn; label: string; note?: string }[] = [
-  { key: 'todo',  label: '예정' },
-  { key: 'doing', label: '진행 중' },
-  { key: 'done',  label: '완료', note: '최근 2주' },
+const COLUMNS: { key: KanbanColumn; labelKey: string; noteKey?: string }[] = [
+  { key: 'todo',  labelKey: 'monitoring:kanban.colTodo' },
+  { key: 'doing', labelKey: 'monitoring:kanban.colDoing' },
+  { key: 'done',  labelKey: 'monitoring:kanban.colDone', noteKey: 'monitoring:kanban.doneNote' },
 ];
 
 type KindFilter = 'all' | 'wbs' | 'issue';
-const KIND_FILTERS: { key: KindFilter; label: string }[] = [
-  { key: 'all',   label: '전체' },
-  { key: 'wbs',   label: 'WBS' },
-  { key: 'issue', label: '이슈' },
+const KIND_FILTERS: { key: KindFilter; labelKey: string }[] = [
+  { key: 'all',   labelKey: 'monitoring:kanban.filterAll' },
+  { key: 'wbs',   labelKey: 'monitoring:kanban.filterWbs' },
+  { key: 'issue', labelKey: 'monitoring:kanban.filterIssue' },
 ];
 
 const cardId = (it: KanbanItem) => `${it.kind}-${it.id}`;
@@ -41,6 +41,7 @@ function columnToStatus(kind: KanbanItem['kind'], col: KanbanColumn): string {
 }
 
 export function KanbanBoard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useThemeMode();
   const [items, setItems] = useState<KanbanItem[]>([]);
@@ -99,9 +100,9 @@ export function KanbanBoard() {
 
   const activeItem = activeId ? items.find((x) => cardId(x) === activeId) ?? null : null;
 
-  if (loading) return <Spinner label="불러오는 중..." />;
+  if (loading) return <Spinner label={t('common:loading')} />;
   if (items.length === 0) {
-    return <EmptyState icon={<Star size={32} />} title="보드에 표시할 작업이 없습니다." />;
+    return <EmptyState icon={<Star size={32} />} title={t('monitoring:kanban.empty')} />;
   }
 
   return (
@@ -110,7 +111,7 @@ export function KanbanBoard() {
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-start">
           {COLUMNS.map((c) => (
-            <Column key={c.key} column={c.key} label={c.label} note={c.note} count={byColumn[c.key].length}>
+            <Column key={c.key} column={c.key} label={t(c.labelKey)} note={c.noteKey ? t(c.noteKey) : undefined} count={byColumn[c.key].length}>
               {byColumn[c.key].map((it) => (
                 <KanbanCard key={cardId(it)} item={it} theme={theme} onOpen={() => navigate(itemPath(it))} />
               ))}
@@ -126,6 +127,7 @@ export function KanbanBoard() {
 }
 
 function KindFilterBar({ value, onChange }: { value: KindFilter; onChange: (v: KindFilter) => void }) {
+  const { t } = useTranslation();
   return (
     <div className="inline-flex rounded-md border border-default bg-surface p-0.5">
       {KIND_FILTERS.map((f) => {
@@ -139,7 +141,7 @@ function KindFilterBar({ value, onChange }: { value: KindFilter; onChange: (v: K
               active ? 'bg-accent text-on-accent font-medium' : 'text-secondary hover:text-primary hover:bg-surface-2'
             }`}
           >
-            {f.label}
+            {t(f.labelKey)}
           </button>
         );
       })}

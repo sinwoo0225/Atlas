@@ -5,6 +5,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Users, CalendarCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Card, Badge, EmptyState, Skeleton, Modal } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark } from '../../utils/themeColors';
 import type { ResourceHeatmap, ResourceHeatmapItem, ResourceHeatmapRow } from '../../types';
@@ -35,6 +37,7 @@ function shortMd(iso: string): string {
 }
 
 export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const colors = getChartColors(theme);
   const navigate = useNavigate();
@@ -74,8 +77,8 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
         points.push([wi, ri, c]);
       });
     });
-    return buildOption(data.weekStarts, sortedRows, points, max, colors, effectiveLightDark(theme));
-  }, [data, sortedRows, colors, theme]);
+    return buildOption(data.weekStarts, sortedRows, points, max, colors, effectiveLightDark(theme), t);
+  }, [data, sortedRows, colors, theme, t]);
 
   const selectedItems = useMemo<ResourceHeatmapItem[]>(() => {
     if (!data || !selected) return [];
@@ -89,18 +92,18 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
     const row = sortedRows[ri];
     const weekStart = data.weekStarts[wi];
     if (!row || !weekStart) return '';
-    return `${row.assignee} · W${isoWeekNumber(weekStart)} (${shortMd(weekStart)} 주)`;
-  }, [data, sortedRows, selected]);
+    return t('monitoring:heatmap.weekLabel', { name: row.assignee, week: isoWeekNumber(weekStart), date: shortMd(weekStart) });
+  }, [data, sortedRows, selected, t]);
 
   return (
     <Card padding="normal">
       <div className="flex items-center justify-between gap-2 mb-1">
         <h3 className="h-card flex items-center gap-2">
           <Users size={16} className="text-muted" />
-          담당자 × 8주
+          {t('monitoring:heatmap.title')}
           {data && data.unassignedItems > 0 && (
-            <span className="text-xs font-normal text-muted" title="담당자 미지정 항목 (히트맵 제외)">
-              · 미할당 {data.unassignedItems}건
+            <span className="text-xs font-normal text-muted" title={t('monitoring:heatmap.unassignedTip')}>
+              {t('monitoring:heatmap.unassigned', { count: data.unassignedItems })}
             </span>
           )}
         </h3>
@@ -109,11 +112,11 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="text-xs px-2 py-1 bg-surface-2 border border-default rounded text-secondary"
-            title="정렬"
+            title={t('monitoring:heatmap.sortTitle')}
           >
-            <option value="due">마감 임박순</option>
-            <option value="name">이름순</option>
-            <option value="load">부하 합계순</option>
+            <option value="due">{t('monitoring:heatmap.sortDue')}</option>
+            <option value="name">{t('monitoring:heatmap.sortName')}</option>
+            <option value="load">{t('monitoring:heatmap.sortLoad')}</option>
           </select>
         )}
       </div>
@@ -123,10 +126,10 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
         <div className="flex items-center justify-center" style={{ height }}>
           <EmptyState
             icon={<CalendarCheck size={28} />}
-            title={data.unassignedItems > 0 ? '할당된 마감 없음' : '다가오는 마감 없음'}
+            title={data.unassignedItems > 0 ? t('monitoring:heatmap.emptyAssigned') : t('monitoring:heatmap.emptyNone')}
             description={data.unassignedItems > 0
-              ? `미할당 ${data.unassignedItems}건만 있음 — 담당자 배정 후 히트맵에 표시됩니다`
-              : '앞으로 8주간 미완료 마감 없음'}
+              ? t('monitoring:heatmap.emptyAssignedDesc', { count: data.unassignedItems })
+              : t('monitoring:heatmap.emptyNoneDesc')}
           />
         </div>
       ) : (
@@ -148,7 +151,7 @@ export function ResourceHeatmapCard({ data, loading, height = 220 }: Props) {
         <Modal
           open
           onClose={() => setSelected(null)}
-          title={`${selectedLabel} — ${selectedItems.length}건`}
+          title={t('monitoring:heatmap.modalTitle', { label: selectedLabel, count: selectedItems.length })}
           showCloseButton
           size="md"
         >
@@ -189,6 +192,7 @@ function buildOption(
   maxCount: number,
   ch: ReturnType<typeof getChartColors>,
   theme: 'dark' | 'light',
+  t: TFunction,
 ) {
   // 컴팩트 220px 카드: 라벨 짧게 (월/일만), 좌측 폭 줄임.
   const xLabels = weekStarts.map((ws) => shortMd(ws));
@@ -202,7 +206,7 @@ function buildOption(
         const [xi, yi, v] = p.value as [number, number, number];
         const ws = weekStarts[xi];
         const name = rows[yi]?.assignee ?? '';
-        return `${name} · W${isoWeekNumber(ws)} (${shortMd(ws)} 주): ${v}건`;
+        return t('monitoring:heatmap.cellTooltip', { name, week: isoWeekNumber(ws), date: shortMd(ws), count: v });
       },
       backgroundColor: ch.tooltipBg,
       borderColor: ch.tooltipBorder,

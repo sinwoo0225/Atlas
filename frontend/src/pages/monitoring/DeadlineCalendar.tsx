@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { monitoringApi } from '../../api/monitoring';
 import { Card, Spinner } from '../../components/ui';
 import type { CalendarEvent } from '../../types';
@@ -24,7 +25,7 @@ function startOfWeekSun(d: Date): Date {
   return r;
 }
 
-const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const MAX_CHIPS = 3;
 
 function isCompleted(e: CalendarEvent): boolean {
@@ -34,6 +35,7 @@ function isCompleted(e: CalendarEvent): boolean {
 }
 
 export function DeadlineCalendar() {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   // 보이는 달의 1일.
   const [anchor, setAnchor] = useState(() => {
@@ -114,18 +116,18 @@ export function DeadlineCalendar() {
           <button
             type="button"
             onClick={goPrev}
-            aria-label="이전 달"
+            aria-label={t('monitoring:calendar.prevMonth')}
             className="p-1.5 rounded text-secondary hover:text-primary hover:bg-surface-2 transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
           <span className="text-sm font-semibold text-primary min-w-[6rem] text-center">
-            {anchor.getFullYear()}년 {monthIdx + 1}월
+            {new Date(anchor.getFullYear(), monthIdx, 1).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'ko-KR', { year: 'numeric', month: 'long' })}
           </span>
           <button
             type="button"
             onClick={goNext}
-            aria-label="다음 달"
+            aria-label={t('monitoring:calendar.nextMonth')}
             className="p-1.5 rounded text-secondary hover:text-primary hover:bg-surface-2 transition-colors"
           >
             <ChevronRight size={16} />
@@ -135,25 +137,25 @@ export function DeadlineCalendar() {
             onClick={goToday}
             className="ml-1 px-2 py-1 text-xs rounded border border-default text-secondary hover:text-primary hover:bg-surface-2 transition-colors"
           >
-            오늘로
+            {t('monitoring:calendar.today')}
           </button>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted">
           <span className="flex items-center gap-1"><Dot className="bg-accent" />WBS</span>
-          <span className="flex items-center gap-1"><Dot className="bg-warning" />이슈</span>
-          <span className="flex items-center gap-1"><Star size={11} className="text-on-warning" />마일스톤</span>
+          <span className="flex items-center gap-1"><Dot className="bg-warning" />{t('monitoring:calendar.legendIssue')}</span>
+          <span className="flex items-center gap-1"><Star size={11} className="text-on-warning" />{t('monitoring:calendar.legendMilestone')}</span>
         </div>
       </div>
 
       {/* 요일 헤더 */}
       <div className="grid grid-cols-7 gap-px text-center text-xs text-muted mb-px">
-        {WEEKDAYS.map((w, i) => (
-          <div key={w} className={`py-1 ${i === 0 ? 'text-on-danger' : i === 6 ? 'text-accent' : ''}`}>{w}</div>
+        {WEEKDAY_KEYS.map((w, i) => (
+          <div key={w} className={`py-1 ${i === 0 ? 'text-on-danger' : i === 6 ? 'text-accent' : ''}`}>{t(`monitoring:calendar.weekday.${w}`)}</div>
         ))}
       </div>
 
       {loading ? (
-        <Spinner label="불러오는 중..." />
+        <Spinner label={t('common:loading')} />
       ) : (
         <div className="grid grid-cols-7 gap-px bg-default rounded overflow-hidden border border-default">
           {days.map((d) => {
@@ -179,7 +181,7 @@ export function DeadlineCalendar() {
                   <EventChip key={`${e.kind}-${e.id}`} ev={e} overdue={key < todayIso && !isCompleted(e)} onClick={() => navigate(eventPath(e))} />
                 ))}
                 {dayEvents.length > MAX_CHIPS && (
-                  <span className="text-[10px] text-muted px-1">+{dayEvents.length - MAX_CHIPS}건</span>
+                  <span className="text-[10px] text-muted px-1">{t('monitoring:calendar.moreChips', { count: dayEvents.length - MAX_CHIPS })}</span>
                 )}
               </div>
             );
@@ -188,7 +190,7 @@ export function DeadlineCalendar() {
       )}
 
       {!loading && events.length === 0 && (
-        <p className="text-xs text-muted text-center mt-3">이 달에 마감 예정 항목이 없습니다.</p>
+        <p className="text-xs text-muted text-center mt-3">{t('monitoring:calendar.empty')}</p>
       )}
     </Card>
   );
