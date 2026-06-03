@@ -46,6 +46,7 @@ Write-Host '== 2) Projects ==' -ForegroundColor Cyan
 $projectData = @(
   @{
     name='Atlas v1.5 릴리즈'
+    category='내부'
     description="UI/UX 로드맵 P0~P8 완료 + 백엔드 안정화. 다중 사용자 공유 폴더 베타 진입."
     goal='2026년 6월 v1.5 GA. 로컬 모드 안정성 + 라이트 모드 동등 가독성 + 다중 사용자 락 인프라.'
     status='InProgress'
@@ -58,6 +59,7 @@ $projectData = @(
   }
   @{
     name='데이터 분석 파이프라인'
+    category='사업'
     description='고객 행동 로그를 실시간으로 수집·집계해 BI 대시보드에 노출. Kafka + ClickHouse + Grafana.'
     goal='1초 latency 안에서 10K events/s 처리. 분석가 셀프서비스 5건 출시.'
     status='InProgress'
@@ -70,6 +72,7 @@ $projectData = @(
   }
   @{
     name='모바일 앱 MVP'
+    category='과제'
     description='Atlas 의 핵심 워크플로 (이슈/회의록) 를 모바일 친화 UI 로. iOS + Android.'
     goal='3개월 안 MVP 출시 — 이슈 조회/작성, 회의록 읽기, push 알림.'
     status='Waiting'
