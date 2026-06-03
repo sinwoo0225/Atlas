@@ -4,6 +4,8 @@
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Hourglass } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Card, Skeleton, EmptyState } from '../../components/ui';
 import { getChartColors, useThemeMode } from '../../utils/themeColors';
 import type { AgingWipItem } from '../../types';
@@ -16,6 +18,7 @@ const THRESHOLD = 14;
 // Aging WIP — 현재 진행중(WBS InProgress / 이슈 Open·InProgress) 항목을 나이순으로.
 // 끝난 일이 아니라 '지금 막혀있는 일'을 잡는다(Vacanti). 임계 초과는 danger, 근접은 warning.
 export function AgingWipCard({ data, loading }: { data: AgingWipItem[]; loading: boolean }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const theme = useThemeMode();
   const ch = getChartColors(theme);
@@ -25,17 +28,17 @@ export function AgingWipCard({ data, loading }: { data: AgingWipItem[]; loading:
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
         <Hourglass size={16} className="text-muted" />
-        오래 묵은 진행중 항목 <span className="text-xs font-normal text-muted">(Aging WIP)</span>
+        {t('monitoring:aging.title')} <span className="text-xs font-normal text-muted">{t('monitoring:aging.tag')}</span>
       </h3>
       {loading ? (
         <Skeleton height={CHART_HEIGHT} />
       ) : top.length === 0 ? (
         <div className="flex items-center justify-center" style={{ height: CHART_HEIGHT }}>
-          <EmptyState icon={<Hourglass size={28} />} title="진행중 항목 없음" />
+          <EmptyState icon={<Hourglass size={28} />} title={t('monitoring:aging.empty')} />
         </div>
       ) : (
         <ReactECharts
-          option={buildOption(top, ch)}
+          option={buildOption(top, ch, t)}
           style={{ height: CHART_HEIGHT }}
           onEvents={{
             click: (params: any) => {
@@ -59,7 +62,7 @@ function colorFor(age: number, ch: ReturnType<typeof getChartColors>): string {
   return ch.accentBar;
 }
 
-function buildOption(items: AgingWipItem[], ch: ReturnType<typeof getChartColors>) {
+function buildOption(items: AgingWipItem[], ch: ReturnType<typeof getChartColors>, t: TFunction) {
   return {
     backgroundColor: 'transparent',
     tooltip: {
@@ -68,14 +71,14 @@ function buildOption(items: AgingWipItem[], ch: ReturnType<typeof getChartColors
       formatter: (params: any) => {
         const it = items[(params as any[])[0].dataIndex as number];
         const tag = it.kind === 'wbs' ? 'WBS' : 'Issue';
-        return `<b>${it.title}</b><br/>${it.projectName} · ${tag}<br/>진행 ${it.ageDays}일${it.assignee ? ` · ${it.assignee}` : ''}`;
+        return `<b>${it.title}</b><br/>${it.projectName} · ${tag}<br/>${t('monitoring:aging.tooltipAge', { days: it.ageDays })}${it.assignee ? ` · ${it.assignee}` : ''}`;
       },
       backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
     },
     grid: { left: 110, right: 40, top: 8, bottom: 22 },
     xAxis: {
       type: 'value',
-      name: '경과일',
+      name: t('monitoring:aging.axisAge'),
       nameTextStyle: { color: ch.axisText, fontSize: 9 },
       axisLabel: { color: ch.axisText, fontSize: 9 },
       splitLine: { lineStyle: { color: ch.splitLine } },
@@ -97,7 +100,7 @@ function buildOption(items: AgingWipItem[], ch: ReturnType<typeof getChartColors
       label: { show: true, position: 'right', color: ch.axisText, fontSize: 9, formatter: (p: any) => `${items[p.dataIndex as number].ageDays}d` },
       markLine: {
         symbol: 'none',
-        label: { color: ch.axisText, fontSize: 9, formatter: `${THRESHOLD}일` },
+        label: { color: ch.axisText, fontSize: 9, formatter: t('monitoring:aging.thresholdLabel', { days: THRESHOLD }) },
         lineStyle: { color: ch.ganttToday, type: 'dashed' },
         data: [{ xAxis: THRESHOLD }],
       },

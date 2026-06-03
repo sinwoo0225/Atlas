@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, AlertTriangle, CalendarClock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, Skeleton } from '../../components/ui';
 import type { ReviewCompletedItem, ReviewDeadlineItem, WeeklyReview } from '../../types';
 
@@ -14,6 +15,7 @@ function entityUrl(kind: 'wbs' | 'issue', projectId: number, id: number): string
 }
 
 export function WeeklyReviewCard({ review, loading }: { review: WeeklyReview | null; loading: boolean }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const completed = review?.completed ?? [];
@@ -49,13 +51,13 @@ export function WeeklyReviewCard({ review, loading }: { review: WeeklyReview | n
       <div className="flex items-center gap-3 mb-3 flex-wrap">
         <h2 className="h-card flex items-center gap-2">
           <CheckCircle2 size={16} className="text-accent" />
-          이번 주 회고
-          {review && <span className="text-xs font-normal text-muted">({review.weekStart} 주)</span>}
+          {t('monitoring:review.title')}
+          {review && <span className="text-xs font-normal text-muted">{t('monitoring:weekSuffix', { date: review.weekStart })}</span>}
         </h2>
         <div className="flex items-center gap-2.5">
-          <CountChip label="완료" count={completed.length} />
-          <CountChip label="놓친 마감" count={missed.length} tone="danger" />
-          <CountChip label="다음 주" count={upcoming.length} />
+          <CountChip label={t('monitoring:review.chipDone')} count={completed.length} />
+          <CountChip label={t('monitoring:review.chipMissed')} count={missed.length} tone="danger" />
+          <CountChip label={t('monitoring:review.chipNext')} count={upcoming.length} />
         </div>
       </div>
 
@@ -66,10 +68,10 @@ export function WeeklyReviewCard({ review, loading }: { review: WeeklyReview | n
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Column
-            title="완료한 항목"
+            title={t('monitoring:review.colDone')}
             count={completed.length}
             icon={<CheckCircle2 size={12} />}
-            empty="완료한 항목 없음"
+            empty={t('monitoring:review.colDoneEmpty')}
           >
             {completed.slice(0, MAX_ROWS).map((it: ReviewCompletedItem) =>
               row(`c-${it.kind}-${it.id}`, it.kind, it.projectId, it.id, it.title, it.projectName,
@@ -78,11 +80,11 @@ export function WeeklyReviewCard({ review, loading }: { review: WeeklyReview | n
           </Column>
 
           <Column
-            title="놓친 마감"
+            title={t('monitoring:review.colMissed')}
             count={missed.length}
             tone="danger"
             icon={<AlertTriangle size={12} />}
-            empty="놓친 마감 없음"
+            empty={t('monitoring:review.colMissedEmpty')}
           >
             {missed.slice(0, MAX_ROWS).map((it: ReviewDeadlineItem) =>
               row(`m-${it.kind}-${it.id}`, it.kind, it.projectId, it.id, it.title, it.projectName, it.dueDate, 'danger'))}
@@ -90,10 +92,10 @@ export function WeeklyReviewCard({ review, loading }: { review: WeeklyReview | n
           </Column>
 
           <Column
-            title="다음 주 마감 예정"
+            title={t('monitoring:review.colUpcoming')}
             count={upcoming.length}
             icon={<CalendarClock size={12} />}
-            empty="예정된 마감 없음"
+            empty={t('monitoring:review.colUpcomingEmpty')}
           >
             {upcoming.slice(0, MAX_ROWS).map((it: ReviewDeadlineItem) =>
               row(`u-${it.kind}-${it.id}`, it.kind, it.projectId, it.id, it.title, it.projectName, it.dueDate, 'muted'))}
@@ -115,7 +117,8 @@ function CountChip({ label, count, tone }: { label: string; count: number; tone?
 }
 
 function MoreText({ count }: { count: number }) {
-  return <p className="text-xs text-muted mt-1">외 {count}건</p>;
+  const { t } = useTranslation();
+  return <p className="text-xs text-muted mt-1">{t('monitoring:more', { count })}</p>;
 }
 
 function Column({

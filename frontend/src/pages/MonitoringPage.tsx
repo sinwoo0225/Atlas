@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, RefreshCw, Calendar, NotebookPen, Download, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
@@ -36,18 +37,18 @@ import type {
 
 // 통합 모니터링에는 '한 일'·'이슈'만 노출한다. '계획' 은 프로젝트별 업무일지에서 본다.
 type WorkLogField = 'done' | 'issues';
-const FIELD_DEFS: { key: WorkLogField; label: string }[] = [
-  { key: 'done',   label: '한 일' },
-  { key: 'issues', label: '이슈' },
+const FIELD_DEFS: { key: WorkLogField; labelKey: string }[] = [
+  { key: 'done',   labelKey: 'monitoring:fields.done' },
+  { key: 'issues', labelKey: 'monitoring:fields.issues' },
 ];
 
 type MonitoringTab = 'overview' | 'people' | 'trends' | 'tasks' | 'logs';
-const TABS: { value: MonitoringTab; label: string }[] = [
-  { value: 'overview', label: '개요' },
-  { value: 'people',   label: '담당자' },
-  { value: 'trends',   label: '추세' },
-  { value: 'tasks',    label: '작업' },
-  { value: 'logs',     label: '일지' },
+const TABS: { value: MonitoringTab; labelKey: string }[] = [
+  { value: 'overview', labelKey: 'monitoring:tabs.overview' },
+  { value: 'people',   labelKey: 'monitoring:tabs.people' },
+  { value: 'trends',   labelKey: 'monitoring:tabs.trends' },
+  { value: 'tasks',    labelKey: 'monitoring:tabs.tasks' },
+  { value: 'logs',     labelKey: 'monitoring:tabs.logs' },
 ];
 function isTab(v: string | null): v is MonitoringTab {
   return v === 'overview' || v === 'people' || v === 'trends' || v === 'tasks' || v === 'logs';
@@ -55,10 +56,10 @@ function isTab(v: string | null): v is MonitoringTab {
 
 // '작업' 탭 내부 뷰 — 배열에 항목만 추가하면 확장.
 type TaskView = 'list' | 'calendar' | 'kanban';
-const TASK_VIEWS: { value: TaskView; label: string }[] = [
-  { value: 'list',     label: '리스트' },
-  { value: 'calendar', label: '캘린더' },
-  { value: 'kanban',   label: '칸반' },
+const TASK_VIEWS: { value: TaskView; labelKey: string }[] = [
+  { value: 'list',     labelKey: 'monitoring:taskViews.list' },
+  { value: 'calendar', labelKey: 'monitoring:taskViews.calendar' },
+  { value: 'kanban',   labelKey: 'monitoring:taskViews.kanban' },
 ];
 function isTaskView(v: string | null): v is TaskView {
   return v === 'list' || v === 'calendar' || v === 'kanban';
@@ -166,7 +167,7 @@ export function MonitoringPage() {
         setWorkload(wl);
         setCategories(cat);
       })
-      .catch(() => setError('모니터링 데이터를 불러올 수 없습니다.'))
+      .catch(() => setError(t('monitoring:loadFailed')))
       .finally(() => setLoading(false));
   };
 
@@ -224,9 +225,9 @@ export function MonitoringPage() {
       <div className="flex items-center justify-between">
         <h1 className="h-page flex items-center gap-2">
           <Activity size={18} className="text-muted" />
-          통합 모니터링
+          {t('monitoring:title')}
         </h1>
-        <Button variant="secondary" onClick={load} leadingIcon={<RefreshCw size={16} />}>새로고침</Button>
+        <Button variant="secondary" onClick={load} leadingIcon={<RefreshCw size={16} />}>{t('monitoring:refresh')}</Button>
       </div>
 
       {error && (
@@ -280,10 +281,10 @@ export function MonitoringPage() {
           <Card padding="normal">
             <p className="text-xs text-muted flex items-center gap-2">
               <Calendar size={12} />
-              {today} 기준 진행 중인 작업
+              {t('monitoring:tasks.asOf', { date: today })}
             </p>
             <p className="text-2xl font-semibold text-primary mt-1">
-              총 {items.length}건 / {grouped.length}개 프로젝트
+              {t('monitoring:tasks.summary', { count: items.length, projects: grouped.length })}
             </p>
           </Card>
 
@@ -303,7 +304,7 @@ export function MonitoringPage() {
           ) : grouped.length === 0 ? (
             <EmptyState
               icon={<Activity size={32} />}
-              title="오늘 진행 중인 작업이 없습니다."
+              title={t('monitoring:tasks.empty')}
             />
           ) : (
             <div className="space-y-3">
@@ -314,16 +315,16 @@ export function MonitoringPage() {
                     onClick={() => navigate(`/projects/${g.projectId}/wbs`)}
                   >
                     <h2 className="h-card">{g.projectName}</h2>
-                    <span className="text-xs text-muted">{g.items.length}건</span>
+                    <span className="text-xs text-muted">{t('monitoring:countItems', { count: g.items.length })}</span>
                   </div>
                   <div className="overflow-x-auto">
                   <table className="w-full min-w-[640px]">
                     <thead>
                       <tr className="text-xs text-muted border-b border-default">
-                        <th className="text-left py-2 px-4 font-medium">작업명</th>
-                        <th className="text-left py-2 px-3 font-medium">담당자</th>
-                        <th className="text-left py-2 px-3 font-medium">기간</th>
-                        <th className="text-left py-2 px-3 font-medium">상태</th>
+                        <th className="text-left py-2 px-4 font-medium">{t('monitoring:tasks.colName')}</th>
+                        <th className="text-left py-2 px-3 font-medium">{t('monitoring:tasks.colAssignee')}</th>
+                        <th className="text-left py-2 px-3 font-medium">{t('monitoring:tasks.colPeriod')}</th>
+                        <th className="text-left py-2 px-3 font-medium">{t('monitoring:tasks.colStatus')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -363,7 +364,7 @@ export function MonitoringPage() {
           <WeeklyReviewCard review={review} loading={reviewLoading} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
             <WeeklySection
-              title="지난 주 업무일지"
+              title={t('monitoring:logs.lastWeek')}
               data={lastWeek}
               loading={loading}
               onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
@@ -371,7 +372,7 @@ export function MonitoringPage() {
               exportable
             />
             <WeeklySection
-              title="이번 주 업무일지"
+              title={t('monitoring:logs.thisWeek')}
               data={thisWeek}
               loading={loading}
               onProjectClick={(id) => navigate(`/projects/${id}/worklog`)}
@@ -393,24 +394,25 @@ export function MonitoringPage() {
 }
 
 function TabBar({ value, onChange }: { value: MonitoringTab; onChange: (next: MonitoringTab) => void }) {
+  const { t } = useTranslation();
   return (
     <div role="tablist" className="inline-flex rounded-md border border-default bg-surface p-0.5">
-      {TABS.map((t) => {
-        const active = t.value === value;
+      {TABS.map((tab) => {
+        const active = tab.value === value;
         return (
           <button
-            key={t.value}
+            key={tab.value}
             role="tab"
             aria-selected={active}
             type="button"
-            onClick={() => onChange(t.value)}
+            onClick={() => onChange(tab.value)}
             className={`px-3 py-1.5 text-sm rounded transition-colors ${
               active
                 ? 'bg-accent text-on-accent font-medium'
                 : 'text-secondary hover:text-primary hover:bg-surface-2'
             }`}
           >
-            {t.label}
+            {t(tab.labelKey)}
           </button>
         );
       })}
@@ -420,6 +422,7 @@ function TabBar({ value, onChange }: { value: MonitoringTab; onChange: (next: Mo
 
 // '작업' 탭 내부 뷰 전환 (리스트 / 캘린더 …). TabBar 와 동일 스타일.
 function TaskViewSwitch({ value, onChange }: { value: TaskView; onChange: (next: TaskView) => void }) {
+  const { t } = useTranslation();
   return (
     <div role="tablist" className="inline-flex rounded-md border border-default bg-surface p-0.5">
       {TASK_VIEWS.map((v) => {
@@ -437,7 +440,7 @@ function TaskViewSwitch({ value, onChange }: { value: TaskView; onChange: (next:
                 : 'text-secondary hover:text-primary hover:bg-surface-2'
             }`}
           >
-            {v.label}
+            {t(v.labelKey)}
           </button>
         );
       })}
@@ -451,21 +454,22 @@ function oneLine(s: string): string {
 }
 
 // 회고 다이제스트 섹션 — 완료한 항목 / 놓친 마감 / 다음 주 예정. md 내보내기 상단에 첨부.
-function buildReviewMarkdown(review: WeeklyReview): string {
-  const lines: string[] = ['## 주간 회고', ''];
+function buildReviewMarkdown(review: WeeklyReview, t: TFunction): string {
+  const due = t('monitoring:markdown.due');
+  const lines: string[] = [`## ${t('monitoring:markdown.reviewHeading')}`, ''];
   const section = (heading: string, items: string[]) => {
     lines.push(`### ${heading} (${items.length})`);
-    if (items.length === 0) lines.push('- _(없음)_');
+    if (items.length === 0) lines.push(`- _${t('monitoring:markdown.none')}_`);
     else lines.push(...items);
     lines.push('');
   };
-  section('완료한 항목', review.completed.map((c) => `- [${c.projectName}] ${c.title} (${c.completedAt})`));
-  section('놓친 마감', review.missedDeadlines.map((d) => `- [${d.projectName}] ${d.title} — 마감 ${d.dueDate}`));
-  section('다음 주 마감 예정', review.upcomingNextWeek.map((d) => `- [${d.projectName}] ${d.title} — 마감 ${d.dueDate}`));
+  section(t('monitoring:markdown.completed'), review.completed.map((c) => `- [${c.projectName}] ${c.title} (${c.completedAt})`));
+  section(t('monitoring:markdown.missed'), review.missedDeadlines.map((d) => `- [${d.projectName}] ${d.title} — ${due} ${d.dueDate}`));
+  section(t('monitoring:markdown.upcoming'), review.upcomingNextWeek.map((d) => `- [${d.projectName}] ${d.title} — ${due} ${d.dueDate}`));
   return lines.join('\n');
 }
 
-function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null): string {
+function buildWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null): string {
   const weekStart = data.weekStart.slice(0, 10);
   // 종료일 = 주 시작 + 4일 (월~금)
   const start = new Date(weekStart);
@@ -474,22 +478,22 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProjec
   const endIso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
 
   const fields: { key: 'done' | 'plan' | 'issues'; label: string }[] = [
-    { key: 'done',   label: '한 일' },
-    { key: 'plan',   label: '계획' },
-    { key: 'issues', label: '이슈' },
+    { key: 'done',   label: t('monitoring:fields.done') },
+    { key: 'plan',   label: t('monitoring:fields.plan') },
+    { key: 'issues', label: t('monitoring:fields.issues') },
   ];
 
   const lines: string[] = [];
-  lines.push(`# 업무일지 (${weekStart} ~ ${endIso})`);
+  lines.push(`# ${t('monitoring:markdown.worklogTitle')} (${weekStart} ~ ${endIso})`);
   lines.push('');
 
   if (review) {
-    lines.push(buildReviewMarkdown(review));
+    lines.push(buildReviewMarkdown(review, t));
     lines.push('');
   }
 
   if (data.projects.length === 0) {
-    lines.push('_(기록 없음)_');
+    lines.push(`_${t('monitoring:markdown.noRecord')}_`);
     lines.push('');
   } else {
     for (const p of data.projects) {
@@ -520,7 +524,7 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProjec
     }),
   );
   if (issueLines.length > 0) {
-    lines.push('## 이슈 목록');
+    lines.push(`## ${t('monitoring:markdown.issuesTitle')}`);
     lines.push('');
     lines.push(...issueLines);
     lines.push('');
@@ -528,8 +532,8 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProjec
   return lines.join('\n');
 }
 
-function downloadWeeklyMarkdown(data: WeeklyWorkLog, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null) {
-  const md = buildWeeklyMarkdown(data, openIssues, review);
+function downloadWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null) {
+  const md = buildWeeklyMarkdown(data, t, openIssues, review);
   const weekStart = data.weekStart.slice(0, 10);
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -556,6 +560,7 @@ function WeeklySection({
   openIssues?: OpenIssuesByProject[];
   review?: WeeklyReview | null;
 }) {
+  const { t } = useTranslation();
   const muted = variant === 'muted';
   const titleCls = muted ? 'text-secondary' : 'text-primary';
   const iconCls = muted ? 'text-muted' : 'text-accent';
@@ -570,7 +575,7 @@ function WeeklySection({
           {title}
           {data && (
             <span className="text-xs text-muted font-normal">
-              ({data.weekStart.slice(0, 10)} 주)
+              {t('monitoring:weekSuffix', { date: data.weekStart.slice(0, 10) })}
             </span>
           )}
         </h2>
@@ -578,19 +583,19 @@ function WeeklySection({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => downloadWeeklyMarkdown(data!, openIssues, review)}
+            onClick={() => downloadWeeklyMarkdown(data!, t, openIssues, review)}
             leadingIcon={<Download size={14} />}
-            title="md 파일로 내보내기 (주간 회고 + 미해결 이슈 목록 포함)"
+            title={t('monitoring:logs.exportTitle')}
           >
-            md 내보내기
+            {t('monitoring:logs.export')}
           </Button>
         )}
       </div>
       {loading ? (
-        <Spinner label="불러오는 중..." />
+        <Spinner label={t('common:loading')} />
       ) : !data || data.projects.length === 0 ? (
         <Card padding="spacious" variant={muted ? 'subtle' : 'default'} className="text-center text-muted text-sm">
-          기록 없음
+          {t('monitoring:logs.noRecord')}
         </Card>
       ) : (
         <div className="space-y-3">
@@ -610,6 +615,7 @@ function ProjectWeekCard({
   onProjectClick: (id: number) => void;
   variant?: WeeklyVariant;
 }) {
+  const { t } = useTranslation();
   return (
     <Card padding="normal" variant={variant === 'muted' ? 'subtle' : 'default'} className={variant === 'muted' ? 'opacity-90' : ''}>
       <button
@@ -624,7 +630,7 @@ function ProjectWeekCard({
           if (daysWithContent.length === 0) return null;
           return (
             <div key={f.key}>
-              <p className="text-xs text-accent font-medium mb-1">{f.label}</p>
+              <p className="text-xs text-accent font-medium mb-1">{t(f.labelKey)}</p>
               <div className="pl-2 space-y-2">
                 {daysWithContent.map((d) => (
                   <DayBlock key={d.dayIndex} day={d} field={f.key} />
@@ -655,19 +661,20 @@ function OpenIssuesSection({
   loading: boolean;
   onProjectClick: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const total = openIssues.reduce((n, p) => n + p.issues.length, 0);
   return (
     <section className="space-y-3">
       <h2 className="h-section flex items-center gap-2 text-primary">
         <AlertCircle size={16} className="text-accent" />
-        이슈 목록
-        <span className="text-xs text-muted font-normal">(미해결 {total}건)</span>
+        {t('monitoring:logs.issuesTitle')}
+        <span className="text-xs text-muted font-normal">{t('monitoring:logs.openCount', { count: total })}</span>
       </h2>
       {loading ? (
-        <Spinner label="불러오는 중..." />
+        <Spinner label={t('common:loading')} />
       ) : openIssues.length === 0 ? (
         <Card padding="spacious" className="text-center text-muted text-sm">
-          미해결 이슈 없음
+          {t('monitoring:logs.noOpenIssues')}
         </Card>
       ) : (
         <div className="space-y-3">

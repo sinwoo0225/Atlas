@@ -1,0 +1,110 @@
+{
+  "title": "통합 모니터링",
+  "refresh": "새로고침",
+  "loadFailed": "모니터링 데이터를 불러올 수 없습니다.",
+  "more": "외 {{count}}건",
+  "weekSuffix": "({{date}} 주)",
+  "centerUnit": "프로젝트",
+  "countItems": "{{count}}건",
+  "tabs": {
+    "overview": "개요",
+    "people": "담당자",
+    "trends": "추세",
+    "tasks": "작업",
+    "logs": "일지"
+  },
+  "taskViews": {
+    "list": "리스트",
+    "calendar": "캘린더",
+    "kanban": "칸반"
+  },
+  "tasks": {
+    "asOf": "{{date}} 기준 진행 중인 작업",
+    "summary": "총 {{count}}건 / {{projects}}개 프로젝트",
+    "empty": "오늘 진행 중인 작업이 없습니다.",
+    "colName": "작업명",
+    "colAssignee": "담당자",
+    "colPeriod": "기간",
+    "colStatus": "상태"
+  },
+  "logs": {
+    "lastWeek": "지난 주 업무일지",
+    "thisWeek": "이번 주 업무일지",
+    "exportTitle": "md 파일로 내보내기 (주간 회고 + 미해결 이슈 목록 포함)",
+    "export": "md 내보내기",
+    "noRecord": "기록 없음",
+    "issuesTitle": "이슈 목록",
+    "openCount": "(미해결 {{count}}건)",
+    "noOpenIssues": "미해결 이슈 없음"
+  },
+  "fields": {
+    "done": "한 일",
+    "plan": "계획",
+    "issues": "이슈"
+  },
+  "risk": {
+    "title": "주의가 필요한 항목",
+    "allProjects": "(전체 프로젝트)",
+    "chipOverdue": "지연",
+    "chipDueSoon": "임박",
+    "chipHighIssue": "High 이슈",
+    "colOverdue": "지연된 WBS",
+    "colOverdueEmpty": "지연 없음",
+    "colDueSoon": "마감 임박 (7일)",
+    "colDueSoonEmpty": "임박 없음",
+    "colHighIssue": "처리 안 된 High 이슈",
+    "colHighIssueEmpty": "High 이슈 없음"
+  },
+  "stale": {
+    "title": "방치된 프로젝트",
+    "empty": "방치된 프로젝트 없음",
+    "emptyDesc": "활성 프로젝트가 최근 모두 업데이트됨",
+    "noActivity": "활동 기록 없음",
+    "days": "{{count}}일"
+  },
+  "aging": {
+    "title": "오래 묵은 진행중 항목",
+    "tag": "(Aging WIP)",
+    "empty": "진행중 항목 없음",
+    "axisAge": "경과일",
+    "tooltipAge": "진행 {{days}}일",
+    "thresholdLabel": "{{days}}일"
+  },
+  "category": {
+    "title": "카테고리별 프로젝트",
+    "empty": "프로젝트 없음",
+    "tooltip": "{{name}}: {{count}}개 ({{percent}}%)"
+  },
+  "kpi": {
+    "title": "요약",
+    "totalProjects": "전체 프로젝트",
+    "inProgress": "진행중",
+    "done": "완료",
+    "avgWbsProgress": "평균 WBS 진행률",
+    "openIssues": "미해결 이슈",
+    "upcomingMilestones": "다가오는 마일스톤"
+  },
+  "review": {
+    "title": "이번 주 회고",
+    "chipDone": "완료",
+    "chipMissed": "놓친 마감",
+    "chipNext": "다음 주",
+    "colDone": "완료한 항목",
+    "colDoneEmpty": "완료한 항목 없음",
+    "colMissed": "놓친 마감",
+    "colMissedEmpty": "놓친 마감 없음",
+    "colUpcoming": "다음 주 마감 예정",
+    "colUpcomingEmpty": "예정된 마감 없음"
+  },
+  "markdown": {
+    "reviewHeading": "주간 회고",
+    "completed": "완료한 항목",
+    "missed": "놓친 마감",
+    "upcoming": "다음 주 마감 예정",
+    "none": "(없음)",
+    "due": "마감",
+    "worklogTitle": "업무일지",
+    "noRecord": "(기록 없음)",
+    "issuesTitle": "이슈 목록"
+  }
+}

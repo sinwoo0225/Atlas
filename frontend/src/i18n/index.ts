@@ -18,6 +18,7 @@ import koDevinfo from './locales/ko/devinfo.json';
 import koChangelog from './locales/ko/changelog.json';
 import koWidget from './locales/ko/widget.json';
 import koMeetings from './locales/ko/meetings.json';
+import koMonitoring from './locales/ko/monitoring.json';
 import enCommon from './locales/en/common.json';
 import enNav from './locales/en/nav.json';
 import enStatus from './locales/en/status.json';
@@ -34,6 +35,7 @@ import enDevinfo from './locales/en/devinfo.json';
 import enChangelog from './locales/en/changelog.json';
 import enWidget from './locales/en/widget.json';
 import enMeetings from './locales/en/meetings.json';
+import enMonitoring from './locales/en/monitoring.json';
 
 export const SUPPORTED_LANGUAGES = ['ko', 'en'] as const;
 export type Language = (typeof SUPPORTED_LANGUAGES)[number];
@@ -41,8 +43,8 @@ export type Language = (typeof SUPPORTED_LANGUAGES)[number];
 // 리소스는 번들에 인라인 — 백엔드 로딩 없이 동기 초기화되므로 Provider/Suspense 불필요.
 // 기본 인스턴스라 컴포넌트는 useTranslation() 만으로 사용한다.
 const resources = {
-  ko: { common: koCommon, nav: koNav, status: koStatus, settings: koSettings, palette: koPalette, shortcuts: koShortcuts, dashboard: koDashboard, projects: koProjects, issues: koIssues, worklog: koWorklog, resources: koResources, activity: koActivity, devinfo: koDevinfo, changelog: koChangelog, widget: koWidget, meetings: koMeetings },
-  en: { common: enCommon, nav: enNav, status: enStatus, settings: enSettings, palette: enPalette, shortcuts: enShortcuts, dashboard: enDashboard, projects: enProjects, issues: enIssues, worklog: enWorklog, resources: enResources, activity: enActivity, devinfo: enDevinfo, changelog: enChangelog, widget: enWidget, meetings: enMeetings },
+  ko: { common: koCommon, nav: koNav, status: koStatus, settings: koSettings, palette: koPalette, shortcuts: koShortcuts, dashboard: koDashboard, projects: koProjects, issues: koIssues, worklog: koWorklog, resources: koResources, activity: koActivity, devinfo: koDevinfo, changelog: koChangelog, widget: koWidget, meetings: koMeetings, monitoring: koMonitoring },
+  en: { common: enCommon, nav: enNav, status: enStatus, settings: enSettings, palette: enPalette, shortcuts: enShortcuts, dashboard: enDashboard, projects: enProjects, issues: enIssues, worklog: enWorklog, resources: enResources, activity: enActivity, devinfo: enDevinfo, changelog: enChangelog, widget: enWidget, meetings: enMeetings, monitoring: enMonitoring },
 } as const;
 
 i18n.use(initReactI18next).init({
@@ -50,7 +52,7 @@ i18n.use(initReactI18next).init({
   lng: loadSettings().language,
   fallbackLng: 'ko',
   defaultNS: 'common',
-  ns: ['common', 'nav', 'status', 'settings', 'palette', 'shortcuts', 'dashboard', 'projects', 'issues', 'worklog', 'resources', 'activity', 'devinfo', 'changelog', 'widget', 'meetings'],
+  ns: ['common', 'nav', 'status', 'settings', 'palette', 'shortcuts', 'dashboard', 'projects', 'issues', 'worklog', 'resources', 'activity', 'devinfo', 'changelog', 'widget', 'meetings', 'monitoring'],
   interpolation: { escapeValue: false },
   react: { useSuspense: false },
 });

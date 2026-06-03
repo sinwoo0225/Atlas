@@ -17,7 +17,7 @@ export function StaleProjectsCard({ data, loading }: { data: StaleProject[]; loa
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-2">
         <MoonStar size={16} className="text-muted" />
-        방치된 프로젝트
+        {t('monitoring:stale.title')}
         {data.length > 0 && <span className="text-xs font-normal text-muted">({data.length})</span>}
       </h3>
       <div style={{ height: BODY_H }}>
@@ -25,7 +25,7 @@ export function StaleProjectsCard({ data, loading }: { data: StaleProject[]; loa
         <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} height={44} />)}</div>
       ) : data.length === 0 ? (
         <div className="h-full flex items-center justify-center">
-          <EmptyState icon={<MoonStar size={28} />} title="방치된 프로젝트 없음" description="활성 프로젝트가 최근 모두 업데이트됨" />
+          <EmptyState icon={<MoonStar size={28} />} title={t('monitoring:stale.empty')} description={t('monitoring:stale.emptyDesc')} />
         </div>
       ) : (
         <ul className="h-full space-y-2 overflow-y-auto pr-1">
@@ -42,14 +42,14 @@ export function StaleProjectsCard({ data, loading }: { data: StaleProject[]; loa
                   <Badge variant={badge.variant} size="sm">{t(badge.labelKey)}</Badge>
                   <span className="text-sm text-primary truncate flex-1 min-w-0">{p.projectName}</span>
                   <span className="text-[11px] text-muted shrink-0 hidden sm:inline">
-                    {p.lastActivity ? `${p.lastActivity}` : '활동 기록 없음'}
+                    {p.lastActivity ? `${p.lastActivity}` : t('monitoring:stale.noActivity')}
                   </span>
                   <span
                     className={`text-xs font-semibold shrink-0 px-2 py-0.5 rounded-full tabular-nums ${
                       crit ? 'bg-danger-soft text-on-danger' : 'bg-warning-soft text-on-warning'
                     }`}
                   >
-                    {p.daysSince}일
+                    {t('monitoring:stale.days', { count: p.daysSince })}
                   </span>
                 </button>
               </li>

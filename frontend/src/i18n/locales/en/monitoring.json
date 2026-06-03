@@ -1,0 +1,110 @@
+{
+  "title": "Monitoring",
+  "refresh": "Refresh",
+  "loadFailed": "Couldn't load monitoring data.",
+  "more": "+{{count}} more",
+  "weekSuffix": "(week of {{date}})",
+  "centerUnit": "projects",
+  "countItems": "{{count}}",
+  "tabs": {
+    "overview": "Overview",
+    "people": "People",
+    "trends": "Trends",
+    "tasks": "Tasks",
+    "logs": "Logs"
+  },
+  "taskViews": {
+    "list": "List",
+    "calendar": "Calendar",
+    "kanban": "Kanban"
+  },
+  "tasks": {
+    "asOf": "In progress as of {{date}}",
+    "summary": "{{count}} items / {{projects}} projects",
+    "empty": "No tasks in progress today.",
+    "colName": "Task",
+    "colAssignee": "Assignee",
+    "colPeriod": "Period",
+    "colStatus": "Status"
+  },
+  "logs": {
+    "lastWeek": "Last week's work log",
+    "thisWeek": "This week's work log",
+    "exportTitle": "Export as .md file (includes weekly review + open issues list)",
+    "export": "Export MD",
+    "noRecord": "No records",
+    "issuesTitle": "Issue list",
+    "openCount": "(open: {{count}})",
+    "noOpenIssues": "No open issues"
+  },
+  "fields": {
+    "done": "Done",
+    "plan": "Plan",
+    "issues": "Issues"
+  },
+  "risk": {
+    "title": "Items needing attention",
+    "allProjects": "(all projects)",
+    "chipOverdue": "Overdue",
+    "chipDueSoon": "Due soon",
+    "chipHighIssue": "High issues",
+    "colOverdue": "Overdue WBS",
+    "colOverdueEmpty": "None overdue",
+    "colDueSoon": "Due soon (7 days)",
+    "colDueSoonEmpty": "None due soon",
+    "colHighIssue": "Unresolved High issues",
+    "colHighIssueEmpty": "No High issues"
+  },
+  "stale": {
+    "title": "Stale projects",
+    "empty": "No stale projects",
+    "emptyDesc": "All active projects updated recently",
+    "noActivity": "No activity",
+    "days": "{{count}}d"
+  },
+  "aging": {
+    "title": "Aging in-progress items",
+    "tag": "(Aging WIP)",
+    "empty": "No in-progress items",
+    "axisAge": "Days",
+    "tooltipAge": "{{days}}d in progress",
+    "thresholdLabel": "{{days}}d"
+  },
+  "category": {
+    "title": "Projects by category",
+    "empty": "No projects",
+    "tooltip": "{{name}}: {{count}} ({{percent}}%)"
+  },
+  "kpi": {
+    "title": "Summary",
+    "totalProjects": "Total projects",
+    "inProgress": "In progress",
+    "done": "Done",
+    "avgWbsProgress": "Avg WBS progress",
+    "openIssues": "Open issues",
+    "upcomingMilestones": "Upcoming milestones"
+  },
+  "review": {
+    "title": "This week's review",
+    "chipDone": "Done",
+    "chipMissed": "Missed",
+    "chipNext": "Next week",
+    "colDone": "Completed",
+    "colDoneEmpty": "Nothing completed",
+    "colMissed": "Missed deadlines",
+    "colMissedEmpty": "No missed deadlines",
+    "colUpcoming": "Due next week",
+    "colUpcomingEmpty": "No upcoming deadlines"
+  },
+  "markdown": {
+    "reviewHeading": "Weekly Review",
+    "completed": "Completed",
+    "missed": "Missed deadlines",
+    "upcoming": "Due next week",
+    "none": "(none)",
+    "due": "Due",
+    "worklogTitle": "Work Log",
+    "noRecord": "(no records)",
+    "issuesTitle": "Issue List"
+  }
+}
