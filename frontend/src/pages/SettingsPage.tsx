@@ -50,19 +50,19 @@ import {
 import { formatDateTime } from '../i18n/format';
 
 // 번들된 앱 아이콘 프리셋 (public/icons → 빌드 시 wwwroot/icons). 선택 시 data URL 로 변환해 저장.
-const BRAND_ICON_PRESETS: { file: string; label: string }[] = [
-  { file: 'atlas-v2-compass.png', label: '나침반' },
-  { file: 'atlas-v2-celestial.png', label: '천체' },
-  { file: 'atlas-v2-constellation.png', label: '별자리' },
-  { file: 'atlas-v2-horizon.png', label: '지평선' },
-  { file: 'atlas-v2-mountain.png', label: '산' },
-  { file: 'atlas-v2-mountain-a.png', label: '산 A' },
-  { file: 'atlas-v2-monogram.png', label: '모노그램' },
-  { file: 'atlas-v2-brush.png', label: '브러시' },
-  { file: 'atlas-v2-calligraphy.png', label: '캘리그래피' },
-  { file: 'atlas-v2-at-calligraphy.png', label: 'At 캘리그래피' },
-  { file: 'atlas-v2-cute.png', label: '큐트' },
-  { file: 'atlas-v2-cute-hills.png', label: '큐트 언덕' },
+const BRAND_ICON_PRESETS: { file: string; labelKey: string }[] = [
+  { file: 'atlas-v2-compass.png', labelKey: 'settings:brandPresets.compass' },
+  { file: 'atlas-v2-celestial.png', labelKey: 'settings:brandPresets.celestial' },
+  { file: 'atlas-v2-constellation.png', labelKey: 'settings:brandPresets.constellation' },
+  { file: 'atlas-v2-horizon.png', labelKey: 'settings:brandPresets.horizon' },
+  { file: 'atlas-v2-mountain.png', labelKey: 'settings:brandPresets.mountain' },
+  { file: 'atlas-v2-mountain-a.png', labelKey: 'settings:brandPresets.mountainA' },
+  { file: 'atlas-v2-monogram.png', labelKey: 'settings:brandPresets.monogram' },
+  { file: 'atlas-v2-brush.png', labelKey: 'settings:brandPresets.brush' },
+  { file: 'atlas-v2-calligraphy.png', labelKey: 'settings:brandPresets.calligraphy' },
+  { file: 'atlas-v2-at-calligraphy.png', labelKey: 'settings:brandPresets.atCalligraphy' },
+  { file: 'atlas-v2-cute.png', labelKey: 'settings:brandPresets.cute' },
+  { file: 'atlas-v2-cute-hills.png', labelKey: 'settings:brandPresets.cuteHills' },
 ];
 
 type SettingsTab = 'appearance' | 'behavior' | 'system' | 'backup';
@@ -319,17 +319,17 @@ export function SettingsPage() {
                 </Button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                {BASE_COLOR_FIELDS.map(({ key, label, hint }) => (
+                {BASE_COLOR_FIELDS.map(({ key, labelKey, hintKey }) => (
                   <div key={key} className="flex items-center gap-2">
                     <input
                       type="color"
                       value={settings.customColors[key]}
                       onChange={(e) => updateColor(key, e.target.value)}
                       className="w-8 h-8 rounded border border-default bg-transparent cursor-pointer shrink-0"
-                      aria-label={label}
+                      aria-label={t(labelKey)}
                     />
                     <div className="min-w-0 flex-1">
-                      <div className="text-sm text-secondary truncate" title={hint}>{label}</div>
+                      <div className="text-sm text-secondary truncate" title={t(hintKey)}>{t(labelKey)}</div>
                       <input
                         value={settings.customColors[key]}
                         onChange={(e) => updateColor(key, e.target.value)}
@@ -452,15 +452,15 @@ export function SettingsPage() {
           <div className="mt-3">
             <div className="text-xs text-muted mb-1.5">{t('settings:brand.fromPreset')}</div>
             <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
-              {BRAND_ICON_PRESETS.map(({ file, label }) => (
+              {BRAND_ICON_PRESETS.map(({ file, labelKey }) => (
                 <button
                   key={file}
                   type="button"
                   onClick={() => handleBrandIconPreset(file)}
-                  title={label}
+                  title={t(labelKey)}
                   className="aspect-square rounded-md border border-default hover:border-accent overflow-hidden bg-surface-2"
                 >
-                  <img src={`/icons/${file}`} alt={label} className="w-full h-full object-contain" />
+                  <img src={`/icons/${file}`} alt={t(labelKey)} className="w-full h-full object-contain" />
                 </button>
               ))}
             </div>
@@ -620,8 +620,9 @@ export function SettingsPage() {
       <Section title={t('settings:icons.title')}>
         <FormField label={t('settings:icons.menuLabel')} hint={t('settings:icons.menuHint')}>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {MENU_ICON_SLOTS.map(({ slot, label, default: def }) => {
+            {MENU_ICON_SLOTS.map(({ slot, labelKey, default: def }) => {
               const name = settings.menuIcons[slot] || def;
+              const label = t(labelKey);
               return (
                 <button
                   key={slot}
@@ -639,8 +640,9 @@ export function SettingsPage() {
         </FormField>
         <FormField label={t('settings:icons.entityLabel')} hint={t('settings:icons.entityHint')}>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {ENTITY_ICON_SLOTS.map(({ slot, label, default: def }) => {
+            {ENTITY_ICON_SLOTS.map(({ slot, labelKey, default: def }) => {
               const name = settings.entityIcons[slot] || def;
+              const label = t(labelKey);
               return (
                 <button
                   key={slot}

@@ -5,6 +5,9 @@
   "count": "{{count}}",
   "loadMore": "Load more",
   "loadingMore": "Loading…",
+  "changeCount": "{{count}} changes",
+  "fieldChangesShow": "Show field changes",
+  "fieldChangesHide": "Hide field changes",
   "end": "— End —",
   "reset": "Reset",
   "clearSelection": "Clear selection",
@@ -23,5 +26,21 @@
     "last7": "Last 7 days",
     "last30": "Last 30 days",
     "custom": "Custom"
+  },
+  "entityType": {
+    "Project": "Project",
+    "WbsItem": "WBS",
+    "Issue": "Issue",
+    "Meeting": "Meeting",
+    "ChangeLog": "Change log",
+    "DevInfoItem": "Dev info",
+    "WorkLog": "Work log",
+    "Resource": "Resource"
+  },
+  "action": {
+    "Create": "Created",
+    "Update": "Updated",
+    "Delete": "Deleted",
+    "Promote": "Promoted"
   }
 }

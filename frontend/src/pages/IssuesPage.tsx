@@ -20,7 +20,7 @@ import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import type { Issue, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
-import { LINK_TYPE_META, LINK_TYPE_OPTIONS } from '../utils/issueWbsLinkType';
+import { linkTypeOptions } from '../utils/issueWbsLinkType';
 
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
 const PRIORITY_VALUES: IssuePriority[] = ['High', 'Medium', 'Low'];
@@ -550,6 +550,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const linkOptions = useMemo(() => linkTypeOptions(t), [t]);
   const [links, setLinks] = useState<IssueWbsLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerType, setPickerType] = useState<IssueWbsLinkType>('RelatesTo');
@@ -606,7 +607,7 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
             <li key={l.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
               <BadgeMenu<IssueWbsLinkType>
                 value={l.type}
-                options={LINK_TYPE_OPTIONS}
+                options={linkOptions}
                 onChange={(next) => handleChangeType(l, next)}
                 title={t('issues:links.changeType')}
               />
@@ -639,8 +640,8 @@ function RelatedWbsSection({ issueId, projectId, wbsItems, onLinksChanged }: {
               onChange={(e) => setPickerType(e.target.value as IssueWbsLinkType)}
               className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary"
             >
-              {LINK_TYPE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{LINK_TYPE_META[o.value].label}</option>
+              {linkOptions.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
           </div>

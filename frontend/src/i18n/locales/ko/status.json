@@ -26,5 +26,10 @@
     "High": "높음",
     "Medium": "중간",
     "Low": "낮음"
+  },
+  "linkType": {
+    "RelatesTo": "관련",
+    "Blocks": "차단",
+    "ParentOf": "부모"
   }
 }

@@ -17,20 +17,20 @@ export interface BaseColors {
   info: string;
 }
 
-// 설정 UI 의 12색 피커 — 라벨/힌트. 입력 순서 = 표시 순서.
-export const BASE_COLOR_FIELDS: { key: keyof BaseColors; label: string; hint: string }[] = [
-  { key: 'bgBase', label: '기본 배경', hint: '본문 영역 배경' },
-  { key: 'bgSidebar', label: '사이드바 배경', hint: '좌측 내비게이션' },
-  { key: 'bgSurface', label: '카드/표면', hint: '카드·모달 배경 (2·3단계는 자동 파생)' },
-  { key: 'textPrimary', label: '기본 텍스트', hint: '제목·본문' },
-  { key: 'textSecondary', label: '보조 텍스트', hint: '설명·라벨 (muted 는 자동 파생)' },
-  { key: 'borderDefault', label: '테두리', hint: '카드·입력 테두리 (강조 테두리는 자동 파생)' },
-  { key: 'accent', label: '액센트', hint: '주요 버튼·활성 표시 (hover·soft·ring 자동 파생)' },
-  { key: 'accent2', label: '보조 액센트', hint: '마일스톤·코드 강조 (warm gold 계열)' },
-  { key: 'success', label: '성공', hint: '완료·성공 상태' },
-  { key: 'warning', label: '경고', hint: '진행중·주의 상태' },
-  { key: 'danger', label: '위험', hint: '오류·삭제 상태' },
-  { key: 'info', label: '정보', hint: '안내·정보 상태' },
+// 설정 UI 의 12색 피커 — 라벨/힌트 i18n 키(settings:colorFields.*). 입력 순서 = 표시 순서.
+export const BASE_COLOR_FIELDS: { key: keyof BaseColors; labelKey: string; hintKey: string }[] = [
+  { key: 'bgBase', labelKey: 'settings:colorFields.bgBase.label', hintKey: 'settings:colorFields.bgBase.hint' },
+  { key: 'bgSidebar', labelKey: 'settings:colorFields.bgSidebar.label', hintKey: 'settings:colorFields.bgSidebar.hint' },
+  { key: 'bgSurface', labelKey: 'settings:colorFields.bgSurface.label', hintKey: 'settings:colorFields.bgSurface.hint' },
+  { key: 'textPrimary', labelKey: 'settings:colorFields.textPrimary.label', hintKey: 'settings:colorFields.textPrimary.hint' },
+  { key: 'textSecondary', labelKey: 'settings:colorFields.textSecondary.label', hintKey: 'settings:colorFields.textSecondary.hint' },
+  { key: 'borderDefault', labelKey: 'settings:colorFields.borderDefault.label', hintKey: 'settings:colorFields.borderDefault.hint' },
+  { key: 'accent', labelKey: 'settings:colorFields.accent.label', hintKey: 'settings:colorFields.accent.hint' },
+  { key: 'accent2', labelKey: 'settings:colorFields.accent2.label', hintKey: 'settings:colorFields.accent2.hint' },
+  { key: 'success', labelKey: 'settings:colorFields.success.label', hintKey: 'settings:colorFields.success.hint' },
+  { key: 'warning', labelKey: 'settings:colorFields.warning.label', hintKey: 'settings:colorFields.warning.hint' },
+  { key: 'danger', labelKey: 'settings:colorFields.danger.label', hintKey: 'settings:colorFields.danger.hint' },
+  { key: 'info', labelKey: 'settings:colorFields.info.label', hintKey: 'settings:colorFields.info.hint' },
 ];
 
 // index.css :root (다크) 미러 — 커스텀 시드 / defaults.

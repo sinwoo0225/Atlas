@@ -1,23 +1,23 @@
 import type { ActivityLog, ActivityEntityType, ActivityAction } from '../types';
 
-// 활동 피드의 entity 타입별 라벨. 아이콘은 utils/iconRegistry 의 getEntityIcon 으로 조회
-// (설정에서 슬롯별 커스터마이즈 가능) — CommandPalette TYPE_META 와 톤 동일.
-export const ACTIVITY_TYPE_META: Record<ActivityEntityType, { label: string }> = {
-  Project:     { label: '프로젝트' },
-  WbsItem:     { label: 'WBS' },
-  Issue:       { label: '이슈' },
-  Meeting:     { label: '회의록' },
-  ChangeLog:   { label: '변경' },
-  DevInfoItem: { label: '개발정보' },
-  WorkLog:     { label: '업무일지' },
-  Resource:    { label: '리소스' },
+// 활동 피드의 entity 타입별 라벨 키(activity:entityType.*). 아이콘은 utils/iconRegistry 의
+// getEntityIcon 으로 조회(설정에서 슬롯별 커스터마이즈 가능). 라벨은 소비처에서 t(labelKey).
+export const ACTIVITY_TYPE_META: Record<ActivityEntityType, { labelKey: string }> = {
+  Project:     { labelKey: 'activity:entityType.Project' },
+  WbsItem:     { labelKey: 'activity:entityType.WbsItem' },
+  Issue:       { labelKey: 'activity:entityType.Issue' },
+  Meeting:     { labelKey: 'activity:entityType.Meeting' },
+  ChangeLog:   { labelKey: 'activity:entityType.ChangeLog' },
+  DevInfoItem: { labelKey: 'activity:entityType.DevInfoItem' },
+  WorkLog:     { labelKey: 'activity:entityType.WorkLog' },
+  Resource:    { labelKey: 'activity:entityType.Resource' },
 };
 
-export const ACTION_META: Record<ActivityAction, { label: string; variant: 'success' | 'info' | 'danger' }> = {
-  Create: { label: '생성', variant: 'success' },
-  Update: { label: '수정', variant: 'info' },
-  Delete: { label: '삭제', variant: 'danger' },
-  Promote: { label: '승격', variant: 'info' },
+export const ACTION_META: Record<ActivityAction, { labelKey: string; variant: 'success' | 'info' | 'danger' }> = {
+  Create: { labelKey: 'activity:action.Create', variant: 'success' },
+  Update: { labelKey: 'activity:action.Update', variant: 'info' },
+  Delete: { labelKey: 'activity:action.Delete', variant: 'danger' },
+  Promote: { labelKey: 'activity:action.Promote', variant: 'info' },
 };
 
 // 상대 시간 포매팅은 로캘화를 위해 `i18n/format.ts` 의 relativeTime 으로 이동.

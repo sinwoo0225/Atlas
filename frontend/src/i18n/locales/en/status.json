@@ -26,5 +26,10 @@
     "High": "High",
     "Medium": "Medium",
     "Low": "Low"
+  },
+  "linkType": {
+    "RelatesTo": "Relates to",
+    "Blocks": "Blocks",
+    "ParentOf": "Parent of"
   }
 }

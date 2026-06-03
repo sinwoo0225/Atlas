@@ -185,13 +185,13 @@ export function ActivityPage() {
           <MultiSelect<ActivityEntityType>
             label={t('activity:filter.type')}
             values={entityTypes}
-            options={ENTITY_TYPES.map((et) => ({ value: et, label: ACTIVITY_TYPE_META[et].label }))}
+            options={ENTITY_TYPES.map((et) => ({ value: et, label: t(ACTIVITY_TYPE_META[et].labelKey) }))}
             onChange={(v) => setMulti('entityType', v)}
           />
           <MultiSelect<ActivityAction>
             label={t('activity:filter.action')}
             values={actions}
-            options={ACTION_KEYS.map((a) => ({ value: a, label: ACTION_META[a].label }))}
+            options={ACTION_KEYS.map((a) => ({ value: a, label: t(ACTION_META[a].labelKey) }))}
             onChange={(v) => setMulti('action', v)}
           />
           <MultiSelect<string>

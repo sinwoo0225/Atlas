@@ -22,34 +22,36 @@ import {
 } from 'lucide-react';
 import { loadSettings } from '../store/settings';
 
-// 슬롯키 → 기본 아이콘 이름. (Layout 의 nav path / 프로젝트 메뉴 path / 'settings')
-export const MENU_ICON_SLOTS: { slot: string; label: string; default: string }[] = [
-  { slot: '/', label: '프로젝트 목록', default: 'FolderOpen' },
-  { slot: '/monitoring', label: '통합 모니터링', default: 'BarChart3' },
-  { slot: '/activity', label: '전체 활동', default: 'Activity' },
-  { slot: '/resources', label: '리소스 관리', default: 'Users' },
-  { slot: '/wbs-templates', label: '일정 템플릿', default: 'ClipboardList' },
-  { slot: 'dashboard', label: '대시보드', default: 'LayoutDashboard' },
-  { slot: 'wbs', label: '일정/WBS', default: 'CalendarDays' },
-  { slot: 'worklog', label: '업무일지', default: 'NotebookPen' },
-  { slot: 'issues', label: '이슈 관리', default: 'AlertTriangle' },
-  { slot: 'changelogs', label: '변경이력', default: 'GitBranch' },
-  { slot: 'meetings', label: '회의록', default: 'FileText' },
-  { slot: 'devinfo', label: '개발 정보', default: 'Code2' },
-  { slot: 'map', label: '프로젝트 맵', default: 'Network' },
-  { slot: 'settings', label: '설정', default: 'Settings' },
+// 슬롯키 → 기본 아이콘 이름 + i18n 라벨 키. (Layout 의 nav path / 프로젝트 메뉴 path / 'settings')
+// 라벨은 nav 네임스페이스 재사용(설정 아이콘 피커에서 t(labelKey) 로 해석).
+export const MENU_ICON_SLOTS: { slot: string; labelKey: string; default: string }[] = [
+  { slot: '/', labelKey: 'nav:projects', default: 'FolderOpen' },
+  { slot: '/monitoring', labelKey: 'nav:monitoring', default: 'BarChart3' },
+  { slot: '/activity', labelKey: 'nav:activity', default: 'Activity' },
+  { slot: '/resources', labelKey: 'nav:resources', default: 'Users' },
+  { slot: '/wbs-templates', labelKey: 'nav:wbsTemplates', default: 'ClipboardList' },
+  { slot: 'dashboard', labelKey: 'nav:dashboard', default: 'LayoutDashboard' },
+  { slot: 'wbs', labelKey: 'nav:wbs', default: 'CalendarDays' },
+  { slot: 'worklog', labelKey: 'nav:worklog', default: 'NotebookPen' },
+  { slot: 'issues', labelKey: 'nav:issues', default: 'AlertTriangle' },
+  { slot: 'changelogs', labelKey: 'nav:changelogs', default: 'GitBranch' },
+  { slot: 'meetings', labelKey: 'nav:meetings', default: 'FileText' },
+  { slot: 'devinfo', labelKey: 'nav:devinfo', default: 'Code2' },
+  { slot: 'map', labelKey: 'nav:map', default: 'Network' },
+  { slot: 'settings', labelKey: 'nav:settings', default: 'Settings' },
 ];
 
-// 엔티티 타입 → 기본 아이콘 이름. (활동 피드 / 커맨드 팔레트 공용)
-export const ENTITY_ICON_SLOTS: { slot: string; label: string; default: string }[] = [
-  { slot: 'Project', label: '프로젝트', default: 'FolderOpen' },
-  { slot: 'WbsItem', label: 'WBS', default: 'CalendarDays' },
-  { slot: 'Issue', label: '이슈', default: 'AlertTriangle' },
-  { slot: 'Meeting', label: '회의록', default: 'FileText' },
-  { slot: 'ChangeLog', label: '변경', default: 'GitBranch' },
-  { slot: 'DevInfoItem', label: '개발정보', default: 'Code2' },
-  { slot: 'WorkLog', label: '업무일지', default: 'NotebookPen' },
-  { slot: 'Resource', label: '리소스', default: 'User' },
+// 엔티티 타입 → 기본 아이콘 이름 + i18n 라벨 키. (활동 피드 / 커맨드 팔레트 공용)
+// 라벨은 activity:entityType.* 재사용.
+export const ENTITY_ICON_SLOTS: { slot: string; labelKey: string; default: string }[] = [
+  { slot: 'Project', labelKey: 'activity:entityType.Project', default: 'FolderOpen' },
+  { slot: 'WbsItem', labelKey: 'activity:entityType.WbsItem', default: 'CalendarDays' },
+  { slot: 'Issue', labelKey: 'activity:entityType.Issue', default: 'AlertTriangle' },
+  { slot: 'Meeting', labelKey: 'activity:entityType.Meeting', default: 'FileText' },
+  { slot: 'ChangeLog', labelKey: 'activity:entityType.ChangeLog', default: 'GitBranch' },
+  { slot: 'DevInfoItem', labelKey: 'activity:entityType.DevInfoItem', default: 'Code2' },
+  { slot: 'WorkLog', labelKey: 'activity:entityType.WorkLog', default: 'NotebookPen' },
+  { slot: 'Resource', labelKey: 'activity:entityType.Resource', default: 'User' },
 ];
 
 // 이름 → 컴포넌트. 선택 피커가 노출하는 전체 후보이기도 하다.

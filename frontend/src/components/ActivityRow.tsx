@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronRight } from 'lucide-react';
 import { diffLines } from 'diff';
 import { Badge } from './ui';
@@ -14,6 +15,7 @@ import type { ActivityLog } from '../types';
 // 단일 라인 필드 = 기존 3열 표 (이전 / 이후). multiline 필드 (\n 포함) = diffLines git-style +/− 다이프.
 // 행 본문 클릭 = entity 페이지 이동. chevron 만 stopPropagation 으로 확장 토글.
 export function ActivityRow({ activity, showProject = false }: { activity: ActivityLog; showProject?: boolean }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
 
@@ -31,8 +33,8 @@ export function ActivityRow({ activity, showProject = false }: { activity: Activ
         className="flex items-center gap-2 py-1.5 border-b border-default last:border-0"
       >
         <EntityIcon slot={activity.entityType} size={14} className="text-muted shrink-0" />
-        <span className="text-xs text-muted shrink-0 w-12">{meta.label}</span>
-        <Badge variant={action.variant} size="sm">{action.label}</Badge>
+        <span className="text-xs text-muted shrink-0 w-12">{t(meta.labelKey)}</span>
+        <Badge variant={action.variant} size="sm">{t(action.labelKey)}</Badge>
         {showProject && activity.projectName && activity.projectId != null && (
           <ProjectChip
             projectId={activity.projectId}
@@ -46,13 +48,13 @@ export function ActivityRow({ activity, showProject = false }: { activity: Activ
             type="button"
             onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v); }}
             className="text-xs text-muted hover:text-secondary shrink-0 flex items-center gap-0.5 px-1 py-0.5 rounded hover:bg-surface-3"
-            title={expanded ? '필드 변경 닫기' : '필드 변경 보기'}
+            title={expanded ? t('activity:fieldChangesHide') : t('activity:fieldChangesShow')}
           >
             <ChevronRight
               size={12}
               className={`transition-transform ${expanded ? 'rotate-90' : ''}`}
             />
-            <span>{changedEntries.length}개 변경</span>
+            <span>{t('activity:changeCount', { count: changedEntries.length })}</span>
           </button>
         )}
         {activity.actor && <span className="text-xs text-muted shrink-0">{activity.actor}</span>}

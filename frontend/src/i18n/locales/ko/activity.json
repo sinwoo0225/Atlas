@@ -5,6 +5,9 @@
   "count": "{{count}}건",
   "loadMore": "더 불러오기",
   "loadingMore": "불러오는 중…",
+  "changeCount": "{{count}}개 변경",
+  "fieldChangesShow": "필드 변경 보기",
+  "fieldChangesHide": "필드 변경 닫기",
   "end": "— 끝 —",
   "reset": "초기화",
   "clearSelection": "선택 해제",
@@ -23,5 +26,21 @@
     "last7": "최근 7일",
     "last30": "최근 30일",
     "custom": "사용자 지정"
+  },
+  "entityType": {
+    "Project": "프로젝트",
+    "WbsItem": "WBS",
+    "Issue": "이슈",
+    "Meeting": "회의록",
+    "ChangeLog": "변경",
+    "DevInfoItem": "개발정보",
+    "WorkLog": "업무일지",
+    "Resource": "리소스"
+  },
+  "action": {
+    "Create": "생성",
+    "Update": "수정",
+    "Delete": "삭제",
+    "Promote": "승격"
   }
 }

@@ -224,5 +224,33 @@
     "projectCount": " (프로젝트 {{count}}개)",
     "notWritable": "쓰기 권한이 없어 이 폴더를 사용할 수 없습니다.",
     "saving": "저장 중..."
+  },
+  "colorFields": {
+    "bgBase": { "label": "기본 배경", "hint": "본문 영역 배경" },
+    "bgSidebar": { "label": "사이드바 배경", "hint": "좌측 내비게이션" },
+    "bgSurface": { "label": "카드/표면", "hint": "카드·모달 배경 (2·3단계는 자동 파생)" },
+    "textPrimary": { "label": "기본 텍스트", "hint": "제목·본문" },
+    "textSecondary": { "label": "보조 텍스트", "hint": "설명·라벨 (muted 는 자동 파생)" },
+    "borderDefault": { "label": "테두리", "hint": "카드·입력 테두리 (강조 테두리는 자동 파생)" },
+    "accent": { "label": "액센트", "hint": "주요 버튼·활성 표시 (hover·soft·ring 자동 파생)" },
+    "accent2": { "label": "보조 액센트", "hint": "마일스톤·코드 강조 (warm gold 계열)" },
+    "success": { "label": "성공", "hint": "완료·성공 상태" },
+    "warning": { "label": "경고", "hint": "진행중·주의 상태" },
+    "danger": { "label": "위험", "hint": "오류·삭제 상태" },
+    "info": { "label": "정보", "hint": "안내·정보 상태" }
+  },
+  "brandPresets": {
+    "compass": "나침반",
+    "celestial": "천체",
+    "constellation": "별자리",
+    "horizon": "지평선",
+    "mountain": "산",
+    "mountainA": "산 A",
+    "monogram": "모노그램",
+    "brush": "브러시",
+    "calligraphy": "캘리그래피",
+    "atCalligraphy": "At 캘리그래피",
+    "cute": "큐트",
+    "cuteHills": "큐트 언덕"
   }
 }
