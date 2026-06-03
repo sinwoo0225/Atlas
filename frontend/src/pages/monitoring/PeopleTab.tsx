@@ -5,6 +5,8 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ReactECharts from 'echarts-for-react';
 import { Users, Scale, ShieldAlert, UserPlus, Trophy, Timer } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark } from '../../utils/themeColors';
 import { ResourceHeatmapCard } from './ResourceHeatmapCard';
@@ -47,22 +49,23 @@ export function PeopleTab({ workload, heatmap, loading, assigneeThroughput, assi
 
 // 담당자별 워크로드 밸런스 — 미완 WBS + 이슈를 사람별 스택 가로막대로. 부하 합계순(과부하 상단).
 function WorkloadBalanceCard({ data, loading }: { data: AssigneeWorkload[]; loading: boolean }) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   // option 을 메모이즈 — 추세 번들 도착 등 무관한 부모 리렌더에서 같은 참조를 넘겨 재그리기 방지.
   const ch = useMemo(() => getChartColors(theme), [theme]);
-  const option = useMemo(() => buildWorkloadOption(data.slice(0, 15), ch), [data, ch]);
+  const option = useMemo(() => buildWorkloadOption(data.slice(0, 15), ch, t), [data, ch, t]);
 
   return (
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
         <Scale size={16} className="text-muted" />
-        담당자별 워크로드 밸런스
+        {t('monitoring:people.workloadTitle')}
       </h3>
       {loading ? (
         <Skeleton height={CHART_HEIGHT} />
       ) : data.length === 0 ? (
         <div className="flex items-center justify-center" style={{ height: CHART_HEIGHT }}>
-          <EmptyState icon={<Users size={28} />} title="배정된 미완료 작업 없음" />
+          <EmptyState icon={<Users size={28} />} title={t('monitoring:people.workloadEmpty')} />
         </div>
       ) : (
         <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
@@ -71,15 +74,16 @@ function WorkloadBalanceCard({ data, loading }: { data: AssigneeWorkload[]; load
   );
 }
 
-function buildWorkloadOption(items: AssigneeWorkload[], ch: ReturnType<typeof getChartColors>) {
+function buildWorkloadOption(items: AssigneeWorkload[], ch: ReturnType<typeof getChartColors>, t: TFunction) {
   const names = items.map((a) => a.assignee);
+  const issueLabel = t('monitoring:people.legendIssue');
   return {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis', axisPointer: { type: 'shadow' },
       backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
     },
-    legend: { data: ['WBS', '이슈'], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
+    legend: { data: ['WBS', issueLabel], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
     grid: { left: 90, right: 32, top: 24, bottom: 22 },
     xAxis: {
       type: 'value', minInterval: 1,
@@ -94,7 +98,7 @@ function buildWorkloadOption(items: AssigneeWorkload[], ch: ReturnType<typeof ge
     series: [
       { name: 'WBS', type: 'bar', stack: 'load', barWidth: 12, data: items.map((a) => a.openWbs), itemStyle: { color: ch.accentBar } },
       {
-        name: '이슈', type: 'bar', stack: 'load', barWidth: 12, data: items.map((a) => a.openIssues),
+        name: issueLabel, type: 'bar', stack: 'load', barWidth: 12, data: items.map((a) => a.openIssues),
         itemStyle: { color: ch.ganttMilestone, borderRadius: [0, 3, 3, 0] },
         label: {
           show: true, position: 'right', color: ch.axisText, fontSize: 9,
@@ -107,23 +111,24 @@ function buildWorkloadOption(items: AssigneeWorkload[], ch: ReturnType<typeof ge
 
 // 담당자별 위험 매트릭스 — 사람 × {마감초과·임박·High Open}. 위험 0인 담당자는 제외.
 function PersonRiskCard({ data, loading }: { data: AssigneeWorkload[]; loading: boolean }) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const ch = useMemo(() => getChartColors(theme), [theme]);
   const ld = effectiveLightDark(theme);
   const atRisk = useMemo(() => data.filter((a) => a.overdue + a.dueSoon + a.highOpen > 0).slice(0, 15), [data]);
-  const option = useMemo(() => buildPersonRiskOption(atRisk, ch, ld), [atRisk, ch, ld]);
+  const option = useMemo(() => buildPersonRiskOption(atRisk, ch, ld, t), [atRisk, ch, ld, t]);
 
   return (
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
         <ShieldAlert size={16} className="text-muted" />
-        담당자별 위험
+        {t('monitoring:people.riskTitle')}
       </h3>
       {loading ? (
         <Skeleton height={CHART_HEIGHT} />
       ) : atRisk.length === 0 ? (
         <div className="flex items-center justify-center" style={{ height: CHART_HEIGHT }}>
-          <EmptyState icon={<ShieldAlert size={28} />} title="위험 신호 있는 담당자 없음" description="마감 초과·임박·High 이슈 없음" />
+          <EmptyState icon={<ShieldAlert size={28} />} title={t('monitoring:people.riskEmpty')} description={t('monitoring:people.riskEmptyDesc')} />
         </div>
       ) : (
         <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
@@ -132,8 +137,8 @@ function PersonRiskCard({ data, loading }: { data: AssigneeWorkload[]; loading: 
   );
 }
 
-function buildPersonRiskOption(items: AssigneeWorkload[], ch: ReturnType<typeof getChartColors>, theme: 'dark' | 'light') {
-  const cols = ['마감초과', '임박', 'High'];
+function buildPersonRiskOption(items: AssigneeWorkload[], ch: ReturnType<typeof getChartColors>, theme: 'dark' | 'light', t: TFunction) {
+  const cols = [t('monitoring:people.riskColOverdue'), t('monitoring:people.riskColDueSoon'), t('monitoring:people.riskColHigh')];
   const names = items.map((a) => a.assignee);
   const points: [number, number, number][] = [];
   let max = 0;
@@ -147,7 +152,7 @@ function buildPersonRiskOption(items: AssigneeWorkload[], ch: ReturnType<typeof 
       position: 'top',
       formatter: (p: any) => {
         const [ci, ri, v] = p.value as [number, number, number];
-        return `${names[ri]} · ${cols[ci]}: ${v}건`;
+        return t('monitoring:people.riskTooltip', { name: names[ri], col: cols[ci], count: v });
       },
       backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
     },
@@ -179,12 +184,13 @@ function buildPersonRiskOption(items: AssigneeWorkload[], ch: ReturnType<typeof 
 
 // 미할당 작업 큐 — 담당자 미지정 미완 항목(마감 임박순). 관리자 배정 액션 아이템.
 function UnassignedQueueCard({ data, loading }: { data: UnassignedItem[]; loading: boolean }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   return (
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-2">
         <UserPlus size={16} className="text-muted" />
-        미할당 작업 큐
+        {t('monitoring:people.unassignedTitle')}
         {data.length > 0 && <span className="text-xs font-normal text-muted">({data.length})</span>}
       </h3>
       <div style={{ height: CHART_HEIGHT }}>
@@ -192,7 +198,7 @@ function UnassignedQueueCard({ data, loading }: { data: UnassignedItem[]; loadin
         <div className="space-y-2">{[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} height={40} />)}</div>
       ) : data.length === 0 ? (
         <div className="h-full flex items-center justify-center">
-          <EmptyState icon={<UserPlus size={28} />} title="미할당 작업 없음" description="모든 미완 항목에 담당자 배정됨" />
+          <EmptyState icon={<UserPlus size={28} />} title={t('monitoring:people.unassignedEmpty')} description={t('monitoring:people.unassignedEmptyDesc')} />
         </div>
       ) : (
         <ul className="h-full space-y-2 overflow-y-auto pr-1">
@@ -221,6 +227,7 @@ function UnassignedQueueCard({ data, loading }: { data: UnassignedItem[]; loadin
 
 // 담당자별 처리량(B-3) — 완료 엔티티의 Assignee 귀속(Actor 아님). 최근 N주 합계 가로막대.
 function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | null; loading: boolean }) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const ch = useMemo(() => getChartColors(theme), [theme]);
   const rows = useMemo(() => (data?.rows ?? []).slice(0, 15), [data]);
@@ -245,14 +252,14 @@ function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | nu
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
         <Trophy size={16} className="text-muted" />
-        담당자별 처리량 <span className="text-xs font-normal text-muted">(최근 {weeks}주 완료)</span>
+        {t('monitoring:people.throughputTitle')} <span className="text-xs font-normal text-muted">{t('monitoring:people.throughputSub', { weeks })}</span>
       </h3>
       <div style={{ height: CHART_HEIGHT }}>
         {loading ? (
           <Skeleton height={CHART_HEIGHT} />
         ) : rows.length === 0 ? (
           <div className="h-full flex items-center justify-center">
-            <EmptyState icon={<Trophy size={28} />} title="완료 기록 없음" description="완료 항목이 쌓이면 표시됩니다" />
+            <EmptyState icon={<Trophy size={28} />} title={t('monitoring:people.noCompleted')} description={t('monitoring:people.noCompletedDesc')} />
           </div>
         ) : (
           <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
@@ -264,40 +271,44 @@ function PersonThroughputCard({ data, loading }: { data: AssigneeThroughput | nu
 
 // 담당자별 사이클타임(B-4) — 완료시점−생성 중앙값·85p. 표본 적으면 참고용.
 function PersonCycleTimeCard({ data, loading }: { data: AssigneeCycleTime[]; loading: boolean }) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const ch = useMemo(() => getChartColors(theme), [theme]);
   const rows = useMemo(() => data.slice(0, 15), [data]);
-  const option = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: {
-      trigger: 'axis', backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
-      formatter: (ps: any) => { const i = ps[0].dataIndex as number; const r = rows[i]; return `${r.assignee} (${r.count}건)<br/>중앙값 ${r.median}일 · 85p ${r.p85}일`; },
-    },
-    legend: { data: ['중앙값', '85p'], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
-    grid: { left: 90, right: 24, top: 24, bottom: 20 },
-    xAxis: { type: 'value', name: '일', nameTextStyle: { color: ch.axisText, fontSize: 9 }, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
-    yAxis: {
-      type: 'category', inverse: true, data: rows.map((r) => r.assignee),
-      axisLine: { lineStyle: { color: ch.axisLine } },
-      axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
-    },
-    series: [
-      { name: '중앙값', type: 'bar', barGap: '-30%', barWidth: 8, data: rows.map((r) => r.median), itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] } },
-      { name: '85p', type: 'bar', barWidth: 8, data: rows.map((r) => r.p85), itemStyle: { color: ch.ganttBarInProgress, borderRadius: [0, 3, 3, 0] } },
-    ],
-  }), [rows, ch]);
+  const option = useMemo(() => {
+    const medianLabel = t('monitoring:people.legendMedian');
+    return {
+      backgroundColor: 'transparent',
+      tooltip: {
+        trigger: 'axis', backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder, textStyle: { color: ch.tooltipText },
+        formatter: (ps: any) => { const i = ps[0].dataIndex as number; const r = rows[i]; return t('monitoring:people.cycleTooltip', { name: r.assignee, count: r.count, median: r.median, p85: r.p85 }); },
+      },
+      legend: { data: [medianLabel, '85p'], textStyle: { color: ch.axisText, fontSize: 10 }, top: 0, right: 0 },
+      grid: { left: 90, right: 24, top: 24, bottom: 20 },
+      xAxis: { type: 'value', name: t('monitoring:people.axisDays'), nameTextStyle: { color: ch.axisText, fontSize: 9 }, axisLabel: { color: ch.axisText, fontSize: 9 }, splitLine: { lineStyle: { color: ch.splitLine } } },
+      yAxis: {
+        type: 'category', inverse: true, data: rows.map((r) => r.assignee),
+        axisLine: { lineStyle: { color: ch.axisLine } },
+        axisLabel: { color: ch.axisText, fontSize: 10, formatter: (v: string) => (v.length > 8 ? v.slice(0, 8) + '…' : v) },
+      },
+      series: [
+        { name: medianLabel, type: 'bar', barGap: '-30%', barWidth: 8, data: rows.map((r) => r.median), itemStyle: { color: ch.ganttBarDone, borderRadius: [0, 3, 3, 0] } },
+        { name: '85p', type: 'bar', barWidth: 8, data: rows.map((r) => r.p85), itemStyle: { color: ch.ganttBarInProgress, borderRadius: [0, 3, 3, 0] } },
+      ],
+    };
+  }, [rows, ch, t]);
   return (
     <Card padding="normal">
       <h3 className="h-card flex items-center gap-2 mb-1">
         <Timer size={16} className="text-muted" />
-        담당자별 사이클타임 <span className="text-xs font-normal text-muted">(중앙값·85p, 참고용)</span>
+        {t('monitoring:people.cycleTitle')} <span className="text-xs font-normal text-muted">{t('monitoring:people.cycleSub')}</span>
       </h3>
       <div style={{ height: CHART_HEIGHT }}>
         {loading ? (
           <Skeleton height={CHART_HEIGHT} />
         ) : rows.length === 0 ? (
           <div className="h-full flex items-center justify-center">
-            <EmptyState icon={<Timer size={28} />} title="완료 기록 없음" />
+            <EmptyState icon={<Timer size={28} />} title={t('monitoring:people.noCompleted')} />
           </div>
         ) : (
           <ReactECharts option={option} style={{ height: CHART_HEIGHT }} />
