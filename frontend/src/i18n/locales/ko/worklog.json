@@ -1,0 +1,19 @@
+{
+  "title": "업무 일지",
+  "prevWeek": "이전 주",
+  "thisWeek": "이번 주",
+  "nextWeek": "다음 주",
+  "weekRange": "{{start}} (월) ~ {{end}} (금)",
+  "searchPlaceholder": "이번 주 본문 검색…",
+  "editSelected": "선택한 요일 편집",
+  "clickToEdit": "클릭하여 편집",
+  "day": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금" },
+  "field": {
+    "doneLabel": "한 일",
+    "donePlaceholder": "- 오늘 진행한 작업\n- WBS / 이슈 완료 시 자동 추가",
+    "planLabel": "계획",
+    "planPlaceholder": "- 내일 / 이번 주 계획",
+    "issuesLabel": "이슈",
+    "issuesPlaceholder": "- 막힌 부분 / 위험"
+  }
+}

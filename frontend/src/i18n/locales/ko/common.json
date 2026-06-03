@@ -8,6 +8,7 @@
   "saveFailed": "저장 실패",
   "retry": "다시 시도",
   "loadFailed": "불러오기에 실패했어요",
+  "loading": "로딩중…",
   "search": "검색",
   "noProjects": "프로젝트 없음",
   "selectProject": "프로젝트 선택",

@@ -1,0 +1,19 @@
+{
+  "title": "Work log",
+  "prevWeek": "Previous week",
+  "thisWeek": "This week",
+  "nextWeek": "Next week",
+  "weekRange": "{{start}} (Mon) ~ {{end}} (Fri)",
+  "searchPlaceholder": "Search this week…",
+  "editSelected": "Editing the selected day",
+  "clickToEdit": "Click to edit",
+  "day": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri" },
+  "field": {
+    "doneLabel": "Done",
+    "donePlaceholder": "- Tasks done today\n- Auto-added when WBS / issues complete",
+    "planLabel": "Plan",
+    "planPlaceholder": "- Tomorrow / this week's plan",
+    "issuesLabel": "Issues",
+    "issuesPlaceholder": "- Blockers / risks"
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, CalendarDays, Search } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
 import { Button, Card, Spinner, DirtyDot, inputClass } from '../components/ui';
@@ -9,11 +10,11 @@ import { applyTextareaTab } from '../utils/textareaTab';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { WorkLog } from '../types';
 
-const DAY_LABELS = ['월', '화', '수', '목', '금'];
-const FIELDS: { key: 'done' | 'plan' | 'issues'; label: string; placeholder: string }[] = [
-  { key: 'done',   label: '한 일',   placeholder: '- 오늘 진행한 작업\n- WBS / 이슈 완료 시 자동 추가' },
-  { key: 'plan',   label: '계획',     placeholder: '- 내일 / 이번 주 계획' },
-  { key: 'issues', label: '이슈',     placeholder: '- 막힌 부분 / 위험' },
+const DAY_LABEL_KEYS = ['worklog:day.mon', 'worklog:day.tue', 'worklog:day.wed', 'worklog:day.thu', 'worklog:day.fri'];
+const FIELDS: { key: 'done' | 'plan' | 'issues'; labelKey: string; placeholderKey: string }[] = [
+  { key: 'done',   labelKey: 'worklog:field.doneLabel',   placeholderKey: 'worklog:field.donePlaceholder' },
+  { key: 'plan',   labelKey: 'worklog:field.planLabel',   placeholderKey: 'worklog:field.planPlaceholder' },
+  { key: 'issues', labelKey: 'worklog:field.issuesLabel', placeholderKey: 'worklog:field.issuesPlaceholder' },
 ];
 
 function startOfWeek(d: Date): Date {
@@ -42,6 +43,7 @@ type DayEntry = { date: string; done: string; plan: string; issues: string };
 type FieldKey = 'done' | 'plan' | 'issues';
 
 export function WorkLogPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const pid = Number(projectId);
   const project = useCurrentProject();
@@ -162,14 +164,14 @@ export function WorkLogPage() {
               <ChevronRight size={14} className="text-muted shrink-0" />
             </>
           )}
-          <span className="shrink-0">업무 일지</span>
+          <span className="shrink-0">{t('worklog:title')}</span>
         </h1>
         <div className="ml-4 flex items-center gap-2">
-          <Button variant="secondary" size="sm" onClick={goPrev} title="이전 주" leadingIcon={<ChevronLeft size={16} />} />
-          <Button variant="secondary" size="sm" onClick={goThis}>이번 주</Button>
-          <Button variant="secondary" size="sm" onClick={goNext} title="다음 주" leadingIcon={<ChevronRight size={16} />} />
+          <Button variant="secondary" size="sm" onClick={goPrev} title={t('worklog:prevWeek')} leadingIcon={<ChevronLeft size={16} />} />
+          <Button variant="secondary" size="sm" onClick={goThis}>{t('worklog:thisWeek')}</Button>
+          <Button variant="secondary" size="sm" onClick={goNext} title={t('worklog:nextWeek')} leadingIcon={<ChevronRight size={16} />} />
           <span className="ml-2 text-sm text-muted">
-            {isoDate(weekStart)} (월) ~ {isoDate(weekEnd)} (금)
+            {t('worklog:weekRange', { start: isoDate(weekStart), end: isoDate(weekEnd) })}
           </span>
         </div>
         <div className="ml-auto relative w-64">
@@ -178,7 +180,7 @@ export function WorkLogPage() {
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="이번 주 본문 검색…"
+            placeholder={t('worklog:searchPlaceholder')}
             className={`${inputClass} pl-7 py-1.5 text-sm`}
           />
           {keyword && (
@@ -190,14 +192,14 @@ export function WorkLogPage() {
       </header>
 
       {loading ? (
-        <Spinner label="로딩중…" />
+        <Spinner label={t('common:loading')} />
       ) : (
         <>
           <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
             {entries.map((entry, idx) => (
               <PreviewCard
                 key={entry.date}
-                dayLabel={DAY_LABELS[idx]}
+                dayLabel={t(DAY_LABEL_KEYS[idx])}
                 date={weekDates[idx]}
                 entry={entry}
                 selected={idx === selectedIdx}
@@ -210,7 +212,7 @@ export function WorkLogPage() {
 
           {selectedEntry && selectedDate && (
             <DayEditor
-              dayLabel={DAY_LABELS[selectedIdx]}
+              dayLabel={t(DAY_LABEL_KEYS[selectedIdx])}
               date={selectedDate}
               entry={selectedEntry}
               onChange={(field, value) => updateField(selectedIdx, field, value)}
@@ -234,6 +236,7 @@ function PreviewCard({
   dimmed?: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   const isToday = isoDate(date) === isoDate(new Date());
   const borderCls = selected
     ? 'border-accent ring-1 ring-accent'
@@ -253,7 +256,7 @@ function PreviewCard({
       </div>
       <div className="p-2 space-y-1.5 flex-1">
         {FIELDS.map((f) => (
-          <PreviewField key={f.key} label={f.label} value={entry[f.key]} />
+          <PreviewField key={f.key} label={t(f.labelKey)} value={entry[f.key]} />
         ))}
       </div>
     </button>
@@ -285,23 +288,24 @@ function DayEditor({
   onChange: (field: FieldKey, value: string) => void;
   onBlur: () => void;
 }) {
+  const { t } = useTranslation();
   const isToday = isoDate(date) === isoDate(new Date());
   return (
     <Card padding="none" className="overflow-hidden">
       <div className={`px-4 py-2 border-b border-default flex items-baseline gap-2 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
         <span className="text-xs text-muted">{fmtMD(date)}</span>
-        <span className="ml-2 text-xs text-muted">선택한 요일 편집</span>
+        <span className="ml-2 text-xs text-muted">{t('worklog:editSelected')}</span>
         {isToday && <span className="text-[10px] text-accent uppercase tracking-wider ml-auto">Today</span>}
       </div>
       <div className="p-4 grid gap-4 grid-cols-1 md:grid-cols-3">
         {FIELDS.map((f) => (
           <div key={f.key} className="flex flex-col">
-            <label className="block text-xs text-muted mb-1 font-medium">{f.label}</label>
+            <label className="block text-xs text-muted mb-1 font-medium">{t(f.labelKey)}</label>
             <EditablePreviewField
               key={`${entry.date}-${f.key}`}
               value={entry[f.key]}
-              placeholder={f.placeholder}
+              placeholder={t(f.placeholderKey)}
               onChange={(v) => onChange(f.key, v)}
               onBlur={onBlur}
             />
@@ -320,6 +324,7 @@ function EditablePreviewField({
   onChange: (value: string) => void;
   onBlur: () => void;
 }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   // 마지막 저장(= 외부 prop) 시점의 값. value prop 이 외부 reload 로 바뀌면 동기화.
@@ -373,7 +378,7 @@ function EditablePreviewField({
         }
       }}
       className="w-full min-h-[18rem] cursor-text rounded border border-default bg-surface-2/30 hover:bg-surface-2/60 px-2 py-1.5 transition-colors"
-      title="클릭하여 편집"
+      title={t('worklog:clickToEdit')}
     >
       {empty ? (
         <span className="text-sm text-muted italic whitespace-pre-wrap">{placeholder}</span>
