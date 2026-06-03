@@ -18,6 +18,13 @@
   "currentProject": "현재 프로젝트",
   "projectMenu": "프로젝트 메뉴",
   "shortcutsTitle": "키보드 단축키",
+  "relative": {
+    "justNow": "방금",
+    "minutesAgo": "{{count}}분 전",
+    "hoursAgo": "{{count}}시간 전",
+    "yesterday": "어제",
+    "daysAgo": "{{count}}일 전"
+  },
   "toast": {
     "backendVersionMismatch": "Atlas 백엔드 버전이 프론트와 일치하지 않아요 (서버 {{server}} / 프론트 {{front}}). 새로고침 또는 재시작이 필요할 수 있어요.",
     "backendUnreachable": "Atlas 백엔드에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.",

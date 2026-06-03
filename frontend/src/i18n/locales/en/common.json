@@ -18,6 +18,13 @@
   "currentProject": "Current project",
   "projectMenu": "Project menu",
   "shortcutsTitle": "Keyboard shortcuts",
+  "relative": {
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "yesterday": "yesterday",
+    "daysAgo": "{{count}}d ago"
+  },
   "toast": {
     "backendVersionMismatch": "The Atlas backend version doesn't match the frontend (server {{server}} / frontend {{front}}). A refresh or restart may be needed.",
     "backendUnreachable": "Can't reach the Atlas backend. Make sure it's running.",

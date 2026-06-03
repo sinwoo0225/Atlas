@@ -47,6 +47,7 @@ import {
   type ConnectionConfig,
   type ConnectionMode,
 } from '../utils/hostBridge';
+import { formatDateTime } from '../i18n/format';
 
 // 번들된 앱 아이콘 프리셋 (public/icons → 빌드 시 wwwroot/icons). 선택 시 data URL 로 변환해 저장.
 const BRAND_ICON_PRESETS: { file: string; label: string }[] = [
@@ -801,7 +802,7 @@ function AutoBackupSection() {
   };
 
   const lastText = status?.lastBackupAt
-    ? t('settings:autobackup.lastText', { date: new Date(status.lastBackupAt).toLocaleString(), count: status.count })
+    ? t('settings:autobackup.lastText', { date: formatDateTime(status.lastBackupAt), count: status.count })
     : t('settings:autobackup.noBackup');
 
   return (
@@ -973,7 +974,7 @@ function UpdateSection() {
     }
   };
 
-  const lastChecked = cfg.lastCheckedAt ? new Date(cfg.lastCheckedAt).toLocaleString() : t('settings:update.never');
+  const lastChecked = cfg.lastCheckedAt ? formatDateTime(cfg.lastCheckedAt) : t('settings:update.never');
 
   return (
     <Section title={t('settings:update.title')}>

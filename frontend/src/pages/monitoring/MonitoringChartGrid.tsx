@@ -8,6 +8,7 @@ import type { TFunction } from 'i18next';
 import { Card, Skeleton, Badge } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark, type ChartColors } from '../../utils/themeColors';
 import { projectStatusBadge } from '../../utils/statusMaps';
+import { formatDate } from '../../i18n/format';
 import type {
   ActivityByProject,
   IssuePriority, IssueStatus,
@@ -341,7 +342,7 @@ function buildMilestoneOption(data: MonitoringChartsData, ch: ChartColors) {
       trigger: 'item',
       formatter: (p: any) => {
         const d = p.data as { name: string; projectName: string; value: [string, number] };
-        return `<b>${d.name}</b><br/>${d.projectName}<br/>${new Date(d.value[0]).toLocaleDateString('ko-KR')}`;
+        return `<b>${d.name}</b><br/>${d.projectName}<br/>${formatDate(d.value[0])}`;
       },
       backgroundColor: ch.tooltipBg, borderColor: ch.tooltipBorder,
       textStyle: { color: ch.tooltipText },

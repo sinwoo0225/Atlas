@@ -11,6 +11,7 @@ import { RiskAlertCard } from './dashboard/RiskAlertCard';
 import { attendeesToDisplay } from '../utils/meetingHelpers';
 import { Button, Card, Badge, Skeleton, EmptyState } from '../components/ui';
 import { wbsStatusBadge, impactBadge, issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
+import { formatNumber } from '../i18n/format';
 import type { ProjectDashboard, ActivityLog } from '../types';
 
 export function Dashboard() {
@@ -140,7 +141,7 @@ export function Dashboard() {
           {[
             { label: t('dashboard:info.startDate'), value: p.startDate?.slice(0, 10) ?? '-' },
             { label: t('dashboard:info.endDate'), value: p.endDate?.slice(0, 10) ?? '-' },
-            { label: t('dashboard:info.budget'), value: p.budget ? t('dashboard:budgetAmount', { amount: p.budget.toLocaleString() }) : '-' },
+            { label: t('dashboard:info.budget'), value: p.budget ? t('dashboard:budgetAmount', { amount: formatNumber(p.budget) }) : '-' },
             { label: t('dashboard:info.participants'), value: p.participants || '-' },
           ].map((item) => (
             <div key={item.label} className="flex justify-between items-baseline px-2">

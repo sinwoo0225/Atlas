@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { GitBranch, GitCommitHorizontal, ArrowUp, ArrowDown, AlertCircle, FolderGit2, Tag, Cloud } from 'lucide-react';
 import { gitApi, type GitStatus, type GitCommit } from '../api/git';
 import { getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
-import { relativeTime } from '../utils/activity';
+import { relativeTime } from '../i18n/format';
 import { Button, Card, Badge, EmptyState, Skeleton } from './ui';
 
 const PAGE = 200;

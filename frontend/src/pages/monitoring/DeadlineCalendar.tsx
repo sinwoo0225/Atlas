@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { monitoringApi } from '../../api/monitoring';
 import { Card, Spinner } from '../../components/ui';
+import { formatMonthYear } from '../../i18n/format';
 import type { CalendarEvent } from '../../types';
 
 // MonitoringPage 와 동일한 월요일 시작 기준 date 유틸 (로컬).
@@ -35,7 +36,7 @@ function isCompleted(e: CalendarEvent): boolean {
 }
 
 export function DeadlineCalendar() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const navigate = useNavigate();
   // 보이는 달의 1일.
   const [anchor, setAnchor] = useState(() => {
@@ -122,7 +123,7 @@ export function DeadlineCalendar() {
             <ChevronLeft size={16} />
           </button>
           <span className="text-sm font-semibold text-primary min-w-[6rem] text-center">
-            {new Date(anchor.getFullYear(), monthIdx, 1).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'ko-KR', { year: 'numeric', month: 'long' })}
+            {formatMonthYear(new Date(anchor.getFullYear(), monthIdx, 1))}
           </span>
           <button
             type="button"

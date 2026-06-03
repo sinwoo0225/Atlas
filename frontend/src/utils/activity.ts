@@ -20,19 +20,7 @@ export const ACTION_META: Record<ActivityAction, { label: string; variant: 'succ
   Promote: { label: '승격', variant: 'info' },
 };
 
-export function relativeTime(iso: string): string {
-  const t = new Date(iso).getTime();
-  const diffSec = Math.floor((Date.now() - t) / 1000);
-  if (diffSec < 60) return '방금';
-  const m = Math.floor(diffSec / 60);
-  if (m < 60) return `${m}분 전`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}시간 전`;
-  const d = Math.floor(h / 24);
-  if (d === 1) return '어제';
-  if (d < 7) return `${d}일 전`;
-  return iso.slice(0, 10);
-}
+// 상대 시간 포매팅은 로캘화를 위해 `i18n/format.ts` 의 relativeTime 으로 이동.
 
 // CommandPalette urlFor 와 같은 규약 (?highlight=, ?date=). 두 곳 모두 변경되는 entity 라우팅이 생기면 헬퍼 추출.
 export function activityUrl(a: ActivityLog): string | null {
