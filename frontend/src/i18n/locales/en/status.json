@@ -1,0 +1,30 @@
+{
+  "project": {
+    "Planned": "Waiting / On hold",
+    "Waiting": "Waiting / On hold",
+    "InProgress": "In progress",
+    "Done": "Done",
+    "Maintenance": "Maintenance"
+  },
+  "wbs": {
+    "Planned": "Planned",
+    "InProgress": "In progress",
+    "Done": "Done"
+  },
+  "issue": {
+    "Open": "Open",
+    "InProgress": "In progress",
+    "Resolved": "Resolved",
+    "Closed": "Closed"
+  },
+  "priority": {
+    "High": "High",
+    "Medium": "Medium",
+    "Low": "Low"
+  },
+  "importance": {
+    "High": "High",
+    "Medium": "Medium",
+    "Low": "Low"
+  }
+}

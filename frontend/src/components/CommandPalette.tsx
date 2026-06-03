@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Search, X } from 'lucide-react';
 import { search, type SearchEntityType, type SearchHit } from '../api/search';
 import { EntityIcon } from '../utils/iconRegistry';
@@ -11,16 +12,16 @@ import { filterCommands, type CommandContext } from '../data/commands';
 const DEBOUNCE_MS = 200;
 const RESULT_LIMIT = 30;
 
-// 엔티티 타입별 라벨/색. 색은 index.css 의 토큰 변수와 어울리는 hex 직접 사용 —
-// ProjectMap 5각형 팔레트와 톤을 맞춤. 아이콘은 iconRegistry 의 getEntityIcon 으로 조회.
-const TYPE_META: Record<SearchEntityType, { label: string; color: string }> = {
-  Project:     { label: '프로젝트',  color: '#9eb2ce' },
-  WbsItem:     { label: 'WBS',       color: '#84cc16' },
-  Issue:       { label: '이슈',      color: '#f87171' },
-  Meeting:     { label: '회의록',    color: '#a78bfa' },
-  ChangeLog:   { label: '변경',      color: '#fbbf24' },
-  DevInfoItem: { label: '개발정보',  color: '#34d399' },
-  WorkLog:     { label: '업무일지',  color: '#60a5fa' },
+// 엔티티 타입별 색. 색은 index.css 의 토큰 변수와 어울리는 hex 직접 사용 —
+// ProjectMap 5각형 팔레트와 톤을 맞춤. 라벨은 t('palette:type.'+type) 로 해석.
+const TYPE_COLOR: Record<SearchEntityType, string> = {
+  Project:     '#9eb2ce',
+  WbsItem:     '#84cc16',
+  Issue:       '#f87171',
+  Meeting:     '#a78bfa',
+  ChangeLog:   '#fbbf24',
+  DevInfoItem: '#34d399',
+  WorkLog:     '#60a5fa',
 };
 
 function urlFor(hit: SearchHit): string {
@@ -43,6 +44,7 @@ function urlFor(hit: SearchHit): string {
 }
 
 export function CommandPalette() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[]>([]);
@@ -60,7 +62,7 @@ export function CommandPalette() {
   const commandMode = trimmed === '' || trimmed.startsWith('>');
   const commandFilter = trimmed.startsWith('>') ? trimmed.slice(1) : '';
   const commandCtx: CommandContext = { navigate, projectId: resolveProjectId(), close: () => setOpen(false) };
-  const commands = commandMode ? filterCommands(commandFilter, commandCtx) : [];
+  const commands = commandMode ? filterCommands(commandFilter, commandCtx, t) : [];
   const listLen = commandMode ? commands.length : results.length;
 
   useEffect(() => {
@@ -145,9 +147,9 @@ export function CommandPalette() {
     const counts = new Map<SearchEntityType, number>();
     results.forEach((r) => counts.set(r.type, (counts.get(r.type) ?? 0) + 1));
     return Array.from(counts.entries())
-      .map(([t, c]) => `${TYPE_META[t].label} ${c}`)
+      .map(([type, c]) => `${t('palette:type.' + type)} ${c}`)
       .join(' · ');
-  }, [results]);
+  }, [results, t]);
 
   if (!open) return null;
 
@@ -170,16 +172,16 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={commandMode
-              ? "명령 실행 (이동·생성·토글) — 텍스트 입력 시 전체 검색"
-              : "프로젝트·WBS·이슈·회의록·변경·개발정보·업무일지 검색"}
+              ? t('palette:placeholderCommand')
+              : t('palette:placeholderSearch')}
             className="flex-1 bg-transparent outline-none text-primary placeholder:text-muted text-sm"
           />
-          {loading && <span className="text-xs text-muted shrink-0">검색 중…</span>}
+          {loading && <span className="text-xs text-muted shrink-0">{t('palette:searching')}</span>}
           <button
             type="button"
             onClick={() => setOpen(false)}
             className="text-muted hover:text-primary p-1 rounded shrink-0"
-            title="닫기 (Esc)"
+            title={t('palette:close')}
           >
             <X size={16} />
           </button>
@@ -188,7 +190,7 @@ export function CommandPalette() {
         <div className="flex-1 overflow-y-auto">
           {commandMode && (
             commands.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-muted">일치하는 명령이 없습니다.</div>
+              <div className="px-4 py-8 text-center text-sm text-muted">{t('palette:noCommands')}</div>
             ) : (
               <ul className="py-1">
                 {commands.map((cmd, i) => {
@@ -205,8 +207,8 @@ export function CommandPalette() {
                         }`}
                       >
                         <Icon size={16} className="shrink-0 text-secondary" />
-                        <span className="flex-1 min-w-0 text-sm text-primary truncate">{cmd.label}</span>
-                        <span className="text-xs text-muted shrink-0">{cmd.group}</span>
+                        <span className="flex-1 min-w-0 text-sm text-primary truncate">{t('palette:cmd.' + cmd.id)}</span>
+                        <span className="text-xs text-muted shrink-0">{t(cmd.groupKey)}</span>
                       </button>
                     </li>
                   );
@@ -217,14 +219,14 @@ export function CommandPalette() {
 
           {!commandMode && !loading && results.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted">
-              검색 결과가 없습니다.
+              {t('palette:noResults')}
             </div>
           )}
 
           {!commandMode && results.length > 0 && (
             <ul className="py-1">
               {results.map((hit, i) => {
-                const meta = TYPE_META[hit.type];
+                const color = TYPE_COLOR[hit.type];
                 const active = i === activeIndex;
                 return (
                   <li key={`${hit.type}-${hit.id}`}>
@@ -239,10 +241,10 @@ export function CommandPalette() {
                         active ? 'bg-surface-3' : 'hover:bg-surface-2'
                       }`}
                     >
-                      <EntityIcon slot={hit.type} size={16} className="mt-0.5 shrink-0" style={{ color: meta.color }} />
+                      <EntityIcon slot={hit.type} size={16} className="mt-0.5 shrink-0" style={{ color }} />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 text-xs">
-                          <span className="font-medium" style={{ color: meta.color }}>{meta.label}</span>
+                          <span className="font-medium" style={{ color }}>{t('palette:type.' + hit.type)}</span>
                           {hit.projectName && (
                             <>
                               <span className="text-muted">·</span>
@@ -252,7 +254,7 @@ export function CommandPalette() {
                         </div>
                         <div
                           className="text-sm text-primary truncate cmd-hit"
-                          dangerouslySetInnerHTML={{ __html: hit.title || '(제목 없음)' }}
+                          dangerouslySetInnerHTML={{ __html: hit.title || t('palette:noTitle') }}
                         />
                         {hit.snippet && (
                           <div
@@ -270,8 +272,8 @@ export function CommandPalette() {
         </div>
 
         <div className="px-4 py-2 border-t border-default text-[11px] text-muted flex justify-between">
-          <span>{commandMode ? `명령 ${commands.length}` : (groupedHint ?? '')}</span>
-          <span>↑↓ 이동 · Enter {commandMode ? '실행' : '선택'} · Esc 닫기</span>
+          <span>{commandMode ? t('palette:footerCommandCount', { count: commands.length }) : (groupedHint ?? '')}</span>
+          <span>{commandMode ? t('palette:footerNavExec') : t('palette:footerNavSelect')}</span>
         </div>
       </div>
     </div>,

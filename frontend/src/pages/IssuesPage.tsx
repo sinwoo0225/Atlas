@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronDown, ChevronRight, FileText, Link as LinkIcon, ListTree, Plus, Search, X } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
@@ -34,14 +35,10 @@ const STATUS_SORT_RANK: Record<IssueStatus, number> = {
 const ghostFieldClass =
   'w-full bg-transparent border border-transparent rounded px-1.5 py-1 transition-colors hover:border-default focus:border-default focus:bg-surface-2 focus:outline-none';
 
-const STATUS_OPTIONS: BadgeMenuOption<IssueStatus>[] = STATUS_VALUES.map((s) => ({
-  value: s, label: issueStatusBadge[s].label, variant: issueStatusBadge[s].variant,
-}));
-const PRIORITY_OPTIONS: BadgeMenuOption<IssuePriority>[] = PRIORITY_VALUES.map((p) => ({
-  value: p, label: issuePriorityBadge[p].label, variant: issuePriorityBadge[p].variant,
-}));
+// STATUS_OPTIONS / PRIORITY_OPTIONS 는 라벨이 i18n 에 의존하므로 컴포넌트 내부에서 useMemo 로 생성한다.
 
 export function IssuesPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const project = useCurrentProject();
@@ -236,7 +233,7 @@ export function IssuesPage() {
                 size="sm"
                 onClick={() => setFilter(s)}
               >
-                {issueStatusBadge[s].label} ({count})
+                {t(issueStatusBadge[s].labelKey)} ({count})
               </Button>
             );
           })}
@@ -260,7 +257,7 @@ export function IssuesPage() {
           >
             <option value="All">우선순위 전체</option>
             {PRIORITY_VALUES.map((p) => (
-              <option key={p} value={p}>{issuePriorityBadge[p].label}</option>
+              <option key={p} value={p}>{t(issuePriorityBadge[p].labelKey)}</option>
             ))}
           </select>
           <select
@@ -385,7 +382,16 @@ function IssueRow({
   onDelete: (id: number, e: React.MouseEvent) => void;
   onLinksChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+  const STATUS_OPTIONS = useMemo<BadgeMenuOption<IssueStatus>[]>(
+    () => STATUS_VALUES.map((s) => ({ value: s, label: t(issueStatusBadge[s].labelKey), variant: issueStatusBadge[s].variant })),
+    [t],
+  );
+  const PRIORITY_OPTIONS = useMemo<BadgeMenuOption<IssuePriority>[]>(
+    () => PRIORITY_VALUES.map((p) => ({ value: p, label: t(issuePriorityBadge[p].labelKey), variant: issuePriorityBadge[p].variant })),
+    [t],
+  );
   const [title, setTitle] = useState(issue.title);
   const [dueDate, setDueDate] = useState(issue.dueDate?.slice(0, 10) ?? '');
   const [occurredOn, setOccurredOn] = useState(issue.occurredOn?.slice(0, 10) ?? '');

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
@@ -462,6 +463,7 @@ function DateEditModal({
 
 
 export function WbsPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const project = useCurrentProject();
@@ -843,7 +845,7 @@ export function WbsPage() {
                     active ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
                   }`}
                 >
-                  {wbsStatusBadge[s].label}
+                  {t(wbsStatusBadge[s].labelKey)}
                 </button>
               );
             })}

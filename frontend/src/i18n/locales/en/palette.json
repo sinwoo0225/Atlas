@@ -1,0 +1,52 @@
+{
+  "placeholderCommand": "Run a command (go / create / toggle) — type text for full search",
+  "placeholderSearch": "Search projects, WBS, issues, meetings, change log, dev info, work log",
+  "searching": "Searching…",
+  "close": "Close (Esc)",
+  "noCommands": "No matching commands.",
+  "noResults": "No search results.",
+  "noTitle": "(untitled)",
+  "footerCommandCount": "{{count}} commands",
+  "footerNavExec": "↑↓ Move · Enter Run · Esc Close",
+  "footerNavSelect": "↑↓ Move · Enter Select · Esc Close",
+  "type": {
+    "Project": "Project",
+    "WbsItem": "WBS",
+    "Issue": "Issue",
+    "Meeting": "Meeting",
+    "ChangeLog": "Change",
+    "DevInfoItem": "Dev info",
+    "WorkLog": "Work log"
+  },
+  "group": {
+    "navigate": "Go to",
+    "create": "Create",
+    "toggle": "Toggle",
+    "help": "Help"
+  },
+  "cmd": {
+    "go-dashboard": "Go to Dashboard",
+    "go-wbs": "Go to Schedule/WBS",
+    "go-issues": "Go to Issues",
+    "go-meetings": "Go to Meetings",
+    "go-changelogs": "Go to Change log",
+    "go-devinfo": "Go to Dev info",
+    "go-worklog": "Go to Work log",
+    "go-map": "Go to Project map",
+    "go-projects": "Go to Projects",
+    "go-monitoring": "Go to Monitoring",
+    "go-resources": "Go to Resources",
+    "go-templates": "Go to Schedule templates",
+    "go-activity": "Go to Activity feed",
+    "go-settings": "Go to Settings",
+    "new-issue": "New issue",
+    "new-wbs": "New WBS",
+    "new-meeting": "New meeting",
+    "new-changelog": "New change log",
+    "new-devinfo": "New dev info",
+    "new-resource": "New resource",
+    "new-project": "New project",
+    "toggle-sidebar": "Toggle sidebar",
+    "open-shortcuts": "Open keyboard shortcuts"
+  }
+}

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Issue } from '../types';
 import { Badge } from './ui';
 import { inputClass } from './ui';
@@ -14,6 +15,7 @@ type Props = {
 // Issue 선택 picker. 평면 list (트리 아님) + 검색 + 상태 배지.
 // 높이는 부모 flex 컨테이너에 fit (max-h 자체 없음).
 export function IssuePicker({ items, excludeIds, onSelect }: Props) {
+  const { t } = useTranslation();
   const [keyword, setKeyword] = useState('');
 
   const filtered = useMemo(() => {
@@ -56,7 +58,7 @@ export function IssuePicker({ items, excludeIds, onSelect }: Props) {
               } transition-colors`}
               title={disabled ? '이미 연결됨' : i.title}
             >
-              <Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+              <Badge variant={badge.variant} size="sm">{t(badge.labelKey)}</Badge>
               <span className="text-primary truncate flex-1">{i.title}</span>
               <span className="text-xs text-muted shrink-0">#{i.id}</span>
             </button>

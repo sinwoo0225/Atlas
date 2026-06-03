@@ -1,0 +1,17 @@
+{
+  "confirm": "확인",
+  "cancel": "취소",
+  "retry": "다시 시도",
+  "loadFailed": "불러오기에 실패했어요",
+  "search": "검색",
+  "noProjects": "프로젝트 없음",
+  "selectProject": "프로젝트 선택",
+  "currentProject": "현재 프로젝트",
+  "projectMenu": "프로젝트 메뉴",
+  "shortcutsTitle": "키보드 단축키",
+  "toast": {
+    "backendVersionMismatch": "Atlas 백엔드 버전이 프론트와 일치하지 않아요 (서버 {{server}} / 프론트 {{front}}). 새로고침 또는 재시작이 필요할 수 있어요.",
+    "backendUnreachable": "Atlas 백엔드에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.",
+    "updateAvailable": "새 버전 v{{version}} 사용 가능 — 설정 › 업데이트에서 받을 수 있어요."
+  }
+}

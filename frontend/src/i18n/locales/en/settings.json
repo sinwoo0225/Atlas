@@ -1,0 +1,14 @@
+{
+  "tabs": {
+    "appearance": "Appearance",
+    "behavior": "Behavior",
+    "system": "System",
+    "backup": "Backup & data"
+  },
+  "language": {
+    "label": "Language",
+    "hint": "Display language for on-screen text such as menus and buttons.",
+    "ko": "한국어",
+    "en": "English"
+  }
+}

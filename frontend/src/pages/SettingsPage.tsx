@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
 import {
   Save, Settings as SettingsIcon, FolderOpen, Server, Plug, Keyboard, Sparkles,
   Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon,
@@ -18,6 +20,7 @@ import {
   MARKDOWN_LINE_HEIGHT_RANGE,
   type AppSettings,
   type ThemeMode,
+  type Language,
 } from '../store/settings';
 import {
   type BaseColors,
@@ -62,15 +65,17 @@ const BRAND_ICON_PRESETS: { file: string; label: string }[] = [
 ];
 
 type SettingsTab = 'appearance' | 'behavior' | 'system' | 'backup';
-const SETTINGS_TABS: { id: SettingsTab; label: string; icon: typeof Palette }[] = [
-  { id: 'appearance', label: '모양', icon: Palette },
-  { id: 'behavior', label: '동작', icon: Keyboard },
-  { id: 'system', label: '시스템', icon: Server },
-  { id: 'backup', label: '백업·관리', icon: Download },
+// label 은 렌더 시점에 t('settings:tabs.'+id) 로 해석 (id 가 곧 i18n 키).
+const SETTINGS_TABS: { id: SettingsTab; icon: typeof Palette }[] = [
+  { id: 'appearance', icon: Palette },
+  { id: 'behavior', icon: Keyboard },
+  { id: 'system', icon: Server },
+  { id: 'backup', icon: Download },
 ];
 const SETTINGS_TAB_KEY = 'atlas-settings-tab';
 
 export function SettingsPage() {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<AppSettings>(loadSettings());
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
@@ -103,6 +108,11 @@ export function SettingsPage() {
     settings.markdownFontSize,
     settings.markdownLineHeight,
   ]);
+
+  // 언어 라이브 프리뷰 — 저장 전에도 즉시 전환 (저장 시 App 의 atlas:settings-changed 리스너가 영속).
+  useEffect(() => {
+    if (i18n.language !== settings.language) i18n.changeLanguage(settings.language);
+  }, [settings.language]);
 
   const update = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [k]: v }));
@@ -255,7 +265,7 @@ export function SettingsPage() {
 
       {/* 카테고리 탭 — 12개 섹션을 모양/동작/시스템/백업·관리로 그룹화. 선택은 localStorage 에 보존. */}
       <div className="flex gap-1 border-b border-default -mt-2">
-        {SETTINGS_TABS.map(({ id, label, icon: Icon }) => {
+        {SETTINGS_TABS.map(({ id, icon: Icon }) => {
           const active = activeTab === id;
           return (
             <button
@@ -270,7 +280,7 @@ export function SettingsPage() {
               aria-current={active ? 'page' : undefined}
             >
               <Icon size={14} />
-              {label}
+              {t('settings:tabs.' + id)}
             </button>
           );
         })}
@@ -501,6 +511,21 @@ export function SettingsPage() {
 
       {activeTab === 'behavior' && (<>
       <Section title="기본 동작">
+        <FormField label={t('settings:language.label')} hint={t('settings:language.hint')}>
+          <div className="flex gap-2">
+            {(['ko', 'en'] as Language[]).map((lng) => (
+              <Button
+                key={lng}
+                variant={settings.language === lng ? 'primary' : 'secondary'}
+                size="md"
+                onClick={() => update('language', lng)}
+              >
+                {t('settings:language.' + lng)}
+              </Button>
+            ))}
+          </div>
+        </FormField>
+
         <FormField
           label="앱 시작 시 마지막 프로젝트 자동 선택"
           hint={`마지막으로 본 프로젝트: ${lastProject ? lastProject.name : '없음'}`}

@@ -8,9 +8,12 @@ import {
 import { setHostBrand } from '../utils/hostBridge';
 
 export type ThemeMode = 'dark' | 'light' | 'custom';
+export type Language = 'ko' | 'en';
 
 export interface AppSettings {
   theme: ThemeMode;
+  // 화면 텍스트 표시 언어. 기본 ko. 설정에서 토글하면 라이브 전환 + <html lang> 갱신.
+  language: Language;
   autoSelectLastProject: boolean;
   lastProjectId: number | null;
   defaultAuthor: string;
@@ -54,6 +57,7 @@ export const DEFAULT_LOGO_ACCENT = '#c9a96b';
 
 const defaults: AppSettings = {
   theme: 'dark',
+  language: 'ko',
   autoSelectLastProject: true,
   lastProjectId: null,
   defaultAuthor: '',
@@ -174,6 +178,8 @@ export function applyAppearance(s: AppSettings): void {
   applyMarkdownStyle(s.markdownFontSize, s.markdownLineHeight);
   const title = s.brandTitle.trim() || 'Atlas';
   if (typeof document !== 'undefined') {
+    // 화면 텍스트 언어를 <html lang> 에 반영 (i18n.changeLanguage 는 App 리스너에서 별도 호출).
+    document.documentElement.lang = s.language;
     // 브라우저 탭 제목 (dev / 일반 브라우저).
     document.title = title;
     // 파비콘 동기화 — brandIcon 이 있으면 교체 (dev 가시성). 없으면 기존 파비콘 유지.

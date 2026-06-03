@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
   Check,
@@ -17,28 +18,30 @@ import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { useActiveProjectId } from '../hooks/useActiveProjectId';
 
 // path = iconRegistry 의 메뉴 슬롯키. 아이콘은 getMenuIcon(slot) 으로 조회(커스터마이즈 가능).
+// key = nav 네임스페이스의 i18n 키. 라벨은 렌더 시점에 t('nav:'+key) 로 해석.
 const navItems = [
-  { path: '/', label: '프로젝트 목록' },
-  { path: '/monitoring', label: '통합 모니터링' },
-  { path: '/activity', label: '전체 활동' },
-  { path: '/resources', label: '리소스 관리' },
-  { path: '/wbs-templates', label: '일정 템플릿' },
+  { path: '/', key: 'projects' },
+  { path: '/monitoring', key: 'monitoring' },
+  { path: '/activity', key: 'activity' },
+  { path: '/resources', key: 'resources' },
+  { path: '/wbs-templates', key: 'wbsTemplates' },
 ];
 
 const projectNavItems = [
-  { path: 'dashboard', label: '대시보드' },
-  { path: 'wbs', label: '일정/WBS' },
-  { path: 'worklog', label: '업무일지' },
-  { path: 'issues', label: '이슈 관리' },
-  { path: 'changelogs', label: '변경이력' },
-  { path: 'meetings', label: '회의록' },
-  { path: 'devinfo', label: '개발 정보' },
-  { path: 'map', label: '프로젝트 맵' },
+  { path: 'dashboard', key: 'dashboard' },
+  { path: 'wbs', key: 'wbs' },
+  { path: 'worklog', key: 'worklog' },
+  { path: 'issues', key: 'issues' },
+  { path: 'changelogs', key: 'changelogs' },
+  { path: 'meetings', key: 'meetings' },
+  { path: 'devinfo', key: 'devinfo' },
+  { path: 'map', key: 'map' },
 ];
 
 // 사이드바의 검색 트리거. 실제 검색 UI 는 CommandPalette (App 최상위 mount) — 이 버튼은
 // Ctrl+K 단축키와 동일하게 팔레트를 연다. 클릭 시 keydown 이벤트를 직접 dispatch.
 function SearchTrigger() {
+  const { t } = useTranslation();
   const handleClick = () => {
     // useGlobalShortcut 가 keydown 으로 토글하므로 같은 이벤트를 합성해 보낸다.
     const ev = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true });
@@ -48,17 +51,18 @@ function SearchTrigger() {
     <button
       type="button"
       onClick={handleClick}
-      title="검색 (Ctrl+K)"
+      title={t('nav:searchTitle')}
       className="w-full flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 hover:bg-surface-3 border border-default text-sm text-muted hover:text-secondary"
     >
       <Search size={14} />
-      <span className="flex-1 text-left">검색</span>
+      <span className="flex-1 text-left">{t('search')}</span>
       <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-default bg-surface-3 text-muted">Ctrl K</kbd>
     </button>
   );
 }
 
 function ProjectSwitcher() {
+  const { t } = useTranslation();
   const projects = useProjectStore((s) => s.projects);
   const selectedId = useProjectStore((s) => s.selectedProjectId);
   const selectProject = useProjectStore((s) => s.selectProject);
@@ -92,14 +96,14 @@ function ProjectSwitcher() {
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md bg-surface-2 hover:bg-surface-3 border border-default text-sm"
       >
         <div className="flex flex-col items-start min-w-0">
-          <span className="text-[10px] uppercase tracking-wider text-muted">현재 프로젝트</span>
-          <span className="truncate text-secondary font-medium">{current?.name ?? '프로젝트 선택'}</span>
+          <span className="text-[10px] uppercase tracking-wider text-muted">{t('currentProject')}</span>
+          <span className="truncate text-secondary font-medium">{current?.name ?? t('selectProject')}</span>
         </div>
         <ChevronDown size={14} className={`text-muted shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <ul className="absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-surface border border-default rounded-md shadow-lg">
-          {projects.length === 0 && <li className="px-3 py-2 text-sm text-muted">프로젝트 없음</li>}
+          {projects.length === 0 && <li className="px-3 py-2 text-sm text-muted">{t('noProjects')}</li>}
           {projects.map((p) => (
             <li key={p.id}>
               <button
@@ -120,6 +124,7 @@ function ProjectSwitcher() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const { selectedProjectId, selectProject, projects } = useProjectStore();
@@ -207,8 +212,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={toggleCollapsed}
-            title={`사이드바 ${collapsed ? '펼치기' : '접기'} (Ctrl+B)`}
-            aria-label={`사이드바 ${collapsed ? '펼치기' : '접기'}`}
+            title={`${t(collapsed ? 'nav:sidebarExpand' : 'nav:sidebarCollapse')} (Ctrl+B)`}
+            aria-label={t(collapsed ? 'nav:sidebarExpand' : 'nav:sidebarCollapse')}
             className="p-1 text-muted hover:text-primary transition-colors shrink-0"
           >
             {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
@@ -222,8 +227,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         )}
 
         <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
-          {navItems.map(({ path, label }) => {
+          {navItems.map(({ path, key }) => {
             const active = location.pathname === path;
+            const label = t('nav:' + key);
             return (
               <Link
                 key={path}
@@ -250,14 +256,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {!collapsed && (
                 <div className="pt-3 pb-1">
                   <p className="text-[10px] text-muted px-3 font-medium uppercase tracking-wider">
-                    프로젝트 메뉴
+                    {t('projectMenu')}
                   </p>
                 </div>
               )}
               {collapsed && <div className="border-t border-default mt-3 mb-1" />}
-              {projectNavItems.map(({ path, label }) => {
+              {projectNavItems.map(({ path, key }) => {
                 const fullPath = `/projects/${selectedProjectId}/${path}`;
                 const active = location.pathname === fullPath;
+                const label = t('nav:' + key);
                 return (
                   <Link
                     key={path}
@@ -283,12 +290,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => toggleWidget()}
                 disabled={!bridge}
-                title={bridge ? '위젯 토글 (Ctrl+Alt+W)' : '데스크톱 앱에서만 사용할 수 있어요'}
-                aria-label="위젯 토글"
+                title={bridge ? t('nav:widgetToggleTitle') : t('nav:widgetDesktopOnly')}
+                aria-label={t('nav:widgetToggle')}
                 className={`${linkClass(false)} w-full disabled:opacity-40 disabled:cursor-not-allowed`}
               >
                 <LayoutGrid size={16} />
-                {!collapsed && '위젯'}
+                {!collapsed && t('nav:widget')}
               </button>
             );
           })()}
@@ -299,10 +306,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 to="/settings"
                 className={linkClass(active)}
                 aria-current={active ? 'page' : undefined}
-                title={collapsed ? '설정' : undefined}
+                title={collapsed ? t('nav:settings') : undefined}
               >
                 <MenuIcon slot="settings" overrides={brand.menuIcons} size={16} />
-                {!collapsed && '설정'}
+                {!collapsed && t('nav:settings')}
               </Link>
             );
           })()}

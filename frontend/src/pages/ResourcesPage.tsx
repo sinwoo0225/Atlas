@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building, ChevronDown, ChevronRight } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
 import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, CopyButton, inputClass } from '../components/ui';
@@ -94,6 +95,7 @@ function ResourceForm({ initial, onSave, onCancel }: {
 }
 
 function AssignmentCard({ a }: { a: ResourceAssignment }) {
+  const { t } = useTranslation();
   const status = wbsStatusBadge[a.status];
   return (
     <Card padding="tight" variant="subtle">
@@ -104,7 +106,7 @@ function AssignmentCard({ a }: { a: ResourceAssignment }) {
             <span>{a.startDate?.slice(0, 10) ?? '-'} ~ {a.endDate?.slice(0, 10) ?? '-'}</span>
           </div>
         </div>
-        <Badge variant={status.variant} size="sm">{status.label}</Badge>
+        <Badge variant={status.variant} size="sm">{t(status.labelKey)}</Badge>
       </div>
     </Card>
   );

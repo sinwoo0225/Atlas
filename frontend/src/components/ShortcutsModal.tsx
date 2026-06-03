@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal } from './ui/Modal';
 import { SHORTCUT_REGISTRY, SHORTCUTS_OPEN_EVENT } from '../data/shortcuts';
 
 export function ShortcutsModal() {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -25,15 +27,15 @@ export function ShortcutsModal() {
   }, []);
 
   return (
-    <Modal open={open} onClose={() => setOpen(false)} title="키보드 단축키" size="md" showCloseButton>
+    <Modal open={open} onClose={() => setOpen(false)} title={t('shortcutsTitle')} size="md" showCloseButton>
       <div className="space-y-4">
         {SHORTCUT_REGISTRY.map((group) => (
-          <div key={group.group}>
-            <h3 className="text-xs text-muted font-medium uppercase tracking-wider mb-2">{group.group}</h3>
+          <div key={group.groupKey}>
+            <h3 className="text-xs text-muted font-medium uppercase tracking-wider mb-2">{t(group.groupKey)}</h3>
             <ul className="space-y-1.5">
               {group.items.map((s, i) => (
                 <li key={i} className="flex items-center justify-between gap-3">
-                  <span className="text-sm text-secondary">{s.desc}</span>
+                  <span className="text-sm text-secondary">{t(s.descKey)}</span>
                   <span className="flex items-center gap-1 shrink-0">
                     {s.keys.map((k, ki) => (
                       <kbd

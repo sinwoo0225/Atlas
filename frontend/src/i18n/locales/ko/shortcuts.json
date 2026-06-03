@@ -1,0 +1,35 @@
+{
+  "group": {
+    "global": "전역",
+    "navigate": "탐색 (G 후 키)",
+    "page": "페이지 작업",
+    "modal": "모달",
+    "map": "프로젝트 맵"
+  },
+  "desc": {
+    "openPalette": "검색·명령 팔레트 열기 (빈 입력/> 로 명령)",
+    "toggleSidebar": "사이드바 접기/펼치기",
+    "openShortcuts": "단축키 도움말 열기",
+    "closeModal": "열린 모달/팔레트 닫기",
+    "goDashboard": "대시보드",
+    "goIssues": "이슈",
+    "goWbs": "일정/WBS",
+    "goMeetings": "회의록",
+    "goChangelogs": "변경이력",
+    "goDevinfo": "개발정보",
+    "goResources": "리소스",
+    "goSettings": "설정",
+    "newItem": "신규 항목 생성 (현재 페이지 컨텍스트)",
+    "issueEnterAdd": "이슈 페이지 — 마지막 빈 행에서 추가",
+    "modalNext": "모달 안 다음 요소",
+    "modalPrev": "모달 안 이전 요소",
+    "modalClose": "닫기 (변경사항 있으면 확인)",
+    "mapToggleWbs": "WBS 노드 토글",
+    "mapToggleChangelog": "변경이력 노드 토글",
+    "mapToggleMeeting": "회의록 노드 토글",
+    "mapToggleDevinfo": "개발정보 노드 토글",
+    "mapToggleIssue": "이슈 노드 토글",
+    "mapFocusSearch": "검색 입력 포커스",
+    "mapFitReset": "맵 fit 리셋"
+  }
+}

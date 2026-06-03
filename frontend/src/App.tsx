@@ -23,6 +23,7 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 import { applyAppearance, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
+import i18n from './i18n';
 import { isCustomDark } from './utils/themeCustom';
 import { getMachineAccount } from './utils/hostBridge';
 import { systemApi, EXPECTED_API_VERSION } from './api/system';
@@ -41,6 +42,8 @@ function MainShell() {
       const next = loadSettings();
       applyAppearance(next);
       setTheme(next.theme);
+      // 언어 라이브 전환 — useTranslation 구독 컴포넌트가 즉시 재렌더된다.
+      if (i18n.language !== next.language) i18n.changeLanguage(next.language);
     };
     window.addEventListener('atlas:settings-changed', onSettings);
 
@@ -56,18 +59,18 @@ function MainShell() {
     systemApi.ping().then((r) => {
       if (r.apiVersion !== EXPECTED_API_VERSION) {
         toast.warning(
-          `Atlas 백엔드 버전이 프론트와 일치하지 않아요 (서버 ${r.apiVersion} / 프론트 ${EXPECTED_API_VERSION}). 새로고침 또는 재시작이 필요할 수 있어요.`,
+          i18n.t('toast.backendVersionMismatch', { server: r.apiVersion, front: EXPECTED_API_VERSION }),
           { duration: 8000 },
         );
       }
     }).catch(() => {
-      toast.error('Atlas 백엔드에 연결할 수 없어요. 백엔드가 실행 중인지 확인해 주세요.', { duration: 8000 });
+      toast.error(i18n.t('toast.backendUnreachable'), { duration: 8000 });
     });
 
     // 백그라운드 업데이트 체크가 새 버전을 발견해 뒀으면 시작 시 안내 (silent — 실패해도 무시).
     systemApi.getUpdateStatus().then((s) => {
       if (s.lastResult?.hasUpdate) {
-        toast.info(`새 버전 v${s.lastResult.latestVersion} 사용 가능 — 설정 › 업데이트에서 받을 수 있어요.`, { duration: 8000 });
+        toast.info(i18n.t('toast.updateAvailable', { version: s.lastResult.latestVersion }), { duration: 8000 });
       }
     }).catch(() => {});
 

@@ -1,0 +1,14 @@
+{
+  "tabs": {
+    "appearance": "모양",
+    "behavior": "동작",
+    "system": "시스템",
+    "backup": "백업·관리"
+  },
+  "language": {
+    "label": "언어",
+    "hint": "메뉴·버튼 등 화면 텍스트의 표시 언어입니다.",
+    "ko": "한국어",
+    "en": "English"
+  }
+}

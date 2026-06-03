@@ -3,6 +3,7 @@
 // 이 파일 안에서만 any 를 허용한다 (다른 차트 사용처와 같은 관행).
 import ReactECharts from 'echarts-for-react';
 import { PieChart, AlertTriangle, Diamond, BarChart3, Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, Skeleton, Badge } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark, type ChartColors } from '../../utils/themeColors';
 import { projectStatusBadge } from '../../utils/statusMaps';
@@ -188,6 +189,7 @@ function ProjectStatusBreakdownWidget({
 }
 
 function ProjectStatusListItem({ item, onClick }: { item: ProjectStatusItem; onClick: () => void }) {
+  const { t } = useTranslation();
   const badge = projectStatusBadge[item.status];
   // 진행률(WBS 완료 비율) 과 D-day(종료일 기준) 둘 다 표시. 종료일 미설정이면 D-day 생략.
   const dd = dDay(item.endDate);
@@ -198,7 +200,7 @@ function ProjectStatusListItem({ item, onClick }: { item: ProjectStatusItem; onC
         onClick={onClick}
         className="w-full text-left flex items-center gap-2 py-1 px-2 -mx-2 rounded hover:bg-surface-2 transition-colors"
       >
-        <Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+        <Badge variant={badge.variant} size="sm">{t(badge.labelKey)}</Badge>
         <span className="text-sm text-secondary truncate flex-1 min-w-0">{item.projectName}</span>
         <span className="text-xs shrink-0 tabular-nums flex items-baseline gap-2">
           <span className="text-muted">{item.progressPercent.toFixed(0)}%</span>

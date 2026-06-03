@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ElementType } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Diamond, GitBranch, FileText, Code2, Download, Package, Link as LinkIcon, AlertTriangle, NotebookPen, Activity, ChevronRight } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { activityApi } from '../api/activity';
@@ -13,6 +14,7 @@ import { wbsStatusBadge, impactBadge, issueStatusBadge, issuePriorityBadge } fro
 import type { ProjectDashboard, ActivityLog } from '../types';
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
   const [data, setData] = useState<ProjectDashboard | null>(null);
@@ -171,7 +173,7 @@ export function Dashboard() {
                 <span className="text-sm text-secondary">{m.name}</span>
                 <div className="flex items-center gap-2">
                   <Badge variant={wbsStatusBadge[m.status].variant} size="sm">
-                    {wbsStatusBadge[m.status].label}
+                    {t(wbsStatusBadge[m.status].labelKey)}
                   </Badge>
                   <span className="text-xs text-muted">{m.endDate?.slice(0, 10)}</span>
                 </div>
@@ -191,8 +193,8 @@ export function Dashboard() {
                 className="py-2 border-b border-default last:border-0 cursor-pointer hover:bg-surface-2 px-2 -mx-2 rounded transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <Badge variant={issueStatusBadge[i.status].variant} size="sm">{issueStatusBadge[i.status].label}</Badge>
-                  <Badge variant={issuePriorityBadge[i.priority].variant} size="sm">{issuePriorityBadge[i.priority].label}</Badge>
+                  <Badge variant={issueStatusBadge[i.status].variant} size="sm">{t(issueStatusBadge[i.status].labelKey)}</Badge>
+                  <Badge variant={issuePriorityBadge[i.priority].variant} size="sm">{t(issuePriorityBadge[i.priority].labelKey)}</Badge>
                   {i.dueDate && <span className="text-xs text-muted">~ {i.dueDate.slice(0, 10)}</span>}
                 </div>
                 <p className="text-sm text-secondary mt-0.5 line-clamp-1">{i.title}</p>

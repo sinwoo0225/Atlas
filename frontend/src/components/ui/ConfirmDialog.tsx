@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- confirmDialog 유틸 + Host 컴포넌트 의도적 콜로케이션 (dev HMR 전용 규칙) */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 
 export interface ConfirmOptions {
@@ -30,6 +31,7 @@ export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
 }
 
 export function ConfirmDialogHost() {
+  const { t } = useTranslation();
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
 
@@ -90,10 +92,10 @@ export function ConfirmDialogHost() {
         )}
         <div className="flex justify-end gap-2 mt-5">
           <Button ref={cancelRef} autoFocus variant="secondary" onClick={() => close(false)}>
-            {opts.cancelLabel ?? '취소'}
+            {opts.cancelLabel ?? t('cancel')}
           </Button>
           <Button variant={opts.danger ? 'danger' : 'primary'} onClick={() => close(true)}>
-            {opts.confirmLabel ?? '확인'}
+            {opts.confirmLabel ?? t('confirm')}
           </Button>
         </div>
       </div>

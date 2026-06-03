@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
@@ -190,6 +191,7 @@ function KanbanCard({ item, theme, onOpen }: { item: KanbanItem; theme: ThemeMod
 }
 
 function CardBody({ item, theme, dragging }: { item: KanbanItem; theme: ThemeMode; dragging?: boolean }) {
+  const { t } = useTranslation();
   const pc = getProjectColor(item.projectId, theme);
   const pri = item.kind === 'issue' && item.priority ? issuePriorityBadge[item.priority as IssuePriority] : null;
   return (
@@ -210,7 +212,7 @@ function CardBody({ item, theme, dragging }: { item: KanbanItem; theme: ThemeMod
         >
           {pc.glyph} {item.projectName}
         </span>
-        {pri && <Badge variant={pri.variant} size="sm">{pri.label}</Badge>}
+        {pri && <Badge variant={pri.variant} size="sm">{t(pri.labelKey)}</Badge>}
         {item.dueDate && <span className="text-[10px] text-on-warning">{item.dueDate.slice(0, 10)}</span>}
       </div>
     </Card>

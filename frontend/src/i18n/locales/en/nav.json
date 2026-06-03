@@ -1,0 +1,23 @@
+{
+  "projects": "Projects",
+  "monitoring": "Monitoring",
+  "activity": "Activity",
+  "resources": "Resources",
+  "wbsTemplates": "Schedule templates",
+  "dashboard": "Dashboard",
+  "wbs": "Schedule/WBS",
+  "worklog": "Work log",
+  "issues": "Issues",
+  "changelogs": "Change log",
+  "meetings": "Meetings",
+  "devinfo": "Dev info",
+  "map": "Project map",
+  "widget": "Widget",
+  "settings": "Settings",
+  "searchTitle": "Search (Ctrl+K)",
+  "sidebarExpand": "Expand sidebar",
+  "sidebarCollapse": "Collapse sidebar",
+  "widgetToggle": "Toggle widget",
+  "widgetToggleTitle": "Toggle widget (Ctrl+Alt+W)",
+  "widgetDesktopOnly": "Available only in the desktop app"
+}

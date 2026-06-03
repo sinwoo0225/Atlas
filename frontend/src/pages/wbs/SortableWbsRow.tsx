@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -33,6 +34,7 @@ export function SortableWbsRow({
   linkCountByWbs, sourceCountByWbs, reorderDisabled,
   onEdit, onDelete, onAddChild, onStatusChange,
 }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const linkCount = linkCountByWbs.get(item.id) ?? 0;
   const sourceCount = sourceCountByWbs[item.id] ?? 0;
@@ -165,7 +167,7 @@ export function SortableWbsRow({
         </td>
         {/* 하위 항목이 있는 부모 행은 그루핑 역할 — 중요도·상태는 빈 셀로(자식 값으로 흐려지지 않게). */}
         <td className="py-2 px-3 whitespace-nowrap">
-          {!hasChildren && <Badge variant={importance.variant} size="sm">{importance.label}</Badge>}
+          {!hasChildren && <Badge variant={importance.variant} size="sm">{t(importance.labelKey)}</Badge>}
         </td>
         <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
           {!hasChildren && (

@@ -1,62 +1,63 @@
 export interface ShortcutEntry {
   keys: string[];
-  desc: string;
+  // 설명은 shortcuts 네임스페이스의 i18n 키. ShortcutsModal 이 t(descKey) 로 해석.
+  descKey: string;
 }
 
 export interface ShortcutGroup {
-  group: string;
+  groupKey: string;
   items: ShortcutEntry[];
 }
 
-// 단일 진실 소스 — ShortcutsModal 이 이것을 렌더링한다. 새 단축키 도입 시 여기 한 곳 갱신.
+// 단일 진실 소스 — ShortcutsModal 이 이것을 렌더링한다. 새 단축키 도입 시 여기 + shortcuts.json 갱신.
 export const SHORTCUT_REGISTRY: ShortcutGroup[] = [
   {
-    group: '전역',
+    groupKey: 'shortcuts:group.global',
     items: [
-      { keys: ['Ctrl', 'K'], desc: '검색·명령 팔레트 열기 (빈 입력/> 로 명령)' },
-      { keys: ['Ctrl', 'B'], desc: '사이드바 접기/펼치기' },
-      { keys: ['?'], desc: '단축키 도움말 열기' },
-      { keys: ['Esc'], desc: '열린 모달/팔레트 닫기' },
+      { keys: ['Ctrl', 'K'], descKey: 'shortcuts:desc.openPalette' },
+      { keys: ['Ctrl', 'B'], descKey: 'shortcuts:desc.toggleSidebar' },
+      { keys: ['?'], descKey: 'shortcuts:desc.openShortcuts' },
+      { keys: ['Esc'], descKey: 'shortcuts:desc.closeModal' },
     ],
   },
   {
-    group: '탐색 (G 후 키)',
+    groupKey: 'shortcuts:group.navigate',
     items: [
-      { keys: ['G', 'D'], desc: '대시보드' },
-      { keys: ['G', 'I'], desc: '이슈' },
-      { keys: ['G', 'W'], desc: '일정/WBS' },
-      { keys: ['G', 'M'], desc: '회의록' },
-      { keys: ['G', 'C'], desc: '변경이력' },
-      { keys: ['G', 'V'], desc: '개발정보' },
-      { keys: ['G', 'R'], desc: '리소스' },
-      { keys: ['G', 'S'], desc: '설정' },
+      { keys: ['G', 'D'], descKey: 'shortcuts:desc.goDashboard' },
+      { keys: ['G', 'I'], descKey: 'shortcuts:desc.goIssues' },
+      { keys: ['G', 'W'], descKey: 'shortcuts:desc.goWbs' },
+      { keys: ['G', 'M'], descKey: 'shortcuts:desc.goMeetings' },
+      { keys: ['G', 'C'], descKey: 'shortcuts:desc.goChangelogs' },
+      { keys: ['G', 'V'], descKey: 'shortcuts:desc.goDevinfo' },
+      { keys: ['G', 'R'], descKey: 'shortcuts:desc.goResources' },
+      { keys: ['G', 'S'], descKey: 'shortcuts:desc.goSettings' },
     ],
   },
   {
-    group: '페이지 작업',
+    groupKey: 'shortcuts:group.page',
     items: [
-      { keys: ['Ctrl', 'N'], desc: '신규 항목 생성 (현재 페이지 컨텍스트)' },
-      { keys: ['Enter'], desc: '이슈 페이지 — 마지막 빈 행에서 추가' },
+      { keys: ['Ctrl', 'N'], descKey: 'shortcuts:desc.newItem' },
+      { keys: ['Enter'], descKey: 'shortcuts:desc.issueEnterAdd' },
     ],
   },
   {
-    group: '모달',
+    groupKey: 'shortcuts:group.modal',
     items: [
-      { keys: ['Tab'], desc: '모달 안 다음 요소' },
-      { keys: ['Shift', 'Tab'], desc: '모달 안 이전 요소' },
-      { keys: ['Esc'], desc: '닫기 (변경사항 있으면 확인)' },
+      { keys: ['Tab'], descKey: 'shortcuts:desc.modalNext' },
+      { keys: ['Shift', 'Tab'], descKey: 'shortcuts:desc.modalPrev' },
+      { keys: ['Esc'], descKey: 'shortcuts:desc.modalClose' },
     ],
   },
   {
-    group: '프로젝트 맵',
+    groupKey: 'shortcuts:group.map',
     items: [
-      { keys: ['1'], desc: 'WBS 노드 토글' },
-      { keys: ['2'], desc: '변경이력 노드 토글' },
-      { keys: ['3'], desc: '회의록 노드 토글' },
-      { keys: ['4'], desc: '개발정보 노드 토글' },
-      { keys: ['5'], desc: '이슈 노드 토글' },
-      { keys: ['/'], desc: '검색 입력 포커스' },
-      { keys: ['F'], desc: '맵 fit 리셋' },
+      { keys: ['1'], descKey: 'shortcuts:desc.mapToggleWbs' },
+      { keys: ['2'], descKey: 'shortcuts:desc.mapToggleChangelog' },
+      { keys: ['3'], descKey: 'shortcuts:desc.mapToggleMeeting' },
+      { keys: ['4'], descKey: 'shortcuts:desc.mapToggleDevinfo' },
+      { keys: ['5'], descKey: 'shortcuts:desc.mapToggleIssue' },
+      { keys: ['/'], descKey: 'shortcuts:desc.mapFocusSearch' },
+      { keys: ['F'], descKey: 'shortcuts:desc.mapFitReset' },
     ],
   },
 ];

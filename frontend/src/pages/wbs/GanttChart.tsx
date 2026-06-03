@@ -8,6 +8,7 @@ import ReactECharts from 'echarts-for-react';
 import type { EChartsInstance } from 'echarts-for-react';
 import * as htmlToImage from 'html-to-image';
 import { ChevronDown, ChevronRight, Diamond, Download } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { WbsItem, WbsStatus } from '../../types';
 import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
@@ -236,6 +237,7 @@ export function GanttChart({
   unassignedOnly: boolean;
   lateOnly: boolean;
 }) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const colors = getChartColors(theme);
   const chartRef = useRef<EChartsInstance>(null);
@@ -638,7 +640,7 @@ export function GanttChart({
         const item = rows[v[0]]?.item;
         const start = toIsoDate(v[1]);
         const end = toIsoDate(v[2]);
-        const status = item ? wbsStatusBadge[item.status].label : '';
+        const status = item ? t(wbsStatusBadge[item.status].labelKey) : '';
         const assignee = item?.assignee ? ` · ${item.assignee}` : '';
         return `<div style="font-weight:600">${p.name}</div>` +
                `<div style="font-size:11px;opacity:.85">${start} ~ ${end}</div>` +

@@ -1,0 +1,35 @@
+{
+  "group": {
+    "global": "Global",
+    "navigate": "Navigation (G then key)",
+    "page": "Page actions",
+    "modal": "Modal",
+    "map": "Project map"
+  },
+  "desc": {
+    "openPalette": "Open search / command palette (empty or > for commands)",
+    "toggleSidebar": "Toggle sidebar",
+    "openShortcuts": "Open keyboard shortcuts",
+    "closeModal": "Close open modal / palette",
+    "goDashboard": "Dashboard",
+    "goIssues": "Issues",
+    "goWbs": "Schedule/WBS",
+    "goMeetings": "Meetings",
+    "goChangelogs": "Change log",
+    "goDevinfo": "Dev info",
+    "goResources": "Resources",
+    "goSettings": "Settings",
+    "newItem": "Create new item (current page context)",
+    "issueEnterAdd": "Issues page — add from the last empty row",
+    "modalNext": "Next element in modal",
+    "modalPrev": "Previous element in modal",
+    "modalClose": "Close (confirm if there are changes)",
+    "mapToggleWbs": "Toggle WBS nodes",
+    "mapToggleChangelog": "Toggle change-log nodes",
+    "mapToggleMeeting": "Toggle meeting nodes",
+    "mapToggleDevinfo": "Toggle dev-info nodes",
+    "mapToggleIssue": "Toggle issue nodes",
+    "mapFocusSearch": "Focus search input",
+    "mapFitReset": "Reset map fit"
+  }
+}

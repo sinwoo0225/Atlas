@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertTriangle, RotateCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from './Button';
 
 interface Props {
@@ -21,10 +22,11 @@ export function EmptyState({
   onRetry,
   className = '',
 }: Props) {
+  const { t } = useTranslation();
   const isError = error != null && error !== false;
 
   const resolvedIcon = icon ?? (isError ? <AlertTriangle size={32} /> : undefined);
-  const resolvedTitle = title ?? (isError ? '불러오기에 실패했어요' : '');
+  const resolvedTitle = title ?? (isError ? t('loadFailed') : '');
   const resolvedDescription =
     description ??
     (isError ? (error instanceof Error ? error.message : String(error)) : undefined);
@@ -32,7 +34,7 @@ export function EmptyState({
     action ??
     (isError && onRetry ? (
       <Button variant="secondary" size="sm" leadingIcon={<RotateCw size={14} />} onClick={onRetry}>
-        다시 시도
+        {t('retry')}
       </Button>
     ) : undefined);
 

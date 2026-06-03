@@ -1,0 +1,52 @@
+{
+  "placeholderCommand": "명령 실행 (이동·생성·토글) — 텍스트 입력 시 전체 검색",
+  "placeholderSearch": "프로젝트·WBS·이슈·회의록·변경·개발정보·업무일지 검색",
+  "searching": "검색 중…",
+  "close": "닫기 (Esc)",
+  "noCommands": "일치하는 명령이 없습니다.",
+  "noResults": "검색 결과가 없습니다.",
+  "noTitle": "(제목 없음)",
+  "footerCommandCount": "명령 {{count}}",
+  "footerNavExec": "↑↓ 이동 · Enter 실행 · Esc 닫기",
+  "footerNavSelect": "↑↓ 이동 · Enter 선택 · Esc 닫기",
+  "type": {
+    "Project": "프로젝트",
+    "WbsItem": "WBS",
+    "Issue": "이슈",
+    "Meeting": "회의록",
+    "ChangeLog": "변경",
+    "DevInfoItem": "개발정보",
+    "WorkLog": "업무일지"
+  },
+  "group": {
+    "navigate": "이동",
+    "create": "생성",
+    "toggle": "토글",
+    "help": "도움말"
+  },
+  "cmd": {
+    "go-dashboard": "대시보드로 이동",
+    "go-wbs": "일정/WBS로 이동",
+    "go-issues": "이슈로 이동",
+    "go-meetings": "회의록으로 이동",
+    "go-changelogs": "변경이력으로 이동",
+    "go-devinfo": "개발정보로 이동",
+    "go-worklog": "업무일지로 이동",
+    "go-map": "프로젝트 맵으로 이동",
+    "go-projects": "프로젝트 목록으로 이동",
+    "go-monitoring": "통합 모니터링으로 이동",
+    "go-resources": "리소스로 이동",
+    "go-templates": "WBS 템플릿으로 이동",
+    "go-activity": "활동 피드로 이동",
+    "go-settings": "설정으로 이동",
+    "new-issue": "신규 이슈",
+    "new-wbs": "신규 WBS",
+    "new-meeting": "신규 회의록",
+    "new-changelog": "신규 변경이력",
+    "new-devinfo": "신규 개발정보",
+    "new-resource": "신규 리소스",
+    "new-project": "신규 프로젝트",
+    "toggle-sidebar": "사이드바 접기/펼치기",
+    "open-shortcuts": "단축키 도움말 열기"
+  }
+}

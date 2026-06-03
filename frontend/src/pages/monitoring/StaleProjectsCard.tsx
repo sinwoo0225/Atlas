@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { MoonStar } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui';
 import { projectStatusBadge } from '../../utils/statusMaps';
 import type { StaleProject } from '../../types';
@@ -10,6 +11,7 @@ const BODY_H = 280;
 // 방치된 프로젝트 — 활성(진행중/대기)인데 최근 활동이 오래 없는 프로젝트. 경과일 큰 순.
 // 경과 ≥21일은 위험(danger), 그 외 주의(warning) 톤.
 export function StaleProjectsCard({ data, loading }: { data: StaleProject[]; loading: boolean }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   return (
     <Card padding="normal">
@@ -37,7 +39,7 @@ export function StaleProjectsCard({ data, loading }: { data: StaleProject[]; loa
                   onClick={() => navigate(`/projects/${p.projectId}/dashboard`)}
                   className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md bg-surface-2 border border-default hover:bg-surface-3 transition-colors"
                 >
-                  <Badge variant={badge.variant} size="sm">{badge.label}</Badge>
+                  <Badge variant={badge.variant} size="sm">{t(badge.labelKey)}</Badge>
                   <span className="text-sm text-primary truncate flex-1 min-w-0">{p.projectName}</span>
                   <span className="text-[11px] text-muted shrink-0 hidden sm:inline">
                     {p.lastActivity ? `${p.lastActivity}` : '활동 기록 없음'}

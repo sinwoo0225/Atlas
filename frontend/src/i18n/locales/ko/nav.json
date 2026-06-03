@@ -1,0 +1,23 @@
+{
+  "projects": "프로젝트 목록",
+  "monitoring": "통합 모니터링",
+  "activity": "전체 활동",
+  "resources": "리소스 관리",
+  "wbsTemplates": "일정 템플릿",
+  "dashboard": "대시보드",
+  "wbs": "일정/WBS",
+  "worklog": "업무일지",
+  "issues": "이슈 관리",
+  "changelogs": "변경이력",
+  "meetings": "회의록",
+  "devinfo": "개발 정보",
+  "map": "프로젝트 맵",
+  "widget": "위젯",
+  "settings": "설정",
+  "searchTitle": "검색 (Ctrl+K)",
+  "sidebarExpand": "사이드바 펼치기",
+  "sidebarCollapse": "사이드바 접기",
+  "widgetToggle": "위젯 토글",
+  "widgetToggleTitle": "위젯 토글 (Ctrl+Alt+W)",
+  "widgetDesktopOnly": "데스크톱 앱에서만 사용할 수 있어요"
+}

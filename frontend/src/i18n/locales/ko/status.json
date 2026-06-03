@@ -1,0 +1,30 @@
+{
+  "project": {
+    "Planned": "대기/보류",
+    "Waiting": "대기/보류",
+    "InProgress": "진행",
+    "Done": "완료",
+    "Maintenance": "하자보수/유지보수"
+  },
+  "wbs": {
+    "Planned": "예정",
+    "InProgress": "진행",
+    "Done": "완료"
+  },
+  "issue": {
+    "Open": "열림",
+    "InProgress": "진행중",
+    "Resolved": "해결됨",
+    "Closed": "닫힘"
+  },
+  "priority": {
+    "High": "높음",
+    "Medium": "중간",
+    "Low": "낮음"
+  },
+  "importance": {
+    "High": "높음",
+    "Medium": "중간",
+    "Low": "낮음"
+  }
+}

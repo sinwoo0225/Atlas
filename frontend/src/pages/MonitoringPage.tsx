@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, RefreshCw, Calendar, NotebookPen, Download, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
@@ -83,6 +84,7 @@ function isoDate(d: Date): string {
 }
 
 export function MonitoringPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: MonitoringTab = isTab(searchParams.get('tab')) ? (searchParams.get('tab') as MonitoringTab) : 'overview';
@@ -339,7 +341,7 @@ export function MonitoringPage() {
                               {it.startDate?.slice(0, 10) ?? '-'} ~ {it.endDate?.slice(0, 10) ?? '-'}
                             </td>
                             <td className="py-2 px-3">
-                              <Badge variant={status.variant} size="sm">{status.label}</Badge>
+                              <Badge variant={status.variant} size="sm">{t(status.labelKey)}</Badge>
                             </td>
                           </tr>
                         );
