@@ -140,6 +140,7 @@ function LabelColumn({
   onItemDoubleClick: (item: WbsItem) => void;
   onItemHover: (id: number | null) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       className="border-r border-default flex-shrink-0"
@@ -167,7 +168,7 @@ function LabelColumn({
               <button
                 onClick={(e) => { e.stopPropagation(); onToggle(row.item.id); }}
                 className="text-muted hover:text-primary transition-colors mr-1 flex-shrink-0"
-                title={row.isCollapsed ? '펼치기' : '접기'}
+                title={row.isCollapsed ? t('wbs:gantt.expand') : t('wbs:gantt.collapse')}
               >
                 {row.isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               </button>
@@ -740,7 +741,7 @@ export function GanttChart({
           silent: true,
           symbol: 'none',
           lineStyle: { color: colors.ganttToday, type: 'dashed', width: 1.5 },
-          label: { color: colors.ganttToday, formatter: '오늘', fontSize: 10, position: 'insideEndTop' },
+          label: { color: colors.ganttToday, formatter: t('wbs:gantt.today'), fontSize: 10, position: 'insideEndTop' },
           data: [{ xAxis: nowMs }],
         },
         markArea: {
@@ -766,21 +767,21 @@ export function GanttChart({
               size="sm"
               onClick={() => setScale(s)}
             >
-              {s === 'day' ? '일' : s === 'week' ? '주' : '월'}
+              {s === 'day' ? t('wbs:gantt.scaleDay') : s === 'week' ? t('wbs:gantt.scaleWeek') : t('wbs:gantt.scaleMonth')}
             </Button>
           ))}
         </div>
         <Button variant="secondary" size="sm" onClick={handleExportPng} leadingIcon={<Download size={14} />}>
-          PNG 저장
+          {t('wbs:gantt.exportPng')}
         </Button>
         <span className="ml-auto text-xs text-muted">
-          막대 호버=핸들 표시 · 가운데=이동 / 좌우 끝=리사이즈 · 더블클릭=날짜 모달
+          {t('wbs:gantt.help')}
         </span>
       </div>
 
       {/* 본문: 좌측 라벨 + 우측 차트. PNG 캡처는 이 wrapper 통째. */}
       {rows.length === 0 ? (
-        <p className="text-muted text-sm py-4">간트 차트 표시 가능한 작업이 없습니다.</p>
+        <p className="text-muted text-sm py-4">{t('wbs:gantt.empty')}</p>
       ) : (
         <div
           ref={wrapperRef}

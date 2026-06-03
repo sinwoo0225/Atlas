@@ -99,8 +99,8 @@ export function SortableWbsRow({
                   ? 'opacity-30 cursor-not-allowed'
                   : 'hover:text-primary cursor-grab active:cursor-grabbing'
               }`}
-              aria-label={`${item.name} 행 이동 (Space 로 잡고 화살표로 이동)`}
-              title={reorderDisabled ? '필터를 해제하면 순서를 변경할 수 있습니다.' : '드래그하여 순서 변경'}
+              aria-label={t('wbs:row.moveAria', { name: item.name })}
+              title={reorderDisabled ? t('wbs:row.reorderDisabledTitle') : t('wbs:row.reorderTitle')}
               onClick={(e) => e.stopPropagation()}
             >
               <GripVertical size={14} />
@@ -109,7 +109,7 @@ export function SortableWbsRow({
               <button
                 onClick={() => setExpanded(!expanded)}
                 className="text-muted hover:text-primary transition-colors"
-                aria-label={expanded ? `${item.name} 접기` : `${item.name} 펼치기`}
+                aria-label={expanded ? t('wbs:row.collapseAria', { name: item.name }) : t('wbs:row.expandAria', { name: item.name })}
                 aria-expanded={expanded}
               >
                 {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -129,8 +129,8 @@ export function SortableWbsRow({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onEdit(item); }}
                 className="ml-1 shrink-0"
-                title="관련 Issue 보기"
-                aria-label={`관련 Issue ${linkCount}건 보기`}
+                title={t('wbs:row.relatedIssuesTitle')}
+                aria-label={t('wbs:row.relatedIssuesAria', { count: linkCount })}
               >
                 <Badge variant="neutral" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
                   <LinkIcon size={10} className="mr-0.5" /> {linkCount}
@@ -142,8 +142,8 @@ export function SortableWbsRow({
                 type="button"
                 onClick={(e) => { e.stopPropagation(); navigate(`/projects/${projectId}/changelogs?sourceWbs=${item.id}`); }}
                 className="ml-1 shrink-0"
-                title="이 작업이 출처인 변경이력 보기"
-                aria-label={`출처 변경이력 ${sourceCount}건 보기`}
+                title={t('wbs:row.sourceChangelogTitle')}
+                aria-label={t('wbs:row.sourceChangelogAria', { count: sourceCount })}
               >
                 <Badge variant="info" size="sm" className="cursor-pointer hover:bg-accent-soft hover:text-accent transition-colors">
                   <FileText size={10} className="mr-0.5" /> {sourceCount}
@@ -155,13 +155,13 @@ export function SortableWbsRow({
         <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={hasChildren ? undefined : (item.assignee || undefined)}>{hasChildren ? '' : item.assignee}</td>
         <td
           className={`py-2 px-3 text-xs whitespace-nowrap ${startIsComputed ? 'text-muted opacity-60 italic' : 'text-muted'}`}
-          title={startIsComputed ? '자식 작업에서 계산된 시작일' : undefined}
+          title={startIsComputed ? t('wbs:row.computedStartTitle') : undefined}
         >
           {showStart?.slice(0, 10)}
         </td>
         <td
           className={`py-2 px-3 text-xs whitespace-nowrap ${endIsComputed ? 'text-muted opacity-60 italic' : 'text-muted'}`}
-          title={endIsComputed ? '자식 작업에서 계산된 종료일' : undefined}
+          title={endIsComputed ? t('wbs:row.computedEndTitle') : undefined}
         >
           {showEnd?.slice(0, 10)}
         </td>
@@ -174,12 +174,12 @@ export function SortableWbsRow({
             <BadgeMenu<WbsStatus>
               value={item.status}
               options={[
-                { value: 'Planned',    label: '예정', variant: 'neutral' },
-                { value: 'InProgress', label: '진행', variant: 'warning' },
-                { value: 'Done',       label: '완료', variant: 'success' },
+                { value: 'Planned',    label: t('status:wbs.Planned'),    variant: 'neutral' },
+                { value: 'InProgress', label: t('status:wbs.InProgress'), variant: 'warning' },
+                { value: 'Done',       label: t('status:wbs.Done'),       variant: 'success' },
               ]}
               onChange={(next) => onStatusChange(item, next)}
-              title="상태 변경"
+              title={t('wbs:row.statusChange')}
             />
           )}
         </td>
@@ -187,24 +187,24 @@ export function SortableWbsRow({
           <div className="flex items-center gap-1">
             <button
               onClick={() => onAddChild(item.id)}
-              title="하위 작업 추가"
-              aria-label={`${item.name} 의 하위 작업 추가`}
+              title={t('wbs:row.addChildTitle')}
+              aria-label={t('wbs:row.addChildAria', { name: item.name })}
               className="p-1 text-muted hover:text-primary transition-colors"
             >
               <Plus size={14} />
             </button>
             <button
               onClick={() => onEdit(item)}
-              title="수정"
-              aria-label={`${item.name} 수정`}
+              title={t('common:edit')}
+              aria-label={t('wbs:row.editAria', { name: item.name })}
               className="p-1 text-muted hover:text-primary transition-colors"
             >
               <Pencil size={14} />
             </button>
             <button
               onClick={() => onDelete(item.id)}
-              title="삭제"
-              aria-label={`${item.name} 삭제`}
+              title={t('common:delete')}
+              aria-label={t('wbs:row.deleteAria', { name: item.name })}
               className="p-1 text-on-danger hover:opacity-80 transition-opacity"
             >
               <X size={14} />

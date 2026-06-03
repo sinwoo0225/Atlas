@@ -63,6 +63,7 @@ function WbsItemForm({
   onLinksChanged: () => void;
   onSave: () => void; onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const initialForm: WbsFormData = {
     name: initial?.name ?? '',
     assignee: initial?.assignee ?? '',
@@ -110,11 +111,11 @@ function WbsItemForm({
       } catch (err) {
         if (err instanceof Error && err.message.startsWith('API error 409')) {
           toast.warning(
-            '다른 곳에서 먼저 저장됐어요. [서버 값 보기] 로 최신 값을 확인하세요.',
+            t('wbs:form.conflict'),
             {
               duration: 8000,
               action: {
-                label: '서버 값 보기',
+                label: t('wbs:form.viewServer'),
                 onClick: async () => {
                   const fresh = await wbsApi.get(projectId, initial.id);
                   setSnapshotUpdatedAt(fresh.updatedAt);
@@ -131,28 +132,28 @@ function WbsItemForm({
                   };
                   setForm(freshForm);
                   setInitialSnapshot(JSON.stringify(freshForm));
-                  toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
+                  toast.info(t('wbs:form.fetchedServer'));
                 },
               },
             },
           );
           return;
         }
-        toast.error('저장 실패');
+        toast.error(t('common:saveFailed'));
         return;
       }
       if (parentChanged) {
         const target = findItemName(form.parentId, allItems);
         toast.success(
           descendantCount > 0
-            ? `'${initial.name}' 을(를) '${target}' 아래로 이동 (하위 ${descendantCount}건 포함)`
-            : `'${initial.name}' 을(를) '${target}' 아래로 이동`,
+            ? t('wbs:form.movedWithChildren', { name: initial.name, target, count: descendantCount })
+            : t('wbs:form.moved', { name: initial.name, target }),
         );
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 객체 리터럴↔CreateWbsItemDto 구조 일치, 캐스트만 필요
       await wbsApi.create(payload as any);
-      toast.success(`새 작업 '${form.name}' 이(가) 추가됐어요`);
+      toast.success(t('wbs:form.created', { name: form.name }));
     }
     onSave();
   };
@@ -161,59 +162,59 @@ function WbsItemForm({
     <Modal
       open
       onClose={onCancel}
-      title={initial ? '작업 수정' : '작업 추가'}
+      title={initial ? t('wbs:form.editTitle') : t('wbs:form.addTitle')}
       size="xl"
       fixedHeight
       dirty={dirty}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>{t('common:cancel')}</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>{t('common:save')}</Button>
         </>
       }
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
           {/* 좌측 - 기본 필드. picker 펼침 시 picker 영역이 남은 공간 다 차지 (flex-1). */}
           <div className="flex flex-col gap-3 min-h-0">
-            <FormField label="작업명" required>
+            <FormField label={t('wbs:form.name')} required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label="담당자 (여러 명: Enter / 콤마로 구분)">
+            <FormField label={t('wbs:form.assignee')}>
               <AssigneeTagInput
                 value={form.assignee}
                 onChange={(v) => set('assignee', v)}
                 resources={resources}
-                placeholder="이름 입력 후 Enter / 콤마, 또는 목록에서 선택"
+                placeholder={t('wbs:form.assigneePlaceholder')}
               />
             </FormField>
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="시작일">
+              <FormField label={t('wbs:form.startDate')}>
                 <input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="종료일">
+              <FormField label={t('wbs:form.endDate')}>
                 <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
               </FormField>
             </div>
-            <FormField label="중요도">
+            <FormField label={t('wbs:form.importance')}>
               <select value={form.importance} onChange={(e) => set('importance', e.target.value)} className={inputClass}>
-                <option value="3">높음</option>
-                <option value="2">중간</option>
-                <option value="1">낮음</option>
+                <option value="3">{t('status:importance.High')}</option>
+                <option value="2">{t('status:importance.Medium')}</option>
+                <option value="1">{t('status:importance.Low')}</option>
               </select>
             </FormField>
-            <FormField label="상태">
+            <FormField label={t('wbs:form.status')}>
               <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
-                <option value="Planned">예정</option>
-                <option value="InProgress">진행</option>
-                <option value="Done">완료</option>
+                <option value="Planned">{t('status:wbs.Planned')}</option>
+                <option value="InProgress">{t('status:wbs.InProgress')}</option>
+                <option value="Done">{t('status:wbs.Done')}</option>
               </select>
             </FormField>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.isMilestone} onChange={(e) => set('isMilestone', e.target.checked)} className="rounded" />
-              <span className="text-sm text-secondary">마일스톤</span>
+              <span className="text-sm text-secondary">{t('wbs:form.milestone')}</span>
             </label>
             {initial && (
-              <FormField label="부모 작업" className={pickerOpen ? 'flex-1 min-h-0' : 'shrink-0'}>
+              <FormField label={t('wbs:form.parent')} className={pickerOpen ? 'flex-1 min-h-0' : 'shrink-0'}>
                 <button
                   type="button"
                   onClick={() => setPickerOpen((v) => !v)}
@@ -236,7 +237,7 @@ function WbsItemForm({
                     </div>
                     {descendantCount > 0 && (
                       <p className="text-xs text-muted shrink-0">
-                        이 항목에는 하위 작업 {descendantCount}건이 있습니다. 부모를 변경하면 함께 이동됩니다.
+                        {t('wbs:form.descendantHint', { count: descendantCount })}
                       </p>
                     )}
                   </div>
@@ -256,7 +257,7 @@ function WbsItemForm({
                 onLinksChanged={onLinksChanged}
               />
             )}
-            <FormField label="상세 정보 (마크다운, 포커스 아웃 시 렌더링)" className="min-h-0 flex-1">
+            <FormField label={t('wbs:form.notes')} className="min-h-0 flex-1">
               {notesEditing || !form.notes ? (
                 <div className="relative flex-1 min-h-0 flex flex-col">
                   <DirtyDot
@@ -270,7 +271,7 @@ function WbsItemForm({
                     onFocus={() => setNotesEditing(true)}
                     onBlur={() => setNotesEditing(false)}
                     className={`${inputClass} resize-none font-mono flex-1 min-h-0`}
-                    placeholder="작업에 대한 상세 정보 (마크다운 지원)"
+                    placeholder={t('wbs:form.notesPlaceholder')}
                     autoFocus={notesEditing}
                   />
                 </div>
@@ -297,6 +298,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
   onRefreshIssues: () => void;
   onLinksChanged: () => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [links, setLinks] = useState<IssueWbsLink[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -334,9 +336,9 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
 
   const handleRemove = async (issueId: number, title: string) => {
     if (!await confirmDialog({
-      title: '연결 해제',
-      message: `'${title}' 과(와) 의 연결을 해제하시겠습니까?`,
-      confirmLabel: '해제',
+      title: t('wbs:related.unlinkTitle'),
+      message: t('wbs:related.unlinkMessage', { title }),
+      confirmLabel: t('wbs:related.unlink'),
     })) return;
     await issueWbsLinksApi.delete(issueId, wbsItemId);
     load();
@@ -347,14 +349,14 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
     <div className={pickerOpen ? 'flex flex-col min-h-0 gap-1 flex-1' : 'shrink-0 flex flex-col gap-1'}>
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted font-medium flex items-center gap-1">
-          <ListChecks size={12} /> 관련 Issue ({links.length})
+          <ListChecks size={12} /> {t('wbs:related.title', { count: links.length })}
         </p>
         <Button variant="ghost" size="sm" onClick={togglePicker} leadingIcon={<Plus size={12} />}>
-          {pickerOpen ? '닫기' : '연결 추가'}
+          {pickerOpen ? t('common:close') : t('wbs:related.addLink')}
         </Button>
       </div>
       {links.length === 0 && !pickerOpen ? (
-        <p className="text-xs text-muted italic">연결된 Issue 없음</p>
+        <p className="text-xs text-muted italic">{t('wbs:related.noLinks')}</p>
       ) : (
         <ul className="space-y-1">
           {links.map((l) => (
@@ -363,7 +365,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
                 value={l.type}
                 options={LINK_TYPE_OPTIONS}
                 onChange={(next) => handleChangeType(l, next)}
-                title="관계 타입 변경"
+                title={t('wbs:related.changeType')}
               />
               <button
                 type="button"
@@ -377,8 +379,8 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
                 type="button"
                 onClick={() => handleRemove(l.issueId, l.issueTitle ?? `#${l.issueId}`)}
                 className="p-0.5 text-on-danger hover:opacity-80 transition-opacity"
-                title="해제"
-                aria-label={`이슈 연결 해제 — ${l.issueTitle ?? `#${l.issueId}`}`}
+                title={t('wbs:related.unlink')}
+                aria-label={t('wbs:related.unlinkAria', { title: l.issueTitle ?? `#${l.issueId}` })}
               >
                 <X size={12} />
               </button>
@@ -389,7 +391,7 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
       {pickerOpen && (
         <>
           <div className="flex items-center gap-2 mt-1 text-xs text-muted">
-            <span>관계 타입</span>
+            <span>{t('wbs:related.relationType')}</span>
             <select
               value={pickerType}
               onChange={(e) => setPickerType(e.target.value as IssueWbsLinkType)}
@@ -424,6 +426,7 @@ function DateEditModal({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [start, setStart] = useState(item.startDate?.slice(0, 10) ?? '');
   const [end, setEnd] = useState(item.endDate?.slice(0, 10) ?? '');
 
@@ -440,20 +443,20 @@ function DateEditModal({
     <Modal
       open
       onClose={onCancel}
-      title={`날짜 수정 — ${item.name}`}
+      title={t('wbs:dateEdit.title', { name: item.name })}
       size="sm"
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>저장</Button>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>{t('common:cancel')}</Button>
+          <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />}>{t('common:save')}</Button>
         </>
       }
     >
       <div className="space-y-3">
-        <FormField label="시작일">
+        <FormField label={t('wbs:form.startDate')}>
           <input type="date" value={start} onChange={(e) => setStart(e.target.value)} className={inputClass} />
         </FormField>
-        <FormField label="종료일">
+        <FormField label={t('wbs:form.endDate')}>
           <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className={inputClass} />
         </FormField>
       </div>
@@ -613,9 +616,9 @@ export function WbsPage() {
 
   const handleDelete = async (id: number) => {
     if (!await confirmDialog({
-      title: 'WBS 항목 삭제',
-      message: '이 WBS 항목을 삭제하시겠습니까? 하위 항목도 함께 삭제되며 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('wbs:page.deleteTitle'),
+      message: t('wbs:page.deleteMessage'),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     await wbsApi.delete(pid, id);
@@ -640,7 +643,7 @@ export function WbsPage() {
     const overData = over.data.current as { parentId: number | null } | undefined;
     if (!activeData || !overData) return;
     if (activeData.parentId !== overData.parentId) {
-      toast.info('드래그로 부모 변경은 지원하지 않습니다. 행을 열어 부모 picker 를 사용하세요.');
+      toast.info(t('wbs:page.dragParentUnsupported'));
       return;
     }
 
@@ -667,12 +670,12 @@ export function WbsPage() {
     );
     const failed = results.filter((r) => r.status === 'rejected');
     if (failed.length === 0) {
-      toast.success(`순서 변경 (${patches.length}건)`);
+      toast.success(t('wbs:page.reordered', { count: patches.length }));
     } else if (failed.length === patches.length) {
-      toast.error('순서 변경 실패 — 다른 곳에서 동시 편집한 듯합니다. 최신 상태로 갱신합니다.', { duration: 6000 });
+      toast.error(t('wbs:page.reorderFailed'), { duration: 6000 });
       refresh();
     } else {
-      toast.error(`순서 변경 중 ${failed.length}건 실패. 최신 상태로 갱신합니다.`, { duration: 6000 });
+      toast.error(t('wbs:page.reorderPartialFailed', { count: failed.length }), { duration: 6000 });
       refresh();
     }
   };
@@ -689,7 +692,7 @@ export function WbsPage() {
     setApplyingTemplate(true);
     try {
       const r = await wbsTemplatesApi.apply(pid, { ...sel, versionId: currentVersion ?? null });
-      toast.success(`작업 ${r.createdCount}개를 추가했어요.`);
+      toast.success(t('wbs:page.templateApplied', { count: r.createdCount }));
       setShowTemplatePicker(false);
       refresh();
     } catch { /* client.ts 토스트 처리 */ }
@@ -698,7 +701,7 @@ export function WbsPage() {
 
   const handleSaveTemplate = async () => {
     if (!saveTemplateForm) return;
-    if (!saveTemplateForm.name.trim()) { toast.error('템플릿 이름을 입력하세요.'); return; }
+    if (!saveTemplateForm.name.trim()) { toast.error(t('wbs:page.templateNameRequired')); return; }
     setSavingTemplate(true);
     try {
       await wbsTemplatesApi.fromProject({
@@ -708,7 +711,7 @@ export function WbsPage() {
         category: saveTemplateForm.category,
         versionId: currentVersion ?? null,
       });
-      toast.success('현재 WBS를 템플릿으로 저장했어요.');
+      toast.success(t('wbs:page.templateSaved'));
       setSaveTemplateForm(null);
     } catch { /* client.ts 토스트 처리 */ }
     finally { setSavingTemplate(false); }
@@ -725,7 +728,7 @@ export function WbsPage() {
               <ChevronRight size={14} className="text-muted shrink-0" />
             </>
           )}
-          <span className="shrink-0">일정 / WBS</span>
+          <span className="shrink-0">{t('wbs:page.title')}</span>
         </h1>
         <div className="flex gap-2">
           <div className="flex bg-surface border border-default rounded-md p-1 gap-1">
@@ -734,14 +737,14 @@ export function WbsPage() {
               size="sm"
               onClick={() => setView('table')}
             >
-              표
+              {t('wbs:page.viewTable')}
             </Button>
             <Button
               variant={view === 'gantt' ? 'primary' : 'ghost'}
               size="sm"
               onClick={() => setView('gantt')}
             >
-              간트
+              {t('wbs:page.viewGantt')}
             </Button>
           </div>
           {items.length > 0 && (
@@ -751,35 +754,35 @@ export function WbsPage() {
                 onClick={() => setShowTemplatePicker(true)}
                 leadingIcon={<LayoutTemplate size={16} />}
               >
-                템플릿 적용
+                {t('wbs:page.applyTemplate')}
               </Button>
               <Button
                 variant="secondary"
                 onClick={() => setSaveTemplateForm({ name: '', description: '', category: '' })}
                 leadingIcon={<Save size={16} />}
               >
-                템플릿으로 저장
+                {t('wbs:page.saveTemplate')}
               </Button>
             </>
           )}
           <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-            작업 추가
+            {t('wbs:page.addTask')}
           </Button>
         </div>
       </div>
 
       <Card padding="tight" className="flex items-center gap-3 flex-wrap">
-        <span className="text-sm text-muted">버전:</span>
+        <span className="text-sm text-muted">{t('wbs:page.version')}</span>
         <select
           value={currentVersion ?? ''}
           onChange={(e) => setCurrentVersion(e.target.value ? parseInt(e.target.value) : undefined)}
           className="px-3 py-1.5 text-sm rounded-md"
         >
-          <option value="">전체</option>
-          {versions.map((v) => <option key={v.id} value={v.id}>{v.versionName}{v.isCurrent ? ' (현재)' : ''}</option>)}
+          <option value="">{t('wbs:page.allVersions')}</option>
+          {versions.map((v) => <option key={v.id} value={v.id}>{v.versionName}{v.isCurrent ? t('wbs:page.currentSuffix') : ''}</option>)}
         </select>
         <Button variant="ghost" size="sm" onClick={() => setShowVersionForm(!showVersionForm)}>
-          + 버전
+          {t('wbs:page.addVersion')}
         </Button>
         {showVersionForm && (
           <div className="flex gap-2 items-center">
@@ -789,7 +792,7 @@ export function WbsPage() {
               placeholder="v1.0"
               className="px-2 py-1 text-sm rounded-md w-24"
             />
-            <Button variant="primary" size="sm" onClick={handleCreateVersion}>확인</Button>
+            <Button variant="primary" size="sm" onClick={handleCreateVersion}>{t('common:confirm')}</Button>
           </div>
         )}
 
@@ -802,7 +805,7 @@ export function WbsPage() {
                 type="search"
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="작업명·담당자·노트…"
+                placeholder={t('wbs:page.searchPlaceholder')}
                 className={`${inputClass} pl-7 py-1.5 text-sm w-48`}
               />
             </div>
@@ -813,19 +816,19 @@ export function WbsPage() {
             onClick={() => setShowFilters((v) => !v)}
             leadingIcon={<Filter size={14} />}
           >
-            필터
+            {t('wbs:page.filter')}
             {chipFilterCount > 0 && ` (${chipFilterCount})`}
           </Button>
           {/* 패널이 닫혀 있을 때만 바에 노출 — 열려 있으면 칩 옆(패널)에서 토글. */}
           {view === 'table' && hasAnyFilter(filterOpts) && !showFilters && (
             <label className="text-xs text-muted flex items-center gap-1 cursor-pointer">
               <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
-              매칭만 보기
+              {t('wbs:page.matchOnly')}
             </label>
           )}
           {hasAnyFilter(filterOpts) && (
             <Button variant="ghost" size="sm" onClick={resetFilters}>
-              초기화
+              {t('common:reset')}
             </Button>
           )}
         </div>
@@ -834,7 +837,7 @@ export function WbsPage() {
       {showFilters && (
         <Card padding="tight" className="space-y-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-muted w-12 shrink-0">상태</span>
+            <span className="text-muted w-12 shrink-0">{t('wbs:page.filterStatus')}</span>
             {(['Planned', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
               const active = filterStatuses.has(s);
               return (
@@ -854,20 +857,20 @@ export function WbsPage() {
               className={`px-2 py-0.5 rounded border transition-colors ${
                 lateOnly ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
               }`}
-              title="마감 지난 미완료"
+              title={t('wbs:page.lateTitle')}
             >
-              지연
+              {t('wbs:page.late')}
             </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-muted w-12 shrink-0">담당자</span>
+            <span className="text-muted w-12 shrink-0">{t('wbs:page.filterAssignee')}</span>
             <button
               onClick={() => setUnassignedOnly((v) => !v)}
               className={`px-2 py-0.5 rounded border transition-colors ${
                 unassignedOnly ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
               }`}
             >
-              미할당
+              {t('wbs:page.unassigned')}
             </button>
             {assigneeOptions.map((a) => {
                 const active = filterAssignees.has(a);
@@ -886,10 +889,10 @@ export function WbsPage() {
           </div>
           {view === 'table' && hasAnyFilter(filterOpts) && (
             <div className="flex items-center gap-2 pt-1 border-t border-default">
-              <span className="text-muted w-12 shrink-0">보기</span>
+              <span className="text-muted w-12 shrink-0">{t('wbs:page.filterView')}</span>
               <label className="flex items-center gap-1 cursor-pointer">
                 <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
-                매칭만 보기 (비매칭 행 숨김)
+                {t('wbs:page.matchOnlyFull')}
               </label>
             </div>
           )}
@@ -928,11 +931,11 @@ export function WbsPage() {
         <Card padding="none">
           <EmptyState
             icon={<CalendarDays size={40} />}
-            title="작업이 없습니다."
-            description="'작업 추가' 버튼으로 첫 작업을 만들거나, 일정 템플릿으로 빠르게 시작하세요."
+            title={t('wbs:page.empty')}
+            description={t('wbs:page.emptyDesc')}
             action={
               <Button variant="primary" size="sm" onClick={() => setShowTemplatePicker(true)} leadingIcon={<LayoutTemplate size={14} />}>
-                템플릿에서 시작
+                {t('wbs:page.startFromTemplate')}
               </Button>
             }
           />
@@ -949,13 +952,13 @@ export function WbsPage() {
             <table className="w-full min-w-[960px]">
               <thead>
                 <tr className="border-b border-default text-xs text-muted">
-                  <th className="text-left py-3 px-4 font-medium">작업명</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-28">담당자</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">시작일</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">종료일</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-20">중요도</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-20">상태</th>
-                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">작업</th>
+                  <th className="text-left py-3 px-4 font-medium">{t('wbs:page.colName')}</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-28">{t('wbs:page.colAssignee')}</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">{t('wbs:page.colStart')}</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">{t('wbs:page.colEnd')}</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-20">{t('wbs:page.colImportance')}</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-20">{t('wbs:page.colStatus')}</th>
+                  <th className="text-left py-3 px-3 font-medium whitespace-nowrap w-24">{t('wbs:page.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -964,8 +967,8 @@ export function WbsPage() {
                     <td colSpan={7}>
                       <EmptyState
                         icon={<Search size={32} />}
-                        title="조건에 맞는 작업이 없습니다."
-                        description="필터를 초기화해 보세요."
+                        title={t('wbs:page.noMatch')}
+                        description={t('wbs:page.noMatchDesc')}
                       />
                     </td>
                   </tr>
@@ -1046,25 +1049,25 @@ export function WbsPage() {
         <Modal
           open
           onClose={() => setSaveTemplateForm(null)}
-          title="현재 WBS를 템플릿으로 저장"
+          title={t('wbs:saveTemplateModal.title')}
           size="md"
           showCloseButton
           footer={
             <>
               <Button variant="secondary" onClick={() => setSaveTemplateForm(null)} leadingIcon={<X size={16} />}>
-                취소
+                {t('common:cancel')}
               </Button>
               <Button variant="primary" onClick={handleSaveTemplate} leadingIcon={<Save size={16} />} disabled={savingTemplate}>
-                {savingTemplate ? '저장 중...' : '저장'}
+                {savingTemplate ? t('wbs:saveTemplateModal.saving') : t('common:save')}
               </Button>
             </>
           }
         >
           <div className="space-y-3">
             <p className="text-xs text-muted">
-              현재 작업 트리를 템플릿으로 저장합니다. 날짜는 가장 이른 시작일을 기준으로 한 상대 일정으로 변환돼요.
+              {t('wbs:saveTemplateModal.desc')}
             </p>
-            <FormField label="템플릿 이름" required>
+            <FormField label={t('wbs:saveTemplateModal.name')} required>
               <input
                 value={saveTemplateForm.name}
                 onChange={(e) => setSaveTemplateForm((f) => f && { ...f, name: e.target.value })}
@@ -1072,15 +1075,15 @@ export function WbsPage() {
                 autoFocus
               />
             </FormField>
-            <FormField label="분류">
+            <FormField label={t('wbs:saveTemplateModal.category')}>
               <input
                 value={saveTemplateForm.category}
                 onChange={(e) => setSaveTemplateForm((f) => f && { ...f, category: e.target.value })}
                 className={inputClass}
-                placeholder="예: 개발, 운영"
+                placeholder={t('wbs:saveTemplateModal.categoryPlaceholder')}
               />
             </FormField>
-            <FormField label="설명">
+            <FormField label={t('wbs:saveTemplateModal.description')}>
               <input
                 value={saveTemplateForm.description}
                 onChange={(e) => setSaveTemplateForm((f) => f && { ...f, description: e.target.value })}
