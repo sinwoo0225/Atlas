@@ -923,6 +923,17 @@ function UpdateSection() {
 
   if (!cfg) return null;
 
+  // Microsoft Store(MSIX) 빌드 — 스토어가 업데이트를 자동 관리하므로 인앱 업데이트 컨트롤을 숨긴다.
+  if (cfg.managedExternally) {
+    return (
+      <Section title="업데이트">
+        <p className="text-sm text-secondary">
+          Microsoft Store 버전은 새 버전을 자동으로 받아 설치합니다. 수동으로 확인할 필요가 없습니다.
+        </p>
+      </Section>
+    );
+  }
+
   const result = status?.lastResult ?? null;
   const phase = status?.phase ?? 'idle';
   const runningSessions = (status?.runningMcp ?? 0) + (status?.runningCli ?? 0);

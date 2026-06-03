@@ -166,6 +166,13 @@ public class SystemController : ControllerBase
     // ===== 자동 업데이트 =====
     public record SetUpdateConfigRequest(bool Enabled, int IntervalHours);
 
+    // Microsoft Store(MSIX) 빌드는 업데이트를 스토어가 관리 — 인앱 다운로드/설치 엔드포인트를 단락.
+    // config/status 는 무해하므로 열어 두고(config 가 managedExternally 플래그를 실어 프론트가 UI 를 숨김), 행위성 엔드포인트만 막는다.
+    private static IActionResult? StoreManagedGuard()
+        => AppPackaging.IsPackaged
+            ? new BadRequestObjectResult(new { error = "Microsoft Store 버전은 업데이트를 자동으로 관리합니다." })
+            : null;
+
     [HttpGet("update/config")]
     public IActionResult GetUpdateConfig([FromServices] UpdateService updates)
         => Ok(updates.GetConfig());
@@ -179,7 +186,7 @@ public class SystemController : ControllerBase
 
     [HttpPost("update/check")]
     public async Task<IActionResult> CheckUpdate([FromServices] UpdateService updates)
-        => Ok(await updates.CheckAsync(HttpContext.RequestAborted));
+        => StoreManagedGuard() ?? Ok(await updates.CheckAsync(HttpContext.RequestAborted));
 
     [HttpGet("update/status")]
     public IActionResult UpdateStatus([FromServices] UpdateService updates)
@@ -188,6 +195,7 @@ public class SystemController : ControllerBase
     [HttpPost("update/download")]
     public IActionResult DownloadUpdate([FromServices] UpdateService updates)
     {
+        if (StoreManagedGuard() is { } blocked) return blocked;
         updates.StartDownload();
         return Accepted(updates.GetStatus());
     }
@@ -195,6 +203,8 @@ public class SystemController : ControllerBase
     [HttpPost("update/launch")]
     public IActionResult LaunchUpdate([FromServices] UpdateService updates)
     {
+        if (StoreManagedGuard() is { } blocked) return blocked;
+
         // 설치 파일 실행은 데스크톱 세션이 있는 Local 모드에서만. Client 모드는 원격 서버라 무의미.
         if (!string.Equals(BootstrapConfig.Load().Mode, "Local", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { error = "설치 실행은 Local 모드에서만 가능합니다." });
@@ -207,6 +217,8 @@ public class SystemController : ControllerBase
     [HttpPost("update/reveal")]
     public IActionResult RevealUpdate([FromServices] UpdateService updates)
     {
+        if (StoreManagedGuard() is { } blocked) return blocked;
+
         if (!string.Equals(BootstrapConfig.Load().Mode, "Local", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { error = "Local 모드에서만 가능합니다." });
         return updates.RevealDownloaded() ? Ok(new { revealed = true }) : BadRequest(new { error = "파일을 찾을 수 없습니다." });

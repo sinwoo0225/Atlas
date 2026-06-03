@@ -23,6 +23,9 @@ public class UpdateCheckService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Microsoft Store(MSIX) 빌드는 업데이트를 스토어가 관리 — 백그라운드 체크 자체를 돌리지 않는다.
+        if (AppPackaging.IsPackaged) return;
+
         // 시작 직후 폭주 방지 — 앱 부팅 직후 잠깐 지연.
         try { await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken); }
         catch (OperationCanceledException) { return; }

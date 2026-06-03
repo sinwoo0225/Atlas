@@ -7,18 +7,30 @@
       (Client 모드 클라이언트들이 붙는 원격 서버. wwwroot 는 클라가 자체 보유하므로 서버에는 미포함.)
     - -Version <ver>: zip 이름의 stamp 대신 명시한 버전을 사용. 릴리즈 자산용.
     - -Installer: Inno Setup(ISCC) 으로 per-user 설치형 Atlas-Setup-<버전>.exe 도 생성 (DesktopApp 모드).
+    - -Msix: Microsoft Store 용 MSIX 패키지(Atlas-<버전>.msix) 생성. Atlas.exe + wwwroot 만 담는다 (CLI/MCP 제외).
+      매니페스트는 installer/msix/AppxManifest.xml 템플릿을 치환. 제출 전 -Publisher/-IdentityName 을 Partner Center 값으로 지정.
+      -SelfSign 은 로컬 사이드로드 테스트용 자체서명(스토어 업로드본은 MS 가 서명). makeappx/signtool 은 Windows SDK 필요.
 .EXAMPLE
     .\publish.ps1                          # Atlas-YYYYMMDD_HHMMSS.zip
     .\publish.ps1 -Version 1.4.0           # Atlas-1.4.0.zip
     .\publish.ps1 -Version 1.5.0 -Installer  # Atlas-1.5.0.zip + Atlas-Setup-1.5.0.exe
     .\publish.ps1 -Server -Version 1.4.0   # Atlas-Server-1.4.0.zip
+    .\publish.ps1 -Msix -Version 1.22.0.0 -SelfSign  # Atlas-1.22.0.0.msix (로컬 테스트 서명)
     .\publish.ps1 -SkipZip                 # zip 생략
 #>
 param(
     [switch]$SkipZip,
     [switch]$Server,
     [string]$Version,
-    [switch]$Installer
+    [switch]$Installer,
+    # MSIX (Microsoft Store) 패키지 빌드. Atlas.exe + wwwroot 만 담는다 (CLI/MCP 제외).
+    [switch]$Msix,
+    [switch]$SelfSign,                 # 로컬 사이드로드 테스트용 자체서명 (스토어 업로드본은 MS 가 서명).
+    [string]$Publisher,                # 매니페스트 Identity/Publisher (예: 'CN=ABCD1234-...'). 미지정 시 테스트값.
+    [string]$PublisherDisplay,         # 게시자 표시 이름.
+    [string]$IdentityName,             # Partner Center 발급 Package Name. 미지정 시 테스트값.
+    [string]$DisplayName,              # 스토어/시작 메뉴 표시 이름.
+    [string]$MsixLogoSource            # 타일 로고 소스 PNG. 미지정 시 atlas-v2-monogram.png.
 )
 
 $ErrorActionPreference = 'Stop'
@@ -109,6 +121,133 @@ Atlas-Server.exe
         Write-Host "완료. $zipPath 파일을 서버 운영자에게 전달하세요." -ForegroundColor Green
     } else {
         Write-Host "완료. publish/server/ 폴더 내용을 압축하여 전달하세요." -ForegroundColor Green
+    }
+    return
+}
+
+# -------- MSIX (Microsoft Store) --------
+if ($Msix) {
+    function Find-WindowsSdkTool($exe) {
+        $cmd = Get-Command $exe -ErrorAction SilentlyContinue
+        if ($cmd) { return $cmd.Source }
+        $bases = @(
+            (Join-Path ${env:ProgramFiles(x86)} 'Windows Kits\10\bin'),
+            (Join-Path $env:ProgramFiles 'Windows Kits\10\bin')
+        )
+        foreach ($b in $bases) {
+            if (Test-Path $b) {
+                $found = Get-ChildItem -Path $b -Recurse -Filter $exe -ErrorAction SilentlyContinue |
+                    Where-Object { $_.FullName -match '\\x64\\' } |
+                    Sort-Object FullName -Descending | Select-Object -First 1
+                if ($found) { return $found.FullName }
+            }
+        }
+        return $null
+    }
+
+    Write-Host "==> MSIX 패키지 빌드" -ForegroundColor Cyan
+
+    # 버전: -Version 우선, 없으면 Directory.Build.props 의 <Version>. 4파트로 정규화 (1.22.0 -> 1.22.0.0).
+    $verRaw = if ($Version) { $Version } else {
+        $bp = Join-Path $root 'Directory.Build.props'
+        $m = Select-String -Path $bp -Pattern '<Version>([^<]+)</Version>' | Select-Object -First 1
+        if ($m) { $m.Matches[0].Groups[1].Value.Trim() } else { '0.0.0' }
+    }
+    $parts = @($verRaw.Split('.'))
+    while ($parts.Count -lt 4) { $parts += '0' }
+    $ver4 = ($parts[0..3] -join '.')
+
+    # Partner Center 등록값 (공개 정보 — 커밋 가능). 필요 시 -Publisher/-IdentityName/-DisplayName 로 오버라이드.
+    # DisplayName 은 예약한 표시 이름과 100% 일치해야 스토어 인증을 통과한다.
+    $identityName  = if ($IdentityName)     { $IdentityName }     else { 'SlnU.Atlas-ProjectManager' }
+    $publisher     = if ($Publisher)        { $Publisher }        else { 'CN=1398342C-A2D7-4B4A-BFE2-34D8CCFD7FBA' }
+    $publisherDisp = if ($PublisherDisplay) { $PublisherDisplay } else { 'SlnU' }
+    $displayName   = if ($DisplayName)      { $DisplayName }      else { 'Atlas-Project Manager' }
+    $logoSource    = if ($MsixLogoSource)   { $MsixLogoSource }   else { Join-Path $root 'frontend/public/icons/atlas-v2-monogram.png' }
+
+    $stage = Join-Path $root 'publish/msix-stage'
+    if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+
+    # 1) DesktopApp publish — 단일파일 OFF. 패키지는 폴더 레이아웃이라 Atlas.exe 옆 wwwroot 가 그대로 해석된다.
+    Write-Host "==> DesktopApp publish (non-single-file, self-contained → $stage)" -ForegroundColor Cyan
+    dotnet publish (Join-Path $root 'src/ProjectManager.DesktopApp/ProjectManager.DesktopApp.csproj') `
+        -c Release -r win-x64 --self-contained `
+        -p:PublishSingleFile=false `
+        -p:IncludeNativeLibrariesForSelfExtract=false `
+        -p:EnableCompressionInSingleFile=false `
+        -o $stage
+    if ($LASTEXITCODE -ne 0) { throw "DesktopApp publish 실패" }
+
+    # CLI/MCP 는 스토어 패키지에서 제외 — 스테이징에 복사하지 않는다.
+    $stageExe = Join-Path $stage 'Atlas.exe'
+    $stageWww = Join-Path $stage 'wwwroot/index.html'
+    foreach ($f in @($stageExe, $stageWww)) { if (-not (Test-Path $f)) { throw "필수 파일 누락: $f" } }
+    Write-Host "  - Atlas.exe / wwwroot : OK" -ForegroundColor Green
+
+    # 2) 로고 자산 생성 (256px 소스 → MSIX 필수 PNG 세트). 종횡비 유지, 투명 캔버스 중앙 배치.
+    Write-Host "==> 로고 자산 생성 ($logoSource)" -ForegroundColor Cyan
+    if (-not (Test-Path $logoSource)) { throw "로고 소스를 찾을 수 없습니다: $logoSource" }
+    $assets = Join-Path $stage 'Assets'
+    New-Item -ItemType Directory -Force $assets | Out-Null
+    Add-Type -AssemblyName System.Drawing
+    $srcImg = [System.Drawing.Image]::FromFile($logoSource)
+    try {
+        foreach ($spec in @(@(44,44,'Square44x44Logo.png'), @(150,150,'Square150x150Logo.png'), @(310,150,'Wide310x150Logo.png'), @(50,50,'StoreLogo.png'))) {
+            $w = $spec[0]; $h = $spec[1]; $name = $spec[2]
+            $bmp = New-Object System.Drawing.Bitmap($w, $h)
+            $g = [System.Drawing.Graphics]::FromImage($bmp)
+            $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+            $g.Clear([System.Drawing.Color]::Transparent)
+            $side = [Math]::Min($w, $h)
+            $ratio = [Math]::Min($side / $srcImg.Width, $side / $srcImg.Height)
+            $dw = [int]($srcImg.Width * $ratio); $dh = [int]($srcImg.Height * $ratio)
+            $g.DrawImage($srcImg, [int](($w - $dw) / 2), [int](($h - $dh) / 2), $dw, $dh)
+            $g.Dispose()
+            $bmp.Save((Join-Path $assets $name), [System.Drawing.Imaging.ImageFormat]::Png)
+            $bmp.Dispose()
+        }
+    } finally { $srcImg.Dispose() }
+    Write-Host "  - Assets (4 PNG)      : OK" -ForegroundColor Green
+
+    # 3) 매니페스트 토큰 치환 (.Replace = 양쪽 리터럴, regex/$ 함정 회피).
+    Write-Host "==> AppxManifest 생성 (Identity=$identityName, v$ver4)" -ForegroundColor Cyan
+    $tpl = Get-Content (Join-Path $root 'installer/msix/AppxManifest.xml') -Raw -Encoding UTF8
+    # 메인테이너용 설명 주석은 패키지에 싣지 않는다 (토큰 설명이 치환돼 지저분해지는 것도 방지).
+    $tpl = [System.Text.RegularExpressions.Regex]::Replace($tpl, '<!--.*?-->', '', [System.Text.RegularExpressions.RegexOptions]::Singleline)
+    $manifest = $tpl.Replace('__IDENTITY_NAME__', $identityName).Replace('__PUBLISHER__', $publisher).Replace('__PUBLISHER_DISPLAY__', $publisherDisp).Replace('__DISPLAY_NAME__', $displayName).Replace('__VERSION__', $ver4)
+    $manifest = $manifest.Trim()
+    [System.IO.File]::WriteAllText((Join-Path $stage 'AppxManifest.xml'), $manifest, (New-Object System.Text.UTF8Encoding($false)))
+
+    # 4) makeappx pack.
+    $makeappx = Find-WindowsSdkTool 'makeappx.exe'
+    if (-not $makeappx) {
+        Write-Warning "makeappx.exe(Windows SDK) 를 찾을 수 없습니다. Windows SDK 설치 후 다시 실행하세요. (스테이징은 $stage 에 준비됨)"
+        return
+    }
+    $msixOut = Join-Path $root "Atlas-$ver4.msix"
+    if (Test-Path $msixOut) { Remove-Item $msixOut -Force }
+    & $makeappx pack /d $stage /p $msixOut /o
+    if ($LASTEXITCODE -ne 0) { throw "makeappx pack 실패 (exit $LASTEXITCODE)" }
+    Write-Host "완료. $msixOut 생성됨." -ForegroundColor Green
+
+    # 5) -SelfSign: 로컬 사이드로드 테스트용 자체서명 (스토어 업로드본은 서명 불필요 — MS 가 서명).
+    if ($SelfSign) {
+        $signtool = Find-WindowsSdkTool 'signtool.exe'
+        if (-not $signtool) { Write-Warning "signtool.exe 를 찾을 수 없어 서명을 생략합니다."; return }
+        Write-Host "==> 자체서명 (테스트 전용)" -ForegroundColor Cyan
+        $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $publisher } | Select-Object -First 1
+        if (-not $cert) {
+            $cert = New-SelfSignedCertificate -Type Custom -Subject $publisher `
+                -KeyUsage DigitalSignature -FriendlyName 'Atlas MSIX Test' `
+                -CertStoreLocation 'Cert:\CurrentUser\My' `
+                -TextExtension @('2.5.29.37={text}1.3.6.1.5.5.7.3.3', '2.5.29.19={text}')
+        }
+        & $signtool sign /fd SHA256 /sha1 $cert.Thumbprint $msixOut
+        if ($LASTEXITCODE -ne 0) { throw "signtool 서명 실패 (exit $LASTEXITCODE)" }
+        Write-Host "서명 완료. 로컬 설치 전 인증서를 신뢰 저장소에 추가:" -ForegroundColor Yellow
+        Write-Host "  Export-Certificate -Cert Cert:\CurrentUser\My\$($cert.Thumbprint) -FilePath atlas-test.cer" -ForegroundColor DarkGray
+        Write-Host "  (관리자) Import-Certificate -FilePath atlas-test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople" -ForegroundColor DarkGray
+        Write-Host "  그 후: Add-AppxPackage $msixOut" -ForegroundColor DarkGray
     }
     return
 }

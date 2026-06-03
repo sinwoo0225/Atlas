@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using ProjectManager.AppHost.Services;
 
 namespace ProjectManager.DesktopApp;
 
@@ -22,8 +23,13 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        try { SetCurrentProcessExplicitAppUserModelID(AppUserModelId); }
-        catch { /* 구형 Windows 등에서 실패해도 앱 시작은 막지 않음 */ }
+        // MSIX(스토어) 빌드는 패키지 매니페스트가 AUMID·작업표시줄 정체성을 정한다 —
+        // 명시 호출은 패키지 정체성과 충돌(토스트/작업표시줄 통합 깨짐) 가능하므로 비패키지에서만.
+        if (!AppPackaging.IsPackaged)
+        {
+            try { SetCurrentProcessExplicitAppUserModelID(AppUserModelId); }
+            catch { /* 구형 Windows 등에서 실패해도 앱 시작은 막지 않음 */ }
+        }
 
         _mutex = new Mutex(initiallyOwned: true, MutexName, out bool createdNew);
         if (!createdNew)

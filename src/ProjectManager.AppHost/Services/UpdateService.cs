@@ -59,7 +59,8 @@ public sealed class UpdateService
     {
         var c = BootstrapConfig.Load();
         return new UpdateConfigDto(
-            c.UpdateCheckEnabled, c.UpdateCheckIntervalHours, c.UpdateLastCheckedAt, c.UpdateLatestKnownVersion);
+            c.UpdateCheckEnabled, c.UpdateCheckIntervalHours, c.UpdateLastCheckedAt, c.UpdateLatestKnownVersion,
+            AppPackaging.IsPackaged);
     }
 
     public void SaveConfig(bool enabled, int intervalHours)
@@ -326,4 +327,6 @@ public sealed record UpdateConfigDto(
     bool Enabled,
     int IntervalHours,
     DateTime? LastCheckedAt,
-    string? LatestKnownVersion);
+    string? LatestKnownVersion,
+    // true = Microsoft Store(MSIX) 빌드 — 업데이트는 스토어가 관리하므로 프론트가 인앱 업데이트 UI 를 숨긴다.
+    bool ManagedExternally);

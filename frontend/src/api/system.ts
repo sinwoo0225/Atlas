@@ -55,6 +55,8 @@ export interface UpdateConfig {
   intervalHours: number;
   lastCheckedAt: string | null;
   latestKnownVersion: string | null;
+  // true = Microsoft Store(MSIX) 빌드 — 업데이트는 스토어가 관리하므로 인앱 업데이트 UI 를 숨긴다.
+  managedExternally: boolean;
 }
 
 export interface UpdateCheckResult {

@@ -38,6 +38,9 @@ Thumbs.db
 
 # Release artifacts (publish.ps1 -Installer 가 레포 루트에 생성)
 Atlas-Setup-*.exe
+# MSIX 패키지 (publish.ps1 -Msix) 와 로컬 테스트 자체서명 인증서
+Atlas-*.msix
+*.cer
 
 # Misc
 publish/

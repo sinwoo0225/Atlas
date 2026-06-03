@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Atlas MSIX 패키지 매니페스트 (Microsoft Store 배포용).
+  publish.ps1 -Msix 가 __TOKEN__ 자리를 빌드 시 치환한다:
+    __IDENTITY_NAME__     Partner Center 가 발급한 Package/Identity Name (예: 1234Publisher.Atlas)
+    __PUBLISHER__         Partner Center "패키지 ID"의 Publisher (예: CN=ABCD1234-...). 자체서명 테스트 시엔 인증서 Subject 와 일치해야 함.
+    __PUBLISHER_DISPLAY__ 게시자 표시 이름
+    __DISPLAY_NAME__      스토어/시작 메뉴 표시 이름 ("Atlas" 는 선점 가능성 높음 → 고유 이름 권장)
+    __VERSION__           4파트 버전 (예: 1.22.0.0). 제출마다 증가.
+  full-trust 데스크톱(Win32) 앱: EntryPoint=Windows.FullTrustApplication + rescap:runFullTrust.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap rescap">
+
+  <Identity
+    Name="__IDENTITY_NAME__"
+    Publisher="__PUBLISHER__"
+    Version="__VERSION__"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>__DISPLAY_NAME__</DisplayName>
+    <PublisherDisplayName>__PUBLISHER_DISPLAY__</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <!-- MinVersion = DesktopApp.csproj 의 SupportedOSPlatformVersion(10.0.17763.0). -->
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.22621.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="ko-KR" />
+    <Resource Language="en-US" />
+  </Resources>
+
+  <Applications>
+    <Application Id="Atlas" Executable="Atlas.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="__DISPLAY_NAME__"
+        Description="로컬 우선 프로젝트 관리 앱 — 프로젝트 지도, WBS, 이슈, 회의록을 한 곳에서."
+        BackgroundColor="#15171C"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <!-- full-trust 데스크톱 앱 — 일반 Win32 처럼 파일시스템/레지스트리 접근. (Store 인증 시 정당성 설명 필요) -->
+    <rescap:Capability Name="runFullTrust" />
+  </Capabilities>
+</Package>
