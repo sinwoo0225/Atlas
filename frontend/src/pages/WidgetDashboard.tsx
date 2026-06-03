@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Toaster, toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import {
   GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward,
   AppWindow, Eye, EyeOff, MapPin, Sun, Moon, Cloud, CloudSun, CloudRain, CloudSnow, CloudFog,
@@ -21,7 +22,7 @@ import {
   onActiveWindowsUpdate, setActiveWindowsEnabled, requestActiveWindows, type ActiveWindowItem,
 } from '../utils/hostBridge';
 
-const WD = ['일', '월', '화', '수', '목', '금', '토'];
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
 // 오늘 기준 endDate 까지 남은 일수. 음수면 지났음.
 function daysUntil(dateStr?: string): number | null {
@@ -33,13 +34,13 @@ function daysUntil(dateStr?: string): number | null {
   return Math.round((d.getTime() - today.getTime()) / 86_400_000);
 }
 
-interface Badge { label: string; cls: string; }
-function statusBadge(t: TodayWbs): Badge {
-  const dd = daysUntil(t.endDate);
-  if (t.status === 'Done') return { label: '완료', cls: 'bg-success-soft text-on-success' };
-  if (dd !== null && dd < 0) return { label: '지연', cls: 'bg-danger-soft text-on-danger' };
-  if (t.status === 'InProgress') return { label: '진행', cls: 'bg-info-soft text-on-info' };
-  return { label: '예정', cls: 'bg-neutral-soft text-on-neutral' };
+interface Badge { labelKey: string; cls: string; }
+function statusBadge(tw: TodayWbs): Badge {
+  const dd = daysUntil(tw.endDate);
+  if (tw.status === 'Done') return { labelKey: 'widget:status.done', cls: 'bg-success-soft text-on-success' };
+  if (dd !== null && dd < 0) return { labelKey: 'widget:status.delayed', cls: 'bg-danger-soft text-on-danger' };
+  if (tw.status === 'InProgress') return { labelKey: 'widget:status.inProgress', cls: 'bg-info-soft text-on-info' };
+  return { labelKey: 'widget:status.planned', cls: 'bg-neutral-soft text-on-neutral' };
 }
 
 function Clock() {
@@ -48,6 +49,7 @@ function Clock() {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
+  const { t } = useTranslation();
   const hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
   const ss = String(now.getSeconds()).padStart(2, '0');
   return (
@@ -57,26 +59,27 @@ function Clock() {
         <span className="text-base font-semibold text-muted tabular-nums mb-0.5">{ss}</span>
       </div>
       <div className="mt-1.5 text-xs text-secondary">
-        {now.getFullYear()}. {now.getMonth() + 1}. {now.getDate()} ({WD[now.getDay()]})
+        {now.getFullYear()}. {now.getMonth() + 1}. {now.getDate()} ({t('widget:weekday.' + WEEKDAY_KEYS[now.getDay()])})
       </div>
     </div>
   );
 }
 
 // WMO weather_code → 라벨 + 아이콘.
-function weatherInfo(code: number, isDay: boolean): { label: string; Icon: LucideIcon } {
-  if (code === 0) return { label: '맑음', Icon: isDay ? Sun : Moon };
-  if (code === 1 || code === 2) return { label: '대체로 맑음', Icon: CloudSun };
-  if (code === 3) return { label: '흐림', Icon: Cloud };
-  if (code === 45 || code === 48) return { label: '안개', Icon: CloudFog };
-  if (code >= 51 && code <= 57) return { label: '이슬비', Icon: CloudDrizzle };
-  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return { label: '비', Icon: CloudRain };
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return { label: '눈', Icon: CloudSnow };
-  if (code >= 95) return { label: '뇌우', Icon: CloudLightning };
-  return { label: '흐림', Icon: Cloud };
+function weatherInfo(code: number, isDay: boolean): { labelKey: string; Icon: LucideIcon } {
+  if (code === 0) return { labelKey: 'widget:weather.clear', Icon: isDay ? Sun : Moon };
+  if (code === 1 || code === 2) return { labelKey: 'widget:weather.mostlyClear', Icon: CloudSun };
+  if (code === 3) return { labelKey: 'widget:weather.cloudy', Icon: Cloud };
+  if (code === 45 || code === 48) return { labelKey: 'widget:weather.fog', Icon: CloudFog };
+  if (code >= 51 && code <= 57) return { labelKey: 'widget:weather.drizzle', Icon: CloudDrizzle };
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return { labelKey: 'widget:weather.rain', Icon: CloudRain };
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return { labelKey: 'widget:weather.snow', Icon: CloudSnow };
+  if (code >= 95) return { labelKey: 'widget:weather.thunder', Icon: CloudLightning };
+  return { labelKey: 'widget:weather.cloudy', Icon: Cloud };
 }
 
 function Weather() {
+  const { t } = useTranslation();
   const s0 = loadSettings();
   const [loc, setLoc] = useState<{ lat: number | null; lon: number | null; label: string }>({
     lat: s0.widgetWeatherLat, lon: s0.widgetWeatherLon, label: s0.widgetWeatherLabel,
@@ -116,12 +119,12 @@ function Weather() {
           <input
             autoFocus value={q} onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') search(); }}
-            placeholder="도시 검색"
+            placeholder={t('widget:citySearch')}
             className="flex-1 min-w-0 text-[12px] px-2 py-1 rounded-md bg-surface-2 text-primary border border-default outline-none"
           />
-          <button onClick={() => setEditing(false)} className="text-muted hover:text-secondary px-1" title="취소"><X size={14} /></button>
+          <button onClick={() => setEditing(false)} className="text-muted hover:text-secondary px-1" title={t('common:cancel')}><X size={14} /></button>
         </div>
-        {searching && <div className="text-[10px] text-muted mt-1">검색 중…</div>}
+        {searching && <div className="text-[10px] text-muted mt-1">{t('widget:searching')}</div>}
         <div className="mt-1 max-h-28 overflow-y-auto">
           {results.map((g, i) => (
             <button key={`${g.lat}-${i}`} onClick={() => pick(g)}
@@ -138,14 +141,14 @@ function Weather() {
     return (
       <button onClick={() => setEditing(true)}
         className="ml-auto self-start text-[11px] text-muted hover:text-secondary flex items-center gap-1">
-        <MapPin size={12} /> 날씨 설정
+        <MapPin size={12} /> {t('widget:weatherSetup')}
       </button>
     );
   }
 
   const info = data ? weatherInfo(data.code, data.isDay) : null;
   return (
-    <button onClick={() => setEditing(true)} className="ml-auto text-right shrink-0 flex flex-col items-end" title="위치 변경">
+    <button onClick={() => setEditing(true)} className="ml-auto text-right shrink-0 flex flex-col items-end" title={t('widget:changeLocation')}>
       {data && info ? (
         <>
           <div className="flex items-center gap-1.5">
@@ -153,16 +156,17 @@ function Weather() {
             <span className="text-2xl font-bold text-primary leading-none">{Math.round(data.tempC)}°</span>
           </div>
           <div className="text-[11px] text-secondary mt-1">
-            {info.label}{data.feelsC != null ? ` · 체감 ${Math.round(data.feelsC)}°` : ''}
+            {t(info.labelKey)}{data.feelsC != null ? t('widget:feelsLike', { temp: Math.round(data.feelsC) }) : ''}
           </div>
           <div className="text-[10px] text-muted truncate max-w-[130px]">{loc.label}</div>
         </>
-      ) : <span className="text-[11px] text-muted">날씨 불러오는 중…</span>}
+      ) : <span className="text-[11px] text-muted">{t('widget:weatherLoading')}</span>}
     </button>
   );
 }
 
 function TodayTasks() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<TodayWbs[] | null>(null);
 
   useEffect(() => {
@@ -206,12 +210,12 @@ function TodayTasks() {
   return (
     <section className="rounded-xl border border-default bg-surface p-3.5">
       <h4 className="flex items-center text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">
-        오늘 내 작업
-        {items && <span className="ml-auto font-semibold text-secondary normal-case tracking-normal">{items.length}건</span>}
+        {t('widget:todayTasks')}
+        {items && <span className="ml-auto font-semibold text-secondary normal-case tracking-normal">{t('widget:count', { count: items.length })}</span>}
       </h4>
-      {items === null && <p className="text-xs text-muted py-3 text-center">불러오는 중…</p>}
+      {items === null && <p className="text-xs text-muted py-3 text-center">{t('common:loading')}</p>}
       {items !== null && items.length === 0 && (
-        <p className="text-xs text-muted py-4 text-center">오늘 진행 중인 작업이 없어요.</p>
+        <p className="text-xs text-muted py-4 text-center">{t('widget:noTodayTasks')}</p>
       )}
       <div className="space-y-3">
         {groups.map((g) => (
@@ -219,27 +223,27 @@ function TodayTasks() {
             <p className="flex items-center gap-1.5 text-[11px] font-semibold text-accent mb-1">
               <span className="w-1.5 h-1.5 rounded-full bg-accent" /> {g.name}
             </p>
-            {g.rows.map((t) => {
-              const b = statusBadge(t);
-              const dd = daysUntil(t.endDate);
-              const done = t.status === 'Done';
+            {g.rows.map((tw) => {
+              const b = statusBadge(tw);
+              const dd = daysUntil(tw.endDate);
+              const done = tw.status === 'Done';
               return (
-                <div key={t.wbsItemId} className="flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-surface-2">
+                <div key={tw.wbsItemId} className="flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-surface-2">
                   <button
                     type="button"
-                    onClick={() => toggleDone(t)}
-                    disabled={busy === t.wbsItemId}
-                    title={done ? '완료 해제' : '완료로 표시'}
-                    aria-label={done ? '완료 해제' : '완료로 표시'}
+                    onClick={() => toggleDone(tw)}
+                    disabled={busy === tw.wbsItemId}
+                    title={done ? t('widget:uncomplete') : t('widget:complete')}
+                    aria-label={done ? t('widget:uncomplete') : t('widget:complete')}
                     className={`w-4 h-4 rounded shrink-0 flex items-center justify-center border-[1.5px] transition-colors disabled:opacity-50 ${
                       done ? 'bg-accent border-accent text-on-accent' : 'border-strong hover:border-accent'
                     }`}
                   >
                     {done && <Check size={11} strokeWidth={3} />}
                   </button>
-                  <span className={`flex-1 min-w-0 truncate text-[13px] ${done ? 'text-muted line-through' : 'text-primary'}`}>{t.wbsItemName}</span>
-                  {t.assignee && <span className="text-[11px] text-muted shrink-0 max-w-[72px] truncate">{t.assignee}</span>}
-                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${b.cls}`}>{b.label}</span>
+                  <span className={`flex-1 min-w-0 truncate text-[13px] ${done ? 'text-muted line-through' : 'text-primary'}`}>{tw.wbsItemName}</span>
+                  {tw.assignee && <span className="text-[11px] text-muted shrink-0 max-w-[72px] truncate">{tw.assignee}</span>}
+                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${b.cls}`}>{t(b.labelKey)}</span>
                   {dd !== null && (
                     <span className={`shrink-0 text-[10px] font-bold tabular-nums ${dd < 0 ? 'text-on-danger' : 'text-muted'}`}>
                       {dd === 0 ? 'D-0' : dd > 0 ? `D-${dd}` : `D+${-dd}`}
@@ -257,26 +261,27 @@ function TodayTasks() {
 
 const QC_INPUT = 'w-full text-[13px] px-2.5 py-2 rounded-md bg-surface-2 text-primary border border-default outline-none';
 
-const PRIORITIES: { value: IssuePriority; label: string }[] = [
-  { value: 'Low', label: '낮음' },
-  { value: 'Medium', label: '보통' },
-  { value: 'High', label: '높음' },
+const PRIORITIES: { value: IssuePriority; labelKey: string }[] = [
+  { value: 'Low', labelKey: 'widget:priority.low' },
+  { value: 'Medium', labelKey: 'widget:priority.medium' },
+  { value: 'High', labelKey: 'widget:priority.high' },
 ];
-const IMPACTS: { value: ImpactLevel; label: string }[] = [
-  { value: 'Low', label: '낮음' },
-  { value: 'Medium', label: '보통' },
-  { value: 'High', label: '높음' },
-  { value: 'Critical', label: '심각' },
+const IMPACTS: { value: ImpactLevel; labelKey: string }[] = [
+  { value: 'Low', labelKey: 'widget:impact.low' },
+  { value: 'Medium', labelKey: 'widget:impact.medium' },
+  { value: 'High', labelKey: 'widget:impact.high' },
+  { value: 'Critical', labelKey: 'widget:impact.critical' },
 ];
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 function SaveButton({ onClick, disabled, saving }: { onClick: () => void; disabled: boolean; saving: boolean }) {
+  const { t } = useTranslation();
   return (
     <button
       onClick={onClick} disabled={disabled}
       className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-[13px] font-semibold bg-accent text-on-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
     >
-      {saving ? <Check size={15} /> : <Plus size={15} />} 등록
+      {saving ? <Check size={15} /> : <Plus size={15} />} {t('widget:register')}
     </button>
   );
 }
@@ -290,6 +295,7 @@ function ProjectSelect({ projects, value, onChange }: { projects: Project[]; val
 }
 
 function QuickIssue({ projects }: { projects: Project[] }) {
+  const { t } = useTranslation();
   const [projectId, setProjectId] = useState<number | null>(projects[0]?.id ?? null);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<IssuePriority>('Medium');
@@ -302,7 +308,7 @@ function QuickIssue({ projects }: { projects: Project[] }) {
     setSaving(true);
     try {
       await issuesApi.create({ projectId, title: title.trim(), description: '', status: 'Open', priority, assigneeResourceId: null, dueDate: dueDate || undefined });
-      toast.success('이슈를 등록했어요.');
+      toast.success(t('widget:toast.issueAdded'));
       setTitle(''); setDueDate('');
     } catch { /* client toast */ } finally { setSaving(false); }
   };
@@ -310,11 +316,11 @@ function QuickIssue({ projects }: { projects: Project[] }) {
   return (
     <div className="space-y-2.5">
       <ProjectSelect projects={projects} value={projectId} onChange={setProjectId} />
-      <input className={QC_INPUT} placeholder="이슈 제목" value={title} onChange={(e) => setTitle(e.target.value)}
+      <input className={QC_INPUT} placeholder={t('widget:issueTitle')} value={title} onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(); }} />
       <div className="flex gap-2">
         <select className={QC_INPUT} value={priority} onChange={(e) => setPriority(e.target.value as IssuePriority)}>
-          {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          {PRIORITIES.map((p) => <option key={p.value} value={p.value}>{t(p.labelKey)}</option>)}
         </select>
         <input className={QC_INPUT} type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
       </div>
@@ -324,6 +330,7 @@ function QuickIssue({ projects }: { projects: Project[] }) {
 }
 
 function QuickChangelog({ projects }: { projects: Project[] }) {
+  const { t } = useTranslation();
   const [projectId, setProjectId] = useState<number | null>(projects[0]?.id ?? null);
   const [date, setDate] = useState(todayStr());
   const [impact, setImpact] = useState<ImpactLevel>('Low');
@@ -336,7 +343,7 @@ function QuickChangelog({ projects }: { projects: Project[] }) {
     setSaving(true);
     try {
       await changeLogsApi.create({ projectId, date, content: content.trim(), impact, relatedDocLinks: '', sourceIssueId: null, sourceWbsItemId: null });
-      toast.success('변경이력을 등록했어요.');
+      toast.success(t('widget:toast.changelogAdded'));
       setContent('');
     } catch { /* client toast */ } finally { setSaving(false); }
   };
@@ -347,16 +354,17 @@ function QuickChangelog({ projects }: { projects: Project[] }) {
       <div className="flex gap-2">
         <input className={QC_INPUT} type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <select className={QC_INPUT} value={impact} onChange={(e) => setImpact(e.target.value as ImpactLevel)}>
-          {IMPACTS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+          {IMPACTS.map((p) => <option key={p.value} value={p.value}>{t(p.labelKey)}</option>)}
         </select>
       </div>
-      <textarea className={`${QC_INPUT} resize-none`} rows={3} placeholder="변경 내용" value={content} onChange={(e) => setContent(e.target.value)} />
+      <textarea className={`${QC_INPUT} resize-none`} rows={3} placeholder={t('widget:changeContent')} value={content} onChange={(e) => setContent(e.target.value)} />
       <SaveButton onClick={submit} disabled={!content.trim() || saving} saving={saving} />
     </div>
   );
 }
 
 function QuickResource() {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [type, setType] = useState<ResourceType>('Person');
   const [department, setDepartment] = useState('');
@@ -367,21 +375,21 @@ function QuickResource() {
     setSaving(true);
     try {
       await resourcesApi.create({ name: name.trim(), type, department: department.trim(), email: '', phone: '', notes: '' });
-      toast.success('리소스를 등록했어요.');
+      toast.success(t('widget:toast.resourceAdded'));
       setName(''); setDepartment('');
     } catch { /* client toast */ } finally { setSaving(false); }
   };
 
   return (
     <div className="space-y-2.5">
-      <input className={QC_INPUT} placeholder="이름" value={name} onChange={(e) => setName(e.target.value)}
+      <input className={QC_INPUT} placeholder={t('widget:resourceName')} value={name} onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit(); }} />
       <div className="flex gap-2">
         <select className={QC_INPUT} value={type} onChange={(e) => setType(e.target.value as ResourceType)}>
-          <option value="Person">인력</option>
-          <option value="Equipment">장비</option>
+          <option value="Person">{t('widget:person')}</option>
+          <option value="Equipment">{t('widget:equipment')}</option>
         </select>
-        <input className={QC_INPUT} placeholder="부서(선택)" value={department} onChange={(e) => setDepartment(e.target.value)} />
+        <input className={QC_INPUT} placeholder={t('widget:deptOptional')} value={department} onChange={(e) => setDepartment(e.target.value)} />
       </div>
       <SaveButton onClick={submit} disabled={!name.trim() || saving} saving={saving} />
     </div>
@@ -389,13 +397,14 @@ function QuickResource() {
 }
 
 type QuickEntity = 'issue' | 'changelog' | 'resource';
-const QUICK_TABS: { id: QuickEntity; label: string }[] = [
-  { id: 'issue', label: '이슈' },
-  { id: 'changelog', label: '변경이력' },
-  { id: 'resource', label: '리소스' },
+const QUICK_TABS: { id: QuickEntity; labelKey: string }[] = [
+  { id: 'issue', labelKey: 'widget:tab.issue' },
+  { id: 'changelog', labelKey: 'widget:tab.changelog' },
+  { id: 'resource', labelKey: 'widget:tab.resource' },
 ];
 
 function QuickCreate() {
+  const { t } = useTranslation();
   const [projects, setProjects] = useState<Project[]>([]);
   const [entity, setEntity] = useState<QuickEntity>('issue');
   useEffect(() => { projectsApi.getAll().then(setProjects).catch(() => {}); }, []);
@@ -403,19 +412,19 @@ function QuickCreate() {
   const needsProject = entity !== 'resource';
   return (
     <section className="rounded-xl border border-default bg-surface p-3.5">
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">빠른 작성</h4>
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">{t('widget:quickCreate')}</h4>
       <div className="flex gap-1 mb-3">
-        {QUICK_TABS.map((t) => (
-          <button key={t.id} onClick={() => setEntity(t.id)}
+        {QUICK_TABS.map((tab) => (
+          <button key={tab.id} onClick={() => setEntity(tab.id)}
             className={`flex-1 text-[12px] py-1.5 rounded-md border transition-colors ${
-              entity === t.id ? 'bg-accent-soft border-accent text-accent font-medium' : 'border-default text-muted hover:text-secondary'
+              entity === tab.id ? 'bg-accent-soft border-accent text-accent font-medium' : 'border-default text-muted hover:text-secondary'
             }`}>
-            {t.label}
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
       {needsProject && projects.length === 0 ? (
-        <p className="text-xs text-muted py-3 text-center">프로젝트를 먼저 만들어 주세요.</p>
+        <p className="text-xs text-muted py-3 text-center">{t('widget:needProject')}</p>
       ) : entity === 'issue' ? <QuickIssue projects={projects} />
         : entity === 'changelog' ? <QuickChangelog projects={projects} />
         : <QuickResource />}
@@ -431,6 +440,7 @@ function fmtTime(s: number): string {
 }
 
 function NowPlaying() {
+  const { t } = useTranslation();
   const [media, setMedia] = useState<MediaState | null>(null);
   const [pos, setPos] = useState(0);
 
@@ -468,7 +478,7 @@ function NowPlaying() {
   return (
     <section className="rounded-xl border border-default bg-surface p-3.5">
       <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">
-        <Music size={12} /> 재생 중
+        <Music size={12} /> {t('widget:nowPlaying')}
       </h4>
       <div className="flex items-center gap-3">
         <div className="w-14 h-14 rounded-lg shrink-0 overflow-hidden bg-surface-3 flex items-center justify-center">
@@ -477,7 +487,7 @@ function NowPlaying() {
             : <Music size={22} className="text-muted" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-semibold text-primary truncate">{media.title || '재생 중 아님'}</div>
+          <div className="text-[13px] font-semibold text-primary truncate">{media.title || t('widget:notPlaying')}</div>
           <div className="text-[11px] text-muted truncate">{media.artist || ''}</div>
         </div>
       </div>
@@ -497,32 +507,33 @@ function NowPlaying() {
         <button
           onClick={() => mediaControl('prev')} disabled={!media.canPrev}
           className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-surface-2 disabled:opacity-30"
-          title="이전" aria-label="이전"
+          title={t('widget:prev')} aria-label={t('widget:prev')}
         ><SkipBack size={18} fill="currentColor" /></button>
         <button
           onClick={() => mediaControl('playpause')}
           className="w-10 h-10 flex items-center justify-center rounded-full bg-accent text-on-accent hover:bg-accent-hover"
-          title={media.playing ? '일시정지' : '재생'} aria-label={media.playing ? '일시정지' : '재생'}
+          title={media.playing ? t('widget:pause') : t('widget:play')} aria-label={media.playing ? t('widget:pause') : t('widget:play')}
         >{media.playing ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}</button>
         <button
           onClick={() => mediaControl('next')} disabled={!media.canNext}
           className="w-8 h-8 flex items-center justify-center rounded-full text-secondary hover:bg-surface-2 disabled:opacity-30"
-          title="다음" aria-label="다음"
+          title={t('widget:next')} aria-label={t('widget:next')}
         ><SkipForward size={18} fill="currentColor" /></button>
       </div>
     </section>
   );
 }
 
-function formatDwell(s: number): string {
-  if (s < 60) return `${s}초`;
-  if (s < 3600) return `${Math.floor(s / 60)}분`;
+function formatDwell(s: number, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (s < 60) return t('widget:dwell.sec', { n: s });
+  if (s < 3600) return t('widget:dwell.min', { n: Math.floor(s / 60) });
   const h = Math.floor(s / 3600);
   const m = Math.floor((s % 3600) / 60);
-  return m ? `${h}시간 ${m}분` : `${h}시간`;
+  return m ? t('widget:dwell.hourMin', { h, m }) : t('widget:dwell.hour', { n: h });
 }
 
 function ActiveWindows() {
+  const { t } = useTranslation();
   const [enabled, setEnabled] = useState(() => loadSettings().widgetActiveWindowsEnabled);
   const [items, setItems] = useState<ActiveWindowItem[]>([]);
 
@@ -546,19 +557,19 @@ function ActiveWindows() {
   return (
     <section className="rounded-xl border border-default bg-surface p-3.5">
       <h4 className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">
-        <AppWindow size={12} /> 최근 활성 창
+        <AppWindow size={12} /> {t('widget:activeWindows')}
         <button
           onClick={toggle}
-          title={enabled ? '추적 끄기' : '추적 켜기'}
+          title={enabled ? t('widget:trackOff') : t('widget:trackOn')}
           className="ml-auto w-6 h-6 flex items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-secondary"
         >
           {enabled ? <Eye size={13} /> : <EyeOff size={13} />}
         </button>
       </h4>
       {!enabled ? (
-        <p className="text-xs text-muted py-2 text-center">추적이 꺼져 있어요.</p>
+        <p className="text-xs text-muted py-2 text-center">{t('widget:trackingOff')}</p>
       ) : items.length === 0 ? (
-        <p className="text-xs text-muted py-2 text-center">아직 기록된 창이 없어요.</p>
+        <p className="text-xs text-muted py-2 text-center">{t('widget:noWindows')}</p>
       ) : (
         <div className="space-y-0.5">
           {items.map((w, i) => (
@@ -570,19 +581,20 @@ function ActiveWindows() {
                 <div className="text-[12px] font-semibold text-primary truncate">{w.app}</div>
                 {w.title && <div className="text-[11px] text-muted truncate">{w.title}</div>}
               </div>
-              <span className="text-[10px] text-muted tabular-nums shrink-0">{formatDwell(w.seconds)}</span>
+              <span className="text-[10px] text-muted tabular-nums shrink-0">{formatDwell(w.seconds, t)}</span>
             </div>
           ))}
         </div>
       )}
       {enabled && (
-        <p className="mt-2 text-[10px] text-muted opacity-80">이 PC에만 기록 · 외부 전송 없음</p>
+        <p className="mt-2 text-[10px] text-muted opacity-80">{t('widget:localOnly')}</p>
       )}
     </section>
   );
 }
 
 export function WidgetDashboard() {
+  const { t } = useTranslation();
   const settings = loadSettings();
   const toasterTheme = settings.theme === 'custom'
     ? (isCustomDark(settings.customColors) ? 'dark' : 'light')
@@ -627,20 +639,20 @@ export function WidgetDashboard() {
           onMouseDown={(e) => { if (e.button === 0) beginWidgetDrag(); }}
         >
           <GripHorizontal size={14} className="text-muted" />
-          <span className="text-[12px] font-semibold text-secondary tracking-wide">Atlas 위젯</span>
+          <span className="text-[12px] font-semibold text-secondary tracking-wide">{t('widget:title')}</span>
           <div className="flex-1" />
           {bridge && (
             <button
               onClick={onToggleLayout}
               onMouseDown={(e) => e.stopPropagation()}
-              title={expanded ? '컴팩트 보기' : '확장 보기'}
+              title={expanded ? t('widget:compactView') : t('widget:expandView')}
               className="w-6 h-6 flex items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-secondary mr-1"
             >
               {expanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
           )}
           {bridge && (
-            <label className="flex items-center gap-1.5 mr-1" title="창 투명도" onMouseDown={(e) => e.stopPropagation()}>
+            <label className="flex items-center gap-1.5 mr-1" title={t('widget:opacity')} onMouseDown={(e) => e.stopPropagation()}>
               <input
                 type="range" min={40} max={100} value={opacity}
                 onChange={(e) => onOpacity(Number(e.target.value))}
@@ -653,7 +665,7 @@ export function WidgetDashboard() {
             <button
               onClick={onPin}
               onMouseDown={(e) => e.stopPropagation()}
-              title={pinned ? '항상 위 고정 해제' : '항상 위 고정'}
+              title={pinned ? t('widget:unpin') : t('widget:pin')}
               className={`w-6 h-6 flex items-center justify-center rounded-md ${pinned ? 'text-accent bg-accent-soft' : 'text-muted hover:bg-surface-2'}`}
             >
               {pinned ? <Pin size={14} /> : <PinOff size={14} />}
@@ -663,7 +675,7 @@ export function WidgetDashboard() {
             <button
               onClick={closeWidget}
               onMouseDown={(e) => e.stopPropagation()}
-              title="닫기"
+              title={t('common:close')}
               className="w-6 h-6 flex items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-secondary"
             >
               <X size={14} />
@@ -700,7 +712,7 @@ export function WidgetDashboard() {
         {bridge && (
           <div
             onMouseDown={(e) => { if (e.button === 0) { e.preventDefault(); beginWidgetResize(); } }}
-            title="크기 조정"
+            title={t('widget:resize')}
             className="absolute bottom-0 right-0 w-4 h-4 cursor-nwse-resize text-muted"
             style={{ lineHeight: 0 }}
           >
