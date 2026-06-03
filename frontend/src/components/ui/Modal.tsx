@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { ReactNode, RefObject } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { Card } from './Card';
 import { confirmDialog } from './ConfirmDialog';
@@ -49,6 +50,7 @@ export function Modal({
   dirty = false,
   children,
 }: ModalProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // dirty 폼은 닫기 전 확인. 저장 버튼은 onClose 우회 (form 자체 onSubmit) — confirmDialog 없음.
@@ -58,13 +60,13 @@ export function Modal({
       return;
     }
     const ok = await confirmDialog({
-      title: '변경사항이 있습니다',
-      message: '저장하지 않은 변경사항이 사라집니다. 닫으시겠습니까?',
-      confirmLabel: '닫기',
+      title: t('common:dirtyCloseTitle'),
+      message: t('common:dirtyCloseMessage'),
+      confirmLabel: t('common:close'),
       danger: true,
     });
     if (ok) onClose();
-  }, [dirty, onClose]);
+  }, [dirty, onClose, t]);
 
   // 초기 포커스 — ConfirmDialog 패턴 그대로. rAF 가 WebView2 의 focus race 회피.
   useEffect(() => {
@@ -165,7 +167,7 @@ export function Modal({
                   type="button"
                   onClick={() => requestClose()}
                   className="p-1 text-muted hover:text-primary transition-colors"
-                  aria-label="닫기"
+                  aria-label={t('common:close')}
                 >
                   <X size={18} />
                 </button>

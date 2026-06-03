@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { subscribeProgress } from '../utils/progressEmitter';
 
 type Phase = 'idle' | 'running' | 'completing';
@@ -6,6 +7,7 @@ type Phase = 'idle' | 'running' | 'completing';
 // 글로벌 fetch progress bar — 화면 최상단 2px accent. 200ms threshold (progressEmitter).
 // 점진 증가는 90% 까지만 (응답 대기 표시), 완료 신호 받으면 100% → fade-out.
 export function GlobalProgressBar() {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>('idle');
   const [width, setWidth] = useState(0);
   const rafRef = useRef<number | null>(null);
@@ -59,7 +61,7 @@ export function GlobalProgressBar() {
       className="fixed top-0 left-0 right-0 h-0.5 z-[200] pointer-events-none"
       role="progressbar"
       aria-busy={phase === 'running'}
-      aria-label="요청 진행 중"
+      aria-label={t('common:requestInProgress')}
     >
       <div
         className="h-full bg-accent"

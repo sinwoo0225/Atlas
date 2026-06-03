@@ -18,8 +18,14 @@
   "currentProject": "현재 프로젝트",
   "projectMenu": "프로젝트 메뉴",
   "shortcutsTitle": "키보드 단축키",
+  "selectOption": "옵션 선택",
+  "unsavedChanges": "저장 안 된 변경사항",
+  "requestInProgress": "요청 진행 중",
+  "dirtyCloseTitle": "변경사항이 있습니다",
+  "dirtyCloseMessage": "저장하지 않은 변경사항이 사라집니다. 닫으시겠습니까?",
   "tagInput": {
     "placeholder": "태그 입력 후 Enter / 콤마",
+    "assigneePlaceholder": "이름 입력 후 Enter / 콤마",
     "remove": "{{name}} 제거"
   },
   "relative": {

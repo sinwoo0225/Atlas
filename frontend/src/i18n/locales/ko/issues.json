@@ -55,5 +55,10 @@
     "created": "새 이슈 '{{title}}' 이(가) 추가됐어요",
     "closed": "'{{title}}' 닫혔어요. 변경이력에 남길까요?",
     "addChangelog": "변경이력 추가"
+  },
+  "picker": {
+    "search": "이슈 제목·설명 검색…",
+    "empty": "결과 없음",
+    "linked": "이미 연결됨"
   }
 }

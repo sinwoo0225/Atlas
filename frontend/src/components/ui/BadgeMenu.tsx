@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown } from 'lucide-react';
 import { Badge, type BadgeVariant } from './Badge';
 
@@ -27,6 +28,7 @@ const VIEWPORT_MARGIN = 8;
 export function BadgeMenu<T extends string>({
   value, options, onChange, size = 'sm', title,
 }: Props<T>) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [placement, setPlacement] = useState<{ top: number; left: number } | null>(null);
@@ -158,7 +160,7 @@ export function BadgeMenu<T extends string>({
           ref={menuRef}
           role="listbox"
           tabIndex={-1}
-          aria-label={title ?? '옵션 선택'}
+          aria-label={title ?? t('common:selectOption')}
           aria-activedescendant={`${baseId}-opt-${activeIndex}`}
           onClick={(e) => e.stopPropagation()}
           onKeyDown={handleMenuKeyDown}

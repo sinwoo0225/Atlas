@@ -68,5 +68,16 @@
     "updateFailed": "프로젝트 수정 실패",
     "deleteFailed": "프로젝트 삭제 실패",
     "backupFailed": "백업 실패"
+  },
+  "start": {
+    "myTasks": "내 작업",
+    "myTasksEmpty": "할당된 작업 없음",
+    "viewAll": "전체보기",
+    "myTasksModal": "내 작업 ({{count}})",
+    "dueSoon": "이번 주 마감",
+    "dueSoonEmpty": "이번 주 마감 없음",
+    "recent": "최근 본 항목",
+    "recentEmpty": "최근 본 항목 없음",
+    "more": "외 {{count}}건"
   }
 }

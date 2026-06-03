@@ -35,13 +35,13 @@ export function IssuePicker({ items, excludeIds, onSelect }: Props) {
           type="search"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          placeholder="이슈 제목·설명 검색…"
+          placeholder={t('issues:picker.search')}
           className={`${inputClass} pl-7 py-1.5 text-sm`}
         />
       </div>
       <div className="border border-default rounded-md overflow-y-auto flex-1 min-h-0 bg-surface">
         {filtered.length === 0 ? (
-          <div className="px-2 py-4 text-xs text-muted text-center">결과 없음</div>
+          <div className="px-2 py-4 text-xs text-muted text-center">{t('issues:picker.empty')}</div>
         ) : filtered.map((i) => {
           const disabled = excludeIds.has(i.id);
           const badge = issueStatusBadge[i.status];
@@ -56,7 +56,7 @@ export function IssuePicker({ items, excludeIds, onSelect }: Props) {
                   ? 'opacity-50 cursor-not-allowed'
                   : 'hover:bg-surface-2 cursor-pointer'
               } transition-colors`}
-              title={disabled ? '이미 연결됨' : i.title}
+              title={disabled ? t('issues:picker.linked') : i.title}
             >
               <Badge variant={badge.variant} size="sm">{t(badge.labelKey)}</Badge>
               <span className="text-primary truncate flex-1">{i.title}</span>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { Resource } from '../types';
 import { parseAssigneeTokens, serializeAssigneeTokens } from '../utils/assigneeTokens';
@@ -11,6 +12,7 @@ interface Props {
 }
 
 export function AssigneeTagInput({ value, onChange, resources, placeholder }: Props) {
+  const { t } = useTranslation();
   const tokens = useMemo(() => parseAssigneeTokens(value), [value]);
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
@@ -47,13 +49,13 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
   }, [open, draft, tokens, onChange]);
 
   const commitToken = (name: string) => {
-    const t = name.trim();
-    if (!t) return;
-    if (tokens.includes(t)) {
+    const tok = name.trim();
+    if (!tok) return;
+    if (tokens.includes(tok)) {
       setDraft('');
       return;
     }
-    onChange(serializeAssigneeTokens([...tokens, t]));
+    onChange(serializeAssigneeTokens([...tokens, tok]));
     setDraft('');
     setActiveIdx(-1);
   };
@@ -106,12 +108,12 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
         className="w-full flex flex-wrap items-center gap-1.5 px-2 py-1.5 text-sm rounded-md bg-surface-2 border border-default focus-within:border-strong transition-colors min-h-[38px]"
         onClick={() => inputRef.current?.focus()}
       >
-        {tokens.map((t, i) => (
+        {tokens.map((tok, i) => (
           <span
-            key={`${t}-${i}`}
+            key={`${tok}-${i}`}
             className="inline-flex items-center gap-1 rounded bg-neutral-soft text-on-neutral px-2 py-0.5 text-xs font-medium"
           >
-            {t}
+            {tok}
             <button
               type="button"
               onClick={(e) => {
@@ -119,7 +121,7 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
                 removeAt(i);
               }}
               className="text-muted hover:text-on-danger transition-colors"
-              aria-label={`${t} 제거`}
+              aria-label={t('common:tagInput.remove', { name: tok })}
             >
               <X size={11} />
             </button>
@@ -134,7 +136,7 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder={tokens.length === 0 ? (placeholder ?? '이름 입력 후 Enter / 콤마') : ''}
+          placeholder={tokens.length === 0 ? (placeholder ?? t('common:tagInput.assigneePlaceholder')) : ''}
           className="flex-1 min-w-[120px] bg-transparent outline-none text-sm py-0.5"
         />
       </div>

@@ -68,5 +68,16 @@
     "updateFailed": "Failed to update project",
     "deleteFailed": "Failed to delete project",
     "backupFailed": "Backup failed"
+  },
+  "start": {
+    "myTasks": "My tasks",
+    "myTasksEmpty": "No assigned tasks",
+    "viewAll": "View all",
+    "myTasksModal": "My tasks ({{count}})",
+    "dueSoon": "Due this week",
+    "dueSoonEmpty": "Nothing due this week",
+    "recent": "Recently viewed",
+    "recentEmpty": "Nothing recent",
+    "more": "+{{count}} more"
   }
 }

@@ -18,8 +18,14 @@
   "currentProject": "Current project",
   "projectMenu": "Project menu",
   "shortcutsTitle": "Keyboard shortcuts",
+  "selectOption": "Select option",
+  "unsavedChanges": "Unsaved changes",
+  "requestInProgress": "Request in progress",
+  "dirtyCloseTitle": "Unsaved changes",
+  "dirtyCloseMessage": "Unsaved changes will be lost. Close anyway?",
   "tagInput": {
     "placeholder": "Add tag, then Enter / comma",
+    "assigneePlaceholder": "Add name, then Enter / comma",
     "remove": "Remove {{name}}"
   },
   "relative": {

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CheckCircle2, CalendarClock, History } from 'lucide-react';
 import { Card, Modal } from '../../components/ui';
 import type { StartPageItem } from '../../types';
@@ -7,15 +8,16 @@ import type { RecentItem } from '../../utils/recentItems';
 
 const MAX_ROWS = 5;
 
-const SECTION_LABELS: Record<string, string> = {
-  dashboard: '대시보드',
-  wbs: '일정/WBS',
-  worklog: '업무일지',
-  issues: '이슈 관리',
-  changelogs: '변경이력',
-  meetings: '회의록',
-  devinfo: '개발 정보',
-  map: '프로젝트 맵',
+// 섹션 키 → nav 라벨 키 재사용.
+const SECTION_LABEL_KEYS: Record<string, string> = {
+  dashboard: 'nav:dashboard',
+  wbs: 'nav:wbs',
+  worklog: 'nav:worklog',
+  issues: 'nav:issues',
+  changelogs: 'nav:changelogs',
+  meetings: 'nav:meetings',
+  devinfo: 'nav:devinfo',
+  map: 'nav:map',
 };
 
 interface Props {
@@ -26,6 +28,7 @@ interface Props {
 
 // E-2 시작 화면 위젯 — 3 column. 셋 모두 0 이면 row 자체 미노출.
 export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [showAllMine, setShowAllMine] = useState(false);
   if (myOpenItems.length + dueSoonItems.length + recent.length === 0) return null;
@@ -63,7 +66,7 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
       className="w-full text-left flex items-center gap-2 py-1 px-2 -mx-2 rounded hover:bg-surface-2 transition-colors"
     >
       <span className="text-sm text-secondary truncate flex-1 min-w-0">{r.projectName}</span>
-      <span className="text-xs text-muted shrink-0">{SECTION_LABELS[r.section] ?? r.section}</span>
+      <span className="text-xs text-muted shrink-0">{SECTION_LABEL_KEYS[r.section] ? t(SECTION_LABEL_KEYS[r.section]) : r.section}</span>
     </button>
   );
 
@@ -71,9 +74,9 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
       <Widget
         icon={<CheckCircle2 size={14} className="text-accent" />}
-        title="내 작업"
+        title={t('projects:start.myTasks')}
         count={myOpenItems.length}
-        empty="할당된 작업 없음"
+        empty={t('projects:start.myTasksEmpty')}
         overflow={0}
         action={
           myOpenItems.length > MAX_ROWS ? (
@@ -82,7 +85,7 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
               onClick={() => setShowAllMine(true)}
               className="text-xs text-accent hover:underline shrink-0"
             >
-              전체보기
+              {t('projects:start.viewAll')}
             </button>
           ) : undefined
         }
@@ -91,18 +94,18 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
       </Widget>
       <Widget
         icon={<CalendarClock size={14} className="text-on-warning" />}
-        title="이번 주 마감"
+        title={t('projects:start.dueSoon')}
         count={dueSoonItems.length}
-        empty="이번 주 마감 없음"
+        empty={t('projects:start.dueSoonEmpty')}
         overflow={dueSoonItems.length > MAX_ROWS ? dueSoonItems.length - MAX_ROWS : 0}
       >
         {dueSoonItems.slice(0, MAX_ROWS).map(itemRow)}
       </Widget>
       <Widget
         icon={<History size={14} className="text-muted" />}
-        title="최근 본 항목"
+        title={t('projects:start.recent')}
         count={recent.length}
-        empty="최근 본 항목 없음"
+        empty={t('projects:start.recentEmpty')}
         overflow={0}
       >
         {recent.slice(0, MAX_ROWS).map(recentRow)}
@@ -111,7 +114,7 @@ export function StartPageWidgets({ myOpenItems, dueSoonItems, recent }: Props) {
       <Modal
         open={showAllMine}
         onClose={() => setShowAllMine(false)}
-        title={`내 작업 (${myOpenItems.length})`}
+        title={t('projects:start.myTasksModal', { count: myOpenItems.length })}
         size="lg"
         fixedHeight
         showCloseButton
@@ -139,6 +142,7 @@ function Widget({
   action?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <Card padding="spacious">
       <div className="flex items-center gap-2 mb-2">
@@ -153,7 +157,7 @@ function Widget({
       ) : (
         <div className="space-y-0">
           {children}
-          {overflow > 0 && <p className="text-xs text-muted mt-1 px-2">외 {overflow}건</p>}
+          {overflow > 0 && <p className="text-xs text-muted mt-1 px-2">{t('projects:start.more', { count: overflow })}</p>}
         </div>
       )}
     </Card>

@@ -55,5 +55,10 @@
     "created": "New issue '{{title}}' added",
     "closed": "'{{title}}' closed. Add it to the change log?",
     "addChangelog": "Add to change log"
+  },
+  "picker": {
+    "search": "Search issue title or description…",
+    "empty": "No results",
+    "linked": "Already linked"
   }
 }

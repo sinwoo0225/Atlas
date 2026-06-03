@@ -53,7 +53,8 @@
     "colDueSoon": "Due soon (7 days)",
     "colDueSoonEmpty": "None due soon",
     "colHighIssue": "Unresolved High issues",
-    "colHighIssueEmpty": "No High issues"
+    "colHighIssueEmpty": "No High issues",
+    "moreLink": "+{{count}} more →"
   },
   "stale": {
     "title": "Stale projects",
