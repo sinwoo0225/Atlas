@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Activity, X, ChevronDown } from 'lucide-react';
 import { activityApi, type ActivityListFilter } from '../api/activity';
 import { projectsApi } from '../api/projects';
@@ -52,6 +53,7 @@ function rangeOf(preset: RangePreset, customFrom: string | null, customTo: strin
 }
 
 export function ActivityPage() {
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -174,28 +176,28 @@ export function ActivityPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center gap-2">
         <Activity size={20} className="text-accent" />
-        <h1 className="h-page">전체 활동</h1>
+        <h1 className="h-page">{t('activity:title')}</h1>
       </div>
 
       <Card padding="normal">
         <div className="flex flex-wrap items-center gap-2">
           <ProjectFilter projects={projects} value={projectId} onChange={setProject} />
           <MultiSelect<ActivityEntityType>
-            label="타입"
+            label={t('activity:filter.type')}
             values={entityTypes}
-            options={ENTITY_TYPES.map((t) => ({ value: t, label: ACTIVITY_TYPE_META[t].label }))}
+            options={ENTITY_TYPES.map((et) => ({ value: et, label: ACTIVITY_TYPE_META[et].label }))}
             onChange={(v) => setMulti('entityType', v)}
           />
           <MultiSelect<ActivityAction>
-            label="액션"
+            label={t('activity:filter.action')}
             values={actions}
             options={ACTION_KEYS.map((a) => ({ value: a, label: ACTION_META[a].label }))}
             onChange={(v) => setMulti('action', v)}
           />
           <MultiSelect<string>
-            label="액터"
+            label={t('activity:filter.actor')}
             values={actors}
-            options={availableActors.map((a) => ({ value: a, label: a || '(빈 actor)' }))}
+            options={availableActors.map((a) => ({ value: a, label: a || t('activity:emptyActor') }))}
             onChange={(v) => setMulti('actor', v)}
           />
           <RangeFilter
@@ -207,12 +209,12 @@ export function ActivityPage() {
           />
           {hasFilters && (
             <Button variant="ghost" size="sm" onClick={resetAll} leadingIcon={<X size={14} />}>
-              초기화
+              {t('activity:reset')}
             </Button>
           )}
           {!loading && (
             <span className="ml-auto text-xs text-muted">
-              {items.length}건{hasMore ? '+' : ''}
+              {t('activity:count', { count: items.length })}{hasMore ? '+' : ''}
             </span>
           )}
         </div>
@@ -224,7 +226,7 @@ export function ActivityPage() {
             {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} height={28} />)}
           </div>
         ) : items.length === 0 ? (
-          <p className="text-sm text-muted">활동 기록 없음</p>
+          <p className="text-sm text-muted">{t('activity:empty')}</p>
         ) : (
           <>
             <div>
@@ -236,13 +238,13 @@ export function ActivityPage() {
                 <div ref={sentinelRef} aria-hidden className="h-px" />
                 <div className="mt-4 flex justify-center">
                   <Button variant="secondary" onClick={loadMore} disabled={loadingMore}>
-                    {loadingMore ? '불러오는 중…' : '더 불러오기'}
+                    {loadingMore ? t('activity:loadingMore') : t('activity:loadMore')}
                   </Button>
                 </div>
               </>
             )}
             {!hasMore && items.length > 0 && (
-              <p className="mt-4 text-center text-xs text-muted">— 끝 —</p>
+              <p className="mt-4 text-center text-xs text-muted">{t('activity:end')}</p>
             )}
           </>
         )}
@@ -289,12 +291,13 @@ function FilterTrigger({
 function ProjectFilter({
   projects, value, onChange,
 }: { projects: Project[]; value: number | null; onChange: (id: number | null) => void }) {
+  const { t } = useTranslation();
   const { open, setOpen, ref } = useDropdown();
   const current = value != null ? projects.find((p) => p.id === value) : null;
-  const summary = current ? current.name : '전체';
+  const summary = current ? current.name : t('activity:all');
   return (
     <div ref={ref} className="relative">
-      <FilterTrigger label="프로젝트" summary={summary} active={value != null} onClick={() => setOpen((v) => !v)} />
+      <FilterTrigger label={t('activity:filter.project')} summary={summary} active={value != null} onClick={() => setOpen((v) => !v)} />
       {open && (
         <div className="absolute z-20 mt-1 left-0 min-w-[220px] max-h-72 overflow-y-auto bg-surface-2 border border-default rounded-md shadow-lg py-1">
           <button
@@ -302,7 +305,7 @@ function ProjectFilter({
             onClick={() => { onChange(null); setOpen(false); }}
             className={`w-full text-left px-3 py-1.5 text-sm hover:bg-surface-3 ${value == null ? 'text-primary' : 'text-secondary'}`}
           >
-            전체
+            {t('activity:all')}
           </button>
           {projects.map((p) => (
             <button
@@ -328,12 +331,13 @@ function MultiSelect<T extends string>({
   options: { value: T; label: string }[];
   onChange: (next: T[]) => void;
 }) {
+  const { t } = useTranslation();
   const { open, setOpen, ref } = useDropdown();
   const summary = values.length === 0
-    ? '전체'
+    ? t('activity:all')
     : values.length === 1
-      ? options.find((o) => o.value === values[0])?.label ?? '1개'
-      : `${values.length}개`;
+      ? options.find((o) => o.value === values[0])?.label ?? t('activity:oneItem')
+      : t('activity:countItems', { count: values.length });
   const toggle = (v: T) => {
     if (values.includes(v)) onChange(values.filter((x) => x !== v));
     else onChange([...values, v]);
@@ -367,7 +371,7 @@ function MultiSelect<T extends string>({
                 onClick={() => onChange([])}
                 className="text-xs text-muted hover:text-secondary py-1"
               >
-                선택 해제
+                {t('activity:clearSelection')}
               </button>
             </div>
           )}
@@ -386,24 +390,25 @@ function RangeFilter({
   onPreset: (p: RangePreset) => void;
   onCustom: (k: 'from' | 'to', v: string) => void;
 }) {
+  const { t } = useTranslation();
   const { open, setOpen, ref } = useDropdown();
   const summary =
-    preset === 'today' ? '오늘'
-    : preset === '7d'    ? '최근 7일'
-    : preset === '30d'   ? '최근 30일'
-    : preset === 'custom' ? (from && to ? `${from} ~ ${to}` : from ? `${from} ~` : to ? `~ ${to}` : '사용자 지정')
-    : '전체';
+    preset === 'today' ? t('activity:range.today')
+    : preset === '7d'    ? t('activity:range.last7')
+    : preset === '30d'   ? t('activity:range.last30')
+    : preset === 'custom' ? (from && to ? `${from} ~ ${to}` : from ? `${from} ~` : to ? `~ ${to}` : t('activity:range.custom'))
+    : t('activity:all');
   return (
     <div ref={ref} className="relative">
-      <FilterTrigger label="기간" summary={summary} active={preset !== 'all'} onClick={() => setOpen((v) => !v)} />
+      <FilterTrigger label={t('activity:filter.period')} summary={summary} active={preset !== 'all'} onClick={() => setOpen((v) => !v)} />
       {open && (
         <div className="absolute z-20 mt-1 left-0 min-w-[240px] bg-surface-2 border border-default rounded-md shadow-lg py-1">
           {(
             [
-              { v: 'all',   label: '전체' },
-              { v: 'today', label: '오늘' },
-              { v: '7d',    label: '최근 7일' },
-              { v: '30d',   label: '최근 30일' },
+              { v: 'all',   label: t('activity:all') },
+              { v: 'today', label: t('activity:range.today') },
+              { v: '7d',    label: t('activity:range.last7') },
+              { v: '30d',   label: t('activity:range.last30') },
             ] as { v: RangePreset; label: string }[]
           ).map((p) => (
             <button
@@ -416,7 +421,7 @@ function RangeFilter({
             </button>
           ))}
           <div className="border-t border-default mt-1 pt-2 px-3 pb-2 space-y-2">
-            <p className="text-xs text-muted">사용자 지정</p>
+            <p className="text-xs text-muted">{t('activity:range.custom')}</p>
             <div className="flex items-center gap-2">
               <input
                 type="date"

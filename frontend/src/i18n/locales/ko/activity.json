@@ -1,0 +1,27 @@
+{
+  "title": "전체 활동",
+  "all": "전체",
+  "empty": "활동 기록 없음",
+  "count": "{{count}}건",
+  "loadMore": "더 불러오기",
+  "loadingMore": "불러오는 중…",
+  "end": "— 끝 —",
+  "reset": "초기화",
+  "clearSelection": "선택 해제",
+  "countItems": "{{count}}개",
+  "oneItem": "1개",
+  "emptyActor": "(빈 actor)",
+  "filter": {
+    "project": "프로젝트",
+    "type": "타입",
+    "action": "액션",
+    "actor": "액터",
+    "period": "기간"
+  },
+  "range": {
+    "today": "오늘",
+    "last7": "최근 7일",
+    "last30": "최근 30일",
+    "custom": "사용자 지정"
+  }
+}
