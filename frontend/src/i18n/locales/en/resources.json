@@ -1,0 +1,48 @@
+{
+  "title": "Resources",
+  "newBtn": "Add resource",
+  "filterAll": "All",
+  "form": {
+    "newTitle": "Add resource",
+    "editTitle": "Edit resource",
+    "name": "Name",
+    "type": "Type",
+    "person": "Person",
+    "equipment": "Equipment",
+    "department": "Department / group",
+    "email": "Email",
+    "copyEmail": "Copy email",
+    "phone": "Phone",
+    "copyPhone": "Copy phone",
+    "notes": "Notes"
+  },
+  "card": { "viewAssignments": "Click to view assigned tasks" },
+  "empty": {
+    "title": "No resources yet.",
+    "descAll": "Start with the 'Add resource' button at the top right.",
+    "descFiltered": "No resources of this type."
+  },
+  "assign": {
+    "modalTitle": "{{name}} — assigned tasks",
+    "loadError": "Couldn't load assignments.",
+    "noAssignments": "No assigned tasks.",
+    "noActive": "No tasks in progress",
+    "doneCount": "{{count}} done",
+    "activeOnlyLabel": "Show only projects with tasks in progress ({{count}} done — expand under each group's 'Done' section)",
+    "noActiveGroups": "No tasks in progress. Uncheck to also show projects with only completed tasks."
+  },
+  "delete": {
+    "title": "Delete resource",
+    "message": "Delete this resource? This can't be undone."
+  },
+  "toast": {
+    "created": "New resource '{{name}}' added",
+    "createdNoName": "New resource added"
+  },
+  "error": {
+    "loadList": "Couldn't load the resource list.",
+    "createFailed": "Failed to add resource",
+    "updateFailed": "Failed to update resource",
+    "deleteFailed": "Failed to delete resource"
+  }
+}

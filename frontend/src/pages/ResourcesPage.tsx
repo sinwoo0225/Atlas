@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building, ChevronDown, ChevronRight } from 'lucide-react';
@@ -14,6 +14,7 @@ function ResourceForm({ initial, onSave, onCancel }: {
   onSave: (data: Omit<Resource, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const initialForm = {
     name: initial?.name ?? '',
     type: (initial?.type ?? 'Person') as ResourceType,
@@ -30,58 +31,58 @@ function ResourceForm({ initial, onSave, onCancel }: {
     <Modal
       open
       onClose={onCancel}
-      title={initial?.id ? '리소스 수정' : '리소스 등록'}
+      title={initial?.id ? t('resources:form.editTitle') : t('resources:form.newTitle')}
       size="md"
       dirty={dirty}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={() => onSave(form)} leadingIcon={<Save size={16} />}>저장</Button>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>{t('common:cancel')}</Button>
+          <Button variant="primary" onClick={() => onSave(form)} leadingIcon={<Save size={16} />}>{t('common:save')}</Button>
         </>
       }
     >
       <div className="space-y-3">
-        <FormField label="이름" required>
+        <FormField label={t('resources:form.name')} required>
           <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
         </FormField>
 
         <div>
-          <label className="block text-xs text-muted font-medium mb-1">타입</label>
+          <label className="block text-xs text-muted font-medium mb-1">{t('resources:form.type')}</label>
           <div className="flex gap-2">
-            {(['Person', 'Equipment'] as ResourceType[]).map((t) => (
+            {(['Person', 'Equipment'] as ResourceType[]).map((rt) => (
               <Button
-                key={t}
-                variant={form.type === t ? 'primary' : 'secondary'}
+                key={rt}
+                variant={form.type === rt ? 'primary' : 'secondary'}
                 size="md"
-                onClick={() => set('type', t)}
-                leadingIcon={t === 'Person' ? <User size={14} /> : <Wrench size={14} />}
+                onClick={() => set('type', rt)}
+                leadingIcon={rt === 'Person' ? <User size={14} /> : <Wrench size={14} />}
               >
-                {t === 'Person' ? '인원' : '장비'}
+                {rt === 'Person' ? t('resources:form.person') : t('resources:form.equipment')}
               </Button>
             ))}
           </div>
         </div>
 
-        <FormField label="부서 / 그룹">
+        <FormField label={t('resources:form.department')}>
           <input value={form.department} onChange={(e) => set('department', e.target.value)} className={inputClass} />
         </FormField>
 
         <div className="grid grid-cols-2 gap-3">
-          <FormField label="이메일">
+          <FormField label={t('resources:form.email')}>
             <div className="flex items-center gap-1.5">
               <input value={form.email} onChange={(e) => set('email', e.target.value)} className={inputClass} />
-              <CopyButton value={form.email} title="이메일 복사" />
+              <CopyButton value={form.email} title={t('resources:form.copyEmail')} />
             </div>
           </FormField>
-          <FormField label="연락처">
+          <FormField label={t('resources:form.phone')}>
             <div className="flex items-center gap-1.5">
               <input value={form.phone} onChange={(e) => set('phone', e.target.value)} className={inputClass} />
-              <CopyButton value={form.phone} title="연락처 복사" />
+              <CopyButton value={form.phone} title={t('resources:form.copyPhone')} />
             </div>
           </FormField>
         </div>
 
-        <FormField label="비고">
+        <FormField label={t('resources:form.notes')}>
           <textarea
             value={form.notes}
             onChange={(e) => set('notes', e.target.value)}
@@ -116,13 +117,14 @@ function AssignmentCard({ a }: { a: ResourceAssignment }) {
 function AssignmentProjectGroup({ projectName, active, done }: {
   projectName: string; active: ResourceAssignment[]; done: ResourceAssignment[];
 }) {
+  const { t } = useTranslation();
   const [showDone, setShowDone] = useState(false);
   return (
     <div className="space-y-2">
       <p className="text-xs text-muted font-medium">{projectName}</p>
       {active.map((a) => <AssignmentCard key={a.wbsItemId} a={a} />)}
       {active.length === 0 && (
-        <p className="text-xs text-muted/70 pl-1">진행 중인 작업 없음</p>
+        <p className="text-xs text-muted/70 pl-1">{t('resources:assign.noActive')}</p>
       )}
       {done.length > 0 && (
         <>
@@ -133,7 +135,7 @@ function AssignmentProjectGroup({ projectName, active, done }: {
             aria-expanded={showDone}
           >
             {showDone ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            완료 {done.length}건
+            {t('resources:assign.doneCount', { count: done.length })}
           </button>
           {showDone && done.map((a) => <AssignmentCard key={a.wbsItemId} a={a} />)}
         </>
@@ -143,6 +145,7 @@ function AssignmentProjectGroup({ projectName, active, done }: {
 }
 
 function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: () => void }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState<ResourceAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -152,9 +155,9 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
   useEffect(() => {
     resourcesApi.getAssignments(resource.id)
       .then(setItems)
-      .catch(() => setError('할당 작업을 불러올 수 없습니다.'))
+      .catch(() => setError(t('resources:assign.loadError')))
       .finally(() => setLoading(false));
-  }, [resource.id]);
+  }, [resource.id, t]);
 
   // 프로젝트별 그룹 — 진행/예정(active) vs 완료(done) 분리. activeOnly 면 active 없는 그룹 제외.
   const groups = useMemo(() => {
@@ -177,16 +180,16 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
     <Modal
       open
       onClose={onClose}
-      title={`${resource.name} — 할당된 작업`}
+      title={t('resources:assign.modalTitle', { name: resource.name })}
       size="lg"
       showCloseButton
     >
       {loading ? (
-        <div className="py-6 flex justify-center"><Spinner label="불러오는 중..." /></div>
+        <div className="py-6 flex justify-center"><Spinner label={t('common:loading')} /></div>
       ) : error ? (
         <p className="text-sm text-on-danger py-6 text-center">{error}</p>
       ) : items.length === 0 ? (
-        <p className="text-sm text-muted py-6 text-center">할당된 작업이 없습니다.</p>
+        <p className="text-sm text-muted py-6 text-center">{t('resources:assign.noAssignments')}</p>
       ) : (
         <div className="space-y-3">
           <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
@@ -196,10 +199,10 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
               onChange={(e) => setActiveOnly(e.target.checked)}
               className="w-auto"
             />
-            진행 중인 작업이 있는 프로젝트만 보기 (완료 {hiddenCount}건은 그룹별 ‘완료’ 섹션에서 펼치기)
+            {t('resources:assign.activeOnlyLabel', { count: hiddenCount })}
           </label>
           {groups.length === 0 ? (
-            <p className="text-sm text-muted py-6 text-center">진행 중인 작업이 없습니다. 체크를 해제하면 완료만 있는 프로젝트도 보입니다.</p>
+            <p className="text-sm text-muted py-6 text-center">{t('resources:assign.noActiveGroups')}</p>
           ) : (
             <div className="space-y-4 max-h-[55vh] overflow-y-auto">
               {groups.map((g) => (
@@ -214,6 +217,7 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
 }
 
 export function ResourcesPage() {
+  const { t } = useTranslation();
   const [resources, setResources] = useState<Resource[]>([]);
   const [filter, setFilter] = useState<ResourceType | 'All'>('All');
   const [showForm, setShowForm] = useState(false);
@@ -223,17 +227,17 @@ export function ResourcesPage() {
 
   useCreateForm(() => { setEditing(null); setShowForm(true); });
 
-  const load = () => resourcesApi.getAll().then(setResources).catch(() => setError('리소스 목록을 불러올 수 없습니다.'));
+  const load = useCallback(() => resourcesApi.getAll().then(setResources).catch(() => setError(t('resources:error.loadList'))), [t]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [load]);
 
   const handleCreate = async (data: Omit<Resource, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       await resourcesApi.create(data);
       setShowForm(false);
       load();
-      toast.success(data.name ? `새 리소스 '${data.name}' 이(가) 추가됐어요` : '새 리소스가 추가됐어요');
-    } catch { setError('리소스 등록 실패'); }
+      toast.success(data.name ? t('resources:toast.created', { name: data.name }) : t('resources:toast.createdNoName'));
+    } catch { setError(t('resources:error.createFailed')); }
   };
 
   const handleUpdate = async (data: Omit<Resource, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -242,21 +246,21 @@ export function ResourcesPage() {
       await resourcesApi.update(editing.id, data);
       setEditing(null);
       load();
-    } catch { setError('리소스 수정 실패'); }
+    } catch { setError(t('resources:error.updateFailed')); }
   };
 
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!await confirmDialog({
-      title: '리소스 삭제',
-      message: '이 리소스를 삭제하시겠습니까? 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('resources:delete.title'),
+      message: t('resources:delete.message'),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     try {
       await resourcesApi.delete(id);
       load();
-    } catch { setError('리소스 삭제 실패'); }
+    } catch { setError(t('resources:error.deleteFailed')); }
   };
 
   const filtered = filter === 'All' ? resources : resources.filter((r) => r.type === filter);
@@ -266,10 +270,10 @@ export function ResourcesPage() {
       <div className="flex items-center justify-between">
         <h1 className="h-page flex items-center gap-2">
           <Users size={18} className="text-muted" />
-          리소스 관리
+          {t('resources:title')}
         </h1>
         <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-          리소스 등록
+          {t('resources:newBtn')}
         </Button>
       </div>
 
@@ -278,14 +282,14 @@ export function ResourcesPage() {
       )}
 
       <div className="flex gap-2 flex-wrap">
-        <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>전체</Button>
+        <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>{t('resources:filterAll')}</Button>
         <Button
           variant={filter === 'Person' ? 'primary' : 'secondary'}
           size="sm"
           onClick={() => setFilter('Person')}
           leadingIcon={<User size={14} />}
         >
-          인원
+          {t('resources:form.person')}
         </Button>
         <Button
           variant={filter === 'Equipment' ? 'primary' : 'secondary'}
@@ -293,15 +297,15 @@ export function ResourcesPage() {
           onClick={() => setFilter('Equipment')}
           leadingIcon={<Wrench size={14} />}
         >
-          장비
+          {t('resources:form.equipment')}
         </Button>
       </div>
 
       {filtered.length === 0 ? (
         <EmptyState
           icon={<Users size={36} />}
-          title="등록된 리소스가 없습니다."
-          description={filter === 'All' ? '우측 상단 \'리소스 등록\' 버튼으로 시작해보세요.' : '해당 타입의 리소스가 없습니다.'}
+          title={t('resources:empty.title')}
+          description={filter === 'All' ? t('resources:empty.descAll') : t('resources:empty.descFiltered')}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -320,10 +324,10 @@ export function ResourcesPage() {
                   <h3 className="font-medium text-primary">{r.name}</h3>
                 </div>
                 <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button onClick={() => setEditing(r)} title="수정" aria-label="수정" className="p-1 text-muted hover:text-primary transition-colors">
+                  <button onClick={() => setEditing(r)} title={t('common:edit')} aria-label={t('common:edit')} className="p-1 text-muted hover:text-primary transition-colors">
                     <Pencil size={14} />
                   </button>
-                  <button onClick={(e) => handleDelete(r.id, e)} title="삭제" aria-label="삭제" className="p-1 text-on-danger hover:opacity-80 transition-opacity">
+                  <button onClick={(e) => handleDelete(r.id, e)} title={t('common:delete')} aria-label={t('common:delete')} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
                     <X size={14} />
                   </button>
                 </div>
@@ -337,7 +341,7 @@ export function ResourcesPage() {
                     <Mail size={12} className="shrink-0" />
                     <span className="truncate">{r.email}</span>
                     <span onClick={(e) => e.stopPropagation()} className="ml-auto">
-                      <CopyButton value={r.email} title="이메일 복사" className="!p-1" />
+                      <CopyButton value={r.email} title={t('resources:form.copyEmail')} className="!p-1" />
                     </span>
                   </p>
                 )}
@@ -346,14 +350,14 @@ export function ResourcesPage() {
                     <Phone size={12} className="shrink-0" />
                     <span className="truncate">{r.phone}</span>
                     <span onClick={(e) => e.stopPropagation()} className="ml-auto">
-                      <CopyButton value={r.phone} title="연락처 복사" className="!p-1" />
+                      <CopyButton value={r.phone} title={t('resources:form.copyPhone')} className="!p-1" />
                     </span>
                   </p>
                 )}
               </div>
               {r.notes && <p className="text-xs text-muted mt-2 line-clamp-2">{r.notes}</p>}
               <p className="text-xs text-muted mt-3 pt-2 border-t border-default">
-                클릭하여 할당된 작업 보기
+                {t('resources:card.viewAssignments')}
               </p>
             </Card>
           ))}

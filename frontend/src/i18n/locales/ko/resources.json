@@ -1,0 +1,48 @@
+{
+  "title": "리소스 관리",
+  "newBtn": "리소스 등록",
+  "filterAll": "전체",
+  "form": {
+    "newTitle": "리소스 등록",
+    "editTitle": "리소스 수정",
+    "name": "이름",
+    "type": "타입",
+    "person": "인원",
+    "equipment": "장비",
+    "department": "부서 / 그룹",
+    "email": "이메일",
+    "copyEmail": "이메일 복사",
+    "phone": "연락처",
+    "copyPhone": "연락처 복사",
+    "notes": "비고"
+  },
+  "card": { "viewAssignments": "클릭하여 할당된 작업 보기" },
+  "empty": {
+    "title": "등록된 리소스가 없습니다.",
+    "descAll": "우측 상단 '리소스 등록' 버튼으로 시작해보세요.",
+    "descFiltered": "해당 타입의 리소스가 없습니다."
+  },
+  "assign": {
+    "modalTitle": "{{name}} — 할당된 작업",
+    "loadError": "할당 작업을 불러올 수 없습니다.",
+    "noAssignments": "할당된 작업이 없습니다.",
+    "noActive": "진행 중인 작업 없음",
+    "doneCount": "완료 {{count}}건",
+    "activeOnlyLabel": "진행 중인 작업이 있는 프로젝트만 보기 (완료 {{count}}건은 그룹별 '완료' 섹션에서 펼치기)",
+    "noActiveGroups": "진행 중인 작업이 없습니다. 체크를 해제하면 완료만 있는 프로젝트도 보입니다."
+  },
+  "delete": {
+    "title": "리소스 삭제",
+    "message": "이 리소스를 삭제하시겠습니까? 되돌릴 수 없습니다."
+  },
+  "toast": {
+    "created": "새 리소스 '{{name}}' 이(가) 추가됐어요",
+    "createdNoName": "새 리소스가 추가됐어요"
+  },
+  "error": {
+    "loadList": "리소스 목록을 불러올 수 없습니다.",
+    "createFailed": "리소스 등록 실패",
+    "updateFailed": "리소스 수정 실패",
+    "deleteFailed": "리소스 삭제 실패"
+  }
+}
