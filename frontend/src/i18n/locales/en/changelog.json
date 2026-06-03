@@ -1,0 +1,57 @@
+{
+  "title": "Change log",
+  "newBtn": "Add entry",
+  "searchPlaceholder": "Search content / author / doc links…",
+  "tab": { "changelog": "Change log", "git": "Git history" },
+  "chart": { "caption": "Changes per day (by impact)", "countAxis": "Count" },
+  "filter": {
+    "allImpact": "All impacts",
+    "allSource": "All sources",
+    "withSource": "Has source",
+    "noSource": "No source",
+    "sourceIssueBadge": "From Issue #{{id}}",
+    "sourceWbsBadge": "From WBS #{{id}}",
+    "clearSourceAria": "Clear source filter"
+  },
+  "empty": {
+    "titleNone": "No change log entries.",
+    "titleFiltered": "No matching change log entries.",
+    "descNone": "Start with the 'Add entry' button at the top right.",
+    "descAdjust": "Try adjusting the search or impact filter."
+  },
+  "card": {
+    "editedBy": "edited by {{name}}",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "toggleAria": "{{state}} entry — {{date}}",
+    "editAria": "Edit entry — {{date}}",
+    "deleteAria": "Delete entry — {{date}}"
+  },
+  "delete": {
+    "title": "Delete entry",
+    "message": "Delete this change log entry? This can't be undone."
+  },
+  "form": {
+    "newTitle": "Add entry",
+    "editTitle": "Edit entry",
+    "date": "Date",
+    "impact": "Impact",
+    "relatedDocs": "Related doc links (one per line)",
+    "sourceIssue": "Source Issue",
+    "sourceWbs": "Source WBS task",
+    "none": "(none)",
+    "clearSource": "Clear source",
+    "clearSourceIssueAria": "Clear source issue",
+    "clearSourceWbsAria": "Clear source WBS",
+    "relatedMeetings": "Related meetings",
+    "meetingsSelected": "{{selected}} selected / {{total}} total",
+    "meetingSearch": "Search meetings (topic/date)",
+    "noMeetings": "No meetings.",
+    "noSearchResult": "No results",
+    "content": "Change content (markdown supported, rendered on blur)",
+    "conflictToast": "Saved elsewhere first. Use [View server value] to check the latest.",
+    "viewServer": "View server value",
+    "serverFetched": "Fetched the server value. Edit again and save."
+  },
+  "toast": { "created": "New change log entry added" }
+}

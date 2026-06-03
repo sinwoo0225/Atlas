@@ -1,0 +1,57 @@
+{
+  "title": "변경 이력",
+  "newBtn": "변경 이력 추가",
+  "searchPlaceholder": "내용·작성자·문서 링크 검색…",
+  "tab": { "changelog": "변경 이력", "git": "Git 이력" },
+  "chart": { "caption": "날짜별 변경 건수 (영향도별)", "countAxis": "건수" },
+  "filter": {
+    "allImpact": "영향도 전체",
+    "allSource": "출처 전체",
+    "withSource": "출처 있음",
+    "noSource": "출처 없음",
+    "sourceIssueBadge": "Issue #{{id}} 출처",
+    "sourceWbsBadge": "WBS #{{id}} 출처",
+    "clearSourceAria": "출처 필터 해제"
+  },
+  "empty": {
+    "titleNone": "변경 이력이 없습니다.",
+    "titleFiltered": "조건에 맞는 변경 이력이 없습니다.",
+    "descNone": "우측 상단 '변경 이력 추가' 버튼으로 시작해보세요.",
+    "descAdjust": "검색어나 영향도 필터를 조정해 보세요."
+  },
+  "card": {
+    "editedBy": "수정 {{name}}",
+    "expand": "펼치기",
+    "collapse": "접기",
+    "toggleAria": "변경이력 {{state}} — {{date}}",
+    "editAria": "변경이력 수정 — {{date}}",
+    "deleteAria": "변경이력 삭제 — {{date}}"
+  },
+  "delete": {
+    "title": "변경 이력 삭제",
+    "message": "이 변경 이력을 삭제하시겠습니까? 되돌릴 수 없습니다."
+  },
+  "form": {
+    "newTitle": "변경 이력 추가",
+    "editTitle": "변경 이력 수정",
+    "date": "날짜",
+    "impact": "영향도",
+    "relatedDocs": "관련 문서 링크 (한 줄에 하나)",
+    "sourceIssue": "출처 Issue",
+    "sourceWbs": "출처 WBS 작업",
+    "none": "(없음)",
+    "clearSource": "출처 해제",
+    "clearSourceIssueAria": "출처 이슈 해제",
+    "clearSourceWbsAria": "출처 WBS 해제",
+    "relatedMeetings": "관련 회의록",
+    "meetingsSelected": "{{selected}}개 선택 / {{total}}개 중",
+    "meetingSearch": "회의록 검색 (주제/날짜)",
+    "noMeetings": "회의록이 없습니다.",
+    "noSearchResult": "검색 결과 없음",
+    "content": "변경 내용 (마크다운 지원, 포커스 아웃 시 렌더링)",
+    "conflictToast": "다른 곳에서 먼저 저장됐어요. [서버 값 보기] 로 최신 값을 확인하세요.",
+    "viewServer": "서버 값 보기",
+    "serverFetched": "서버 값을 가져왔어요. 다시 편집 후 저장하세요."
+  },
+  "toast": { "created": "새 변경 이력이 추가됐어요" }
+}

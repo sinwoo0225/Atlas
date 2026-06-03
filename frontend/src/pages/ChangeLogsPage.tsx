@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import ReactECharts from 'echarts-for-react';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
@@ -32,6 +33,7 @@ const impactColor: Record<ImpactLevel, string> = {
 
 // 영향도 분포 + 일자별 차트 (히트맵 대신 stacked bar chart 사용)
 function ImpactBarChart({ logs }: { logs: ChangeLog[] }) {
+  const { t } = useTranslation();
   const theme = useThemeMode();
   const colors = getChartColors(theme);
 
@@ -84,7 +86,7 @@ function ImpactBarChart({ logs }: { logs: ChangeLog[] }) {
     },
     yAxis: {
       type: 'value',
-      name: '건수',
+      name: t('changelog:chart.countAxis'),
       nameTextStyle: { color: colors.axisText, fontSize: 11 },
       axisLabel: { color: colors.axisText, fontSize: 11 },
       splitLine: { lineStyle: { color: colors.splitLine } },
@@ -133,6 +135,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
   defaultSourceIssueId?: number | null;
   onSave: () => void; onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [content, setContent] = useState(initial?.content ?? '');
   const [impact, setImpact] = useState<ImpactLevel>(initial?.impact ?? 'Low');
@@ -207,11 +210,11 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
       } catch (err) {
         if (err instanceof Error && err.message.startsWith('API error 409')) {
           toast.warning(
-            '다른 곳에서 먼저 저장됐어요. [서버 값 보기] 로 최신 값을 확인하세요.',
+            t('changelog:form.conflictToast'),
             {
               duration: 8000,
               action: {
-                label: '서버 값 보기',
+                label: t('changelog:form.viewServer'),
                 onClick: async () => {
                   const fresh = await changeLogsApi.get(projectId, initial.id);
                   setSnapshotUpdatedAt(fresh.updatedAt);
@@ -234,19 +237,19 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                     otherLinks: freshOtherLinks, selectedMeetings: freshSelectedMeetings,
                     sourceIssueId: freshSourceIssueId, sourceWbsItemId: freshSourceWbsItemId,
                   }));
-                  toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
+                  toast.info(t('changelog:form.serverFetched'));
                 },
               },
             },
           );
           return;
         }
-        toast.error('저장 실패');
+        toast.error(t('common:saveFailed'));
         return;
       }
     } else {
       await changeLogsApi.create(payload);
-      toast.success('새 변경 이력이 추가됐어요');
+      toast.success(t('changelog:toast.created'));
     }
     onSave();
   };
@@ -260,14 +263,14 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
     <Modal
       open
       onClose={onCancel}
-      title={initial ? '변경 이력 수정' : '변경 이력 추가'}
+      title={initial ? t('changelog:form.editTitle') : t('changelog:form.newTitle')}
       size="wide"
       fixedHeight
       dirty={dirty}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>{t('common:cancel')}</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>{t('common:save')}</Button>
         </>
       }
     >
@@ -277,10 +280,10 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
           {/* 좌측 — 날짜·영향도·링크·출처·관련 회의록 */}
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <FormField label="날짜">
+              <FormField label={t('changelog:form.date')}>
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="영향도">
+              <FormField label={t('changelog:form.impact')}>
                 <select value={impact} onChange={(e) => setImpact(e.target.value as ImpactLevel)} className={inputClass}>
                   {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
                     <option key={v} value={v}>{v}</option>
@@ -289,7 +292,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
               </FormField>
             </div>
 
-            <FormField label="관련 문서 링크 (한 줄에 하나)">
+            <FormField label={t('changelog:form.relatedDocs')}>
               <textarea
                 value={otherLinks}
                 onChange={(e) => setOtherLinks(e.target.value)}
@@ -299,7 +302,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
             </FormField>
 
             {/* 출처 — 이 변경의 원인이 된 Issue / WBS. 둘 다 nullable 독립. */}
-            <FormField label="출처 Issue">
+            <FormField label={t('changelog:form.sourceIssue')}>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -313,7 +316,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                   className={`${inputClass} text-left flex items-center justify-between flex-1`}
                 >
                   <span className={sourceIssueLabel ? 'text-primary truncate' : 'text-muted'}>
-                    {sourceIssueLabel ?? '(없음)'}
+                    {sourceIssueLabel ?? t('changelog:form.none')}
                   </span>
                   {issuePickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
                 </button>
@@ -322,8 +325,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                     type="button"
                     onClick={() => setSourceIssueId(null)}
                     className="p-1 text-on-danger hover:opacity-80 transition-opacity"
-                    title="출처 해제"
-                    aria-label="출처 이슈 해제"
+                    title={t('changelog:form.clearSource')}
+                    aria-label={t('changelog:form.clearSourceIssueAria')}
                   >
                     <X size={14} />
                   </button>
@@ -339,7 +342,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                 </div>
               )}
             </FormField>
-            <FormField label="출처 WBS 작업">
+            <FormField label={t('changelog:form.sourceWbs')}>
               <div className="flex items-center gap-1">
                 <button
                   type="button"
@@ -347,7 +350,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                   className={`${inputClass} text-left flex items-center justify-between flex-1`}
                 >
                   <span className={sourceWbsLabel ? 'text-primary truncate' : 'text-muted'}>
-                    {sourceWbsLabel ?? '(없음)'}
+                    {sourceWbsLabel ?? t('changelog:form.none')}
                   </span>
                   {wbsPickerOpen ? <ChevronDown size={14} className="text-muted shrink-0" /> : <ChevronRight size={14} className="text-muted shrink-0" />}
                 </button>
@@ -356,8 +359,8 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                     type="button"
                     onClick={() => setSourceWbsItemId(null)}
                     className="p-1 text-on-danger hover:opacity-80 transition-opacity"
-                    title="출처 해제"
-                    aria-label="출처 WBS 해제"
+                    title={t('changelog:form.clearSource')}
+                    aria-label={t('changelog:form.clearSourceWbsAria')}
                   >
                     <X size={14} />
                   </button>
@@ -378,23 +381,23 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="block text-xs text-muted font-medium">관련 회의록</label>
+                <label className="block text-xs text-muted font-medium">{t('changelog:form.relatedMeetings')}</label>
                 <span className="text-xs text-muted">
-                  {selectedMeetings.length}개 선택 / {meetings.length}개 중
+                  {t('changelog:form.meetingsSelected', { selected: selectedMeetings.length, total: meetings.length })}
                 </span>
               </div>
               <input
                 value={meetingKeyword}
                 onChange={(e) => setMeetingKeyword(e.target.value)}
-                placeholder="회의록 검색 (주제/날짜)"
+                placeholder={t('changelog:form.meetingSearch')}
                 className={`${inputClass} mb-2`}
               />
               {meetings.length === 0 ? (
-                <p className="text-xs text-muted">회의록이 없습니다.</p>
+                <p className="text-xs text-muted">{t('changelog:form.noMeetings')}</p>
               ) : (
                 <div className="max-h-48 overflow-y-auto border border-default rounded-md p-2 space-y-1">
                   {filteredMeetings.length === 0 ? (
-                    <p className="text-xs text-muted text-center py-2">검색 결과 없음</p>
+                    <p className="text-xs text-muted text-center py-2">{t('changelog:form.noSearchResult')}</p>
                   ) : filteredMeetings.map((m) => (
                     <label key={m.id} className="flex items-center gap-2 cursor-pointer hover:bg-surface-2 px-2 py-1 rounded transition-colors">
                       <input
@@ -412,7 +415,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
           </div>
 
           {/* 우측 — 변경 내용 (마크다운). 모달 우측 공간 끝까지 채움. */}
-          <FormField label="변경 내용 (마크다운 지원, 포커스 아웃 시 렌더링)" required className="flex-1 flex flex-col min-h-0">
+          <FormField label={t('changelog:form.content')} required className="flex-1 flex flex-col min-h-0">
             {contentEditing || !content ? (
               <textarea
                 value={content}
@@ -439,6 +442,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
 }
 
 export function ChangeLogsPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const project = useCurrentProject();
@@ -546,9 +550,9 @@ export function ChangeLogsPage() {
   const handleDelete = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!await confirmDialog({
-      title: '변경 이력 삭제',
-      message: '이 변경 이력을 삭제하시겠습니까? 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('changelog:delete.title'),
+      message: t('changelog:delete.message'),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     await changeLogsApi.delete(pid, id);
@@ -560,18 +564,18 @@ export function ChangeLogsPage() {
       <PageHeader
         icon={<GitBranch size={18} />}
         breadcrumb={project?.name}
-        title="변경 이력"
+        title={t('changelog:title')}
         actions={
           tab === 'changelog' ? (
             <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-              변경 이력 추가
+              {t('changelog:newBtn')}
             </Button>
           ) : undefined
         }
       />
 
       <div className="flex gap-1 border-b border-default">
-        {([['changelog', '변경 이력'], ['git', 'Git 이력']] as const).map(([key, label]) => (
+        {(['changelog', 'git'] as const).map((key) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -580,7 +584,7 @@ export function ChangeLogsPage() {
             }`}
             style={tab === key ? { borderColor: 'var(--accent)' } : undefined}
           >
-            {label}
+            {t('changelog:tab.' + key)}
           </button>
         ))}
       </div>
@@ -606,7 +610,7 @@ export function ChangeLogsPage() {
 
       {!loading && !error && logs.length > 0 && (
         <Card padding="normal">
-          <p className="text-xs text-muted mb-2">날짜별 변경 건수 (영향도별)</p>
+          <p className="text-xs text-muted mb-2">{t('changelog:chart.caption')}</p>
           <ImpactBarChart logs={logs} />
         </Card>
       )}
@@ -617,7 +621,7 @@ export function ChangeLogsPage() {
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="내용·작성자·문서 링크 검색…"
+            placeholder={t('changelog:searchPlaceholder')}
             leadingIcon={<Search size={14} />}
             fullWidth={false}
             wrapperClassName="w-64"
@@ -628,7 +632,7 @@ export function ChangeLogsPage() {
             onChange={(e) => setImpactFilter(e.target.value as ImpactLevel | 'All')}
             className={`${inputClassNoW} py-1.5 text-sm w-36`}
           >
-            <option value="All">영향도 전체</option>
+            <option value="All">{t('changelog:filter.allImpact')}</option>
             {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
               <option key={v} value={v}>{v}</option>
             ))}
@@ -638,19 +642,19 @@ export function ChangeLogsPage() {
             onChange={(e) => setSourceFilter(e.target.value as 'all' | 'withSource' | 'noSource')}
             className={`${inputClassNoW} py-1.5 text-sm w-32`}
           >
-            <option value="all">출처 전체</option>
-            <option value="withSource">출처 있음</option>
-            <option value="noSource">출처 없음</option>
+            <option value="all">{t('changelog:filter.allSource')}</option>
+            <option value="withSource">{t('changelog:filter.withSource')}</option>
+            <option value="noSource">{t('changelog:filter.noSource')}</option>
           </select>
           {/* URL 쿼리 (?sourceIssue=N / ?sourceWbs=N) 활성 — 자동 필터 안내 + 해제 */}
           {(filterSourceIssue || filterSourceWbs) && (
             <Badge variant="accent" size="sm" className="flex items-center gap-1">
-              {filterSourceIssue ? `Issue #${filterSourceIssue} 출처` : `WBS #${filterSourceWbs} 출처`}
+              {filterSourceIssue ? t('changelog:filter.sourceIssueBadge', { id: filterSourceIssue }) : t('changelog:filter.sourceWbsBadge', { id: filterSourceWbs })}
               <button
                 type="button"
                 onClick={clearSourceQuery}
                 className="hover:opacity-70"
-                aria-label="출처 필터 해제"
+                aria-label={t('changelog:filter.clearSourceAria')}
               >
                 <X size={11} />
               </button>
@@ -658,7 +662,7 @@ export function ChangeLogsPage() {
           )}
           {(keyword || impactFilter !== 'All' || sourceFilter !== 'all' || filterSourceIssue || filterSourceWbs) && (
             <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setImpactFilter('All'); setSourceFilter('all'); clearSourceQuery(); }}>
-              초기화
+              {t('common:reset')}
             </Button>
           )}
           <span className="text-xs text-muted ml-auto">{filtered.length} / {logs.length}</span>
@@ -670,10 +674,10 @@ export function ChangeLogsPage() {
         {filtered.length === 0 ? (
           <EmptyState
             icon={<GitBranch size={36} />}
-            title={logs.length === 0 ? '변경 이력이 없습니다.' : '조건에 맞는 변경 이력이 없습니다.'}
+            title={logs.length === 0 ? t('changelog:empty.titleNone') : t('changelog:empty.titleFiltered')}
             description={logs.length === 0
-              ? "우측 상단 '변경 이력 추가' 버튼으로 시작해보세요."
-              : '검색어나 영향도 필터를 조정해 보세요.'}
+              ? t('changelog:empty.descNone')
+              : t('changelog:empty.descAdjust')}
           />
         ) : filtered.map((log) => {
           const meetingIds = extractMeetingIds(log.relatedDocLinks);
@@ -718,7 +722,7 @@ export function ChangeLogsPage() {
                   <span className="text-sm text-muted">{log.date.slice(0, 10)}</span>
                   {log.createdBy && <span className="text-xs text-muted">by {log.createdBy}</span>}
                   {log.updatedBy && log.updatedBy !== log.createdBy && (
-                    <span className="text-xs text-muted">· 수정 {log.updatedBy}</span>
+                    <span className="text-xs text-muted">· {t('changelog:card.editedBy', { name: log.updatedBy })}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -726,14 +730,14 @@ export function ChangeLogsPage() {
                     onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                     className="px-2 text-xs text-muted hover:text-primary transition-colors"
                     aria-expanded={expanded === log.id}
-                    aria-label={`변경이력 ${expanded === log.id ? '접기' : '펼치기'} — ${log.date.slice(0, 10)}`}
+                    aria-label={t('changelog:card.toggleAria', { state: expanded === log.id ? t('changelog:card.collapse') : t('changelog:card.expand'), date: log.date.slice(0, 10) })}
                   >
-                    {expanded === log.id ? '접기' : '펼치기'}
+                    {expanded === log.id ? t('changelog:card.collapse') : t('changelog:card.expand')}
                   </button>
-                  <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`변경이력 수정 — ${log.date.slice(0, 10)}`}>
+                  <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('changelog:card.editAria', { date: log.date.slice(0, 10) })}>
                     <Pencil size={14} />
                   </button>
-                  <button onClick={(e) => handleDelete(log.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제" aria-label={`변경이력 삭제 — ${log.date.slice(0, 10)}`}>
+                  <button onClick={(e) => handleDelete(log.id, e)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('common:delete')} aria-label={t('changelog:card.deleteAria', { date: log.date.slice(0, 10) })}>
                     <X size={14} />
                   </button>
                 </div>
