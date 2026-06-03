@@ -43,7 +43,7 @@ Atlas 에는 서버 측 보관 기간 개념이 없습니다. 데이터는 사�
 
 Atlas 는 개인·업무용 프로젝트 관리 도구입니다. 본 방침에 대한 문의나 제보는 GitHub 저장소의 이슈로 부탁드립니다: <https://github.com/sinwoo0225/Atlas>.
 
-라이선스는 [`LICENSE`](./LICENSE)(MIT) 를 참고하세요. Copyright (c) 2026 SlnU.
+라이선스는 [`LICENSE`](./LICENSE)(독점 소프트웨어, All rights reserved) 를 참고하세요. Copyright (c) 2026 SlnU.
 
 ---
 
@@ -92,4 +92,4 @@ There is no server-side retention concept. Data stays on your device until you d
 
 Atlas is a personal/work project-management tool. For questions or reports about this policy, please open an issue on the GitHub repository: <https://github.com/sinwoo0225/Atlas>.
 
-For licensing, see [`LICENSE`](./LICENSE) (MIT). Copyright (c) 2026 SlnU.
+For licensing, see [`LICENSE`](./LICENSE) (proprietary, all rights reserved). Copyright (c) 2026 SlnU.

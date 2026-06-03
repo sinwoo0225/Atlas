@@ -112,7 +112,7 @@ cd frontend; npm install; cd ..
 
 ## 라이선스
 
-MIT — 자세한 내용은 [`LICENSE`](./LICENSE) 참고. Copyright (c) 2026 SlnU.
+독점 소프트웨어(Proprietary) — All rights reserved. 자세한 내용은 [`LICENSE`](./LICENSE) 참고. Copyright (c) 2026 SlnU.
 
 개인정보 처리방침은 [`PRIVACY.md`](./PRIVACY.md) 참고.
 
@@ -230,6 +230,6 @@ cd frontend; npm install; cd ..
 
 ### License
 
-MIT — see [`LICENSE`](./LICENSE). Copyright (c) 2026 SlnU.
+Proprietary — All rights reserved. See [`LICENSE`](./LICENSE). Copyright (c) 2026 SlnU.
 
 See [`PRIVACY.md`](./PRIVACY.md) for the privacy policy.
