@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search, AlertTriangle, ListTree, Sparkles, Mic } from 'lucide-react';
 import { meetingsApi } from '../api/meetings';
 import { aiApi } from '../api/ai';
@@ -49,6 +50,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   projectId: number; initial?: Meeting;
   onSave: () => void; onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const [date, setDate] = useState(initial?.date?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [startTime, setStartTime] = useState(initial?.startTime ?? '');
   const [endTime, setEndTime] = useState(initial?.endTime ?? '');
@@ -71,17 +73,17 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   const aiEnabled = loadSettings().aiSummaryEnabled;
   const [aiSummarizing, setAiSummarizing] = useState(false);
   const handleAiSummary = async () => {
-    if (!discussion.trim()) { toast.info('논의 내용을 먼저 입력하세요'); return; }
+    if (!discussion.trim()) { toast.info(t('meetings:form.aiNeedContent')); return; }
     setAiSummarizing(true);
     try {
       const { summary } = await aiApi.summarize(discussion);
       setDiscussion(prependAiSummary(discussion, summary));
       setDiscussionEditing(true);
-      toast.success('AI 요약을 상단에 추가했어요');
+      toast.success(t('meetings:form.aiAdded'));
     } catch (e) {
       // 서버 오류(claude 실패 등)는 api client 가 이미 토스트 — 네트워크 등 그 외만 보완.
       if (!(e instanceof Error && e.message.startsWith('API error'))) {
-        toast.error('AI 요약 실패 — 네트워크/백엔드 확인');
+        toast.error(t('meetings:form.aiFailed'));
       }
     } finally {
       setAiSummarizing(false);
@@ -210,11 +212,11 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
       } catch (err) {
         if (err instanceof Error && err.message.startsWith('API error 409')) {
           toast.warning(
-            '다른 곳에서 먼저 저장됐어요. [서버 값 보기] 로 최신 값을 확인하세요.',
+            t('meetings:form.conflictToast'),
             {
               duration: 8000,
               action: {
-                label: '서버 값 보기',
+                label: t('meetings:form.viewServer'),
                 onClick: async () => {
                   const fresh = await meetingsApi.get(projectId, initial.id);
                   setSnapshotUpdatedAt(fresh.updatedAt);
@@ -240,20 +242,20 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                     discussion: freshDiscussion, attendees: freshAttendees,
                     decisions: freshDecisions, actionItems: freshActions,
                   }));
-                  toast.info('서버 값을 가져왔어요. 다시 편집 후 저장하세요.');
+                  toast.info(t('meetings:form.serverFetched'));
                 },
               },
             },
           );
           return;
         }
-        toast.error('저장 실패');
+        toast.error(t('common:saveFailed'));
         return;
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 리터럴↔CreateMeetingDto 구조 일치, 캐스트만 필요
       await meetingsApi.create(payload as any);
-      toast.success(topic.trim() ? `새 회의록 '${topic.trim()}' 이(가) 추가됐어요` : '새 회의록이 추가됐어요');
+      toast.success(topic.trim() ? t('meetings:toast.created', { topic: topic.trim() }) : t('meetings:toast.createdNoName'));
     }
     onSave();
   };
@@ -262,14 +264,14 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
     <Modal
       open
       onClose={onCancel}
-      title={initial ? '회의록 수정' : '회의록 작성'}
+      title={initial ? t('meetings:form.editTitle') : t('meetings:form.newTitle')}
       size="wide"
       fixedHeight
       dirty={dirty}
       footer={
         <>
-          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>취소</Button>
-          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>저장</Button>
+          <Button variant="secondary" onClick={onCancel} leadingIcon={<X size={16} />}>{t('common:cancel')}</Button>
+          <Button variant="primary" onClick={handleSubmit} leadingIcon={<Save size={16} />}>{t('common:save')}</Button>
         </>
       }
     >
@@ -278,10 +280,10 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
           {/* 좌측 */}
           <div className="space-y-3">
             <div className="grid grid-cols-12 gap-3">
-              <FormField label="날짜" className="col-span-3">
+              <FormField label={t('meetings:form.date')} className="col-span-3">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label="시간 (시작 ~ 종료, 30분 단위)" className="col-span-5">
+              <FormField label={t('meetings:form.time')} className="col-span-5">
                 <div className="flex items-center gap-2">
                   <select
                     value={startTime}
@@ -306,20 +308,20 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                   </select>
                 </div>
               </FormField>
-              <FormField label="주제" required className="col-span-4">
+              <FormField label={t('meetings:form.topic')} required className="col-span-4">
                 <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} />
               </FormField>
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs text-muted font-medium">참석자 (소속별)</label>
+                <label className="block text-xs text-muted font-medium">{t('meetings:form.attendees')}</label>
                 <Button variant="ghost" size="sm" onClick={addOrg} leadingIcon={<Building2 size={14} />}>
-                  소속 추가
+                  {t('meetings:form.addOrg')}
                 </Button>
               </div>
               {legacyAttendees && (
-                <p className="text-xs text-muted mb-2">기존 값: {legacyAttendees}</p>
+                <p className="text-xs text-muted mb-2">{t('meetings:form.legacyValue', { value: legacyAttendees })}</p>
               )}
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {attendees.map((org, i) => (
@@ -328,10 +330,10 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                       <input
                         value={org.org}
                         onChange={(e) => updateOrg(i, 'org', e.target.value)}
-                        placeholder="소속명"
+                        placeholder={t('meetings:form.orgName')}
                         className={inputClass}
                       />
-                      <button onClick={() => removeOrg(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="소속 삭제" aria-label="소속 삭제">
+                      <button onClick={() => removeOrg(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('meetings:form.removeOrg')} aria-label={t('meetings:form.removeOrg')}>
                         <X size={14} />
                       </button>
                     </div>
@@ -340,10 +342,10 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         <input
                           value={m}
                           onChange={(e) => updateMember(i, j, e.target.value)}
-                          placeholder="이름"
+                          placeholder={t('meetings:form.memberName')}
                           className={inputClass}
                         />
-                        <button onClick={() => removeMember(i, j)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="인원 삭제" aria-label="인원 삭제">
+                        <button onClick={() => removeMember(i, j)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('meetings:form.removeMember')} aria-label={t('meetings:form.removeMember')}>
                           <X size={14} />
                         </button>
                       </div>
@@ -355,7 +357,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                       onClick={() => addMember(i)}
                       leadingIcon={<UserPlus size={14} />}
                     >
-                      인원 추가
+                      {t('meetings:form.addMember')}
                     </Button>
                   </div>
                 ))}
@@ -363,16 +365,16 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
             </div>
 
             <div>
-              <label className="block text-xs text-muted font-medium mb-1">주요 결정사항</label>
+              <label className="block text-xs text-muted font-medium mb-1">{t('meetings:form.decisions')}</label>
               <div className="flex gap-2 mb-2">
                 <input
                   value={decisionInput}
                   onChange={(e) => setDecisionInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addDecision())}
-                  placeholder="결정사항 입력 후 추가"
+                  placeholder={t('meetings:form.decisionPlaceholder')}
                   className={inputClass}
                 />
-                <Button variant="secondary" onClick={addDecision} leadingIcon={<Plus size={16} />}>추가</Button>
+                <Button variant="secondary" onClick={addDecision} leadingIcon={<Plus size={16} />}>{t('common:add')}</Button>
               </div>
               <ul className="space-y-1">
                 {decisions.map((d, i) => (
@@ -394,12 +396,12 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         type="button"
                         onClick={() => startEditDecision(i)}
                         className="flex-1 text-left text-sm text-secondary hover:text-primary cursor-text"
-                        title="클릭해서 수정"
+                        title={t('meetings:form.clickEdit')}
                       >
                         {d}
                       </button>
                     )}
-                    <button onClick={() => removeDecision(i)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity" title="결정사항 삭제" aria-label="결정사항 삭제">
+                    <button onClick={() => removeDecision(i)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity" title={t('meetings:form.removeDecision')} aria-label={t('meetings:form.removeDecision')}>
                       <X size={14} />
                     </button>
                   </li>
@@ -410,7 +412,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="block text-xs text-muted font-medium">Action Items</label>
-                <Button variant="ghost" size="sm" onClick={addAction} leadingIcon={<Plus size={14} />}>추가</Button>
+                <Button variant="ghost" size="sm" onClick={addAction} leadingIcon={<Plus size={14} />}>{t('common:add')}</Button>
               </div>
               <div className="space-y-2">
                 {actionItems.map((a, i) => {
@@ -424,10 +426,10 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         <input
                           value={a.content}
                           onChange={(e) => updateAction(i, 'content', e.target.value)}
-                          placeholder="내용"
+                          placeholder={t('meetings:form.content')}
                           className={inputClass}
                         />
-                        <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="Action Item 삭제" aria-label="Action Item 삭제">
+                        <button onClick={() => removeAction(i)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('meetings:form.removeAction')} aria-label={t('meetings:form.removeAction')}>
                           <X size={14} />
                         </button>
                       </div>
@@ -435,7 +437,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         <input
                           value={a.assignee}
                           onChange={(e) => updateAction(i, 'assignee', e.target.value)}
-                          placeholder="담당자"
+                          placeholder={t('meetings:form.assignee')}
                           className={inputClass}
                         />
                         <input
@@ -449,12 +451,12 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         <div className="flex flex-wrap gap-1 text-xs text-muted">
                           {a.promotedIssueId != null && (
                             <span className="bg-surface-2 border border-default rounded px-1.5 py-0.5">
-                              Issue #{a.promotedIssueId} 로 승격됨
+                              {t('meetings:form.promotedIssue', { id: a.promotedIssueId })}
                             </span>
                           )}
                           {a.promotedWbsItemId != null && (
                             <span className="bg-surface-2 border border-default rounded px-1.5 py-0.5">
-                              WBS #{a.promotedWbsItemId} 로 승격됨
+                              {t('meetings:form.promotedWbs', { id: a.promotedWbsItemId })}
                             </span>
                           )}
                         </div>
@@ -467,18 +469,18 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
           </div>
 
           {/* 우측 - 논의 내용 (마크다운). 모달 우측 공간 끝까지 채움. */}
-          <FormField label="논의 내용 (마크다운 지원, 포커스 아웃 시 렌더링)" className="flex-1 flex flex-col min-h-0">
+          <FormField label={t('meetings:form.discussion')} className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between gap-2 mb-1 shrink-0">
-              <span className="text-xs text-muted">💡 Win+H 로 받아쓰기 입력</span>
+              <span className="text-xs text-muted">{t('meetings:form.dictationHint')}</span>
               <div className="flex items-center gap-1">
                 {bridgeAvailable && (
                   <Button variant="ghost" size="sm" onClick={handleDictation} leadingIcon={<Mic size={14} />}>
-                    받아쓰기
+                    {t('meetings:form.dictation')}
                   </Button>
                 )}
                 {aiEnabled && (
                   <Button variant="ghost" size="sm" onClick={handleAiSummary} disabled={aiSummarizing} leadingIcon={<Sparkles size={14} />}>
-                    {aiSummarizing ? 'AI 요약 중…' : 'AI 요약'}
+                    {aiSummarizing ? t('meetings:form.aiSummarizing') : t('meetings:form.aiSummary')}
                   </Button>
                 )}
               </div>
@@ -512,6 +514,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
 function MeetingDetail({ meeting, projectId, onChange }: {
   meeting: Meeting; projectId: number; onChange: () => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const decisions = parseDecisions(meeting.decisions);
   const actions = parseActionItems(meeting.actionItems);
@@ -519,7 +522,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
 
   const promote = async (a: ActionItem, target: 'issue' | 'wbs') => {
     if (!a.content.trim()) {
-      toast.error('내용이 비어 있는 ActionItem 은 승격할 수 없습니다.');
+      toast.error(t('meetings:detail.emptyActionItem'));
       return;
     }
     setBusy(`${a.id}:${target}`);
@@ -530,13 +533,13 @@ function MeetingDetail({ meeting, projectId, onChange }: {
         // 일치하지 않으면 silent 하게 담당자 미지정(null)이 된다 — 한 줄 안내.
         const unmatched = a.assignee.trim() && issue.assigneeResourceId == null;
         if (unmatched) {
-          toast.success(`Issue #${issue.id} 생성됨 — '${a.assignee.trim()}'은 등록된 리소스가 아니라 담당자 미지정`);
+          toast.success(t('meetings:detail.issueCreatedUnmatched', { id: issue.id, assignee: a.assignee.trim() }));
         } else {
-          toast.success(`Issue #${issue.id} 생성됨`);
+          toast.success(t('meetings:detail.issueCreated', { id: issue.id }));
         }
       } else {
         const item = await meetingsApi.promoteToWbs(projectId, meeting.id, a.id);
-        toast.success(`WBS #${item.id} 생성됨`);
+        toast.success(t('meetings:detail.wbsCreated', { id: item.id }));
       }
       onChange();
     } catch { /* api/client.ts 가 이미 toast 처리 */ }
@@ -548,7 +551,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
       {/* 1. 주요 결정사항 */}
       {decisions.length > 0 && (
         <div>
-          <p className="text-xs text-muted font-medium mb-1">주요 결정사항</p>
+          <p className="text-xs text-muted font-medium mb-1">{t('meetings:detail.decisions')}</p>
           <ul className="text-sm text-secondary list-disc pl-5 space-y-0.5">
             {decisions.map((d, i) => <li key={i}>{d}</li>)}
           </ul>
@@ -556,7 +559,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
       )}
       {!decisions.length && meeting.decisions && (
         <div>
-          <p className="text-xs text-muted font-medium mb-1">주요 결정사항</p>
+          <p className="text-xs text-muted font-medium mb-1">{t('meetings:detail.decisions')}</p>
           <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.decisions}</p>
         </div>
       )}
@@ -568,10 +571,10 @@ function MeetingDetail({ meeting, projectId, onChange }: {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs text-muted">
-                <th className="text-left pb-1 pr-2 font-medium">내용</th>
-                <th className="text-left pb-1 pr-2 font-medium">담당자</th>
-                <th className="text-left pb-1 pr-2 font-medium">기한</th>
-                <th className="text-right pb-1 font-medium w-48">승격</th>
+                <th className="text-left pb-1 pr-2 font-medium">{t('meetings:detail.thContent')}</th>
+                <th className="text-left pb-1 pr-2 font-medium">{t('meetings:detail.thAssignee')}</th>
+                <th className="text-left pb-1 pr-2 font-medium">{t('meetings:detail.thDeadline')}</th>
+                <th className="text-right pb-1 font-medium w-48">{t('meetings:detail.thPromote')}</th>
               </tr>
             </thead>
             <tbody>
@@ -587,7 +590,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
                           type="button"
                           onClick={() => navigate(`/projects/${projectId}/issues?highlight=${a.promotedIssueId}`)}
                           className="text-xs bg-surface-2 border border-default rounded px-1.5 py-0.5 hover:border-strong transition-colors"
-                          title="Issue 페이지로 이동"
+                          title={t('meetings:detail.gotoIssue')}
                         >
                           Issue #{a.promotedIssueId}
                         </button>
@@ -598,7 +601,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
                           onClick={() => promote(a, 'issue')}
                           className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded border border-default text-muted hover:text-primary hover:border-strong disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                          <AlertTriangle size={12} /> Issue로
+                          <AlertTriangle size={12} /> {t('meetings:detail.toIssue')}
                         </button>
                       )}
                       {a.promotedWbsItemId != null ? (
@@ -606,7 +609,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
                           type="button"
                           onClick={() => navigate(`/projects/${projectId}/wbs?highlight=${a.promotedWbsItemId}`)}
                           className="text-xs bg-surface-2 border border-default rounded px-1.5 py-0.5 hover:border-strong transition-colors"
-                          title="WBS 페이지로 이동"
+                          title={t('meetings:detail.gotoWbs')}
                         >
                           WBS #{a.promotedWbsItemId}
                         </button>
@@ -617,7 +620,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
                           onClick={() => promote(a, 'wbs')}
                           className="text-xs flex items-center gap-1 px-1.5 py-0.5 rounded border border-default text-muted hover:text-primary hover:border-strong disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                         >
-                          <ListTree size={12} /> WBS로
+                          <ListTree size={12} /> {t('meetings:detail.toWbs')}
                         </button>
                       )}
                     </div>
@@ -638,7 +641,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
       {/* 3. 논의 내용 - 마크다운 렌더링 */}
       {meeting.discussion && (
         <div>
-          <p className="text-xs text-muted font-medium mb-1">논의 내용</p>
+          <p className="text-xs text-muted font-medium mb-1">{t('meetings:detail.discussion')}</p>
           <div className="markdown-body">
             <ReactMarkdown>{meeting.discussion}</ReactMarkdown>
           </div>
@@ -649,6 +652,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
 }
 
 export function MeetingsPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const pid = parseInt(projectId!);
   const project = useCurrentProject();
@@ -703,9 +707,9 @@ export function MeetingsPage() {
 
   const handleDelete = async (id: number) => {
     if (!await confirmDialog({
-      title: '회의록 삭제',
-      message: '이 회의록을 삭제하시겠습니까? 되돌릴 수 없습니다.',
-      confirmLabel: '삭제',
+      title: t('meetings:delete.title'),
+      message: t('meetings:delete.message'),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     await meetingsApi.delete(pid, id);
@@ -717,10 +721,10 @@ export function MeetingsPage() {
       <PageHeader
         icon={<FileText size={18} />}
         breadcrumb={project?.name}
-        title="회의록"
+        title={t('meetings:title')}
         actions={
           <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-            회의록 작성
+            {t('meetings:newBtn')}
           </Button>
         }
       />
@@ -732,19 +736,19 @@ export function MeetingsPage() {
             type="search"
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="주제·논의·결정사항·참석자 검색…"
+            placeholder={t('meetings:searchPlaceholder')}
             className={`${inputClass} pl-7 py-1.5 text-sm`}
           />
         </div>
         <div className="flex items-center gap-1 text-sm">
-          <span className="text-muted text-xs">날짜</span>
+          <span className="text-muted text-xs">{t('meetings:dateLabel')}</span>
           <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={`${inputClassNoW} py-1.5 text-sm w-36`} />
           <span className="text-muted">~</span>
           <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={`${inputClassNoW} py-1.5 text-sm w-36`} />
         </div>
         {(keyword || dateFrom || dateTo) && (
           <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setDateFrom(''); setDateTo(''); }}>
-            초기화
+            {t('common:reset')}
           </Button>
         )}
         <span className="text-xs text-muted ml-auto">{filtered.length} / {meetings.length}</span>
@@ -768,10 +772,10 @@ export function MeetingsPage() {
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={<FileText size={36} />}
-            title={meetings.length === 0 ? '회의록이 없습니다.' : '조건에 맞는 회의록이 없습니다.'}
+            title={meetings.length === 0 ? t('meetings:empty.titleNone') : t('meetings:empty.titleFiltered')}
             description={meetings.length === 0
-              ? "우측 상단 '회의록 작성' 버튼으로 새 회의록을 만들어보세요."
-              : '검색어나 날짜 범위를 조정해 보세요.'}
+              ? t('meetings:empty.descNone')
+              : t('meetings:empty.descAdjust')}
           />
         ) : filtered.map((m) => (
           <Card key={m.id} padding="spacious" data-highlight-id={m.id}>
@@ -795,17 +799,17 @@ export function MeetingsPage() {
                 </h3>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => setEditing(m)} className="p-1 text-muted hover:text-primary transition-colors" title="수정" aria-label={`회의록 수정 — ${m.topic}`}>
+                <button onClick={() => setEditing(m)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('meetings:card.editAria', { topic: m.topic })}>
                   <Pencil size={14} />
                 </button>
-                <button onClick={() => handleDelete(m.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title="삭제" aria-label={`회의록 삭제 — ${m.topic}`}>
+                <button onClick={() => handleDelete(m.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('common:delete')} aria-label={t('meetings:card.deleteAria', { topic: m.topic })}>
                   <X size={14} />
                 </button>
                 <button
                   onClick={() => setExpanded(expanded === m.id ? null : m.id)}
                   className="px-2 text-xs text-muted hover:text-primary transition-colors"
                 >
-                  {expanded === m.id ? '접기' : '펼치기'}
+                  {expanded === m.id ? t('meetings:card.collapse') : t('meetings:card.expand')}
                 </button>
               </div>
             </div>
