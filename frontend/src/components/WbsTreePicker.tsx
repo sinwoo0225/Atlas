@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import type { WbsItem } from '../types';
 import { collectAncestorIds, collectMatchedIds, type WbsFilterOpts } from '../utils/wbsHelpers';
@@ -15,6 +16,7 @@ type Props = {
 // WBS 트리에서 부모를 고르는 picker. 검색 + expand/collapse + 자손 비활성.
 // 높이는 부모가 제어 (flex 컨테이너 안에서 flex-1 로 fit). 자체 max-h 없음 — 이중 스크롤 방지.
 export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, showRoot = true }: Props) {
+  const { t } = useTranslation();
   const [keyword, setKeyword] = useState('');
   const [manuallyExpanded, setManuallyExpanded] = useState<Set<number>>(new Set());
 
@@ -57,7 +59,7 @@ export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, showRoo
           type="search"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
-          placeholder="작업명·담당자 검색…"
+          placeholder={t('wbs:treePicker.search')}
           className={`${inputClass} pl-7 py-1.5 text-sm`}
         />
       </div>
@@ -87,6 +89,7 @@ export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, showRoo
 }
 
 function RootRow({ selected, onSelect }: { selected: boolean; onSelect: () => void }) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -96,7 +99,7 @@ function RootRow({ selected, onSelect }: { selected: boolean; onSelect: () => vo
       }`}
     >
       <span className="w-4 inline-block" />
-      <span className="text-muted">(루트)</span>
+      <span className="text-muted">{t('wbs:treePicker.root')}</span>
     </button>
   );
 }
@@ -113,6 +116,7 @@ function Node({
   visible: Set<number> | null;
   onSelect: (id: number | null) => void;
 }) {
+  const { t } = useTranslation();
   // 검색 활성 시: visible 에 없으면 본인+자손 모두 hide.
   if (visible && !visible.has(item.id)) return null;
 
@@ -151,7 +155,7 @@ function Node({
                   ? 'text-accent'
                   : 'text-primary hover:text-accent cursor-pointer'
             } transition-colors`}
-            title={disabled ? '자기 자신 또는 자손은 부모로 지정할 수 없습니다' : item.name}
+            title={disabled ? t('wbs:treePicker.disabledTitle') : item.name}
           >
             {item.name}
           </button>

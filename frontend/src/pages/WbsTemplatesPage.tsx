@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Eye, X, Save, ClipboardList, Flag, ChevronRight, CornerDownRight } from 'lucide-react';
 import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '../components/ui';
@@ -7,9 +8,9 @@ import { wbsTemplatesApi } from '../api/wbsTemplates';
 import type { WbsTemplate, WbsTemplateSummary, WbsTemplateNode } from '../types';
 
 const importanceOptions = [
-  { value: 1, label: '낮음' },
-  { value: 2, label: '중간' },
-  { value: 3, label: '높음' },
+  { value: 1, labelKey: 'status:importance.Low' },
+  { value: 2, labelKey: 'status:importance.Medium' },
+  { value: 3, labelKey: 'status:importance.High' },
 ];
 
 function blankNode(): WbsTemplateNode {
@@ -36,6 +37,7 @@ function NodeEditor({
   onChange: (next: WbsTemplateNode) => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const update = (patch: Partial<WbsTemplateNode>) => onChange({ ...node, ...patch });
   const addChild = () => update({ children: [...node.children, blankNode()] });
   const updateChild = (i: number, child: WbsTemplateNode) =>
@@ -50,14 +52,14 @@ function NodeEditor({
         <input
           value={node.name}
           onChange={(e) => update({ name: e.target.value })}
-          placeholder="작업 이름"
+          placeholder={t('templates:node.name')}
           disabled={readOnly}
           className={`${inputClass} flex-1`}
         />
         <input
           value={node.assignee}
           onChange={(e) => update({ assignee: e.target.value })}
-          placeholder="담당(역할)"
+          placeholder={t('templates:node.assignee')}
           disabled={readOnly}
           className={`${inputClass} w-28`}
         />
@@ -65,8 +67,8 @@ function NodeEditor({
           type="number"
           value={node.offsetStartDays ?? ''}
           onChange={(e) => update({ offsetStartDays: parseNum(e.target.value) })}
-          placeholder="시작+일"
-          title="시작 오프셋(앵커로부터 일수). 비우면 날짜 없음"
+          placeholder={t('templates:node.offsetStart')}
+          title={t('templates:node.offsetTitle')}
           disabled={readOnly}
           className={`${inputClass} w-20`}
         />
@@ -74,8 +76,8 @@ function NodeEditor({
           type="number"
           value={node.durationDays ?? ''}
           onChange={(e) => update({ durationDays: parseNum(e.target.value) })}
-          placeholder="기간"
-          title="기간(일). 비우면 종료일 없음"
+          placeholder={t('templates:node.duration')}
+          title={t('templates:node.durationTitle')}
           disabled={readOnly || node.isMilestone}
           className={`${inputClass} w-16`}
         />
@@ -86,24 +88,24 @@ function NodeEditor({
           className={`${inputClass} w-20`}
         >
           {importanceOptions.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
+            <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
           ))}
         </select>
         <button
           type="button"
           onClick={() => update({ isMilestone: !node.isMilestone })}
           disabled={readOnly}
-          title="마일스톤"
+          title={t('templates:node.milestone')}
           className={`p-1.5 rounded shrink-0 transition-colors disabled:opacity-50 ${node.isMilestone ? 'text-accent bg-accent-soft' : 'text-muted hover:text-secondary'}`}
         >
           <Flag size={14} />
         </button>
         {!readOnly && (
           <>
-            <button type="button" onClick={addChild} title="하위 작업 추가" className="p-1.5 rounded text-muted hover:text-secondary shrink-0">
+            <button type="button" onClick={addChild} title={t('templates:node.addChild')} className="p-1.5 rounded text-muted hover:text-secondary shrink-0">
               <Plus size={14} />
             </button>
-            <button type="button" onClick={onRemove} title="삭제" className="p-1.5 rounded text-muted hover:text-on-danger shrink-0">
+            <button type="button" onClick={onRemove} title={t('templates:node.remove')} className="p-1.5 rounded text-muted hover:text-on-danger shrink-0">
               <Trash2 size={14} />
             </button>
           </>
@@ -138,6 +140,7 @@ function TemplateEditor({ initial, onClose, onSaved }: {
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t } = useTranslation();
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description);
   const [category, setCategory] = useState(initial.category);
@@ -153,15 +156,15 @@ function TemplateEditor({ initial, onClose, onSaved }: {
   const removeRoot = (i: number) => setNodes((ns) => ns.filter((_, idx) => idx !== i));
 
   const handleSave = async () => {
-    if (!name.trim()) { toast.error('템플릿 이름을 입력하세요.'); return; }
+    if (!name.trim()) { toast.error(t('templates:editor.nameRequired')); return; }
     setSaving(true);
     try {
       if (initial.mode === 'create') {
         await wbsTemplatesApi.create({ name: name.trim(), description, category, nodes });
-        toast.success('템플릿을 만들었어요.');
+        toast.success(t('templates:editor.created'));
       } else if (initial.mode === 'edit' && initial.id != null && initial.updatedAt) {
         await wbsTemplatesApi.update(initial.id, { name: name.trim(), description, category, nodes, updatedAt: initial.updatedAt });
-        toast.success('템플릿을 수정했어요.');
+        toast.success(t('templates:editor.updated'));
       }
       onSaved();
     } catch {
@@ -171,7 +174,7 @@ function TemplateEditor({ initial, onClose, onSaved }: {
     }
   };
 
-  const titles = { create: '새 일정 템플릿', edit: '템플릿 수정', view: '템플릿 보기' };
+  const titles = { create: t('templates:editor.createTitle'), edit: t('templates:editor.editTitle'), view: t('templates:editor.viewTitle') };
 
   return (
     <Modal
@@ -184,11 +187,11 @@ function TemplateEditor({ initial, onClose, onSaved }: {
       footer={
         <>
           <Button variant="secondary" onClick={onClose} leadingIcon={<X size={16} />}>
-            {readOnly ? '닫기' : '취소'}
+            {readOnly ? t('common:close') : t('common:cancel')}
           </Button>
           {!readOnly && (
             <Button variant="primary" onClick={handleSave} leadingIcon={<Save size={16} />} disabled={saving}>
-              {saving ? '저장 중...' : '저장'}
+              {saving ? t('templates:editor.saving') : t('common:save')}
             </Button>
           )}
         </>
@@ -196,34 +199,34 @@ function TemplateEditor({ initial, onClose, onSaved }: {
     >
       <div className="flex-1 min-h-0 overflow-y-auto -mx-2 px-2 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <FormField label="템플릿 이름" required>
+          <FormField label={t('templates:editor.name')} required>
             <input value={name} onChange={(e) => setName(e.target.value)} disabled={readOnly} className={inputClass} />
           </FormField>
-          <FormField label="분류">
-            <input value={category} onChange={(e) => setCategory(e.target.value)} disabled={readOnly} className={inputClass} placeholder="예: 개발, 운영" />
+          <FormField label={t('templates:editor.category')}>
+            <input value={category} onChange={(e) => setCategory(e.target.value)} disabled={readOnly} className={inputClass} placeholder={t('templates:editor.categoryPlaceholder')} />
           </FormField>
-          <FormField label="설명">
+          <FormField label={t('templates:editor.description')}>
             <input value={description} onChange={(e) => setDescription(e.target.value)} disabled={readOnly} className={inputClass} />
           </FormField>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-secondary">작업 트리</h3>
+            <h3 className="text-sm font-medium text-secondary">{t('templates:editor.tree')}</h3>
             {!readOnly && (
               <Button variant="secondary" size="sm" onClick={addRoot} leadingIcon={<Plus size={14} />}>
-                상위 작업 추가
+                {t('templates:editor.addRoot')}
               </Button>
             )}
           </div>
           <p className="text-xs text-muted mb-2">
-            시작+일/기간을 비우면 날짜 없는 구조 템플릿이 됩니다. 적용 시 프로젝트 시작일 기준으로 날짜가 계산돼요.
+            {t('templates:editor.treeHint')}
           </p>
           {nodes.length === 0 ? (
             <EmptyState
               icon={<ChevronRight size={28} />}
-              title="작업이 없습니다."
-              description={readOnly ? undefined : '상위 작업을 추가해 트리를 구성하세요.'}
+              title={t('templates:editor.emptyTitle')}
+              description={readOnly ? undefined : t('templates:editor.emptyDesc')}
             />
           ) : (
             <div className="border border-default rounded-md p-2">
@@ -246,6 +249,7 @@ function TemplateEditor({ initial, onClose, onSaved }: {
 }
 
 export function WbsTemplatesPage() {
+  const { t } = useTranslation();
   const [list, setList] = useState<WbsTemplateSummary[] | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [editor, setEditor] = useState<EditorState | null>(null);
@@ -287,14 +291,14 @@ export function WbsTemplatesPage() {
   const handleDelete = async (s: WbsTemplateSummary) => {
     if (s.id == null) return;
     if (!await confirmDialog({
-      title: '템플릿 삭제',
-      message: `'${s.name}' 템플릿을 삭제하시겠습니까?`,
-      confirmLabel: '삭제',
+      title: t('templates:deleteTitle'),
+      message: t('templates:deleteMessage', { name: s.name }),
+      confirmLabel: t('common:delete'),
       danger: true,
     })) return;
     try {
       await wbsTemplatesApi.delete(s.id);
-      toast.success('템플릿을 삭제했어요.');
+      toast.success(t('templates:deleted'));
       load();
     } catch { /* 토스트 처리됨 */ }
   };
@@ -303,11 +307,11 @@ export function WbsTemplatesPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="h-page">일정 템플릿</h1>
-          <p className="text-sm text-muted mt-1">새 프로젝트의 WBS를 빠르게 구성할 수 있는 재사용 템플릿이에요.</p>
+          <h1 className="h-page">{t('templates:title')}</h1>
+          <p className="text-sm text-muted mt-1">{t('templates:subtitle')}</p>
         </div>
         <Button variant="primary" onClick={openCreate} leadingIcon={<Plus size={16} />}>
-          새 템플릿
+          {t('templates:new')}
         </Button>
       </div>
 
@@ -316,39 +320,39 @@ export function WbsTemplatesPage() {
       {list && list.length === 0 && (
         <EmptyState
           icon={<ClipboardList size={40} />}
-          title="템플릿이 없습니다."
-          description="새 템플릿을 만들어보세요. 또는 WBS 화면에서 '현재 WBS를 템플릿으로 저장'을 사용할 수 있어요."
+          title={t('templates:emptyTitle')}
+          description={t('templates:emptyDesc')}
         />
       )}
 
       {list && list.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {list.map((t) => (
-            <Card key={t.isBuiltIn ? `b:${t.builtinKey}` : `c:${t.id}`} className="flex flex-col">
+          {list.map((tpl) => (
+            <Card key={tpl.isBuiltIn ? `b:${tpl.builtinKey}` : `c:${tpl.id}`} className="flex flex-col">
               <div className="flex items-start justify-between gap-2 mb-1">
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-primary truncate">{t.name}</div>
+                  <div className="font-medium text-primary truncate">{tpl.name}</div>
                 </div>
                 <div className="shrink-0 flex items-center gap-1.5">
-                  {t.category && <Badge size="sm" variant="neutral">{t.category}</Badge>}
-                  {t.isBuiltIn && <Badge size="sm" variant="info">기본</Badge>}
+                  {tpl.category && <Badge size="sm" variant="neutral">{tpl.category}</Badge>}
+                  {tpl.isBuiltIn && <Badge size="sm" variant="info">{t('templates:builtin')}</Badge>}
                 </div>
               </div>
-              {t.description && <p className="text-sm text-muted line-clamp-2 mb-2">{t.description}</p>}
+              {tpl.description && <p className="text-sm text-muted line-clamp-2 mb-2">{tpl.description}</p>}
               <div className="flex items-center justify-between mt-auto pt-2">
-                <span className="text-xs text-muted">작업 {t.nodeCount}개</span>
+                <span className="text-xs text-muted">{t('templates:nodeCount', { count: tpl.nodeCount })}</span>
                 <div className="flex items-center gap-1">
-                  {t.isBuiltIn ? (
-                    <Button variant="ghost" size="sm" onClick={() => openView(t)} leadingIcon={<Eye size={14} />}>
-                      보기
+                  {tpl.isBuiltIn ? (
+                    <Button variant="ghost" size="sm" onClick={() => openView(tpl)} leadingIcon={<Eye size={14} />}>
+                      {t('templates:view')}
                     </Button>
                   ) : (
                     <>
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(t)} leadingIcon={<Pencil size={14} />}>
-                        편집
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(tpl)} leadingIcon={<Pencil size={14} />}>
+                        {t('templates:edit')}
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(t)} leadingIcon={<Trash2 size={14} />}>
-                        삭제
+                      <Button variant="ghost" size="sm" onClick={() => handleDelete(tpl)} leadingIcon={<Trash2 size={14} />}>
+                        {t('common:delete')}
                       </Button>
                     </>
                   )}

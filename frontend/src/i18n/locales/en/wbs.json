@@ -98,6 +98,11 @@
     "expand": "Expand",
     "collapse": "Collapse"
   },
+  "treePicker": {
+    "search": "Search task or assignee…",
+    "root": "(root)",
+    "disabledTitle": "An item can't be its own parent or a descendant's parent"
+  },
   "row": {
     "moveAria": "Move row {{name}} (grab with Space, move with arrows)",
     "reorderDisabledTitle": "Clear the filters to change the order.",
