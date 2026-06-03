@@ -3,6 +3,7 @@
   "cancel": "Cancel",
   "save": "Save",
   "enable": "Enabled",
+  "saveFailed": "Save failed",
   "retry": "Retry",
   "loadFailed": "Failed to load",
   "search": "Search",

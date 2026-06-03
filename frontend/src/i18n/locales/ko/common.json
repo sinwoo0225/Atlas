@@ -3,6 +3,7 @@
   "cancel": "취소",
   "save": "저장",
   "enable": "활성화",
+  "saveFailed": "저장 실패",
   "retry": "다시 시도",
   "loadFailed": "불러오기에 실패했어요",
   "search": "검색",

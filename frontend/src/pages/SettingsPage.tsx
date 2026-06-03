@@ -735,14 +735,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-const BACKUP_INTERVALS: { value: number; label: string }[] = [
-  { value: 24, label: '매일 (24시간)' },
-  { value: 12, label: '12시간' },
-  { value: 6, label: '6시간' },
-  { value: 0, label: '앱 실행마다' },
+const BACKUP_INTERVALS: { value: number; labelKey: string }[] = [
+  { value: 24, labelKey: 'settings:autobackup.intervalDaily' },
+  { value: 12, labelKey: 'settings:autobackup.intervalH12' },
+  { value: 6, labelKey: 'settings:autobackup.intervalH6' },
+  { value: 0, labelKey: 'settings:autobackup.intervalEveryLaunch' },
 ];
 
 function AutoBackupSection() {
+  const { t } = useTranslation();
   const bridgeAvailable = isHostBridgeAvailable();
   const [cfg, setCfg] = useState<BackupConfig | null>(null);
   const [status, setStatus] = useState<BackupStatus | null>(null);
@@ -774,7 +775,7 @@ function AutoBackupSection() {
       setTimeout(() => setSavedAt(null), 2500);
       refresh();
     } catch (e) {
-      toast.error((e as Error).message || '저장 실패');
+      toast.error((e as Error).message || t('common:saveFailed'));
     } finally {
       setBusy(false);
     }
@@ -782,7 +783,7 @@ function AutoBackupSection() {
 
   const handleRunNow = async () => {
     if (!cfg.folder?.trim()) {
-      toast.error('먼저 백업 폴더를 지정하세요.');
+      toast.error(t('settings:autobackup.needFolder'));
       return;
     }
     setRunning(true);
@@ -790,61 +791,61 @@ function AutoBackupSection() {
       // 현재 폴더/옵션을 먼저 저장한 뒤 즉시 백업 (백엔드는 저장된 설정을 사용).
       await systemApi.setBackupConfig(cfg);
       const r = await systemApi.runBackup();
-      toast.success(`백업 완료 — ${r.fileName} (${Math.round(r.sizeBytes / 1024)} KB)`);
+      toast.success(t('settings:autobackup.backupDone', { fileName: r.fileName, kb: Math.round(r.sizeBytes / 1024) }));
       refresh();
     } catch (e) {
-      toast.error((e as Error).message || '백업 실패');
+      toast.error((e as Error).message || t('settings:autobackup.backupFailed'));
     } finally {
       setRunning(false);
     }
   };
 
   const lastText = status?.lastBackupAt
-    ? `${new Date(status.lastBackupAt).toLocaleString()} (총 ${status.count}개 보관)`
-    : '아직 백업 없음';
+    ? t('settings:autobackup.lastText', { date: new Date(status.lastBackupAt).toLocaleString(), count: status.count })
+    : t('settings:autobackup.noBackup');
 
   return (
-    <Section title="자동 백업">
+    <Section title={t('settings:autobackup.title')}>
       <FormField
-        label="자동 백업 사용"
-        hint="전체 데이터(DB + 첨부파일)를 지정한 폴더로 주기적으로 내보냅니다. 그 폴더가 OneDrive·Dropbox 등 동기화 폴더면 자동으로 클라우드에 올라갑니다."
+        label={t('settings:autobackup.enableLabel')}
+        hint={t('settings:autobackup.enableHint')}
       >
         <label className="flex items-center gap-2 cursor-pointer">
           <input type="checkbox" checked={cfg.enabled} onChange={(e) => update('enabled', e.target.checked)} />
-          <span className="text-sm text-secondary">활성화</span>
+          <span className="text-sm text-secondary">{t('common:enable')}</span>
         </label>
       </FormField>
 
-      <FormField label="백업 폴더" hint="데이터 폴더 안에는 둘 수 없습니다(재귀 방지). 클라우드 동기화 폴더 권장.">
+      <FormField label={t('settings:autobackup.folder')} hint={t('settings:autobackup.folderHint')}>
         <div className="space-y-2">
           <input
             value={cfg.folder ?? ''}
             onChange={(e) => update('folder', e.target.value)}
-            placeholder="예: C:\Users\me\OneDrive\AtlasBackups"
+            placeholder={t('settings:autobackup.folderPlaceholder')}
             className={inputClass}
             spellCheck={false}
           />
           {bridgeAvailable && (
             <Button variant="secondary" size="md" onClick={handleBrowse} leadingIcon={<FolderOpen size={14} />}>
-              찾아보기
+              {t('settings:autobackup.browse')}
             </Button>
           )}
         </div>
       </FormField>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <FormField label="주기">
+        <FormField label={t('settings:autobackup.interval')}>
           <select
             value={cfg.intervalHours}
             onChange={(e) => update('intervalHours', Number(e.target.value))}
             className={inputClass}
           >
             {BACKUP_INTERVALS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
             ))}
           </select>
         </FormField>
-        <FormField label="보관 개수" hint="0 = 무제한">
+        <FormField label={t('settings:autobackup.retention')} hint={t('settings:autobackup.retentionHint')}>
           <input
             type="number"
             min={0}
@@ -853,18 +854,18 @@ function AutoBackupSection() {
             className={inputClass}
           />
         </FormField>
-        <FormField label="첨부파일 포함">
+        <FormField label={t('settings:autobackup.includeFiles')}>
           <label className="flex items-center gap-2 cursor-pointer h-[38px]">
             <input type="checkbox" checked={cfg.includeFiles} onChange={(e) => update('includeFiles', e.target.checked)} />
-            <span className="text-sm text-secondary">DB + 첨부</span>
+            <span className="text-sm text-secondary">{t('settings:autobackup.dbPlusFiles')}</span>
           </label>
         </FormField>
       </div>
 
-      <FormField label="상태" hint="복구: zip 을 풀어 데이터 폴더에 덮어쓰거나(앱 종료 상태), 프로젝트별로 '가져오기' 사용.">
+      <FormField label={t('settings:autobackup.status')} hint={t('settings:autobackup.statusHint')}>
         <div className="flex items-center gap-3 flex-wrap">
           <Button variant="primary" onClick={handleSave} disabled={busy} leadingIcon={<Save size={14} />}>
-            {busy ? '저장 중…' : '저장'}
+            {busy ? t('settings:autobackup.saving') : t('common:save')}
           </Button>
           <Button
             variant="secondary"
@@ -872,24 +873,25 @@ function AutoBackupSection() {
             disabled={running || !cfg.folder?.trim()}
             leadingIcon={running ? <Spinner size="sm" /> : <Download size={14} />}
           >
-            {running ? '백업 중…' : '지금 백업'}
+            {running ? t('settings:autobackup.running') : t('settings:autobackup.runNow')}
           </Button>
-          {savedAt && <span className="text-sm text-on-success">저장되었습니다.</span>}
-          <span className="text-xs text-muted">마지막 백업: {lastText}</span>
+          {savedAt && <span className="text-sm text-on-success">{t('settings:page.saved')}</span>}
+          <span className="text-xs text-muted">{t('settings:autobackup.lastBackup', { text: lastText })}</span>
         </div>
       </FormField>
     </Section>
   );
 }
 
-const UPDATE_INTERVALS: { value: number; label: string }[] = [
-  { value: 24, label: '매일 (24시간)' },
-  { value: 12, label: '12시간' },
-  { value: 6, label: '6시간' },
-  { value: 168, label: '매주' },
+const UPDATE_INTERVALS: { value: number; labelKey: string }[] = [
+  { value: 24, labelKey: 'settings:update.intervalDaily' },
+  { value: 12, labelKey: 'settings:update.intervalH12' },
+  { value: 6, labelKey: 'settings:update.intervalH6' },
+  { value: 168, labelKey: 'settings:update.intervalWeekly' },
 ];
 
 function UpdateSection() {
+  const { t } = useTranslation();
   const [cfg, setCfg] = useState<UpdateConfig | null>(null);
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [checking, setChecking] = useState(false);
@@ -913,9 +915,9 @@ function UpdateSection() {
   // Microsoft Store(MSIX) 빌드 — 스토어가 업데이트를 자동 관리하므로 인앱 업데이트 컨트롤을 숨긴다.
   if (cfg.managedExternally) {
     return (
-      <Section title="업데이트">
+      <Section title={t('settings:update.title')}>
         <p className="text-sm text-secondary">
-          Microsoft Store 버전은 새 버전을 자동으로 받아 설치합니다. 수동으로 확인할 필요가 없습니다.
+          {t('settings:update.managedText')}
         </p>
       </Section>
     );
@@ -931,10 +933,10 @@ function UpdateSection() {
       const r = await systemApi.checkUpdate();
       await refreshStatus();
       systemApi.getUpdateConfig().then(setCfg).catch(() => {});
-      if (r.hasUpdate) toast.success(`새 버전 v${r.latestVersion} 사용 가능`);
-      else toast.info(`최신 버전입니다 (v${r.currentVersion})`);
+      if (r.hasUpdate) toast.success(t('settings:update.toastAvailable', { version: r.latestVersion }));
+      else toast.info(t('settings:update.toastLatest', { version: r.currentVersion }));
     } catch (e) {
-      toast.error((e as Error).message || '업데이트 확인 실패');
+      toast.error((e as Error).message || t('settings:update.checkFailed'));
     } finally {
       setChecking(false);
     }
@@ -944,19 +946,19 @@ function UpdateSection() {
     try {
       setStatus(await systemApi.startUpdateDownload());
     } catch (e) {
-      toast.error((e as Error).message || '다운로드 시작 실패');
+      toast.error((e as Error).message || t('settings:update.downloadFailed'));
     }
   };
 
   const handleLaunch = async () => {
     const message = runningSessions > 0
-      ? `설치 프로그램을 실행하면 현재 실행 중인 Atlas와 연결된 Claude(MCP/CLI) 세션 ${runningSessions}개가 모두 종료됩니다. 진행할까요?`
-      : '설치 프로그램을 실행하면 Atlas가 종료되고 새 버전이 설치됩니다. 진행할까요?';
-    if (!await confirmDialog({ title: '업데이트 설치', message, confirmLabel: '설치 실행', danger: runningSessions > 0 })) return;
+      ? t('settings:update.launchConfirmSessions', { count: runningSessions })
+      : t('settings:update.launchConfirm');
+    if (!await confirmDialog({ title: t('settings:update.launchTitle'), message, confirmLabel: t('settings:update.install'), danger: runningSessions > 0 })) return;
     try {
       await systemApi.launchUpdate();
     } catch (e) {
-      toast.error((e as Error).message || '설치 실행 실패');
+      toast.error((e as Error).message || t('settings:update.launchFailed'));
     }
   };
 
@@ -967,15 +969,15 @@ function UpdateSection() {
       setSavedAt(Date.now());
       setTimeout(() => setSavedAt(null), 2000);
     } catch (e) {
-      toast.error((e as Error).message || '저장 실패');
+      toast.error((e as Error).message || t('common:saveFailed'));
     }
   };
 
-  const lastChecked = cfg.lastCheckedAt ? new Date(cfg.lastCheckedAt).toLocaleString() : '없음';
+  const lastChecked = cfg.lastCheckedAt ? new Date(cfg.lastCheckedAt).toLocaleString() : t('settings:update.never');
 
   return (
-    <Section title="업데이트">
-      <FormField label="현재 버전">
+    <Section title={t('settings:update.title')}>
+      <FormField label={t('settings:update.currentVersion')}>
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-sm text-secondary">v{result?.currentVersion ?? '—'}</span>
           <Button
@@ -985,16 +987,16 @@ function UpdateSection() {
             disabled={checking}
             leadingIcon={checking ? <Spinner size="sm" /> : <RotateCcw size={14} />}
           >
-            {checking ? '확인 중…' : '지금 확인'}
+            {checking ? t('settings:update.checking') : t('settings:update.checkNow')}
           </Button>
-          <span className="text-xs text-muted">마지막 확인: {lastChecked}</span>
+          <span className="text-xs text-muted">{t('settings:update.lastChecked', { when: lastChecked })}</span>
         </div>
       </FormField>
 
       {result?.hasUpdate ? (
         <FormField
-          label={`새 버전 v${result.latestVersion}`}
-          hint={result.sizeBytes > 0 ? `설치 파일 약 ${Math.round(result.sizeBytes / 1024 / 1024)} MB` : undefined}
+          label={t('settings:update.newVersion', { version: result.latestVersion })}
+          hint={result.sizeBytes > 0 ? t('settings:update.fileSize', { mb: Math.round(result.sizeBytes / 1024 / 1024) }) : undefined}
         >
           <div className="space-y-3">
             {result.releaseNotes && (
@@ -1008,27 +1010,27 @@ function UpdateSection() {
                 <div className="h-2 rounded bg-surface-2 overflow-hidden">
                   <div className="h-full bg-accent transition-all" style={{ width: `${status?.percent ?? 0}%` }} />
                 </div>
-                <span className="text-xs text-muted">다운로드 중… {status?.percent ?? 0}%</span>
+                <span className="text-xs text-muted">{t('settings:update.downloading', { percent: status?.percent ?? 0 })}</span>
               </div>
             ) : phase === 'ready' && status?.downloadedPath ? (
               <div className="flex items-center gap-3 flex-wrap">
                 <Button variant="primary" onClick={handleLaunch} leadingIcon={<Download size={14} />}>
-                  설치 실행
+                  {t('settings:update.install')}
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={() => systemApi.revealUpdate().catch(() => {})}
                   leadingIcon={<FolderOpen size={14} />}
                 >
-                  다운로드 폴더 열기
+                  {t('settings:update.openFolder')}
                 </Button>
                 {runningSessions > 0 && (
-                  <span className="text-xs text-on-warning">⚠ 실행 중 Claude 세션 {runningSessions}개 — 설치 시 종료됩니다.</span>
+                  <span className="text-xs text-on-warning">{t('settings:update.sessionsWarn', { count: runningSessions })}</span>
                 )}
               </div>
             ) : (
               <Button variant="primary" onClick={handleDownload} disabled={!result.downloadUrl} leadingIcon={<Download size={14} />}>
-                다운로드
+                {t('settings:update.download')}
               </Button>
             )}
 
@@ -1037,13 +1039,13 @@ function UpdateSection() {
         </FormField>
       ) : (
         phase === 'error' && status?.error && (
-          <FormField label="확인 결과"><span className="text-sm text-on-danger">{status.error}</span></FormField>
+          <FormField label={t('settings:update.checkResult')}><span className="text-sm text-on-danger">{status.error}</span></FormField>
         )
       )}
 
       <FormField
-        label="자동 확인"
-        hint="백그라운드에서 주기적으로 새 버전을 확인합니다. 다운로드·설치는 자동으로 하지 않습니다."
+        label={t('settings:update.autoCheck')}
+        hint={t('settings:update.autoCheckHint')}
       >
         <div className="flex items-center gap-4 flex-wrap">
           <label className="flex items-center gap-2 cursor-pointer">
@@ -1052,7 +1054,7 @@ function UpdateSection() {
               checked={cfg.enabled}
               onChange={(e) => handleSaveConfig(e.target.checked, cfg.intervalHours)}
             />
-            <span className="text-sm text-secondary">활성화</span>
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
           </label>
           <select
             className={inputClass}
@@ -1062,10 +1064,10 @@ function UpdateSection() {
             onChange={(e) => handleSaveConfig(cfg.enabled, Number(e.target.value))}
           >
             {UPDATE_INTERVALS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>{t(o.labelKey)}</option>
             ))}
           </select>
-          {savedAt && <span className="text-sm text-on-success">저장되었습니다.</span>}
+          {savedAt && <span className="text-sm text-on-success">{t('settings:page.saved')}</span>}
         </div>
       </FormField>
     </Section>
@@ -1135,6 +1137,7 @@ function IconPickerModal({
 }
 
 function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: ConnectionMode) => void }) {
+  const { t } = useTranslation();
   const bridgeAvailable = isHostBridgeAvailable();
   // 브릿지 미가용 환경은 진입 시점에 이미 로드 완료로 간주 — 비동기 작업이 없음.
   const [loaded, setLoaded] = useState(() => !bridgeAvailable);
@@ -1174,13 +1177,13 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
     const r = await testServerConnection(draft.serverUrl, draft.apiKey || null);
     setTesting(false);
     if (!r) {
-      setTestResult({ ok: false, message: '호스트 브릿지를 사용할 수 없습니다 (데스크톱 앱에서만 가능)' });
+      setTestResult({ ok: false, message: t('settings:conn.testNoBridge') });
       return;
     }
-    if (r.ok) setTestResult({ ok: true, message: '연결 성공' });
-    else if (r.status === 401) setTestResult({ ok: false, message: 'API 키가 일치하지 않습니다 (HTTP 401)' });
-    else if (r.status > 0) setTestResult({ ok: false, message: `서버 응답 오류: HTTP ${r.status}` });
-    else setTestResult({ ok: false, message: r.error ?? '연결 실패 (네트워크 오류)' });
+    if (r.ok) setTestResult({ ok: true, message: t('settings:conn.testOk') });
+    else if (r.status === 401) setTestResult({ ok: false, message: t('settings:conn.test401') });
+    else if (r.status > 0) setTestResult({ ok: false, message: t('settings:conn.testHttpErr', { status: r.status }) });
+    else setTestResult({ ok: false, message: r.error ?? t('settings:conn.testNetErr') });
   };
 
   const handleSave = async () => {
@@ -1200,15 +1203,15 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
   };
 
   return (
-    <Section title="연결 방식">
+    <Section title={t('settings:conn.title')}>
       {!bridgeAvailable && (
         <p className="text-sm text-muted">
-          데스크톱 앱에서만 변경할 수 있습니다. 브라우저(dev) 에서는 Local 모드로 동작합니다.
+          {t('settings:conn.bridgeOnly')}
         </p>
       )}
       {bridgeAvailable && loaded && (
         <>
-          <FormField label="모드" hint="Local 은 Atlas.exe 안에서 인프로세스로 동작. Client 는 원격 Atlas-Server 에 붙습니다.">
+          <FormField label={t('settings:conn.mode')} hint={t('settings:conn.modeHint')}>
             <div className="flex flex-col gap-2">
               <label className="flex items-start gap-2 cursor-pointer">
                 <input
@@ -1220,9 +1223,9 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
                 />
                 <span className="text-sm">
                   <span className="text-primary font-medium inline-flex items-center gap-1.5">
-                    <Server size={14} /> Local (기본)
+                    <Server size={14} /> {t('settings:conn.localTitle')}
                   </span>
-                  <span className="block text-xs text-muted">이 머신의 SQLite 파일에 직접 저장. 단일 사용자.</span>
+                  <span className="block text-xs text-muted">{t('settings:conn.localDesc')}</span>
                 </span>
               </label>
               <label className="flex items-start gap-2 cursor-pointer">
@@ -1235,9 +1238,9 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
                 />
                 <span className="text-sm">
                   <span className="text-primary font-medium inline-flex items-center gap-1.5">
-                    <Plug size={14} /> Client (원격 서버 연결)
+                    <Plug size={14} /> {t('settings:conn.clientTitle')}
                   </span>
-                  <span className="block text-xs text-muted">팀원과 공유. 서버 머신에서 Atlas-Server 가 떠 있어야 합니다.</span>
+                  <span className="block text-xs text-muted">{t('settings:conn.clientDesc')}</span>
                 </span>
               </label>
             </div>
@@ -1245,7 +1248,7 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
 
           {draft.mode === 'Client' && (
             <>
-              <FormField label="서버 URL" hint="예: http://atlas.intranet:5200 (사내 LAN 평문 HTTP 가정)">
+              <FormField label={t('settings:conn.serverUrl')} hint={t('settings:conn.serverUrlHint')}>
                 <input
                   value={draft.serverUrl ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, serverUrl: e.target.value }))}
@@ -1253,16 +1256,16 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
                   className={inputClass}
                 />
               </FormField>
-              <FormField label="API 키" hint="서버 운영자가 공유한 공용 시크릿 (X-Atlas-Key 헤더). 비워두면 보내지 않습니다.">
+              <FormField label={t('settings:conn.apiKey')} hint={t('settings:conn.apiKeyHint')}>
                 <input
                   type="password"
                   value={draft.apiKey ?? ''}
                   onChange={(e) => setDraft((d) => ({ ...d, apiKey: e.target.value }))}
-                  placeholder="(선택)"
+                  placeholder={t('settings:conn.optional')}
                   className={inputClass}
                 />
               </FormField>
-              <FormField label="연결 테스트">
+              <FormField label={t('settings:conn.test')}>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button
                     variant="secondary"
@@ -1270,7 +1273,7 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
                     onClick={handleTest}
                     disabled={testing || !draft.serverUrl}
                   >
-                    {testing ? '테스트 중...' : '테스트'}
+                    {testing ? t('settings:conn.testing') : t('settings:conn.testBtn')}
                   </Button>
                   {testResult && (
                     <span className={`text-xs ${testResult.ok ? 'text-on-success' : 'text-on-danger'}`}>
@@ -1284,13 +1287,13 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
 
           <div className="flex items-center gap-2">
             <Button variant="primary" onClick={handleSave} disabled={busy || !isDirty} leadingIcon={busy ? <Spinner size="sm" /> : undefined}>
-              {busy ? '저장 중' : '저장'}
+              {busy ? t('settings:conn.saving') : t('common:save')}
             </Button>
             {savedAt && (
-              <span className="text-xs text-on-warning">저장됨 — Atlas 를 재시작해야 적용됩니다.</span>
+              <span className="text-xs text-on-warning">{t('settings:conn.savedRestart')}</span>
             )}
             {isDirty && !savedAt && (
-              <span className="text-xs text-muted">변경 사항 있음</span>
+              <span className="text-xs text-muted">{t('settings:conn.dirty')}</span>
             )}
           </div>
         </>
@@ -1300,6 +1303,7 @@ function ConnectionModeSection({ onModeChanged }: { onModeChanged: (m: Connectio
 }
 
 function DataFolderSection() {
+  const { t } = useTranslation();
   const [info, setInfo] = useState<DataFolderInfo | null>(null);
   const [pendingPath, setPendingPath] = useState<string | null>(null);
   const [preview, setPreview] = useState<DataFolderPreview | null>(null);
@@ -1349,14 +1353,14 @@ function DataFolderSection() {
     setPreview(null);
   };
 
-  const currentDisplay = savedPath ?? info?.current ?? '불러오는 중...';
+  const currentDisplay = savedPath ?? info?.current ?? t('settings:data.loading');
 
   return (
     <>
-      <Section title="데이터">
+      <Section title={t('settings:data.title')}>
         <FormField
-          label="저장 위치"
-          hint="데이터베이스(projectmanager.db)와 프로젝트별 첨부 파일이 저장되는 폴더입니다. 변경 사항은 Atlas 재시작 후 적용됩니다."
+          label={t('settings:data.location')}
+          hint={t('settings:data.locationHint')}
         >
           <div className="space-y-2">
             <code className="block bg-surface-2 px-2 py-1.5 rounded text-xs break-all">
@@ -1370,13 +1374,13 @@ function DataFolderSection() {
                 disabled={busy || !bridgeAvailable}
                 leadingIcon={<FolderOpen size={14} />}
               >
-                변경
+                {t('settings:data.change')}
               </Button>
               {!bridgeAvailable && (
-                <span className="text-xs text-muted">데스크톱 앱에서만 변경 가능</span>
+                <span className="text-xs text-muted">{t('settings:data.desktopOnly')}</span>
               )}
               {savedPath && (
-                <span className="text-xs text-on-warning">변경됨 — Atlas 를 재시작해주세요</span>
+                <span className="text-xs text-on-warning">{t('settings:data.changedRestart')}</span>
               )}
             </div>
             {error && <p className="text-xs text-on-danger">{error}</p>}
@@ -1410,6 +1414,7 @@ function DataFolderConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation();
   const blocked = !preview.isWritable;
 
   return (
@@ -1421,26 +1426,18 @@ function DataFolderConfirmModal({
         className="bg-surface border border-default rounded-lg p-6 max-w-lg w-full m-4 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold">데이터 폴더 변경</h3>
+        <h3 className="text-lg font-semibold">{t('settings:data.confirmTitle')}</h3>
         <code className="block bg-surface-2 px-2 py-1.5 rounded text-xs break-all">{path}</code>
 
         <div className="space-y-2 text-sm text-secondary">
           {!preview.exists && (
-            <p>이 폴더는 아직 존재하지 않습니다. 저장 시 자동으로 생성됩니다.</p>
+            <p>{t('settings:data.notExist')}</p>
           )}
           {preview.exists && !preview.hasExistingDb && (
-            <p>
-              이 폴더에는 기존 Atlas 데이터가 없습니다. 그대로 진행하면 <strong>새 빈 데이터베이스</strong>로 시작됩니다.
-              <br />
-              기존 데이터를 옮기려면 먼저 현재 폴더의 <code>projectmanager.db</code> 와 프로젝트 하위 폴더들을 이 위치로 복사한 뒤 변경하세요.
-            </p>
+            <p>{t('settings:data.noExistingDb')}</p>
           )}
           {preview.hasExistingDb && (
-            <p>
-              이 폴더에서 기존 Atlas 데이터를 발견했습니다
-              {preview.projectCount !== null && <> (프로젝트 {preview.projectCount}개)</>}.
-              이 데이터를 사용하도록 전환합니다.
-            </p>
+            <p>{t('settings:data.foundDb', { suffix: preview.projectCount !== null ? t('settings:data.projectCount', { count: preview.projectCount }) : '' })}</p>
           )}
           {preview.warnings.length > 0 && (
             <ul className="list-disc list-inside text-on-warning text-xs space-y-1">
@@ -1450,16 +1447,16 @@ function DataFolderConfirmModal({
             </ul>
           )}
           {blocked && (
-            <p className="text-on-danger text-xs">쓰기 권한이 없어 이 폴더를 사용할 수 없습니다.</p>
+            <p className="text-on-danger text-xs">{t('settings:data.notWritable')}</p>
           )}
         </div>
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onCancel} disabled={busy}>
-            취소
+            {t('common:cancel')}
           </Button>
           <Button variant="primary" onClick={onConfirm} disabled={busy || blocked}>
-            {busy ? '저장 중...' : '변경'}
+            {busy ? t('settings:data.saving') : t('settings:data.change')}
           </Button>
         </div>
       </div>
