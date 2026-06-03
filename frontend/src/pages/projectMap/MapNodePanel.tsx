@@ -1,6 +1,7 @@
 import { AlertTriangle, CalendarDays, Code2, ExternalLink, FileText, GitBranch, Link as LinkIcon, Network, X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { ChangeLog, DevInfoItem, Issue, Meeting, Project, WbsItem } from '../../types';
 import { parseActionItems, parseAttendees, parseDecisions } from '../../utils/meetingHelpers';
 
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export function MapNodePanel({ selection, projectId, onClose }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const open = selection !== null;
 
@@ -44,22 +46,22 @@ export function MapNodePanel({ selection, projectId, onClose }: Props) {
             <div className="flex items-center gap-2 min-w-0">
               <KindIcon kind={selection.kind} />
               <span className="text-[11px] uppercase tracking-wider text-muted truncate">
-                {kindLabel(selection.kind)}
+                {t(kindLabelKey(selection.kind))}
               </span>
             </div>
             <div className="flex items-center gap-1">
               <button
                 onClick={openFullPage}
                 className="flex items-center gap-1 px-2 py-1 text-xs rounded-md text-secondary border border-default hover:bg-surface-3 hover:text-primary"
-                title="전체 페이지에서 열기"
+                title={t('map:panel.openFull')}
               >
-                <ExternalLink size={12} /> 전체보기
+                <ExternalLink size={12} /> {t('map:panel.openFullBtn')}
               </button>
               <button
                 onClick={onClose}
                 className="p-1 rounded-md text-muted hover:text-primary hover:bg-surface-3"
-                title="닫기 (Esc)"
-                aria-label="닫기"
+                title={t('map:panel.closeTitle')}
+                aria-label={t('common:close')}
               >
                 <X size={16} />
               </button>
@@ -90,14 +92,14 @@ function routeFor(kind: PanelSelection['kind']): string {
   }
 }
 
-function kindLabel(kind: PanelSelection['kind']): string {
+function kindLabelKey(kind: PanelSelection['kind']): string {
   switch (kind) {
-    case 'project': return '프로젝트';
-    case 'wbs': return 'WBS';
-    case 'change': return '변경이력';
-    case 'meeting': return '회의록';
-    case 'dev': return '개발 정보';
-    case 'issue': return '이슈';
+    case 'project': return 'map:cat.project';
+    case 'wbs': return 'map:cat.wbs';
+    case 'change': return 'map:cat.changes';
+    case 'meeting': return 'map:cat.meetings';
+    case 'dev': return 'map:cat.dev';
+    case 'issue': return 'map:cat.issues';
   }
 }
 
@@ -114,11 +116,12 @@ function KindIcon({ kind }: { kind: PanelSelection['kind'] }) {
 }
 
 function ProjectView({ entity, counts }: { entity: Project; counts: ProjectCounts }) {
+  const { t } = useTranslation();
   return (
     <>
       <h2 className="text-base font-semibold text-primary">{entity.name}</h2>
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge tone={projectStatusTone(entity.status)}>{entity.status}</Badge>
+        <Badge tone={projectStatusTone(entity.status)}>{t(`status:project.${entity.status}`)}</Badge>
         {(entity.startDate || entity.endDate) && (
           <span className="text-xs text-muted">
             {entity.startDate?.slice(0, 10) ?? '-'} ~ {entity.endDate?.slice(0, 10) ?? '-'}
@@ -126,40 +129,41 @@ function ProjectView({ entity, counts }: { entity: Project; counts: ProjectCount
         )}
       </div>
       {entity.goal && (
-        <Section label="목표">
+        <Section label={t('map:field.goal')}>
           <p className="text-sm text-secondary whitespace-pre-wrap">{entity.goal}</p>
         </Section>
       )}
       {entity.description && (
-        <Section label="설명">
+        <Section label={t('map:field.description')}>
           <p className="text-sm text-secondary whitespace-pre-wrap">{entity.description}</p>
         </Section>
       )}
       <div className="grid grid-cols-2 gap-2 pt-1">
-        <Stat label="WBS" value={counts.wbs} />
-        <Stat label="변경이력" value={counts.changes} />
-        <Stat label="회의록" value={counts.meetings} />
-        <Stat label="개발 정보" value={counts.dev} />
-        <Stat label="이슈" value={counts.issues} />
+        <Stat label={t('map:cat.wbs')} value={counts.wbs} />
+        <Stat label={t('map:cat.changes')} value={counts.changes} />
+        <Stat label={t('map:cat.meetings')} value={counts.meetings} />
+        <Stat label={t('map:cat.dev')} value={counts.dev} />
+        <Stat label={t('map:cat.issues')} value={counts.issues} />
       </div>
     </>
   );
 }
 
 function IssueView({ entity }: { entity: Issue }) {
+  const { t } = useTranslation();
   return (
     <>
       <h2 className="text-base font-semibold text-primary">{entity.title}</h2>
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge tone={priorityTone(entity.priority)}>{entity.priority}</Badge>
-        <Badge tone={issueStatusTone(entity.status)}>{entity.status}</Badge>
+        <Badge tone={priorityTone(entity.priority)}>{t(`status:priority.${entity.priority}`)}</Badge>
+        <Badge tone={issueStatusTone(entity.status)}>{t(`status:issue.${entity.status}`)}</Badge>
         {entity.dueDate && (
-          <span className="text-xs text-muted">마감 {entity.dueDate.slice(0, 10)}</span>
+          <span className="text-xs text-muted">{t('map:field.due')} {entity.dueDate.slice(0, 10)}</span>
         )}
       </div>
-      {entity.assigneeName && <KV label="담당" value={entity.assigneeName} />}
+      {entity.assigneeName && <KV label={t('map:field.assignee')} value={entity.assigneeName} />}
       {entity.description && (
-        <Section label="설명">
+        <Section label={t('map:field.description')}>
           <p className="text-sm text-secondary whitespace-pre-wrap">{entity.description}</p>
         </Section>
       )}
@@ -168,6 +172,7 @@ function IssueView({ entity }: { entity: Issue }) {
 }
 
 function WbsView({ entity }: { entity: WbsItem }) {
+  const { t } = useTranslation();
   return (
     <>
       <h2 className="text-base font-semibold text-primary flex items-start gap-2">
@@ -175,16 +180,16 @@ function WbsView({ entity }: { entity: WbsItem }) {
         <span className="flex-1">{entity.name}</span>
       </h2>
       <div className="flex items-center gap-2 flex-wrap">
-        <Badge tone={wbsStatusTone(entity.status)}>{entity.status}</Badge>
-        {entity.isMilestone && <Badge tone="amber">마일스톤</Badge>}
+        <Badge tone={wbsStatusTone(entity.status)}>{t(`status:wbs.${entity.status}`)}</Badge>
+        {entity.isMilestone && <Badge tone="amber">{t('map:milestone')}</Badge>}
       </div>
-      <KV label="담당" value={entity.assignee || '-'} />
+      <KV label={t('map:field.assignee')} value={entity.assignee || '-'} />
       <KV
-        label="기간"
+        label={t('map:field.period')}
         value={`${entity.startDate?.slice(0, 10) ?? '-'} ~ ${entity.endDate?.slice(0, 10) ?? '-'}`}
       />
       {entity.notes && (
-        <Section label="메모">
+        <Section label={t('map:field.notes')}>
           <p className="text-sm text-secondary whitespace-pre-wrap">{entity.notes}</p>
         </Section>
       )}
@@ -193,23 +198,24 @@ function WbsView({ entity }: { entity: WbsItem }) {
 }
 
 function ChangeView({ entity }: { entity: ChangeLog }) {
+  const { t } = useTranslation();
   return (
     <>
       <div className="flex items-center gap-2 flex-wrap">
         <Badge tone={impactTone(entity.impact)}>{entity.impact}</Badge>
         <span className="text-xs text-muted">{entity.date.slice(0, 10)}</span>
       </div>
-      {entity.createdBy && <KV label="작성자" value={entity.createdBy} />}
+      {entity.createdBy && <KV label={t('map:field.author')} value={entity.createdBy} />}
       {entity.updatedBy && entity.updatedBy !== entity.createdBy && (
-        <KV label="최근 수정자" value={entity.updatedBy} />
+        <KV label={t('map:field.lastEditor')} value={entity.updatedBy} />
       )}
-      <Section label="변경 내용">
+      <Section label={t('map:field.changeContent')}>
         <div className="markdown-body">
           <ReactMarkdown>{entity.content}</ReactMarkdown>
         </div>
       </Section>
       {entity.relatedDocLinks && (
-        <Section label="관련 문서">
+        <Section label={t('map:field.relatedDocs')}>
           <p className="text-xs text-secondary break-all">{entity.relatedDocLinks}</p>
         </Section>
       )}
@@ -218,6 +224,7 @@ function ChangeView({ entity }: { entity: ChangeLog }) {
 }
 
 function MeetingView({ entity }: { entity: Meeting }) {
+  const { t } = useTranslation();
   const attendees = parseAttendees(entity.attendees);
   const decisions = parseDecisions(entity.decisions);
   const actions = parseActionItems(entity.actionItems);
@@ -226,7 +233,7 @@ function MeetingView({ entity }: { entity: Meeting }) {
       <h2 className="text-base font-semibold text-primary">{entity.topic}</h2>
       <div className="text-xs text-muted">{entity.date.slice(0, 10)}</div>
       {attendees.length > 0 ? (
-        <Section label="참석자">
+        <Section label={t('map:field.attendees')}>
           <div className="space-y-1">
             {attendees.map((a, i) => (
               <div key={i} className="text-sm text-secondary">
@@ -237,26 +244,26 @@ function MeetingView({ entity }: { entity: Meeting }) {
           </div>
         </Section>
       ) : entity.attendees ? (
-        <KV label="참석자" value={entity.attendees} />
+        <KV label={t('map:field.attendees')} value={entity.attendees} />
       ) : null}
       {decisions.length > 0 && (
-        <Section label="결정사항">
+        <Section label={t('map:field.decisions')}>
           <ul className="list-disc pl-5 space-y-0.5 text-sm text-secondary">
             {decisions.map((d, i) => <li key={i}>{d}</li>)}
           </ul>
         </Section>
       )}
       {actions.length > 0 && (
-        <Section label="액션 아이템">
+        <Section label={t('map:field.actionItems')}>
           <ul className="space-y-1.5 text-sm text-secondary">
             {actions.map((a, i) => (
               <li key={i} className="bg-surface-2 border border-default rounded px-2 py-1.5">
                 <div>{a.content}</div>
                 {(a.assignee || a.deadline) && (
                   <div className="text-[11px] text-muted mt-0.5">
-                    {a.assignee && <span>담당: {a.assignee}</span>}
+                    {a.assignee && <span>{t('map:field.assignee')}: {a.assignee}</span>}
                     {a.assignee && a.deadline && <span> · </span>}
-                    {a.deadline && <span>마감: {a.deadline}</span>}
+                    {a.deadline && <span>{t('map:field.due')}: {a.deadline}</span>}
                   </div>
                 )}
               </li>
@@ -265,7 +272,7 @@ function MeetingView({ entity }: { entity: Meeting }) {
         </Section>
       )}
       {entity.discussion && (
-        <Section label="논의">
+        <Section label={t('map:field.discussion')}>
           <p className="text-sm text-secondary whitespace-pre-wrap">{entity.discussion}</p>
         </Section>
       )}
@@ -274,6 +281,7 @@ function MeetingView({ entity }: { entity: Meeting }) {
 }
 
 function DevView({ entity }: { entity: DevInfoItem }) {
+  const { t } = useTranslation();
   return (
     <>
       <h2 className="text-base font-semibold text-primary">{entity.title}</h2>
@@ -287,7 +295,7 @@ function DevView({ entity }: { entity: DevInfoItem }) {
         </div>
       )}
       {entity.type === 'File' && entity.filePath && (
-        <Section label="파일 경로">
+        <Section label={t('map:field.filePath')}>
           <code className="text-xs break-all">{entity.filePath}</code>
         </Section>
       )}

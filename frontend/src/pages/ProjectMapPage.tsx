@@ -3,6 +3,7 @@
 // 캐스팅이 누적된다. GanttChart·MonitoringChartGrid 등 차트 파일과 동일하게 파일 단위로 any 룰 끔.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import cytoscape from 'cytoscape';
 // @ts-expect-error - cytoscape-dagre has no types
@@ -114,10 +115,10 @@ const LIGHT_PALETTE: ThemePalette = {
 
 const SELECTED_GLOW = '#fbbf24';
 
-const MODES: { key: LayoutMode; label: string; title: string }[] = [
-  { key: 'radial',    label: '방사형',   title: '방사형 레이아웃 — 중앙 프로젝트, 사방 카테고리' },
-  { key: 'hierarchy', label: '계층',     title: '계층 레이아웃 (dagre) — 프로젝트→카테고리→항목 트리' },
-  { key: 'timeline',  label: '타임라인', title: '타임라인 레이아웃 — 좌→우 시간축, 위→아래 카테고리 레인' },
+const MODES: { key: LayoutMode; labelKey: string; titleKey: string }[] = [
+  { key: 'radial',    labelKey: 'map:layout.radial',    titleKey: 'map:layoutTitle.radial' },
+  { key: 'hierarchy', labelKey: 'map:layout.hierarchy', titleKey: 'map:layoutTitle.hierarchy' },
+  { key: 'timeline',  labelKey: 'map:layout.timeline',  titleKey: 'map:layoutTitle.timeline' },
 ];
 
 function resolveSelection(nodeId: string, data: LoadedData): PanelSelection | null {
@@ -184,6 +185,7 @@ function selectionDomId(sel: PanelSelection): string {
 }
 
 export function ProjectMapPage() {
+  const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const pid = parseInt(projectId!);
@@ -220,8 +222,8 @@ export function ProjectMapPage() {
       .then(([project, wbs, changeLogs, meetings, devInfo, issues]) => {
         setData({ project, wbs, changeLogs, meetings, devInfo, issues });
       })
-      .catch(() => setError('맵 데이터를 불러올 수 없습니다.'));
-  }, [pid]);
+      .catch(() => setError(t('map:loadFailed')));
+  }, [pid, t]);
 
   const dateRange = useMemo(() => (data ? computeDateRange(data) : null), [data]);
   const effectiveWindow: TimeWindow | null =
@@ -258,20 +260,20 @@ export function ProjectMapPage() {
     // Project hub + category hubs (non-timeline modes only)
     if (includeHubs) {
       elements.push({
-        data: { id: 'project', label: data.project.name, kind: 'project', size: 100, tooltip: `프로젝트 · ${data.project.name}` },
+        data: { id: 'project', label: data.project.name, kind: 'project', size: 100, tooltip: t('map:tooltip.project', { name: data.project.name }) },
         ...posOf('project'),
       });
       const categories = [
-        { id: 'cat-wbs',      label: 'WBS',       kind: 'wbs-hub',     visible: filter.wbs,      count: flattenWbs(data.wbs).length },
-        { id: 'cat-changes',  label: '변경이력',   kind: 'change-hub',  visible: filter.changes,  count: data.changeLogs.length },
-        { id: 'cat-meetings', label: '회의록',     kind: 'meeting-hub', visible: filter.meetings, count: data.meetings.length },
-        { id: 'cat-dev',      label: '개발 정보',  kind: 'dev-hub',     visible: filter.dev,      count: data.devInfo.length },
-        { id: 'cat-issues',   label: '이슈',       kind: 'issue-hub',   visible: filter.issues,   count: data.issues.length },
+        { id: 'cat-wbs',      label: t('map:cat.wbs'),      kind: 'wbs-hub',     visible: filter.wbs,      count: flattenWbs(data.wbs).length },
+        { id: 'cat-changes',  label: t('map:cat.changes'),  kind: 'change-hub',  visible: filter.changes,  count: data.changeLogs.length },
+        { id: 'cat-meetings', label: t('map:cat.meetings'), kind: 'meeting-hub', visible: filter.meetings, count: data.meetings.length },
+        { id: 'cat-dev',      label: t('map:cat.dev'),      kind: 'dev-hub',     visible: filter.dev,      count: data.devInfo.length },
+        { id: 'cat-issues',   label: t('map:cat.issues'),   kind: 'issue-hub',   visible: filter.issues,   count: data.issues.length },
       ];
       for (const cat of categories) {
         if (!cat.visible) continue;
         elements.push({
-          data: { id: cat.id, label: `${cat.label}\n(${cat.count})`, kind: cat.kind, size: 70, tooltip: `카테고리 · ${cat.label} (${cat.count}건)` },
+          data: { id: cat.id, label: t('map:catNode', { label: cat.label, count: cat.count }), kind: cat.kind, size: 70, tooltip: t('map:tooltip.category', { label: cat.label, count: cat.count }) },
           ...posOf(cat.id),
         });
         elements.push({ data: { id: `e-project-${cat.id}`, source: 'project', target: cat.id, kind: 'cat-edge' } });
@@ -298,7 +300,13 @@ export function ProjectMapPage() {
             status: item.status,
             size: item.isMilestone ? 42 : 34,
             date: d ?? null,
-            tooltip: `${item.isMilestone ? '마일스톤' : 'WBS'} · ${item.name}\n상태: ${item.status} / 종료: ${dateLabel}\n담당: ${item.assignee || '-'}`,
+            tooltip: t('map:tooltip.wbs', {
+              kind: item.isMilestone ? t('map:milestone') : t('map:cat.wbs'),
+              name: item.name,
+              status: t(`status:wbs.${item.status}`),
+              date: dateLabel,
+              assignee: item.assignee || '-',
+            }),
           },
           ...posOf(id),
         });
@@ -325,7 +333,7 @@ export function ProjectMapPage() {
         if (mode === 'timeline' && (!tlWindow || !isInTimeline(d, tlWindow))) continue;
         const label = c.content.length > 24 ? c.content.slice(0, 24) + '…' : c.content;
         elements.push({
-          data: { id, label, kind: 'change', impact: c.impact, size: 32, date: d, tooltip: `변경이력 · ${c.impact}\n${c.content}\n${d.slice(0, 10)}` },
+          data: { id, label, kind: 'change', impact: c.impact, size: 32, date: d, tooltip: t('map:tooltip.change', { impact: c.impact, content: c.content, date: d.slice(0, 10) }) },
           ...posOf(id),
         });
         if (mode !== 'timeline' && includeHubs) {
@@ -343,7 +351,7 @@ export function ProjectMapPage() {
         if (mode === 'timeline' && (!tlWindow || !isInTimeline(d, tlWindow))) continue;
         const label = m.topic.length > 24 ? m.topic.slice(0, 24) + '…' : m.topic;
         elements.push({
-          data: { id, label, kind: 'meeting', size: 32, date: d, tooltip: `회의록 · ${m.topic}\n${d.slice(0, 10)}` },
+          data: { id, label, kind: 'meeting', size: 32, date: d, tooltip: t('map:tooltip.meeting', { topic: m.topic, date: d.slice(0, 10) }) },
           ...posOf(id),
         });
         if (mode !== 'timeline' && includeHubs) {
@@ -361,7 +369,7 @@ export function ProjectMapPage() {
         if (mode === 'timeline' && (!tlWindow || !isInTimeline(d, tlWindow))) continue;
         const label = dv.title.length > 24 ? dv.title.slice(0, 24) + '…' : dv.title;
         elements.push({
-          data: { id, label, kind: 'dev', size: 32, date: d, tooltip: `개발 정보 · ${dv.type}\n${dv.title}` },
+          data: { id, label, kind: 'dev', size: 32, date: d, tooltip: t('map:tooltip.dev', { type: dv.type, title: dv.title }) },
           ...posOf(id),
         });
         if (mode !== 'timeline' && includeHubs) {
@@ -388,7 +396,7 @@ export function ProjectMapPage() {
             issueStatus: it.status,
             size: 32,
             date: d ?? null,
-            tooltip: `이슈 · ${it.priority} / ${it.status}\n${it.title}\n마감: ${due}`,
+            tooltip: t('map:tooltip.issue', { priority: t(`status:priority.${it.priority}`), status: t(`status:issue.${it.status}`), title: it.title, due }),
           },
           ...posOf(id),
         });
@@ -567,7 +575,7 @@ export function ProjectMapPage() {
       cy.destroy();
       cyRef.current = null;
     };
-  }, [data, filter, pid, navigate, mode, windowStart, windowEnd, PALETTE]);
+  }, [data, filter, pid, navigate, mode, windowStart, windowEnd, PALETTE, t]);
 
   useEffect(() => {
     const cy = cyRef.current;
@@ -644,15 +652,15 @@ export function ProjectMapPage() {
   }, [selected, query, toggleFilter]);
 
   const legendItems = useMemo(() => [
-    { key: 'wbs',      label: 'WBS',       color: PALETTE.wbsHub.stroke },
-    { key: 'changes',  label: '변경이력',   color: PALETTE.changeHub.stroke },
-    { key: 'meetings', label: '회의록',     color: PALETTE.meetingHub.stroke },
-    { key: 'dev',      label: '개발 정보',  color: PALETTE.devHub.stroke },
-    { key: 'issues',   label: '이슈',       color: PALETTE.issueHub.stroke },
-  ], [PALETTE]);
+    { key: 'wbs',      label: t('map:cat.wbs'),      color: PALETTE.wbsHub.stroke },
+    { key: 'changes',  label: t('map:cat.changes'),  color: PALETTE.changeHub.stroke },
+    { key: 'meetings', label: t('map:cat.meetings'), color: PALETTE.meetingHub.stroke },
+    { key: 'dev',      label: t('map:cat.dev'),      color: PALETTE.devHub.stroke },
+    { key: 'issues',   label: t('map:cat.issues'),   color: PALETTE.issueHub.stroke },
+  ], [PALETTE, t]);
 
   if (error) return <div className="p-6 text-sm text-on-danger">{error}</div>;
-  if (!data) return <div className="p-6"><Spinner label="로딩 중..." /></div>;
+  if (!data) return <div className="p-6"><Spinner label={t('common:loading')} /></div>;
 
   const btnClass = (active: boolean) =>
     `flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors border ${
@@ -679,7 +687,7 @@ export function ProjectMapPage() {
               <ChevronRight size={14} className="text-muted shrink-0" />
             </>
           )}
-          <span className="shrink-0">프로젝트 맵</span>
+          <span className="shrink-0">{t('map:title')}</span>
         </h1>
         <div className="flex gap-2 flex-wrap items-center">
           <div className="inline-flex rounded-md border border-default overflow-hidden bg-surface-2">
@@ -688,9 +696,9 @@ export function ProjectMapPage() {
                 key={m.key}
                 onClick={() => setMode(m.key)}
                 className={modeBtnClass(mode === m.key)}
-                title={m.title}
+                title={t(m.titleKey)}
               >
-                {m.label}
+                {t(m.labelKey)}
               </button>
             ))}
           </div>
@@ -701,47 +709,47 @@ export function ProjectMapPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="검색…  (/)"
+              placeholder={t('map:searchPlaceholder')}
               className="pl-8 pr-7 py-1.5 text-sm rounded-md w-56"
             />
             {query && (
               <button
                 onClick={() => { setQuery(''); searchRef.current?.focus(); }}
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-muted hover:text-primary hover:bg-surface-3"
-                title="검색 초기화 (Esc)"
-                aria-label="검색 초기화"
+                title={t('map:clearSearch')}
+                aria-label={t('map:clearSearchAria')}
               >
                 <X size={12} />
               </button>
             )}
           </div>
-          <button onClick={() => toggleFilter('wbs')} className={btnClass(filter.wbs)} title="WBS 토글 (1)">
+          <button onClick={() => toggleFilter('wbs')} className={btnClass(filter.wbs)} title={t('map:toggle.wbs')}>
             <CalendarDays size={14} /> WBS
           </button>
-          <button onClick={() => toggleFilter('changes')} className={btnClass(filter.changes)} title="변경이력 토글 (2)">
-            <GitBranch size={14} /> 변경
+          <button onClick={() => toggleFilter('changes')} className={btnClass(filter.changes)} title={t('map:toggle.changes')}>
+            <GitBranch size={14} /> {t('map:filterShort.changes')}
           </button>
-          <button onClick={() => toggleFilter('meetings')} className={btnClass(filter.meetings)} title="회의록 토글 (3)">
-            <FileText size={14} /> 회의
+          <button onClick={() => toggleFilter('meetings')} className={btnClass(filter.meetings)} title={t('map:toggle.meetings')}>
+            <FileText size={14} /> {t('map:filterShort.meetings')}
           </button>
-          <button onClick={() => toggleFilter('dev')} className={btnClass(filter.dev)} title="개발 정보 토글 (4)">
-            <Code2 size={14} /> 개발
+          <button onClick={() => toggleFilter('dev')} className={btnClass(filter.dev)} title={t('map:toggle.dev')}>
+            <Code2 size={14} /> {t('map:filterShort.dev')}
           </button>
-          <button onClick={() => toggleFilter('issues')} className={btnClass(filter.issues)} title="이슈 토글 (5)">
-            <AlertTriangle size={14} /> 이슈
+          <button onClick={() => toggleFilter('issues')} className={btnClass(filter.issues)} title={t('map:toggle.issues')}>
+            <AlertTriangle size={14} /> {t('map:filterShort.issues')}
           </button>
           <div className="inline-flex rounded-md border border-default overflow-hidden bg-surface-2">
             <button
               onClick={() => zoomBy(cyRef.current, 1 / 1.25)}
               className="px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-3 border-r border-default"
-              title="축소"
+              title={t('map:zoomOut')}
             >
               <Minus size={14} />
             </button>
             <button
               onClick={() => zoomBy(cyRef.current, 1.25)}
               className="px-2 py-1.5 text-secondary hover:text-primary hover:bg-surface-3"
-              title="확대"
+              title={t('map:zoomIn')}
             >
               <Plus size={14} />
             </button>
@@ -749,15 +757,15 @@ export function ProjectMapPage() {
           <button
             onClick={() => cyRef.current?.fit(undefined, 60)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm bg-surface-2 text-secondary hover:bg-surface-3 border border-default"
-            title="화면 맞춤 (f)"
+            title={t('map:fitTitle')}
           >
-            <Maximize2 size={14} /> 화면 맞춤
+            <Maximize2 size={14} /> {t('map:fit')}
           </button>
         </div>
       </div>
 
       <div className="flex items-center gap-4 text-xs text-muted flex-wrap">
-        <span>범례</span>
+        <span>{t('map:legend')}</span>
         {legendItems.map((l) => (
           <span key={l.key} className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-sm" style={{ backgroundColor: l.color }} />
@@ -765,14 +773,14 @@ export function ProjectMapPage() {
           </span>
         ))}
         <span className="ml-auto text-[11px] text-muted">
-          클릭 → 패널 · 더블클릭 → 페이지 · <kbd>/</kbd> 검색 · <kbd>f</kbd> 맞춤 · <kbd>1~5</kbd> 필터 · <kbd>Esc</kbd> 닫기
+          {t('map:help.clickPanel')} <kbd>/</kbd> {t('map:help.search')} <kbd>f</kbd> {t('map:help.fit')} <kbd>1~5</kbd> {t('map:help.filter')} <kbd>Esc</kbd> {t('map:help.close')}
         </span>
       </div>
 
       {mode === 'timeline' && (
         <div className="flex items-center gap-2 text-xs bg-surface-2 border border-default rounded-md px-3 py-2 flex-wrap">
           <CalendarRange size={14} className="text-accent" />
-          <span className="text-muted">기간</span>
+          <span className="text-muted">{t('map:period')}</span>
           <input
             type="date"
             value={effectiveWindow?.start ?? ''}
@@ -802,12 +810,12 @@ export function ProjectMapPage() {
             onClick={() => setTimeWindow(null)}
             className="px-2 py-0.5 rounded text-secondary hover:text-primary hover:bg-surface-3 border border-default disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={timeWindow === null}
-            title="전체 범위로 복원"
+            title={t('map:restoreRange')}
           >
-            전체
+            {t('map:all')}
           </button>
           <span className="ml-auto text-muted">
-            {dateRange ? `전체 데이터: ${dateRange.min} ~ ${dateRange.max}` : '날짜 데이터 없음'}
+            {dateRange ? t('map:dateRange', { min: dateRange.min, max: dateRange.max }) : t('map:noDateData')}
           </span>
         </div>
       )}
@@ -828,7 +836,7 @@ export function ProjectMapPage() {
         {showTimelineEmpty && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="text-sm text-muted bg-surface-2/80 backdrop-blur px-4 py-2 rounded-md border border-default">
-              타임라인에 표시할 항목이 없습니다.
+              {t('map:timelineEmpty')}
             </div>
           </div>
         )}

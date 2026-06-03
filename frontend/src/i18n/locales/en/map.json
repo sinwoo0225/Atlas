@@ -1,0 +1,89 @@
+{
+  "title": "Project map",
+  "loadFailed": "Couldn't load map data.",
+  "searchPlaceholder": "Search…  (/)",
+  "clearSearch": "Clear search (Esc)",
+  "clearSearchAria": "Clear search",
+  "zoomOut": "Zoom out",
+  "zoomIn": "Zoom in",
+  "fit": "Fit",
+  "fitTitle": "Fit to screen (f)",
+  "legend": "Legend",
+  "period": "Period",
+  "restoreRange": "Restore full range",
+  "all": "All",
+  "dateRange": "Full data: {{min}} ~ {{max}}",
+  "noDateData": "No date data",
+  "timelineEmpty": "No items to show on the timeline.",
+  "milestone": "Milestone",
+  "layout": {
+    "radial": "Radial",
+    "hierarchy": "Hierarchy",
+    "timeline": "Timeline"
+  },
+  "layoutTitle": {
+    "radial": "Radial layout — project at center, categories around",
+    "hierarchy": "Hierarchy layout (dagre) — project→category→item tree",
+    "timeline": "Timeline layout — left→right time axis, top→bottom category lanes"
+  },
+  "cat": {
+    "project": "Project",
+    "wbs": "WBS",
+    "changes": "Change logs",
+    "meetings": "Meetings",
+    "dev": "Dev info",
+    "issues": "Issues"
+  },
+  "filterShort": {
+    "changes": "Changes",
+    "meetings": "Meetings",
+    "dev": "Dev",
+    "issues": "Issues"
+  },
+  "toggle": {
+    "wbs": "Toggle WBS (1)",
+    "changes": "Toggle change logs (2)",
+    "meetings": "Toggle meetings (3)",
+    "dev": "Toggle dev info (4)",
+    "issues": "Toggle issues (5)"
+  },
+  "catNode": "{{label}}\n({{count}})",
+  "tooltip": {
+    "project": "Project · {{name}}",
+    "category": "Category · {{label}} ({{count}})",
+    "wbs": "{{kind}} · {{name}}\nStatus: {{status}} / Due: {{date}}\nAssignee: {{assignee}}",
+    "change": "Change · {{impact}}\n{{content}}\n{{date}}",
+    "meeting": "Meeting · {{topic}}\n{{date}}",
+    "dev": "Dev info · {{type}}\n{{title}}",
+    "issue": "Issue · {{priority}} / {{status}}\n{{title}}\nDue: {{due}}"
+  },
+  "help": {
+    "clickPanel": "Click → panel · Double-click → page ·",
+    "search": "search ·",
+    "fit": "fit ·",
+    "filter": "filter ·",
+    "close": "close"
+  },
+  "panel": {
+    "openFull": "Open in full page",
+    "openFullBtn": "Full view",
+    "closeTitle": "Close (Esc)"
+  },
+  "field": {
+    "goal": "Goal",
+    "description": "Description",
+    "notes": "Notes",
+    "period": "Period",
+    "assignee": "Assignee",
+    "author": "Author",
+    "lastEditor": "Last editor",
+    "changeContent": "Change details",
+    "relatedDocs": "Related docs",
+    "attendees": "Attendees",
+    "decisions": "Decisions",
+    "actionItems": "Action items",
+    "discussion": "Discussion",
+    "filePath": "File path",
+    "due": "Due"
+  }
+}
