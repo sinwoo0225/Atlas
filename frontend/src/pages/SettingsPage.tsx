@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import {
   Save, Settings as SettingsIcon, FolderOpen, Server, Plug, Keyboard, Sparkles,
-  Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon,
+  Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon, FileText,
 } from 'lucide-react';
 import { openShortcutsModal } from '../data/shortcuts';
 import { aiApi } from '../api/ai';
@@ -613,6 +613,7 @@ export function SettingsPage() {
           </p>
         </Section>
       )}
+      <AboutSection />
       </>)}
 
       {/* 아이콘은 '모양' 탭에 속하지만 Local/Client 조건 섹션 뒤에 위치 — 조건부 렌더라 탭 전환 시 올바른 그룹에 표시됨. */}
@@ -735,6 +736,56 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="h-card mb-4">{title}</h2>
       <div className="space-y-4">{children}</div>
     </Card>
+  );
+}
+
+// 오픈소스 라이선스 고지 — 번들된 의존성의 라이선스 텍스트를 모달로 표시.
+// public/THIRD-PARTY-NOTICES.txt (빌드 시 wwwroot 로 복사) 를 런타임 fetch.
+// 모든 연결 모드·관리형(Store) 빌드에서 노출돼야 하므로 connectionMode 가드 밖에 둔다.
+function AboutSection() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const openModal = async () => {
+    setOpen(true);
+    if (text !== null) return;
+    setLoading(true);
+    try {
+      const res = await fetch('/THIRD-PARTY-NOTICES.txt');
+      setText(res.ok ? await res.text() : t('settings:about.loadFailed'));
+    } catch {
+      setText(t('settings:about.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Section title={t('settings:about.title')}>
+      <FormField label={t('settings:about.licenses')} hint={t('settings:about.licensesHint')}>
+        <Button variant="secondary" size="md" onClick={openModal} leadingIcon={<FileText size={14} />}>
+          {t('settings:about.viewLicenses')}
+        </Button>
+      </FormField>
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t('settings:about.licensesTitle')}
+        size="xxl"
+        fixedHeight
+        showCloseButton
+      >
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center"><Spinner /></div>
+        ) : (
+          <pre className="flex-1 min-h-0 overflow-auto text-xs text-secondary whitespace-pre-wrap font-mono leading-relaxed">
+            {text}
+          </pre>
+        )}
+      </Modal>
+    </Section>
   );
 }
 

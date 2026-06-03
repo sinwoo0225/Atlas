@@ -92,6 +92,14 @@
     "clientDataTitle": "Data",
     "clientDataText": "In Client mode the data folder is managed by the server. Edit dataFolder in the server's %LOCALAPPDATA%\\Atlas\\config.json to change it."
   },
+  "about": {
+    "title": "About",
+    "licenses": "Open-source licenses",
+    "licensesHint": "Atlas is built with the open-source components below. Their copyright and license notices are shown here.",
+    "viewLicenses": "View licenses",
+    "licensesTitle": "Open-source license notices",
+    "loadFailed": "Failed to load license information."
+  },
   "backup": {
     "title": "Settings backup",
     "location": "Storage location",

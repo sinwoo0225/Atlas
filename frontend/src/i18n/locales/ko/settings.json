@@ -92,6 +92,14 @@
     "clientDataTitle": "데이터",
     "clientDataText": "Client 모드에서는 데이터 폴더를 서버가 관리합니다. 서버 측 %LOCALAPPDATA%\\Atlas\\config.json 의 dataFolder 를 편집해 변경하세요."
   },
+  "about": {
+    "title": "정보",
+    "licenses": "오픈소스 라이선스",
+    "licensesHint": "Atlas 는 아래 오픈소스 구성요소를 사용합니다. 각 라이선스의 저작권·고지를 표시합니다.",
+    "viewLicenses": "라이선스 보기",
+    "licensesTitle": "오픈소스 라이선스 고지",
+    "loadFailed": "라이선스 정보를 불러오지 못했습니다."
+  },
   "backup": {
     "title": "설정 백업",
     "location": "저장 위치",
