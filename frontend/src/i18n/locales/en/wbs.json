@@ -75,6 +75,20 @@
     "unlink": "Remove",
     "unlinkAria": "Remove issue link — {{title}}"
   },
+  "relatedInfo": {
+    "title": "Related info ({{count}})",
+    "addLink": "Add link",
+    "noLinks": "No linked work info",
+    "unlinkTitle": "Remove link",
+    "unlinkMessage": "Remove the link to '{{title}}'?",
+    "unlink": "Remove",
+    "unlinkAria": "Remove work-info link — {{title}}",
+    "picker": {
+      "search": "Search title / tags…",
+      "empty": "No work info.",
+      "linked": "Already linked"
+    }
+  },
   "dateEdit": {
     "title": "Edit dates — {{name}}"
   },

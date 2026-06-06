@@ -54,6 +54,7 @@ public static class AppServicesRegistration
         services.AddScoped<IWorkLogRepository, WorkLogRepository>();
         services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
         services.AddScoped<IIssueWbsLinkRepository, IssueWbsLinkRepository>();
+        services.AddScoped<IWbsDevInfoLinkRepository, WbsDevInfoLinkRepository>();
 
         services.AddSingleton<BuiltInTemplateProvider>();
         services.AddScoped<ProjectService>();
@@ -70,6 +71,7 @@ public static class AppServicesRegistration
         services.AddScoped<MonitoringService>();
         services.AddScoped<ActionItemPromotionService>();
         services.AddScoped<IssueWbsLinkService>();
+        services.AddScoped<WbsDevInfoLinkService>();
         services.AddScoped<StartPageService>();
         services.AddScoped<BackupService>();
         services.AddSingleton<UpdateService>();

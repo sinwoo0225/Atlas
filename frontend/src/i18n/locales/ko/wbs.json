@@ -75,6 +75,20 @@
     "unlink": "해제",
     "unlinkAria": "이슈 연결 해제 — {{title}}"
   },
+  "relatedInfo": {
+    "title": "관련 정보 ({{count}})",
+    "addLink": "정보 연결",
+    "noLinks": "연결된 업무 정보 없음",
+    "unlinkTitle": "연결 해제",
+    "unlinkMessage": "'{{title}}' 과(와) 의 연결을 해제하시겠습니까?",
+    "unlink": "해제",
+    "unlinkAria": "업무 정보 연결 해제 — {{title}}",
+    "picker": {
+      "search": "제목·태그 검색…",
+      "empty": "업무 정보가 없습니다.",
+      "linked": "이미 연결됨"
+    }
+  },
   "dateEdit": {
     "title": "날짜 수정 — {{name}}"
   },

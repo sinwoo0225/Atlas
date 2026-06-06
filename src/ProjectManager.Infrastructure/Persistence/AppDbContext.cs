@@ -20,6 +20,7 @@ public class AppDbContext(
     public DbSet<Resource> Resources => Set<Resource>();
     public DbSet<Issue> Issues => Set<Issue>();
     public DbSet<IssueWbsLink> IssueWbsLinks => Set<IssueWbsLink>();
+    public DbSet<WbsDevInfoLink> WbsDevInfoLinks => Set<WbsDevInfoLink>();
     public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
 
@@ -142,6 +143,19 @@ public class AppDbContext(
             // 이 인덱스로 커버된다 → IssueId 단독 인덱스 불필요. WbsItemId 는 별도(후행 컬럼이라 미커버).
             e.HasIndex(x => new { x.IssueId, x.WbsItemId }).IsUnique();
             e.HasIndex(x => x.WbsItemId);
+        });
+
+        modelBuilder.Entity<WbsDevInfoLink>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            e.HasOne(x => x.WbsItem).WithMany().HasForeignKey(x => x.WbsItemId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.DevInfoItem).WithMany().HasForeignKey(x => x.DevInfoItemId).OnDelete(DeleteBehavior.Cascade);
+            // 복합 unique 의 선두 컬럼 WbsItemId 가 by-wbs 조회를 커버 → WbsItemId 단독 인덱스 불필요. DevInfoItemId 는 별도.
+            e.HasIndex(x => new { x.WbsItemId, x.DevInfoItemId }).IsUnique();
+            e.HasIndex(x => x.DevInfoItemId);
         });
 
         modelBuilder.Entity<WorkLog>(e =>

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate } from 'lucide-react';
+import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate, Code2 } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
   closestCenter, useSensor, useSensors,
@@ -16,7 +16,7 @@ import { wbsTemplatesApi } from '../api/wbsTemplates';
 import { WbsTemplatePicker, type TemplateApplySelection } from '../components/WbsTemplatePicker';
 import { resourcesApi } from '../api/resources';
 import { changeLogsApi } from '../api/changelogs';
-import { Button, Card, Modal, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -24,19 +24,22 @@ import {
   collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName,
   applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
-import { wbsStatusBadge } from '../utils/statusMaps';
+import { wbsStatusBadge, devInfoTypeBadge } from '../utils/statusMaps';
 import { sortWbsTree } from '../utils/wbsSort';
 import { WbsTreePicker } from '../components/WbsTreePicker';
 import { IssuePicker } from '../components/IssuePicker';
 import { issuesApi } from '../api/issues';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
+import { wbsDevInfoLinksApi, type WbsDevInfoLink } from '../api/wbsDevInfoLinks';
+import { devInfoApi } from '../api/devinfo';
+import { DevInfoPicker } from '../components/DevInfoPicker';
 import { GanttChart } from './wbs/GanttChart';
 import { SortableWbsRow } from './wbs/SortableWbsRow';
 import { WbsDragOverlayRow } from './wbs/WbsDragOverlayRow';
 import { computeSiblingReorder } from './wbs/wbsReorder';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
-import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType } from '../types';
+import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem } from '../types';
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
@@ -54,12 +57,13 @@ type WbsFormData = {
 };
 
 function WbsItemForm({
-  projectId, versionId, parentId, initial, resources, allItems, allIssues,
-  onRefreshIssues, onLinksChanged, onSave, onCancel,
+  projectId, versionId, parentId, initial, resources, allItems, allIssues, allDevInfo,
+  onRefreshIssues, onRefreshDevInfo, onLinksChanged, onSave, onCancel,
 }: {
   projectId: number; versionId?: number; parentId?: number;
-  initial?: WbsItem; resources: Resource[]; allItems: WbsItem[]; allIssues: Issue[];
+  initial?: WbsItem; resources: Resource[]; allItems: WbsItem[]; allIssues: Issue[]; allDevInfo: DevInfoItem[];
   onRefreshIssues: () => void;
+  onRefreshDevInfo: () => void;
   onLinksChanged: () => void;
   onSave: () => void; onCancel: () => void;
 }) {
@@ -249,13 +253,21 @@ function WbsItemForm({
           {/* 우측 - 관련 Issue (수정 시) + 상세 정보 (마크다운). 마크다운이 세로 가득. */}
           <div className="flex flex-col min-h-0 gap-3">
             {initial && (
-              <RelatedIssuesSection
-                wbsItemId={initial.id}
-                projectId={projectId}
-                allIssues={allIssues}
-                onRefreshIssues={onRefreshIssues}
-                onLinksChanged={onLinksChanged}
-              />
+              <>
+                <RelatedIssuesSection
+                  wbsItemId={initial.id}
+                  projectId={projectId}
+                  allIssues={allIssues}
+                  onRefreshIssues={onRefreshIssues}
+                  onLinksChanged={onLinksChanged}
+                />
+                <RelatedWorkInfoSection
+                  wbsItemId={initial.id}
+                  projectId={projectId}
+                  allDevInfo={allDevInfo}
+                  onRefreshDevInfo={onRefreshDevInfo}
+                />
+              </>
             )}
             <FormField label={t('wbs:form.notes')} className="min-h-0 flex-1">
               {notesEditing || !form.notes ? (
@@ -416,6 +428,101 @@ function RelatedIssuesSection({ wbsItemId, projectId, allIssues, onRefreshIssues
   );
 }
 
+// WBS 항목의 관련 업무 정보(DevInfo) 링크 목록 + 추가/해제. 무타입 단순 연결 ("관련 정보").
+// 모달 펼침 시 fetch. picker 열 때마다 업무 정보 silent refetch (다른 탭에서 만든 새 항목 즉시 반영).
+function RelatedWorkInfoSection({ wbsItemId, projectId, allDevInfo, onRefreshDevInfo }: {
+  wbsItemId: number; projectId: number; allDevInfo: DevInfoItem[];
+  onRefreshDevInfo: () => void;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [links, setLinks] = useState<WbsDevInfoLink[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  const load = () => wbsDevInfoLinksApi.byWbs(wbsItemId).then(setLinks).catch(() => setLinks([]));
+  useEffect(() => { load(); }, [wbsItemId]);
+
+  const excludeIds = useMemo(() => new Set(links.map((l) => l.devInfoItemId)), [links]);
+
+  const togglePicker = () => {
+    setPickerOpen((v) => {
+      const next = !v;
+      if (next) onRefreshDevInfo();
+      return next;
+    });
+  };
+
+  const handleAdd = async (devInfoItemId: number) => {
+    try {
+      await wbsDevInfoLinksApi.create(wbsItemId, devInfoItemId);
+      setPickerOpen(false);
+      load();
+    } catch { /* api/client.ts 가 토스트 처리 */ }
+  };
+
+  const handleRemove = async (devInfoItemId: number, title: string) => {
+    if (!await confirmDialog({
+      title: t('wbs:relatedInfo.unlinkTitle'),
+      message: t('wbs:relatedInfo.unlinkMessage', { title }),
+      confirmLabel: t('wbs:relatedInfo.unlink'),
+    })) return;
+    await wbsDevInfoLinksApi.delete(wbsItemId, devInfoItemId);
+    load();
+  };
+
+  return (
+    <div className={pickerOpen ? 'flex flex-col min-h-0 gap-1 flex-1' : 'shrink-0 flex flex-col gap-1'}>
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted font-medium flex items-center gap-1">
+          <Code2 size={12} /> {t('wbs:relatedInfo.title', { count: links.length })}
+        </p>
+        <Button variant="ghost" size="sm" onClick={togglePicker} leadingIcon={<Plus size={12} />}>
+          {pickerOpen ? t('common:close') : t('wbs:relatedInfo.addLink')}
+        </Button>
+      </div>
+      {links.length === 0 && !pickerOpen ? (
+        <p className="text-xs text-muted italic">{t('wbs:relatedInfo.noLinks')}</p>
+      ) : (
+        <ul className="space-y-1">
+          {links.map((l) => (
+            <li key={l.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
+              {l.devInfoType && (
+                <Badge variant={devInfoTypeBadge[l.devInfoType].variant} size="sm">{l.devInfoType}</Badge>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate(`/projects/${projectId}/devinfo?highlight=${l.devInfoItemId}`)}
+                className="flex-1 text-left text-primary hover:text-accent truncate transition-colors"
+              >
+                {l.devInfoTitle ?? `#${l.devInfoItemId}`}
+              </button>
+              <span className="text-xs text-muted shrink-0">#{l.devInfoItemId}</span>
+              <button
+                type="button"
+                onClick={() => handleRemove(l.devInfoItemId, l.devInfoTitle ?? `#${l.devInfoItemId}`)}
+                className="p-0.5 text-on-danger hover:opacity-80 transition-opacity"
+                title={t('wbs:relatedInfo.unlink')}
+                aria-label={t('wbs:relatedInfo.unlinkAria', { title: l.devInfoTitle ?? `#${l.devInfoItemId}` })}
+              >
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {pickerOpen && (
+        <div className="mt-1 flex-1 min-h-0">
+          <DevInfoPicker
+            items={allDevInfo}
+            excludeIds={excludeIds}
+            onSelect={handleAdd}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DateEditModal({
   item,
   projectId,
@@ -475,6 +582,7 @@ export function WbsPage() {
   const [versions, setVersions] = useState<WbsVersion[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [allIssues, setAllIssues] = useState<Issue[]>([]);
+  const [allDevInfo, setAllDevInfo] = useState<DevInfoItem[]>([]);
   const [linkCountByWbs, setLinkCountByWbs] = useState<Map<number, number>>(new Map());
   const [sourceCountByWbs, setSourceCountByWbs] = useState<Record<number, number>>({});
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
@@ -572,13 +680,14 @@ export function WbsPage() {
     setError(null);
     setLoading(true);
     try {
-      const [is, vs, rs, ais, lks, srcCounts] = await Promise.all([
+      const [is, vs, rs, ais, lks, srcCounts, dis] = await Promise.all([
         wbsApi.getByProject(pid, currentVersion),
         wbsApi.getVersions(pid),
         resourcesApi.getAll(),
         issuesApi.getByProject(pid),
         issueWbsLinksApi.byProject(pid).catch(() => []),
         changeLogsApi.getSourceCounts(pid).catch(() => ({ byIssueId: {}, byWbsItemId: {} })),
+        devInfoApi.getByProject(pid).catch(() => [] as DevInfoItem[]),
       ]);
       setItems(is);
       setVersions(vs);
@@ -586,6 +695,7 @@ export function WbsPage() {
       setAllIssues(ais);
       setLinkCountByWbs(computeLinkCountsByWbs(lks));
       setSourceCountByWbs(srcCounts.byWbsItemId);
+      setAllDevInfo(dis);
     } catch (e) {
       setError(e);
     } finally {
@@ -609,6 +719,11 @@ export function WbsPage() {
   // picker 열 때마다 issues silent refetch — 다른 탭에서 만든 새 Issue 즉시 반영.
   const refreshIssues = useCallback(() => {
     issuesApi.getByProject(pid).then(setAllIssues).catch(() => {});
+  }, [pid]);
+
+  // picker 열 때마다 업무 정보 silent refetch — 다른 탭에서 만든 새 항목 즉시 반영.
+  const refreshDevInfo = useCallback(() => {
+    devInfoApi.getByProject(pid).then(setAllDevInfo).catch(() => {});
   }, [pid]);
 
   useEffect(() => { load(); }, [load]);
@@ -1010,7 +1125,9 @@ export function WbsPage() {
           resources={resources}
           allItems={items}
           allIssues={allIssues}
+          allDevInfo={allDevInfo}
           onRefreshIssues={refreshIssues}
+          onRefreshDevInfo={refreshDevInfo}
           onLinksChanged={refreshLinkCounts}
           onSave={() => { setShowForm(false); setAddingChildOf(undefined); refresh(); }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
@@ -1023,7 +1140,9 @@ export function WbsPage() {
           resources={resources}
           allItems={items}
           allIssues={allIssues}
+          allDevInfo={allDevInfo}
           onRefreshIssues={refreshIssues}
+          onRefreshDevInfo={refreshDevInfo}
           onLinksChanged={refreshLinkCounts}
           onSave={() => { setEditing(null); refresh(); }}
           onCancel={() => setEditing(null)}

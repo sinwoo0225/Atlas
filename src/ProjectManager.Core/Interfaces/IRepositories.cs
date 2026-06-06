@@ -137,3 +137,16 @@ public interface IIssueWbsLinkRepository
     // 프로젝트의 모든 link tuple 반환 (카운트 배지용). Issue.ProjectId 기준 — Issue/WBS 양쪽 ProjectId 는 동일하다는 서비스 가드 전제.
     Task<IReadOnlyList<(int IssueId, int WbsItemId)>> GetByProjectAsync(int projectId);
 }
+
+// WbsItem ↔ DevInfoItem "관련 정보" 다대다 (무타입). UpdateAsync 없음 — audit 외 변경 가능한 필드 없음.
+public interface IWbsDevInfoLinkRepository
+{
+    Task<IEnumerable<WbsDevInfoLink>> GetByWbsItemAsync(int wbsItemId);
+    Task<IEnumerable<WbsDevInfoLink>> GetByDevInfoAsync(int devInfoItemId);
+    Task<WbsDevInfoLink?> GetAsync(int wbsItemId, int devInfoItemId);
+    Task<WbsDevInfoLink?> GetByIdAsync(int id);
+    Task<WbsDevInfoLink> CreateAsync(WbsDevInfoLink link);
+    Task<bool> DeleteAsync(int wbsItemId, int devInfoItemId);
+    // 프로젝트의 모든 link tuple 반환. WbsItem.ProjectId 기준 — WBS/DevInfo ProjectId 동일 서비스 가드 전제.
+    Task<IReadOnlyList<(int WbsItemId, int DevInfoItemId)>> GetByProjectAsync(int projectId);
+}
