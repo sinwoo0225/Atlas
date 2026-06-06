@@ -10,10 +10,18 @@
     "descAdjust": "Try adjusting the search or date range."
   },
   "card": {
-    "collapse": "Collapse",
-    "expand": "Expand",
     "editAria": "Edit meeting — {{topic}}",
     "deleteAria": "Delete meeting — {{topic}}"
+  },
+  "category": {
+    "label": "Type",
+    "internal": "Internal",
+    "external": "External"
+  },
+  "tabs": {
+    "all": "All",
+    "internal": "Internal",
+    "external": "External"
   },
   "delete": { "title": "Delete meeting", "message": "Delete this meeting? This can't be undone." },
   "form": {
@@ -52,6 +60,7 @@
     "serverFetched": "Fetched the server value. Edit again and save."
   },
   "detail": {
+    "selectPrompt": "Select a meeting from the list on the left.",
     "decisions": "Key decisions",
     "discussion": "Discussion",
     "thContent": "Content",

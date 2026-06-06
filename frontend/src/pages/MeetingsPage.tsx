@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +23,7 @@ import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
 import { useCurrentProject } from '../hooks/useCurrentProject';
-import type { Meeting } from '../types';
+import type { Meeting, MeetingCategory } from '../types';
 
 // 논의내용 상단에 삽입하는 'AI 요약' 블록. 재요약 시 기존 블록을 걷어내고 새로 prepend (중복 방지).
 const AI_SUMMARY_HEADER = '## 🤖 AI 요약';
@@ -46,6 +46,21 @@ const HALF_HOUR_SLOTS: string[] = Array.from({ length: 48 }, (_, i) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 });
 
+// 내부=중립 칩, 외부=amber 칩(주의 환기 — 고객·협력사 동반 회의).
+function CategoryChip({ category, className = '' }: { category: MeetingCategory; className?: string }) {
+  const { t } = useTranslation();
+  const external = category === 'External';
+  return (
+    <span
+      className={`inline-flex items-center rounded px-1.5 py-0.5 text-xs font-medium ${
+        external ? 'bg-warning-soft text-on-warning' : 'bg-surface-2 text-muted'
+      } ${className}`}
+    >
+      {t(external ? 'meetings:category.external' : 'meetings:category.internal')}
+    </span>
+  );
+}
+
 function MeetingForm({ projectId, initial, onSave, onCancel }: {
   projectId: number; initial?: Meeting;
   onSave: () => void; onCancel: () => void;
@@ -55,6 +70,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
   const [startTime, setStartTime] = useState(initial?.startTime ?? '');
   const [endTime, setEndTime] = useState(initial?.endTime ?? '');
   const [topic, setTopic] = useState(initial?.topic ?? '');
+  const [category, setCategory] = useState<MeetingCategory>(initial?.category ?? 'Internal');
   const [discussion, setDiscussion] = useState(initial?.discussion ?? '');
   const [discussionEditing, setDiscussionEditing] = useState(false);
   const discussionRef = useRef<HTMLTextAreaElement | null>(null);
@@ -115,6 +131,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
       startTime: initial?.startTime ?? '',
       endTime: initial?.endTime ?? '',
       topic: initial?.topic ?? '',
+      category: initial?.category ?? 'Internal',
       discussion: initial?.discussion ?? '',
       attendees: parsedAtt.length > 0 ? parsedAtt : [],
       decisions: parseDecisions(initial?.decisions ?? ''),
@@ -122,7 +139,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
     });
   });
   const dirty = JSON.stringify({
-    date, startTime, endTime, topic, discussion, attendees, decisions, actionItems,
+    date, startTime, endTime, topic, category, discussion, attendees, decisions, actionItems,
   }) !== initialSnapshot;
 
   const addOrg = () => setAttendees([...attendees, { org: '', members: [''] }]);
@@ -198,6 +215,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
       date,
       startTime: startTime || undefined,
       endTime: endTime || undefined,
+      category,
       attendees: attendeesPayload,
       topic,
       decisions: decisions.length > 0 ? JSON.stringify(decisions) : '',
@@ -224,6 +242,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                   const freshStart = fresh.startTime ?? '';
                   const freshEnd = fresh.endTime ?? '';
                   const freshTopic = fresh.topic ?? '';
+                  const freshCategory = fresh.category ?? 'Internal';
                   const freshDiscussion = fresh.discussion ?? '';
                   const parsedAtt = parseAttendees(fresh.attendees ?? '');
                   const freshAttendees = parsedAtt.length > 0 ? parsedAtt : [];
@@ -233,12 +252,14 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                   setStartTime(freshStart);
                   setEndTime(freshEnd);
                   setTopic(freshTopic);
+                  setCategory(freshCategory);
                   setDiscussion(freshDiscussion);
                   setAttendees(freshAttendees);
                   setDecisions(freshDecisions);
                   setActionItems(freshActions);
                   setInitialSnapshot(JSON.stringify({
                     date: freshDate, startTime: freshStart, endTime: freshEnd, topic: freshTopic,
+                    category: freshCategory,
                     discussion: freshDiscussion, attendees: freshAttendees,
                     decisions: freshDecisions, actionItems: freshActions,
                   }));
@@ -280,10 +301,10 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
           {/* 좌측 */}
           <div className="space-y-3">
             <div className="grid grid-cols-12 gap-3">
-              <FormField label={t('meetings:form.date')} className="col-span-3">
+              <FormField label={t('meetings:form.date')} className="col-span-4">
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
               </FormField>
-              <FormField label={t('meetings:form.time')} className="col-span-5">
+              <FormField label={t('meetings:form.time')} className="col-span-8">
                 <div className="flex items-center gap-2">
                   <select
                     value={startTime}
@@ -308,10 +329,35 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                   </select>
                 </div>
               </FormField>
-              <FormField label={t('meetings:form.topic')} required className="col-span-4">
-                <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} />
-              </FormField>
             </div>
+
+            {/* 제목 전용 행 — 좌측에 내부/외부 세그먼트 토글, 나머지를 제목 input 이 전부 사용. */}
+            <FormField label={t('meetings:form.topic')} required>
+              <div className="flex items-stretch gap-2">
+                <div
+                  className="flex shrink-0 rounded-md border border-default overflow-hidden"
+                  role="group"
+                  aria-label={t('meetings:category.label')}
+                >
+                  {(['Internal', 'External'] as const).map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setCategory(c)}
+                      aria-pressed={category === c}
+                      className={`px-3 text-sm whitespace-nowrap transition-colors ${
+                        category === c
+                          ? 'bg-accent text-on-accent'
+                          : 'bg-surface-2 text-muted hover:text-primary'
+                      }`}
+                    >
+                      {t(c === 'External' ? 'meetings:category.external' : 'meetings:category.internal')}
+                    </button>
+                  ))}
+                </div>
+                <input value={topic} onChange={(e) => setTopic(e.target.value)} className={inputClass} />
+              </div>
+            </FormField>
 
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -499,7 +545,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
             ) : (
               <div
                 onClick={() => setDiscussionEditing(true)}
-                className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+                className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
                 <ReactMarkdown>{discussion}</ReactMarkdown>
               </div>
@@ -638,11 +684,11 @@ function MeetingDetail({ meeting, projectId, onChange }: {
         </div>
       )}
 
-      {/* 3. 논의 내용 - 마크다운 렌더링 */}
+      {/* 3. 논의 내용 - 마크다운 렌더링 (디테일 패널 폭 전부 사용) */}
       {meeting.discussion && (
         <div>
           <p className="text-xs text-muted font-medium mb-1">{t('meetings:detail.discussion')}</p>
-          <div className="markdown-body">
+          <div className="markdown-body markdown-body--wide">
             <ReactMarkdown>{meeting.discussion}</ReactMarkdown>
           </div>
         </div>
@@ -662,9 +708,16 @@ export function MeetingsPage() {
   const [dateTo, setDateTo] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Meeting | null>(null);
-  const [expanded, setExpanded] = useState<number | null>(null);
+  const [categoryTab, setCategoryTab] = useState<'all' | MeetingCategory>('all');
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+
+  // 딥링크(?highlight=:id)로 들어온 회의록은 자동 선택 — 훅이 50ms 뒤 쿼리를 지우므로 첫 렌더에 캡처.
+  const [searchParams] = useSearchParams();
+  const initialHighlightRef = useRef<number | null>(
+    searchParams.get('highlight') ? Number(searchParams.get('highlight')) : null,
+  );
 
   useCreateForm(() => { setEditing(null); setShowForm(true); });
 
@@ -704,6 +757,44 @@ export function MeetingsPage() {
       return true;
     });
   }, [meetings, keyword, dateFrom, dateTo]);
+
+  // 탭(전체/내부/외부) 적용 + 탭별 건수 배지.
+  const tabbed = useMemo(
+    () => (categoryTab === 'all' ? filtered : filtered.filter((m) => m.category === categoryTab)),
+    [filtered, categoryTab],
+  );
+  const counts = useMemo(() => ({
+    all: filtered.length,
+    Internal: filtered.filter((m) => m.category === 'Internal').length,
+    External: filtered.filter((m) => m.category === 'External').length,
+  }), [filtered]);
+
+  // 선택 유효성 유지 — 필터/탭으로 선택 항목이 사라지면 딥링크 우선, 없으면 첫 항목 자동 선택.
+  useEffect(() => {
+    if (tabbed.length === 0) { setSelectedId(null); return; }
+    setSelectedId((cur) => {
+      if (cur != null && tabbed.some((m) => m.id === cur)) return cur;
+      const hl = initialHighlightRef.current;
+      if (hl != null && tabbed.some((m) => m.id === hl)) return hl;
+      return tabbed[0].id;
+    });
+  }, [tabbed]);
+
+  const selected = useMemo(() => tabbed.find((m) => m.id === selectedId) ?? null, [tabbed, selectedId]);
+
+  // ↑/↓ 로 좌측 목록 선택 이동 (단독 효율 — 키보드 탐색).
+  const moveSelection = (dir: 1 | -1) => {
+    if (tabbed.length === 0) return;
+    const idx = tabbed.findIndex((m) => m.id === selectedId);
+    const next = idx === -1 ? 0 : Math.min(tabbed.length - 1, Math.max(0, idx + dir));
+    setSelectedId(tabbed[next].id);
+  };
+
+  const TAB_DEFS: { key: 'all' | MeetingCategory; label: string; count: number }[] = [
+    { key: 'all', label: t('meetings:tabs.all'), count: counts.all },
+    { key: 'Internal', label: t('meetings:tabs.internal'), count: counts.Internal },
+    { key: 'External', label: t('meetings:tabs.external'), count: counts.External },
+  ];
 
   const handleDelete = async (id: number) => {
     if (!await confirmDialog({
@@ -754,69 +845,126 @@ export function MeetingsPage() {
         <span className="text-xs text-muted ml-auto">{filtered.length} / {meetings.length}</span>
       </div>
 
-      <div className="space-y-3">
-        {loading ? (
-          <>
-            {[0, 1, 2, 3].map((i) => (
-              <Card key={i} padding="spacious">
-                <Skeleton height={14} width="25%" />
-                <Skeleton height={18} width="60%" className="mt-2" />
-                <Skeleton height={12} count={2} className="mt-3" />
-              </Card>
-            ))}
-          </>
-        ) : error ? (
-          <Card padding="spacious">
-            <EmptyState error={error} onRetry={load} />
-          </Card>
-        ) : filtered.length === 0 ? (
-          <EmptyState
-            icon={<FileText size={36} />}
-            title={meetings.length === 0 ? t('meetings:empty.titleNone') : t('meetings:empty.titleFiltered')}
-            description={meetings.length === 0
-              ? t('meetings:empty.descNone')
-              : t('meetings:empty.descAdjust')}
-          />
-        ) : filtered.map((m) => (
-          <Card key={m.id} padding="spacious" data-highlight-id={m.id}>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-secondary font-medium">{m.date.slice(0, 10)}</span>
-                  {(m.startTime || m.endTime) && (
-                    <span className="text-xs text-muted">
-                      {m.startTime ?? ''}{m.startTime && m.endTime ? '–' : ''}{m.endTime ?? ''}
-                    </span>
-                  )}
-                  <span className="text-xs text-muted">|</span>
-                  <span className="text-xs text-muted truncate">{attendeesToDisplay(m.attendees)}</span>
-                </div>
-                <h3
-                  className="h-section hover:text-accent cursor-pointer transition-colors"
-                  onClick={() => setEditing(m)}
-                >
-                  {m.topic}
-                </h3>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button onClick={() => setEditing(m)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('meetings:card.editAria', { topic: m.topic })}>
-                  <Pencil size={14} />
-                </button>
-                <button onClick={() => handleDelete(m.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('common:delete')} aria-label={t('meetings:card.deleteAria', { topic: m.topic })}>
-                  <X size={14} />
-                </button>
+      {loading ? (
+        <div className="space-y-3">
+          {[0, 1, 2, 3].map((i) => (
+            <Card key={i} padding="spacious">
+              <Skeleton height={14} width="25%" />
+              <Skeleton height={18} width="60%" className="mt-2" />
+              <Skeleton height={12} count={2} className="mt-3" />
+            </Card>
+          ))}
+        </div>
+      ) : error ? (
+        <Card padding="spacious">
+          <EmptyState error={error} onRetry={load} />
+        </Card>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={<FileText size={36} />}
+          title={meetings.length === 0 ? t('meetings:empty.titleNone') : t('meetings:empty.titleFiltered')}
+          description={meetings.length === 0
+            ? t('meetings:empty.descNone')
+            : t('meetings:empty.descAdjust')}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] gap-4 items-start">
+          {/* 좌(1) — 탭 + 선택형 카드 목록 */}
+          <div className="space-y-2">
+            <div className="flex rounded-md border border-default overflow-hidden text-sm" role="tablist">
+              {TAB_DEFS.map((td) => (
                 <button
-                  onClick={() => setExpanded(expanded === m.id ? null : m.id)}
-                  className="px-2 text-xs text-muted hover:text-primary transition-colors"
+                  key={td.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={categoryTab === td.key}
+                  onClick={() => setCategoryTab(td.key)}
+                  className={`flex-1 px-2 py-1.5 flex items-center justify-center gap-1.5 transition-colors ${
+                    categoryTab === td.key ? 'bg-accent text-on-accent' : 'bg-surface-2 text-muted hover:text-primary'
+                  }`}
                 >
-                  {expanded === m.id ? t('meetings:card.collapse') : t('meetings:card.expand')}
+                  <span>{td.label}</span>
+                  <span className={`text-xs ${categoryTab === td.key ? 'opacity-80' : 'text-muted'}`}>{td.count}</span>
                 </button>
-              </div>
+              ))}
             </div>
-            {expanded === m.id && <MeetingDetail meeting={m} projectId={pid} onChange={refresh} />}
-          </Card>
-        ))}
-      </div>
+
+            <div
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
+              }}
+              className="space-y-2 outline-none rounded-md focus-visible:ring-1 focus-visible:ring-accent"
+            >
+              {tabbed.length === 0 ? (
+                <p className="text-sm text-muted text-center py-8">{t('meetings:empty.titleFiltered')}</p>
+              ) : tabbed.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  data-highlight-id={m.id}
+                  onClick={() => setSelectedId(m.id)}
+                  aria-current={selectedId === m.id}
+                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
+                    selectedId === m.id ? 'border-accent bg-accent-soft' : 'border-default bg-surface hover:border-strong'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs text-secondary font-medium">{m.date.slice(0, 10)}</span>
+                    {(m.startTime || m.endTime) && (
+                      <span className="text-xs text-muted">
+                        {m.startTime ?? ''}{m.startTime && m.endTime ? '–' : ''}{m.endTime ?? ''}
+                      </span>
+                    )}
+                    <CategoryChip category={m.category} className="ml-auto shrink-0" />
+                  </div>
+                  <h3 className="text-sm font-medium text-primary truncate">{m.topic}</h3>
+                  <p className="text-xs text-muted truncate mt-0.5">{attendeesToDisplay(m.attendees)}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 우(3) — 선택 회의록 디테일 (펼치기 없이 상시 표시) */}
+          <div className="min-w-0">
+            {selected ? (
+              <Card padding="spacious" data-highlight-id={selected.id}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-sm text-secondary font-medium">{selected.date.slice(0, 10)}</span>
+                      {(selected.startTime || selected.endTime) && (
+                        <span className="text-xs text-muted">
+                          {selected.startTime ?? ''}{selected.startTime && selected.endTime ? '–' : ''}{selected.endTime ?? ''}
+                        </span>
+                      )}
+                      <CategoryChip category={selected.category} />
+                    </div>
+                    <h2 className="h-section">{selected.topic}</h2>
+                    {attendeesToDisplay(selected.attendees) && (
+                      <p className="text-xs text-muted truncate mt-1">{attendeesToDisplay(selected.attendees)}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => setEditing(selected)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('meetings:card.editAria', { topic: selected.topic })}>
+                      <Pencil size={14} />
+                    </button>
+                    <button onClick={() => handleDelete(selected.id)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('common:delete')} aria-label={t('meetings:card.deleteAria', { topic: selected.topic })}>
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+                <MeetingDetail meeting={selected} projectId={pid} onChange={refresh} />
+              </Card>
+            ) : (
+              <Card padding="spacious">
+                <p className="text-sm text-muted text-center py-12">{t('meetings:detail.selectPrompt')}</p>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <MeetingForm

@@ -253,6 +253,7 @@ public class ProjectService(
 
     internal static MeetingDto MeetingToDto(Meeting m) => new(
         m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime,
+        m.Category,
         m.Attendees, m.Topic,
         m.Decisions, m.Discussion, m.ActionItems,
         m.MarkdownPath,

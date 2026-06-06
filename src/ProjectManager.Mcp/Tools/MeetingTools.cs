@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
 using ProjectManager.Application.Services;
+using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
 
 namespace ProjectManager.Mcp.Tools;
@@ -11,20 +12,22 @@ public static class MeetingTools
     // ActionItems 는 DB JSON-in-TEXT(string). 응답에서는 객체 배열로 풀어 LLM 이 한 번에 이해.
     private static object Project(MeetingDto m) => new
     {
-        m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime, m.Attendees, m.Topic,
+        m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime, m.Category, m.Attendees, m.Topic,
         m.Decisions, m.Discussion,
         ActionItems = McpJson.TryParseJson(m.ActionItems),
         m.MarkdownPath, m.CreatedAt, m.UpdatedAt,
     };
 
     [McpServerTool(Name = "atlas_meeting_list"),
-     Description("프로젝트의 회의록 목록. keyword 옵션으로 제목/내용 검색")]
+     Description("프로젝트의 회의록 목록. keyword 옵션으로 제목/내용 검색, category 로 내부/외부 필터")]
     public static async Task<string> List(
         MeetingService svc,
         [Description("프로젝트 ID")] int projectId,
-        [Description("키워드 — 없으면 전체")] string? keyword = null)
+        [Description("키워드 — 없으면 전체")] string? keyword = null,
+        [Description("구분 필터: Internal | External — 없으면 전부")] MeetingCategory? category = null)
     {
         var list = await svc.GetByProjectAsync(projectId, keyword);
+        if (category is MeetingCategory cat) list = list.Where(m => m.Category == cat);
         return McpJson.Serialize(list.Select(Project));
     }
 
@@ -45,6 +48,7 @@ public static class MeetingTools
         [Description("주제")] string topic,
         [Description("시작 시각 HH:mm")] string? startTime = null,
         [Description("종료 시각 HH:mm")] string? endTime = null,
+        [Description("회의 구분: Internal(기본) | External")] MeetingCategory category = MeetingCategory.Internal,
         [Description("참석자 (자유 형식: 'a, b, c')")] string? attendees = null,
         [Description("결정 사항 (markdown)")] string? decisions = null,
         [Description("논의 내용 (markdown)")] string? discussion = null,
@@ -56,6 +60,7 @@ public static class MeetingTools
             Date: date,
             StartTime: startTime,
             EndTime: endTime,
+            Category: category,
             Attendees: attendees ?? string.Empty,
             Topic: topic,
             Decisions: decisions ?? string.Empty,
@@ -70,6 +75,7 @@ public static class MeetingTools
         MeetingService svc, int id,
         DateTime? date = null,
         string? startTime = null, string? endTime = null,
+        [Description("회의 구분: Internal | External — null 이면 기존 값 유지")] MeetingCategory? category = null,
         string? attendees = null, string? topic = null,
         string? decisions = null, string? discussion = null,
         [Description("ActionItem JSON 배열 — 전달 시 전체 교체")] string? actionItemsJson = null)
@@ -80,6 +86,7 @@ public static class MeetingTools
             Date: date ?? existing.Date,
             StartTime: startTime ?? existing.StartTime,
             EndTime: endTime ?? existing.EndTime,
+            Category: category ?? existing.Category,
             Attendees: attendees ?? existing.Attendees,
             Topic: topic ?? existing.Topic,
             Decisions: decisions ?? existing.Decisions,

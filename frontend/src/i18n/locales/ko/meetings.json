@@ -10,10 +10,18 @@
     "descAdjust": "검색어나 날짜 범위를 조정해 보세요."
   },
   "card": {
-    "collapse": "접기",
-    "expand": "펼치기",
     "editAria": "회의록 수정 — {{topic}}",
     "deleteAria": "회의록 삭제 — {{topic}}"
+  },
+  "category": {
+    "label": "구분",
+    "internal": "내부",
+    "external": "외부"
+  },
+  "tabs": {
+    "all": "전체",
+    "internal": "내부",
+    "external": "외부"
   },
   "delete": { "title": "회의록 삭제", "message": "이 회의록을 삭제하시겠습니까? 되돌릴 수 없습니다." },
   "form": {
@@ -52,6 +60,7 @@
     "serverFetched": "서버 값을 가져왔어요. 다시 편집 후 저장하세요."
   },
   "detail": {
+    "selectPrompt": "왼쪽 목록에서 회의록을 선택하세요.",
     "decisions": "주요 결정사항",
     "discussion": "논의 내용",
     "thContent": "내용",

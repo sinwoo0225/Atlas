@@ -2,12 +2,17 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
 using ProjectManager.Application.Services;
+using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
 
 namespace ProjectManager.Cli.Commands;
 
 internal static class MeetingCommands
 {
+    // 회의 구분 파싱 — internal/external 대소문자 무시, 미지정/오타면 fallback.
+    private static MeetingCategory ParseCategory(string? raw, MeetingCategory fallback) =>
+        Enum.TryParse<MeetingCategory>(raw, ignoreCase: true, out var v) ? v : fallback;
+
     // ActionItems 는 DB 저장 형식이 JSON-in-TEXT(string). CLI 응답에서는 객체로 풀어
     // 자동화 측이 한 번 더 ConvertFrom-Json 해야 하는 번거로움을 피한다. 비-JSON 이면 원본 string 그대로.
     private static JsonNode? TryParseJson(string? raw)
@@ -36,7 +41,7 @@ internal static class MeetingCommands
 
     private static object Project(MeetingDto m) => new
     {
-        m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime, m.Attendees, m.Topic,
+        m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime, m.Category, m.Attendees, m.Topic,
         m.Decisions, m.Discussion,
         ActionItems = TryParseJson(m.ActionItems),
         m.MarkdownPath, m.CreatedAt, m.UpdatedAt,
@@ -57,13 +62,17 @@ internal static class MeetingCommands
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
         var kwOpt = new Option<string?>("--keyword", "제목/내용 키워드 (없으면 전부)");
-        var c = new Command("list", "프로젝트 회의록 조회") { projOpt, kwOpt };
+        var catOpt = new Option<string?>("--category", "구분 필터: internal | external (없으면 전부)");
+        var c = new Command("list", "프로젝트 회의록 조회") { projOpt, kwOpt, catOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pid = ctx.ParseResult.GetValueForOption(projOpt);
             var kw = ctx.ParseResult.GetValueForOption(kwOpt);
+            var catRaw = ctx.ParseResult.GetValueForOption(catOpt);
             var svc = services.GetRequiredService<MeetingService>();
             var list = await svc.GetByProjectAsync(pid, kw);
+            if (!string.IsNullOrWhiteSpace(catRaw) && Enum.TryParse<MeetingCategory>(catRaw, ignoreCase: true, out var cat))
+                list = list.Where(m => m.Category == cat);
             CliJson.WriteSuccess(list.Select(Project));
         }));
         return c;
@@ -91,6 +100,7 @@ internal static class MeetingCommands
         var startOpt = new Option<string?>("--start", "시작 시각 HH:mm");
         var endOpt = new Option<string?>("--end", "종료 시각 HH:mm");
         var attendOpt = new Option<string?>("--attendees", "참석자 (자유 형식: \"a, b, c\")");
+        var catOpt = new Option<string?>("--category", "회의 구분: internal(기본) | external");
         var topicOpt = new Option<string>("--topic", "주제") { IsRequired = true };
         var decisOpt = new Option<string?>("--decisions", "결정 사항 (markdown)");
         var discOpt = new Option<string?>("--discussion", "논의 내용 (markdown)");
@@ -102,7 +112,7 @@ internal static class MeetingCommands
             "ActionItem JSON 을 파일에서 읽기. '-' 이면 stdin. --action-items 보다 우선.");
 
         var c = new Command("create", "회의록 생성 (저장 시 md 파일 자동 export)")
-        { projOpt, dateOpt, startOpt, endOpt, attendOpt, topicOpt, decisOpt, discOpt, aiOpt, aiFileOpt };
+        { projOpt, dateOpt, startOpt, endOpt, attendOpt, catOpt, topicOpt, decisOpt, discOpt, aiOpt, aiFileOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -113,6 +123,7 @@ internal static class MeetingCommands
                 Date: pr.GetValueForOption(dateOpt),
                 StartTime: pr.GetValueForOption(startOpt),
                 EndTime: pr.GetValueForOption(endOpt),
+                Category: ParseCategory(pr.GetValueForOption(catOpt), MeetingCategory.Internal),
                 Attendees: pr.GetValueForOption(attendOpt) ?? string.Empty,
                 Topic: pr.GetValueForOption(topicOpt)!,
                 Decisions: pr.GetValueForOption(decisOpt) ?? string.Empty,
@@ -131,6 +142,7 @@ internal static class MeetingCommands
         var startOpt = new Option<string?>("--start", "시작 시각 HH:mm");
         var endOpt = new Option<string?>("--end", "종료 시각 HH:mm");
         var attendOpt = new Option<string?>("--attendees", "참석자");
+        var catOpt = new Option<string?>("--category", "회의 구분: internal | external (미지정 시 기존 값 유지)");
         var topicOpt = new Option<string?>("--topic", "주제");
         var decisOpt = new Option<string?>("--decisions", "결정 사항 (markdown)");
         var discOpt = new Option<string?>("--discussion", "논의 내용 (markdown)");
@@ -139,7 +151,7 @@ internal static class MeetingCommands
             "ActionItem JSON 파일/stdin('-'). --action-items 보다 우선. 둘 다 미지정 시 기존 값 유지.");
 
         var c = new Command("update", "회의록 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, dateOpt, startOpt, endOpt, attendOpt, topicOpt, decisOpt, discOpt, aiOpt, aiFileOpt };
+        { idOpt, dateOpt, startOpt, endOpt, attendOpt, catOpt, topicOpt, decisOpt, discOpt, aiOpt, aiFileOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -153,6 +165,7 @@ internal static class MeetingCommands
                 Date: pr.GetValueForOption(dateOpt) ?? existing.Date,
                 StartTime: pr.GetValueForOption(startOpt) ?? existing.StartTime,
                 EndTime: pr.GetValueForOption(endOpt) ?? existing.EndTime,
+                Category: ParseCategory(pr.GetValueForOption(catOpt), existing.Category),
                 Attendees: pr.GetValueForOption(attendOpt) ?? existing.Attendees,
                 Topic: pr.GetValueForOption(topicOpt) ?? existing.Topic,
                 Decisions: pr.GetValueForOption(decisOpt) ?? existing.Decisions,

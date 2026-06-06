@@ -53,6 +53,7 @@ public class MeetingMarkdownExporter(PathResolver pathResolver)
         sb.AppendLine($"date: {m.Date:yyyy-MM-dd}");
         if (!string.IsNullOrEmpty(m.StartTime) || !string.IsNullOrEmpty(m.EndTime))
             sb.AppendLine($"time: \"{m.StartTime ?? string.Empty} ~ {m.EndTime ?? string.Empty}\"");
+        sb.AppendLine($"category: {(m.Category == MeetingCategory.External ? "external" : "internal")}");
         sb.AppendLine("---");
         sb.AppendLine();
 
@@ -64,6 +65,10 @@ public class MeetingMarkdownExporter(PathResolver pathResolver)
             ? $" {m.StartTime ?? string.Empty} ~ {m.EndTime ?? string.Empty}"
             : string.Empty;
         sb.AppendLine($"{m.Date:yyyy-MM-dd}{timePart}");
+        sb.AppendLine();
+
+        sb.AppendLine("## 구분");
+        sb.AppendLine(m.Category == MeetingCategory.External ? "외부" : "내부");
         sb.AppendLine();
 
         sb.AppendLine("## 참석자");

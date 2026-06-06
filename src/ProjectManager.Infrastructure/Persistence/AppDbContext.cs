@@ -90,6 +90,8 @@ public class AppDbContext(
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 내부/외부 구분은 string 으로 — enum 순서 변경에 안전, SQL 가독성. default Internal 로 기존 행 마이그레이션.
+            e.Property(x => x.Category).HasConversion<string>().HasMaxLength(16).HasDefaultValue(MeetingCategory.Internal);
         });
 
         modelBuilder.Entity<DevInfoItem>(e =>

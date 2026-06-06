@@ -90,7 +90,9 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         if (!parentChanged) item.SortOrder = dto.SortOrder;
         item.Notes = dto.Notes;
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
-        if (!wasDone && updated.Status == WbsStatus.Done)
+        // 리프(자식 없음)만 업무일지 자동 등록 — 자식이 있는 상위 업무는 요약 노드라 완료해도 등록 제외.
+        // item 은 GetByIdAsync 로 .Include(Children) 로드되어 추가 쿼리 없이 판별 가능.
+        if (!wasDone && updated.Status == WbsStatus.Done && updated.Children.Count == 0)
             await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today,
                 WorkLogService.FormatDoneLine("작업", updated.Name, updated.Assignee, DateTime.Today));
         // C-1 양방향 sync (B 방향) — Name 변경 시 회의록 ActionItem.content 도 갱신.

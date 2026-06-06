@@ -1,5 +1,8 @@
 namespace ProjectManager.Core.Domain;
 
+// 회의 성격 — 내부(자사) / 외부(고객·협력사 동반). 기본 Internal.
+public enum MeetingCategory { Internal, External }
+
 public class Meeting : IAuditable
 {
     public int Id { get; set; }
@@ -7,6 +10,7 @@ public class Meeting : IAuditable
     public DateTime Date { get; set; }
     public string? StartTime { get; set; }
     public string? EndTime { get; set; }
+    public MeetingCategory Category { get; set; } = MeetingCategory.Internal;
     public string Attendees { get; set; } = string.Empty;
     public string Topic { get; set; } = string.Empty;
     public string Decisions { get; set; } = string.Empty;

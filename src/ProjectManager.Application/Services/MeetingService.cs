@@ -27,6 +27,7 @@ public class MeetingService(
         {
             ProjectId = dto.ProjectId, Date = dto.Date,
             StartTime = dto.StartTime, EndTime = dto.EndTime,
+            Category = dto.Category,
             Attendees = dto.Attendees, Topic = dto.Topic,
             Decisions = dto.Decisions, Discussion = dto.Discussion,
             ActionItems = dto.ActionItems
@@ -45,6 +46,7 @@ public class MeetingService(
         var oldActionItems = meeting.ActionItems;
         meeting.Date = dto.Date;
         meeting.StartTime = dto.StartTime; meeting.EndTime = dto.EndTime;
+        meeting.Category = dto.Category;
         meeting.Attendees = dto.Attendees;
         meeting.Topic = dto.Topic; meeting.Decisions = dto.Decisions;
         meeting.Discussion = dto.Discussion; meeting.ActionItems = dto.ActionItems;
@@ -137,6 +139,7 @@ public class MeetingService(
 
     private static MeetingDto ToDto(Meeting m) => new(
         m.Id, m.ProjectId, m.Date, m.StartTime, m.EndTime,
+        m.Category,
         m.Attendees, m.Topic,
         m.Decisions, m.Discussion, m.ActionItems,
         m.MarkdownPath,
