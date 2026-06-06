@@ -195,6 +195,15 @@ if ($Msix) {
     foreach ($f in @($stageExe, $stageWww, $stageCli, $stageMcp)) { if (-not (Test-Path $f)) { throw "필수 파일 누락: $f" } }
     Write-Host "  - Atlas.exe / wwwroot / Atlas-Cli.exe / Atlas-Mcp.exe : OK" -ForegroundColor Green
 
+    # Claude Code 스킬 + CLI 문서 동봉 — atlas-cli skill install 이 패키지 루트의 skills/atlas 를 ~/.claude/skills 로 복사.
+    foreach ($d in @('skills', 'cli-docs')) {
+        $srcDir = Join-Path $root $d
+        if (Test-Path $srcDir) {
+            Copy-Item $srcDir -Destination (Join-Path $stage $d) -Recurse -Force
+            Write-Host "  - $d (동봉)          : OK" -ForegroundColor Green
+        }
+    }
+
     # 2) 로고 자산 생성 (256px 소스 → MSIX 필수 PNG 세트). 종횡비 유지, 투명 캔버스 중앙 배치.
     Write-Host "==> 로고 자산 생성 ($logoSource)" -ForegroundColor Cyan
     if (-not (Test-Path $logoSource)) { throw "로고 소스를 찾을 수 없습니다: $logoSource" }
@@ -314,6 +323,15 @@ $usage = Join-Path $root 'ATLAS-CLI-USAGE.md'
 if (Test-Path $usage) {
     Copy-Item $usage -Destination (Join-Path $publishDir 'ATLAS-CLI-USAGE.md') -Force
     Write-Host "  - ATLAS-CLI-USAGE : OK" -ForegroundColor Green
+}
+
+# Claude Code 스킬 + CLI 문서 동봉 — atlas-cli skill install 이 publish 옆 skills/atlas 를 ~/.claude/skills 로 복사.
+foreach ($d in @('skills', 'cli-docs')) {
+    $srcDir = Join-Path $root $d
+    if (Test-Path $srcDir) {
+        Copy-Item $srcDir -Destination (Join-Path $publishDir $d) -Recurse -Force
+        Write-Host "  - $d (동봉)       : OK" -ForegroundColor Green
+    }
 }
 
 $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }

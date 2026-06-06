@@ -54,3 +54,5 @@ atlas-cli search   <query> [--project N] [--type ...] [--limit N]     # cli-docs
 - 빌드: `publish.ps1` 또는 `publish.ps1 -Msix`.
 
 설치·인코딩·MCP 등록 등 세팅은 [`cli-docs/common.md`](./cli-docs/common.md)(CLI) / [`cli-docs/mcp.md`](./cli-docs/mcp.md)(MCP).
+
+> **Claude Code 스킬**: `atlas-cli skill install` 한 번이면 이 가이드가 `~/.claude/skills/atlas` 에 설치돼 어느 프로젝트에서든 "atlas-cli 로 …" 요청에 자동 적용. (Store/포터블/인스톨러에 동봉.) 자세히는 [`cli-docs/mcp.md`](./cli-docs/mcp.md).

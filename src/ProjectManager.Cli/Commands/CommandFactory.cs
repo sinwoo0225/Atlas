@@ -20,6 +20,7 @@ internal static class CommandFactory
         root.AddCommand(DevInfoCommands.Build(services));
         root.AddCommand(ResourceCommands.Build(services));
         root.AddCommand(SearchCommands.Build(services));
+        root.AddCommand(SkillCommands.Build(services));
         return root;
     }
 }

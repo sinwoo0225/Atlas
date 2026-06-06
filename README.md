@@ -66,9 +66,11 @@ Atlas 는 두 가지 외부 진입로를 제공합니다 — `Atlas-Cli.exe` (CL
   claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
   ```
 
+- **Claude Code 스킬** — `atlas-cli skill install` 한 번이면 사용 가이드가 `~/.claude/skills/atlas` 에 설치되어, **어느 프로젝트에서 Claude Code 를 켜든** "atlas-cli 로 …" 한마디에 자동으로 적용됩니다(작업 컨텍스트 수집·필터 조회·상태 갱신 워크플로우 포함). 스킬은 Store·포터블·인스톨러 배포에 함께 동봉됩니다.
+
 둘 다 GUI 와 같은 데이터 폴더를 자동 발견 (`%LOCALAPPDATA%\Atlas\config.json`), SQLite WAL 모드로 Atlas.exe 가 켜진 상태에서도 동시 안전. 활동 로그에 actor (`claude-code` / `claude-code-mcp`) 로 기록되어 GUI 활동 페이지에서 사람 작업과 분리 추적. Store 설치본의 alias 는 GUI 와 같은 패키지로 실행돼 데이터 뷰가 항상 일치합니다.
 
-도구 40 종 (project · issue · wbs · meeting · changelog · worklog · devinfo · resource) · 시나리오 · PowerShell 인코딩 가이드 · CLI vs MCP 선택 매트릭스 · 다른 머신 인식 가이드는 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
+도구 57 종 (project · issue · wbs(+context) · meeting · changelog · worklog · devinfo · resource · 연결 · search) · 전엔티티 필터/셰이핑 · 에이전틱 워크플로우 · CLI vs MCP 선택 매트릭스는 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md)(라우터) + `cli-docs/`.
 
 ## 스크린샷
 
@@ -112,7 +114,7 @@ cd frontend; npm install; cd ..
 
 - 스택: **백엔드** .NET 8 / ASP.NET Core 8 / EF Core 8 (SQLite). **셸** WPF + WebView2. **프론트** React 19 + Vite + TypeScript + Tailwind 4 + Zustand + ECharts + Cytoscape.
 - 레이어링: `Core` / `Application` / `Infrastructure` / `WebService` / `AppHost` / `DesktopApp` (Clean Architecture).
-- `publish.ps1 -SkipZip` (zip 생략) · `-Server` (Client 모드용 standalone `Atlas-Server.exe`) · `-Msix -Version x.y.z.0` (Store 제출용 MSIX, CLI/MCP 제외) · `-Installer` (설치형 `Atlas-Setup-*.exe`, Inno Setup 6 필요).
+- `publish.ps1 -SkipZip` (zip 생략) · `-Server` (Client 모드용 standalone `Atlas-Server.exe`) · `-Msix -Version x.y.z.0` (Store 제출용 MSIX, CLI/MCP + Claude Code 스킬 동봉) · `-Installer` (설치형 `Atlas-Setup-*.exe`, Inno Setup 6 필요).
 
 ## 라이선스
 
@@ -188,9 +190,11 @@ Atlas provides two external entry points — `Atlas-Cli.exe` (CLI) and `Atlas-Mc
   claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
   ```
 
+- **Claude Code skill** — run `atlas-cli skill install` once and the usage guide is installed to `~/.claude/skills/atlas`, so **whichever project you open Claude Code in**, a request like "use atlas-cli to …" applies it automatically (including the gather-context / filter-query / update-status workflow). The skill is bundled in the Store, portable, and installer distributions.
+
 Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config.json`); SQLite WAL keeps writes safe while `Atlas.exe` is open. Each entry point stamps the activity log with its own actor (`claude-code` / `claude-code-mcp`) so external automation is filterable from human edits. On a Store install the aliases run under the same package identity as the GUI, so their data view always matches.
 
-40 tools (project · issue · wbs · meeting · changelog · worklog · devinfo · resource), scenarios, a PowerShell encoding guide, a CLI-vs-MCP decision matrix, and an other-machine setup guide are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md).
+57 tools (project · issue · wbs(+context) · meeting · changelog · worklog · devinfo · resource · links · search), per-entity filters/shaping, an agentic workflow guide, and a CLI-vs-MCP decision matrix are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md) (router) + `cli-docs/`.
 
 ### Screenshots
 
@@ -234,7 +238,7 @@ cd frontend; npm install; cd ..
 
 - Stack: **Backend** .NET 8 / ASP.NET Core 8 / EF Core 8 (SQLite). **Shell** WPF + WebView2. **Frontend** React 19 + Vite + TypeScript + Tailwind 4 + Zustand + ECharts + Cytoscape.
 - Layering: `Core` / `Application` / `Infrastructure` / `WebService` / `AppHost` / `DesktopApp` (Clean Architecture).
-- `publish.ps1 -SkipZip` (skip zip) · `-Server` (standalone `Atlas-Server.exe` for Client mode) · `-Msix -Version x.y.z.0` (Store-submission MSIX, excludes CLI/MCP) · `-Installer` (build `Atlas-Setup-*.exe`, requires Inno Setup 6).
+- `publish.ps1 -SkipZip` (skip zip) · `-Server` (standalone `Atlas-Server.exe` for Client mode) · `-Msix -Version x.y.z.0` (Store-submission MSIX, bundles CLI/MCP + the Claude Code skill) · `-Installer` (build `Atlas-Setup-*.exe`, requires Inno Setup 6).
 
 ### License
 

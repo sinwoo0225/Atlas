@@ -2,6 +2,13 @@
 
 Claude Code 가 네이티브 도구 콜로 Atlas 데이터에 접근. 셸/escape 함정 없이 자연어 → 도구 자동 선택. 등록 1회 후엔 한국어로 요청만 하면 됨. 데이터·비즈니스 룰·필터는 CLI 와 동일(같은 서비스 그래프).
 
+## Claude Code 스킬 (권장 — 사용법 자동 주입)
+
+```powershell
+atlas-cli skill install        # 배포본에 동봉된 스킬을 ~/.claude/skills/atlas 로 복사 (--force 로 갱신)
+```
+이러면 **어느 프로젝트에서 Claude Code 를 켜든** "atlas-cli 로 …" 요청에 스킬이 자동 적용(워크플로우·필터/셰이핑 규약·`wbs context` 우선·명령 인덱스). MCP 가 "도구"를 준다면 스킬은 "언제·어떤 순서로"(오리엔테이션)를 준다 — 둘 다 두면 최상. 스킬은 Store/포터블/인스톨러에 동봉되며, MSIX 인스톨러 자체는 `~/.claude` 에 못 쓰므로(샌드박스) 위 명령으로 한 번 배치한다.
+
 ## 등록
 
 ### 방법 A — Claude Code CLI (권장)
