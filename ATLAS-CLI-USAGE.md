@@ -17,8 +17,9 @@
 
 ## Where
 
-- Atlas 배포 zip 의 `publish/Atlas-Cli.exe` (Atlas.exe 와 같은 폴더)
-- 호출은 PowerShell 에서 `.\Atlas-Cli.exe ...` 또는 절대경로
+- **Microsoft Store 설치본**: CLI/MCP 가 함께 설치되어 App Execution Alias 로 PATH 에 노출 — 어느 터미널에서나 `atlas-cli ...` / `atlas-mcp` 로 호출. GUI 와 같은 패키지 ID 로 실행돼 데이터 폴더 자동 공유. (별칭 미동작 시 Windows 설정 > 앱 > 고급 앱 설정 > 앱 실행 별칭 에서 켜짐 확인.)
+- **포터블 zip(`Atlas-*.zip`)**: `publish/Atlas-Cli.exe` (Atlas.exe 와 같은 폴더). `.\Atlas-Cli.exe ...` 또는 절대경로로 호출.
+- 직접 빌드: `publish.ps1`(포터블 단일파일) 또는 `publish.ps1 -Msix`(스토어 패키지, alias 포함).
 
 ## Setup
 
@@ -271,11 +272,14 @@ $root = .\Atlas-Cli.exe wbs create --project 1 --name "백엔드" | ConvertFrom-
 }
 ```
 
-`<user>` 와 경로는 본인 환경에 맞게. 절대경로 권장 (Claude Code 가 어느 폴더에서 시작돼도 작동).
+`<user>` 와 경로는 본인 환경에 맞게. 절대경로 권장 (Claude Code 가 어느 폴더에서 시작돼도 작동). **Microsoft Store 설치본**은 절대경로 대신 `"command": "atlas-mcp"`(App Execution Alias) 사용 — 버전이 올라가도 경로가 안 바뀌어 안정.
 
 ### 방법 B — Claude Code CLI (권장)
 
 ```powershell
+# Microsoft Store 설치본 — App Execution Alias (버전 올라가도 안정)
+claude mcp add --scope user atlas atlas-mcp
+# 포터블 zip — exe 절대경로
 claude mcp add --scope user atlas "C:\Users\<user>\...\publish\Atlas-Mcp.exe"
 ```
 
@@ -371,6 +375,9 @@ curl (REST API) 은 토큰 측면 CLI 와 유사하지만 백엔드 가동 + API
 ### 1. MCP 등록 (가장 깔끔)
 
 ```powershell
+# Microsoft Store 설치본
+claude mcp add --scope user atlas atlas-mcp
+# 포터블 zip
 claude mcp add --scope user atlas "C:\path\to\publish\Atlas-Mcp.exe"
 ```
 

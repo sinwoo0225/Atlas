@@ -7,7 +7,7 @@
       (Client 모드 클라이언트들이 붙는 원격 서버. wwwroot 는 클라가 자체 보유하므로 서버에는 미포함.)
     - -Version <ver>: zip 이름의 stamp 대신 명시한 버전을 사용. 릴리즈 자산용.
     - -Installer: Inno Setup(ISCC) 으로 per-user 설치형 Atlas-Setup-<버전>.exe 도 생성 (DesktopApp 모드).
-    - -Msix: Microsoft Store 용 MSIX 패키지(Atlas-<버전>.msix) 생성. Atlas.exe + wwwroot 만 담는다 (CLI/MCP 제외).
+    - -Msix: Microsoft Store 용 MSIX 패키지(Atlas-<버전>.msix) 생성. Atlas.exe + wwwroot + Atlas-Cli.exe + Atlas-Mcp.exe 동봉 (CLI/MCP 는 App Execution Alias atlas-cli·atlas-mcp 로 노출).
       매니페스트는 installer/msix/AppxManifest.xml 템플릿을 치환. 제출 전 -Publisher/-IdentityName 을 Partner Center 값으로 지정.
       -SelfSign 은 로컬 사이드로드 테스트용 자체서명(스토어 업로드본은 MS 가 서명). makeappx/signtool 은 Windows SDK 필요.
 .EXAMPLE
@@ -23,7 +23,7 @@ param(
     [switch]$Server,
     [string]$Version,
     [switch]$Installer,
-    # MSIX (Microsoft Store) 패키지 빌드. Atlas.exe + wwwroot 만 담는다 (CLI/MCP 제외).
+    # MSIX (Microsoft Store) 패키지 빌드. Atlas.exe + wwwroot + Atlas-Cli.exe + Atlas-Mcp.exe (CLI/MCP 는 App Execution Alias 로 노출).
     [switch]$Msix,
     [switch]$SelfSign,                 # 로컬 사이드로드 테스트용 자체서명 (스토어 업로드본은 MS 가 서명).
     [string]$Publisher,                # 매니페스트 Identity/Publisher (예: 'CN=ABCD1234-...'). 미지정 시 테스트값.
@@ -178,11 +178,22 @@ if ($Msix) {
         -o $stage
     if ($LASTEXITCODE -ne 0) { throw "DesktopApp publish 실패" }
 
-    # CLI/MCP 는 스토어 패키지에서 제외 — 스테이징에 복사하지 않는다.
+    # CLI/MCP 도 같은 패키지에 동봉 — App Execution Alias(atlas-cli·atlas-mcp)로 터미널에 노출(매니페스트 Extensions).
+    # non-single-file self-contained 라 DesktopApp 가 이미 stage 에 둔 .NET 런타임 DLL 을 공유(동일 파일 덮어쓰기) → 패키지 비대화 방지.
+    Write-Host "==> Atlas-Cli / Atlas-Mcp publish (non-single-file, self-contained → $stage)" -ForegroundColor Cyan
+    dotnet publish (Join-Path $root 'src/ProjectManager.Cli/ProjectManager.Cli.csproj') `
+        -c Release -r win-x64 --self-contained -p:PublishSingleFile=false -o $stage
+    if ($LASTEXITCODE -ne 0) { throw "Atlas-Cli publish 실패 (MSIX stage)" }
+    dotnet publish (Join-Path $root 'src/ProjectManager.Mcp/ProjectManager.Mcp.csproj') `
+        -c Release -r win-x64 --self-contained -p:PublishSingleFile=false -o $stage
+    if ($LASTEXITCODE -ne 0) { throw "Atlas-Mcp publish 실패 (MSIX stage)" }
+
     $stageExe = Join-Path $stage 'Atlas.exe'
     $stageWww = Join-Path $stage 'wwwroot/index.html'
-    foreach ($f in @($stageExe, $stageWww)) { if (-not (Test-Path $f)) { throw "필수 파일 누락: $f" } }
-    Write-Host "  - Atlas.exe / wwwroot : OK" -ForegroundColor Green
+    $stageCli = Join-Path $stage 'Atlas-Cli.exe'
+    $stageMcp = Join-Path $stage 'Atlas-Mcp.exe'
+    foreach ($f in @($stageExe, $stageWww, $stageCli, $stageMcp)) { if (-not (Test-Path $f)) { throw "필수 파일 누락: $f" } }
+    Write-Host "  - Atlas.exe / wwwroot / Atlas-Cli.exe / Atlas-Mcp.exe : OK" -ForegroundColor Green
 
     # 2) 로고 자산 생성 (256px 소스 → MSIX 필수 PNG 세트). 종횡비 유지, 투명 캔버스 중앙 배치.
     Write-Host "==> 로고 자산 생성 ($logoSource)" -ForegroundColor Cyan
