@@ -8,8 +8,8 @@ namespace ProjectManager.Application.Services;
 
 public class ResourceService(IResourceRepository repo, AppDbContext db)
 {
-    public async Task<IEnumerable<ResourceDto>> GetAllAsync() =>
-        (await repo.GetAllAsync()).Select(ToDto);
+    public async Task<IEnumerable<ResourceDto>> GetAllAsync(ResourceListFilter? filter = null) =>
+        (await repo.GetAllAsync(filter)).Select(ToDto);
 
     public async Task<ResourceDto?> GetByIdAsync(int id)
     {

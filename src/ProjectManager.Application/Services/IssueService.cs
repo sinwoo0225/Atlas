@@ -8,8 +8,8 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
 {
     private static bool IsCompleted(IssueStatus s) => s == IssueStatus.Resolved || s == IssueStatus.Closed;
 
-    public async Task<IEnumerable<IssueDto>> GetByProjectAsync(int projectId) =>
-        (await repo.GetByProjectAsync(projectId)).Select(ToDto);
+    public async Task<IEnumerable<IssueDto>> GetByProjectAsync(int projectId, IssueListFilter? filter = null) =>
+        (await repo.GetByProjectAsync(projectId, filter)).Select(ToDto);
 
     public async Task<IssueDto?> GetByIdAsync(int id)
     {

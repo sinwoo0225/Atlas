@@ -1,13 +1,47 @@
 using Microsoft.EntityFrameworkCore;
 using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
 using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Infrastructure.Persistence;
 
 public class DevInfoRepository(AppDbContext db) : IDevInfoRepository
 {
-    public async Task<IEnumerable<DevInfoItem>> GetByProjectAsync(int projectId) =>
-        await db.DevInfoItems.Where(x => x.ProjectId == projectId).OrderByDescending(x => x.UpdatedAt).ToListAsync();
+    public async Task<IEnumerable<DevInfoItem>> GetByProjectAsync(int projectId, DevInfoListFilter? filter = null)
+    {
+        var f = filter ?? DevInfoListFilter.None;
+        var q = db.DevInfoItems.Where(x => x.ProjectId == projectId);
+
+        if (f.Types is { Count: > 0 })
+        {
+            var types = f.Types.ToArray();
+            q = q.Where(x => types.Contains(x.Type));
+        }
+        if (f.Tags is { Count: > 0 })
+        {
+            // AND — 지정한 태그를 모두 포함(콤마 구분 Tags 필드 substring 매칭). 각 태그를 개별 .Where 로.
+            foreach (var raw in f.Tags)
+            {
+                if (string.IsNullOrWhiteSpace(raw)) continue;
+                var tag = raw.Trim();
+                q = q.Where(x => x.Tags.Contains(tag));
+            }
+        }
+        if (f.UpdatedFrom is DateTime uf)
+            q = q.Where(x => x.UpdatedAt >= uf);
+        if (f.UpdatedTo is DateTime ut)
+        {
+            var end = ut.Date.AddDays(1); // UpdatedAt 은 UTC+시각 — half-open 으로 그 날 전체 포함
+            q = q.Where(x => x.UpdatedAt < end);
+        }
+        if (!string.IsNullOrWhiteSpace(f.Keyword))
+        {
+            var kw = f.Keyword;
+            q = q.Where(x => x.Title.Contains(kw) || x.Content.Contains(kw));
+        }
+
+        return await q.OrderByDescending(x => x.UpdatedAt).ToListAsync();
+    }
 
     public async Task<DevInfoItem?> GetByIdAsync(int id) => await db.DevInfoItems.FindAsync(id);
 

@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -10,15 +11,40 @@ namespace ProjectManager.Mcp.Tools;
 public static class IssueTools
 {
     [McpServerTool(Name = "atlas_issue_list"),
-     Description("프로젝트의 이슈 목록 조회. status 옵션으로 필터 (Open|InProgress|Resolved|Closed)")]
+     Description("프로젝트 이슈 조회 (DB-side 필터 + 출력 셰이핑). 미해결만 보려면 open=true. " +
+                 "statuses 다중 가능. count=true 면 개수만, brief=true 면 축약 필드, fields 로 임의 투영.")]
     public static async Task<string> List(
         IssueService svc,
         [Description("프로젝트 ID")] int projectId,
-        [Description("필터 — 없으면 전체")] IssueStatus? status = null)
+        [Description("상태 다중 필터 (Open|InProgress|Resolved|Closed). 없으면 전체")] IssueStatus[]? statuses = null,
+        [Description("미해결만 (Open|InProgress) — statuses 미지정 시 적용")] bool open = false,
+        [Description("우선순위 다중 필터 (Low|Medium|High)")] IssuePriority[]? priorities = null,
+        [Description("담당자 Resource ID 정확 일치")] int? assigneeResourceId = null,
+        [Description("담당자 이름 부분일치 (정확 ID 는 assigneeResourceId)")] string? assigneeName = null,
+        [Description("마감일 >= YYYY-MM-DD")] DateTime? dueFrom = null,
+        [Description("마감일 <= YYYY-MM-DD (해당일 포함)")] DateTime? dueTo = null,
+        [Description("발생일 >= YYYY-MM-DD")] DateTime? occurredFrom = null,
+        [Description("발생일 <= YYYY-MM-DD (해당일 포함)")] DateTime? occurredTo = null,
+        [Description("기한 초과 미완료만")] bool overdue = false,
+        [Description("제목·설명 부분일치")] string? keyword = null,
+        [Description("개수만 반환")] bool count = false,
+        [Description("최대 N 건")] int? limit = null,
+        [Description("축약 필드만")] bool brief = false,
+        [Description("쉼표구분 필드만 (예: id,title,status)")] string? fields = null)
     {
-        var list = await svc.GetByProjectAsync(projectId);
-        if (status is not null) list = list.Where(i => i.Status == status.Value);
-        return McpJson.Serialize(list);
+        IReadOnlyList<IssueStatus>? statusFilter =
+            statuses is { Length: > 0 } ? statuses : (open ? IssueListFilter.OpenStatuses : null);
+        var filter = new IssueListFilter(
+            Statuses: statusFilter,
+            Priorities: priorities is { Length: > 0 } ? priorities : null,
+            AssigneeResourceId: assigneeResourceId,
+            AssigneeName: assigneeName,
+            DueFrom: dueFrom, DueTo: dueTo,
+            OccurredFrom: occurredFrom, OccurredTo: occurredTo,
+            Overdue: overdue,
+            Keyword: keyword);
+        var list = await svc.GetByProjectAsync(projectId, filter);
+        return McpJson.SerializeList(list, McpJson.View(count, limit, brief, fields, BriefPresets.Issue));
     }
 
     [McpServerTool(Name = "atlas_issue_get"), Description("단일 이슈 상세 조회")]

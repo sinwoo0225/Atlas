@@ -1,6 +1,7 @@
 ﻿using System.CommandLine;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -62,18 +63,25 @@ internal static class MeetingCommands
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
         var kwOpt = new Option<string?>("--keyword", "제목/내용 키워드 (없으면 전부)");
-        var catOpt = new Option<string?>("--category", "구분 필터: internal | external (없으면 전부)");
-        var c = new Command("list", "프로젝트 회의록 조회") { projOpt, kwOpt, catOpt };
+        var catOpt = new Option<MeetingCategory?>("--category", "구분 필터: Internal | External (없으면 전부)");
+        var fromOpt = new Option<DateTime?>("--from", "회의일 >= YYYY-MM-DD");
+        var toOpt = new Option<DateTime?>("--to", "회의일 <= YYYY-MM-DD (해당일 포함)");
+        var view = new ListViewOptions();
+
+        var c = new Command("list", "프로젝트 회의록 조회 (필터 + 출력 셰이핑)") { projOpt, kwOpt, catOpt, fromOpt, toOpt };
+        view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
-            var pid = ctx.ParseResult.GetValueForOption(projOpt);
-            var kw = ctx.ParseResult.GetValueForOption(kwOpt);
-            var catRaw = ctx.ParseResult.GetValueForOption(catOpt);
+            var pr = ctx.ParseResult;
+            var pid = pr.GetValueForOption(projOpt);
+            var filter = new MeetingListFilter(
+                Category: pr.GetValueForOption(catOpt),
+                From: pr.GetValueForOption(fromOpt),
+                To: pr.GetValueForOption(toOpt),
+                Keyword: pr.GetValueForOption(kwOpt));
             var svc = services.GetRequiredService<MeetingService>();
-            var list = await svc.GetByProjectAsync(pid, kw);
-            if (!string.IsNullOrWhiteSpace(catRaw) && Enum.TryParse<MeetingCategory>(catRaw, ignoreCase: true, out var cat))
-                list = list.Where(m => m.Category == cat);
-            CliJson.WriteSuccess(list.Select(Project));
+            var list = await svc.GetByProjectAsync(pid, filter);
+            CliJson.WriteList(list.Select(Project), view.Read(pr, BriefPresets.Meeting));
         }));
         return c;
     }

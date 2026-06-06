@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -16,22 +17,66 @@ internal static class IssueCommands
         cmd.AddCommand(BuildCreate(services));
         cmd.AddCommand(BuildUpdate(services));
         cmd.AddCommand(BuildDelete(services));
+        cmd.AddCommand(BuildWbsLinks(services));
         return cmd;
+    }
+
+    private static Command BuildWbsLinks(IServiceProvider services)
+    {
+        var idOpt = new Option<int>("--id", "이슈 ID") { IsRequired = true };
+        var c = new Command("wbs-links", "이 이슈에 연결된 WBS 항목 목록") { idOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var id = ctx.ParseResult.GetValueForOption(idOpt);
+            var svc = services.GetRequiredService<IssueWbsLinkService>();
+            CliJson.WriteSuccess(await svc.GetByIssueAsync(id));
+        }));
+        return c;
     }
 
     private static Command BuildList(IServiceProvider services)
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
-        var statusOpt = new Option<IssueStatus?>("--status", "Open|InProgress|Resolved|Closed (없으면 전부)");
-        var c = new Command("list", "프로젝트 이슈 조회 (옵션 --status 로 필터)") { projOpt, statusOpt };
+        var statusOpt = CliOptions.EnumList<IssueStatus>("--status", "상태 필터 (다중: Open,InProgress / 반복 가능). 없으면 전부");
+        var openOpt = new Option<bool>("--open", "미해결만 (Open|InProgress) — --status 미지정 시 적용");
+        var prioOpt = CliOptions.EnumList<IssuePriority>("--priority", "우선순위 필터 (다중: Low,High)");
+        var assigneeIdOpt = new Option<int?>("--assignee-id", "담당자 Resource ID (정확 일치)");
+        var assigneeOpt = new Option<string?>("--assignee-name", "담당자 이름 부분일치 (정확 ID 는 --assignee-id)");
+        var dueFromOpt = new Option<DateTime?>("--due-from", "마감일 >= YYYY-MM-DD");
+        var dueToOpt = new Option<DateTime?>("--due-to", "마감일 <= YYYY-MM-DD (해당일 포함)");
+        var occFromOpt = new Option<DateTime?>("--occurred-from", "발생일 >= YYYY-MM-DD");
+        var occToOpt = new Option<DateTime?>("--occurred-to", "발생일 <= YYYY-MM-DD (해당일 포함)");
+        var overdueOpt = new Option<bool>("--overdue", "기한 초과 미완료만 (DueDate < today & 미해결)");
+        var keywordOpt = new Option<string?>("--keyword", "제목·설명 부분일치");
+        var view = new ListViewOptions();
+
+        var c = new Command("list", "프로젝트 이슈 조회 (필터 + 출력 셰이핑)")
+        { projOpt, statusOpt, openOpt, prioOpt, assigneeIdOpt, assigneeOpt,
+          dueFromOpt, dueToOpt, occFromOpt, occToOpt, overdueOpt, keywordOpt };
+        view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
-            var pid = ctx.ParseResult.GetValueForOption(projOpt);
-            var status = ctx.ParseResult.GetValueForOption(statusOpt);
+            var pr = ctx.ParseResult;
+            var pid = pr.GetValueForOption(projOpt);
+            var statuses = pr.GetValueForOption(statusOpt);
+            IReadOnlyList<IssueStatus>? statusFilter =
+                statuses is { Length: > 0 } ? statuses
+                : (pr.GetValueForOption(openOpt) ? IssueListFilter.OpenStatuses : null);
+            var prios = pr.GetValueForOption(prioOpt);
+            var filter = new IssueListFilter(
+                Statuses: statusFilter,
+                Priorities: prios is { Length: > 0 } ? prios : null,
+                AssigneeResourceId: pr.GetValueForOption(assigneeIdOpt),
+                AssigneeName: pr.GetValueForOption(assigneeOpt),
+                DueFrom: pr.GetValueForOption(dueFromOpt),
+                DueTo: pr.GetValueForOption(dueToOpt),
+                OccurredFrom: pr.GetValueForOption(occFromOpt),
+                OccurredTo: pr.GetValueForOption(occToOpt),
+                Overdue: pr.GetValueForOption(overdueOpt),
+                Keyword: pr.GetValueForOption(keywordOpt));
             var svc = services.GetRequiredService<IssueService>();
-            var list = await svc.GetByProjectAsync(pid);
-            if (status is not null) list = list.Where(i => i.Status == status.Value);
-            CliJson.WriteSuccess(list);
+            var list = await svc.GetByProjectAsync(pid, filter);
+            CliJson.WriteList(list, view.Read(pr, BriefPresets.Issue));
         }));
         return c;
     }

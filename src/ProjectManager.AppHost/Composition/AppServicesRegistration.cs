@@ -72,6 +72,7 @@ public static class AppServicesRegistration
         services.AddScoped<ActionItemPromotionService>();
         services.AddScoped<IssueWbsLinkService>();
         services.AddScoped<WbsDevInfoLinkService>();
+        services.AddScoped<WbsContextService>();
         services.AddScoped<StartPageService>();
         services.AddScoped<BackupService>();
         services.AddSingleton<UpdateService>();

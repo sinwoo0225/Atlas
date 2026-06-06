@@ -10,7 +10,7 @@ public class MeetingsController(MeetingService svc, ActionItemPromotionService p
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(int projectId, [FromQuery] string? keyword) =>
-        Ok(await svc.GetByProjectAsync(projectId, keyword));
+        Ok(await svc.GetByProjectAsync(projectId, new MeetingListFilter(Keyword: keyword)));
 
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int projectId, int id) =>

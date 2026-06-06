@@ -15,6 +15,11 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         return roots.Select(x => ToDto(x, items));
     }
 
+    // 필터 조회 — 평면 DTO 리스트(Children 없음). 트리로 묶지 않는 이유: 필터가 부모-자식 경계를 가르면
+    // 매칭된 하위 항목이 root 누락으로 사라진다. 각 항목은 ParentId 를 들고 있어 클라가 재구성 가능.
+    public async Task<IEnumerable<WbsItemDto>> QueryAsync(int projectId, int? versionId, WbsListFilter filter) =>
+        (await repo.QueryAsync(projectId, versionId, filter)).Select(ToFlatDto);
+
     public async Task<WbsItemDto?> GetByIdAsync(int id)
     {
         var item = await repo.GetByIdAsync(id);
@@ -150,6 +155,15 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.CreatedAt, item.UpdatedAt,
         item.SortOrder,
         item.Children?.Select(c => ToDto(c, all)));
+
+    // 평면 결과용 — Children 을 null 로 둬 출력에서 생략(WhenWritingNull). 계층은 ParentId 로 표현.
+    private static WbsItemDto ToFlatDto(WbsItem item) => new(
+        item.Id, item.ProjectId, item.VersionId, item.ParentId,
+        item.Name, item.Assignee, item.StartDate, item.EndDate,
+        item.Status, item.IsMilestone, item.Importance, item.Notes,
+        item.CreatedAt, item.UpdatedAt,
+        item.SortOrder,
+        null);
 
     private static WbsVersionDto ToVersionDto(WbsVersion v) => new(
         v.Id, v.ProjectId, v.VersionName, v.Description, v.CreatedAt, v.IsCurrent);

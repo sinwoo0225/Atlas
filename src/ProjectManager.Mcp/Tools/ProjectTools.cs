@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -10,9 +11,32 @@ namespace ProjectManager.Mcp.Tools;
 public static class ProjectTools
 {
     [McpServerTool(Name = "atlas_project_list"),
-     Description("모든 Atlas 프로젝트 조회 → JSON 배열 (id/name/category/status/dates/...)")]
-    public static async Task<string> List(ProjectService svc) =>
-        McpJson.Serialize(await svc.GetAllAsync());
+     Description("Atlas 프로젝트 조회 (필터 + 출력 셰이핑). 진행/대기 중만 open=true, 특정일 진행 중 activeOn=YYYY-MM-DD.")]
+    public static async Task<string> List(
+        ProjectService svc,
+        [Description("상태 다중 필터 (Planned|Waiting|InProgress|Done|Maintenance)")] ProjectStatus[]? statuses = null,
+        [Description("진행/대기 중만 (완료·유지보수 제외) — statuses 미지정 시 적용")] bool open = false,
+        [Description("그 날 진행 중 (시작<=날짜<=종료) YYYY-MM-DD")] DateTime? activeOn = null,
+        [Description("시작일 >= YYYY-MM-DD")] DateTime? startFrom = null,
+        [Description("시작일 <= YYYY-MM-DD (해당일 포함)")] DateTime? startTo = null,
+        [Description("종료일 >= YYYY-MM-DD")] DateTime? endFrom = null,
+        [Description("종료일 <= YYYY-MM-DD (해당일 포함)")] DateTime? endTo = null,
+        [Description("구분 부분일치")] string? category = null,
+        [Description("이름·설명·목표 부분일치")] string? keyword = null,
+        [Description("개수만 반환")] bool count = false,
+        [Description("최대 N 건")] int? limit = null,
+        [Description("축약 필드만")] bool brief = false,
+        [Description("쉼표구분 필드만 (예: id,name,status)")] string? fields = null)
+    {
+        IReadOnlyList<ProjectStatus>? statusFilter =
+            statuses is { Length: > 0 } ? statuses : (open ? ProjectListFilter.OpenStatuses : null);
+        var filter = new ProjectListFilter(
+            Statuses: statusFilter, ActiveOn: activeOn,
+            StartFrom: startFrom, StartTo: startTo, EndFrom: endFrom, EndTo: endTo,
+            Category: category, Keyword: keyword);
+        var list = await svc.GetAllAsync(filter);
+        return McpJson.SerializeList(list, McpJson.View(count, limit, brief, fields, BriefPresets.Project));
+    }
 
     [McpServerTool(Name = "atlas_project_get"), Description("단일 프로젝트 상세 조회")]
     public static async Task<string> Get(ProjectService svc, int id)

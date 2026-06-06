@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -10,9 +11,29 @@ namespace ProjectManager.Mcp.Tools;
 public static class ChangeLogTools
 {
     [McpServerTool(Name = "atlas_changelog_list"),
-     Description("프로젝트 변경이력 (ChangeLog) 조회 → JSON 배열")]
-    public static async Task<string> List(ChangeLogService svc, int projectId) =>
-        McpJson.Serialize(await svc.GetByProjectAsync(projectId));
+     Description("프로젝트 변경이력 조회 (필터 + 출력 셰이핑). impacts 영향도 다중, from/to 날짜 범위, sourceIssueId/sourceWbsItemId 출처.")]
+    public static async Task<string> List(
+        ChangeLogService svc,
+        [Description("프로젝트 ID")] int projectId,
+        [Description("영향도 다중 필터 (Low|Medium|High|Critical)")] ImpactLevel[]? impacts = null,
+        [Description("날짜 >= YYYY-MM-DD")] DateTime? from = null,
+        [Description("날짜 <= YYYY-MM-DD (해당일 포함)")] DateTime? to = null,
+        [Description("출처 Issue ID")] int? sourceIssueId = null,
+        [Description("출처 WBS 항목 ID")] int? sourceWbsItemId = null,
+        [Description("내용 부분일치")] string? keyword = null,
+        [Description("개수만 반환")] bool count = false,
+        [Description("최대 N 건")] int? limit = null,
+        [Description("축약 필드만")] bool brief = false,
+        [Description("쉼표구분 필드만 (예: id,date,impact)")] string? fields = null)
+    {
+        var filter = new ChangeLogListFilter(
+            Impacts: impacts is { Length: > 0 } ? impacts : null,
+            From: from, To: to,
+            SourceIssueId: sourceIssueId, SourceWbsItemId: sourceWbsItemId,
+            Keyword: keyword);
+        var list = await svc.GetByProjectAsync(projectId, filter);
+        return McpJson.SerializeList(list, McpJson.View(count, limit, brief, fields, BriefPresets.ChangeLog));
+    }
 
     [McpServerTool(Name = "atlas_changelog_get"), Description("단일 변경이력 조회")]
     public static async Task<string> Get(ChangeLogService svc, int id)

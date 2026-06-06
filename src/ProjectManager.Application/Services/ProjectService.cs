@@ -22,8 +22,8 @@ public class ProjectService(
     SearchService search)
 {
     private static readonly string[] WeekdayLabels = { "월", "화", "수", "목", "금" };
-    public async Task<IEnumerable<ProjectDto>> GetAllAsync() =>
-        (await projectRepo.GetAllAsync()).Select(ToDto);
+    public async Task<IEnumerable<ProjectDto>> GetAllAsync(ProjectListFilter? filter = null) =>
+        (await projectRepo.GetAllAsync(filter)).Select(ToDto);
 
     public async Task<ProjectDto?> GetByIdAsync(int id)
     {

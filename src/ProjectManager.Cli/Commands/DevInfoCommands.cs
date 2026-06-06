@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -30,18 +31,51 @@ internal static class DevInfoCommands
         cmd.AddCommand(BuildUpdate(services));
         cmd.AddCommand(BuildDelete(services));
         cmd.AddCommand(BuildTags(services));
+        cmd.AddCommand(BuildWbsLinks(services));
         return cmd;
+    }
+
+    private static Command BuildWbsLinks(IServiceProvider services)
+    {
+        var idOpt = new Option<int>("--id", "업무 정보(DevInfo) ID") { IsRequired = true };
+        var c = new Command("wbs-links", "이 업무 정보에 연결된 WBS 항목 목록") { idOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var id = ctx.ParseResult.GetValueForOption(idOpt);
+            var svc = services.GetRequiredService<WbsDevInfoLinkService>();
+            CliJson.WriteSuccess(await svc.GetByDevInfoAsync(id));
+        }));
+        return c;
     }
 
     private static Command BuildList(IServiceProvider services)
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
-        var c = new Command("list", "프로젝트 업무 정보 조회") { projOpt };
+        var typeOpt = CliOptions.EnumList<DevInfoType>("--type", "타입 필터 (다중: Markdown,GitRepo)");
+        var tagOpt = CliOptions.StringList("--tag", "태그 부분일치 (다중 = 모두 포함 AND)");
+        var updatedFromOpt = new Option<DateTime?>("--updated-from", "수정일 >= YYYY-MM-DD");
+        var updatedToOpt = new Option<DateTime?>("--updated-to", "수정일 <= YYYY-MM-DD (해당일 포함)");
+        var keywordOpt = new Option<string?>("--keyword", "제목·내용 부분일치");
+        var view = new ListViewOptions();
+
+        var c = new Command("list", "프로젝트 업무 정보 조회 (필터 + 출력 셰이핑)")
+        { projOpt, typeOpt, tagOpt, updatedFromOpt, updatedToOpt, keywordOpt };
+        view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
-            var pid = ctx.ParseResult.GetValueForOption(projOpt);
+            var pr = ctx.ParseResult;
+            var pid = pr.GetValueForOption(projOpt);
+            var types = pr.GetValueForOption(typeOpt);
+            var tags = pr.GetValueForOption(tagOpt);
+            var filter = new DevInfoListFilter(
+                Types: types is { Length: > 0 } ? types : null,
+                Tags: tags is { Length: > 0 } ? tags : null,
+                UpdatedFrom: pr.GetValueForOption(updatedFromOpt),
+                UpdatedTo: pr.GetValueForOption(updatedToOpt),
+                Keyword: pr.GetValueForOption(keywordOpt));
             var svc = services.GetRequiredService<DevInfoService>();
-            CliJson.WriteSuccess(await svc.GetByProjectAsync(pid));
+            var list = await svc.GetByProjectAsync(pid, filter);
+            CliJson.WriteList(list, view.Read(pr, BriefPresets.DevInfo));
         }));
         return c;
     }

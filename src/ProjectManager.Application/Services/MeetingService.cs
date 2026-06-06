@@ -12,8 +12,8 @@ public class MeetingService(
     IIssueRepository issueRepo,
     IWbsRepository wbsRepo)
 {
-    public async Task<IEnumerable<MeetingDto>> GetByProjectAsync(int projectId, string? keyword = null) =>
-        (await repo.GetByProjectAsync(projectId, keyword)).Select(ToDto);
+    public async Task<IEnumerable<MeetingDto>> GetByProjectAsync(int projectId, MeetingListFilter? filter = null) =>
+        (await repo.GetByProjectAsync(projectId, filter)).Select(ToDto);
 
     public async Task<MeetingDto?> GetByIdAsync(int id)
     {

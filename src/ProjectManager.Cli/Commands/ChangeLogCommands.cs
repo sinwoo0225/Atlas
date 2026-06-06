@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -38,12 +39,32 @@ internal static class ChangeLogCommands
     private static Command BuildList(IServiceProvider services)
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
-        var c = new Command("list", "프로젝트 변경이력 조회") { projOpt };
+        var impactOpt = CliOptions.EnumList<ImpactLevel>("--impact", "영향도 필터 (다중: High,Critical)");
+        var fromOpt = new Option<DateTime?>("--from", "날짜 >= YYYY-MM-DD");
+        var toOpt = new Option<DateTime?>("--to", "날짜 <= YYYY-MM-DD (해당일 포함)");
+        var srcIssueOpt = new Option<int?>("--source-issue", "출처 Issue ID");
+        var srcWbsOpt = new Option<int?>("--source-wbs", "출처 WBS 항목 ID");
+        var keywordOpt = new Option<string?>("--keyword", "내용 부분일치");
+        var view = new ListViewOptions();
+
+        var c = new Command("list", "프로젝트 변경이력 조회 (필터 + 출력 셰이핑)")
+        { projOpt, impactOpt, fromOpt, toOpt, srcIssueOpt, srcWbsOpt, keywordOpt };
+        view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
-            var pid = ctx.ParseResult.GetValueForOption(projOpt);
+            var pr = ctx.ParseResult;
+            var pid = pr.GetValueForOption(projOpt);
+            var impacts = pr.GetValueForOption(impactOpt);
+            var filter = new ChangeLogListFilter(
+                Impacts: impacts is { Length: > 0 } ? impacts : null,
+                From: pr.GetValueForOption(fromOpt),
+                To: pr.GetValueForOption(toOpt),
+                SourceIssueId: pr.GetValueForOption(srcIssueOpt),
+                SourceWbsItemId: pr.GetValueForOption(srcWbsOpt),
+                Keyword: pr.GetValueForOption(keywordOpt));
             var svc = services.GetRequiredService<ChangeLogService>();
-            CliJson.WriteSuccess(await svc.GetByProjectAsync(pid));
+            var list = await svc.GetByProjectAsync(pid, filter);
+            CliJson.WriteList(list, view.Read(pr, BriefPresets.ChangeLog));
         }));
         return c;
     }

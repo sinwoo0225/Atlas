@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -23,11 +24,23 @@ internal static class ResourceCommands
 
     private static Command BuildList(IServiceProvider services)
     {
-        var c = new Command("list", "모든 리소스 조회");
+        var typeOpt = new Option<ResourceType?>("--type", "Person | Equipment (없으면 전부)");
+        var deptOpt = new Option<string?>("--department", "부서 부분일치");
+        var keywordOpt = new Option<string?>("--keyword", "이름·이메일 부분일치");
+        var view = new ListViewOptions();
+
+        var c = new Command("list", "리소스 조회 (필터 + 출력 셰이핑) — 전역") { typeOpt, deptOpt, keywordOpt };
+        view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
+            var pr = ctx.ParseResult;
+            var filter = new ResourceListFilter(
+                Type: pr.GetValueForOption(typeOpt),
+                Department: pr.GetValueForOption(deptOpt),
+                Keyword: pr.GetValueForOption(keywordOpt));
             var svc = services.GetRequiredService<ResourceService>();
-            CliJson.WriteSuccess(await svc.GetAllAsync());
+            var list = await svc.GetAllAsync(filter);
+            CliJson.WriteList(list, view.Read(pr, BriefPresets.Resource));
         }));
         return c;
     }

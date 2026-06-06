@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
 using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Infrastructure.Persistence;
@@ -10,12 +11,27 @@ public class MeetingRepository(AppDbContext db) : IMeetingRepository
 {
     private static readonly JsonSerializerOptions JsonOpts = new() { WriteIndented = false };
 
-    public async Task<IEnumerable<Meeting>> GetByProjectAsync(int projectId, string? keyword = null)
+    public async Task<IEnumerable<Meeting>> GetByProjectAsync(int projectId, MeetingListFilter? filter = null)
     {
-        var query = db.Meetings.Where(x => x.ProjectId == projectId);
-        if (!string.IsNullOrWhiteSpace(keyword))
-            query = query.Where(x => x.Topic.Contains(keyword) || x.Discussion.Contains(keyword) || x.Decisions.Contains(keyword));
-        return await query.OrderByDescending(x => x.Date).ToListAsync();
+        var f = filter ?? MeetingListFilter.None;
+        var q = db.Meetings.Where(x => x.ProjectId == projectId);
+
+        if (f.Category is MeetingCategory cat)
+            q = q.Where(x => x.Category == cat);
+        if (f.From is DateTime from)
+            q = q.Where(x => x.Date >= from);
+        if (f.To is DateTime to)
+        {
+            var end = to.Date.AddDays(1);
+            q = q.Where(x => x.Date < end);
+        }
+        if (!string.IsNullOrWhiteSpace(f.Keyword))
+        {
+            var kw = f.Keyword;
+            q = q.Where(x => x.Topic.Contains(kw) || x.Discussion.Contains(kw) || x.Decisions.Contains(kw));
+        }
+
+        return await q.OrderByDescending(x => x.Date).ToListAsync();
     }
 
     public async Task<Meeting?> GetByIdAsync(int id) => await db.Meetings.FindAsync(id);

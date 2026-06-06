@@ -1,5 +1,6 @@
 using System.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -21,11 +22,39 @@ internal static class ProjectCommands
 
     private static Command BuildList(IServiceProvider services)
     {
-        var c = new Command("list", "모든 프로젝트 조회 → JSON 배열");
+        var statusOpt = CliOptions.EnumList<ProjectStatus>("--status", "상태 필터 (다중: Waiting,InProgress)");
+        var openOpt = new Option<bool>("--open", "진행/대기 중만 (완료·유지보수 제외) — --status 미지정 시 적용");
+        var activeOnOpt = CliOptions.DateOrKeyword("--active-on", "그 날 진행 중 (시작<=날짜<=종료). today|now 또는 YYYY-MM-DD");
+        var startFromOpt = new Option<DateTime?>("--start-from", "시작일 >= YYYY-MM-DD");
+        var startToOpt = new Option<DateTime?>("--start-to", "시작일 <= YYYY-MM-DD (해당일 포함)");
+        var endFromOpt = new Option<DateTime?>("--end-from", "종료일 >= YYYY-MM-DD");
+        var endToOpt = new Option<DateTime?>("--end-to", "종료일 <= YYYY-MM-DD (해당일 포함)");
+        var categoryOpt = new Option<string?>("--category", "구분 부분일치 (과제·내부·사업 등)");
+        var keywordOpt = new Option<string?>("--keyword", "이름·설명·목표 부분일치");
+        var view = new ListViewOptions();
+
+        var c = new Command("list", "프로젝트 조회 (필터 + 출력 셰이핑)")
+        { statusOpt, openOpt, activeOnOpt, startFromOpt, startToOpt, endFromOpt, endToOpt, categoryOpt, keywordOpt };
+        view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
+            var pr = ctx.ParseResult;
+            var statuses = pr.GetValueForOption(statusOpt);
+            IReadOnlyList<ProjectStatus>? statusFilter =
+                statuses is { Length: > 0 } ? statuses
+                : (pr.GetValueForOption(openOpt) ? ProjectListFilter.OpenStatuses : null);
+            var filter = new ProjectListFilter(
+                Statuses: statusFilter,
+                ActiveOn: pr.GetValueForOption(activeOnOpt),
+                StartFrom: pr.GetValueForOption(startFromOpt),
+                StartTo: pr.GetValueForOption(startToOpt),
+                EndFrom: pr.GetValueForOption(endFromOpt),
+                EndTo: pr.GetValueForOption(endToOpt),
+                Category: pr.GetValueForOption(categoryOpt),
+                Keyword: pr.GetValueForOption(keywordOpt));
             var svc = services.GetRequiredService<ProjectService>();
-            CliJson.WriteSuccess(await svc.GetAllAsync());
+            var list = await svc.GetAllAsync(filter);
+            CliJson.WriteList(list, view.Read(pr, BriefPresets.Project));
         }));
         return c;
     }

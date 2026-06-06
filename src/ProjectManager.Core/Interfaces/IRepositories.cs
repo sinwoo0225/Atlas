@@ -5,7 +5,8 @@ namespace ProjectManager.Core.Interfaces;
 
 public interface IProjectRepository
 {
-    Task<IEnumerable<Project>> GetAllAsync();
+    // filter 미지정이면 전체. 지정 시 상태·기간·구분 등을 DB-side WHERE 로 좁힌다.
+    Task<IEnumerable<Project>> GetAllAsync(ProjectListFilter? filter = null);
     Task<Project?> GetByIdAsync(int id);
     Task<Project> CreateAsync(Project project);
     Task<Project> UpdateAsync(Project project);
@@ -15,6 +16,9 @@ public interface IProjectRepository
 public interface IWbsRepository
 {
     Task<IEnumerable<WbsItem>> GetByProjectAsync(int projectId, int? versionId = null);
+    // 필터(상태·기간·담당자 등) DB-side WHERE 로 좁힌 평면(flat) 결과 — 트리 조립 안 함.
+    // 필터가 부모-자식 경계를 가르므로 트리로 묶으면 매칭된 하위 항목이 소실되기 때문(평면이 정답).
+    Task<IEnumerable<WbsItem>> QueryAsync(int projectId, int? versionId, WbsListFilter filter);
     Task<WbsItem?> GetByIdAsync(int id);
     Task<WbsItem> CreateAsync(WbsItem item);
     // expectedUpdatedAt 이 있으면 EF concurrency token 으로 비교 — 불일치 시 DbUpdateConcurrencyException → 409.
@@ -41,7 +45,7 @@ public interface IWbsTemplateRepository
 
 public interface IChangeLogRepository
 {
-    Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId);
+    Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId, ChangeLogListFilter? filter = null);
     Task<ChangeLog?> GetByIdAsync(int id);
     Task<ChangeLog> CreateAsync(ChangeLog log);
     Task<ChangeLog> UpdateAsync(ChangeLog log, DateTime? expectedUpdatedAt = null);
@@ -53,7 +57,8 @@ public interface IChangeLogRepository
 
 public interface IMeetingRepository
 {
-    Task<IEnumerable<Meeting>> GetByProjectAsync(int projectId, string? keyword = null);
+    // 과거 keyword 단일 인자 → 필터 레코드로 확장(Category·기간·키워드). keyword 는 filter.Keyword 로 흡수.
+    Task<IEnumerable<Meeting>> GetByProjectAsync(int projectId, MeetingListFilter? filter = null);
     Task<Meeting?> GetByIdAsync(int id);
     Task<Meeting> CreateAsync(Meeting meeting);
     Task<Meeting> UpdateAsync(Meeting meeting, DateTime? expectedUpdatedAt = null);
@@ -69,7 +74,7 @@ public interface IMeetingRepository
 
 public interface IDevInfoRepository
 {
-    Task<IEnumerable<DevInfoItem>> GetByProjectAsync(int projectId);
+    Task<IEnumerable<DevInfoItem>> GetByProjectAsync(int projectId, DevInfoListFilter? filter = null);
     Task<DevInfoItem?> GetByIdAsync(int id);
     Task<DevInfoItem> CreateAsync(DevInfoItem item);
     Task<DevInfoItem> UpdateAsync(DevInfoItem item);
@@ -82,7 +87,8 @@ public interface IDevInfoRepository
 
 public interface IResourceRepository
 {
-    Task<IEnumerable<Resource>> GetAllAsync();
+    // 전역(프로젝트 무관). filter 로 type·부서·키워드 좁히기.
+    Task<IEnumerable<Resource>> GetAllAsync(ResourceListFilter? filter = null);
     Task<Resource?> GetByIdAsync(int id);
     Task<Resource> CreateAsync(Resource resource);
     Task<Resource> UpdateAsync(Resource resource);
@@ -91,7 +97,8 @@ public interface IResourceRepository
 
 public interface IIssueRepository
 {
-    Task<IEnumerable<Issue>> GetByProjectAsync(int projectId);
+    // filter 미지정(null) 이면 프로젝트 전체. 지정 시 상태·우선순위·담당자·기간 등을 DB-side WHERE 로 좁힌다.
+    Task<IEnumerable<Issue>> GetByProjectAsync(int projectId, IssueListFilter? filter = null);
     Task<Issue?> GetByIdAsync(int id);
     Task<Issue> CreateAsync(Issue issue);
     Task<Issue> UpdateAsync(Issue issue);

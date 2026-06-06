@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
 using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Infrastructure.Persistence;
@@ -12,6 +13,57 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         if (versionId.HasValue)
             query = query.Where(x => x.VersionId == versionId);
         return await query.Include(x => x.Children).OrderBy(x => x.SortOrder).ToListAsync();
+    }
+
+    // 평면 필터 조회 — 트리 조립/Children Include 없음. SortOrder 순.
+    public async Task<IEnumerable<WbsItem>> QueryAsync(int projectId, int? versionId, WbsListFilter filter)
+    {
+        var f = filter ?? WbsListFilter.None;
+        var q = db.WbsItems.Where(x => x.ProjectId == projectId);
+        if (versionId.HasValue)
+            q = q.Where(x => x.VersionId == versionId);
+
+        if (f.Statuses is { Count: > 0 })
+        {
+            var statuses = f.Statuses.ToArray();
+            q = q.Where(x => statuses.Contains(x.Status));
+        }
+        if (f.ActiveOn is DateTime d)
+        {
+            // 해당 일자에 진행 중: Start <= d <= End. null 경계는 무한대(시작 미정=이미 시작, 종료 미정=아직 안 끝남).
+            var dStart = d.Date;
+            var dEnd = d.Date.AddDays(1); // half-open 상한
+            q = q.Where(x => (x.StartDate == null || x.StartDate < dEnd)
+                          && (x.EndDate == null || x.EndDate >= dStart));
+        }
+        if (f.StartFrom is DateTime sf)
+            q = q.Where(x => x.StartDate != null && x.StartDate >= sf);
+        if (f.StartTo is DateTime sto)
+        {
+            var end = sto.Date.AddDays(1);
+            q = q.Where(x => x.StartDate != null && x.StartDate < end);
+        }
+        if (f.EndFrom is DateTime ef)
+            q = q.Where(x => x.EndDate != null && x.EndDate >= ef);
+        if (f.EndTo is DateTime eto)
+        {
+            var end = eto.Date.AddDays(1);
+            q = q.Where(x => x.EndDate != null && x.EndDate < end);
+        }
+        if (!string.IsNullOrWhiteSpace(f.Assignee))
+        {
+            var a = f.Assignee;
+            q = q.Where(x => x.Assignee.Contains(a));
+        }
+        if (f.Milestone is bool ms)
+            q = q.Where(x => x.IsMilestone == ms);
+        if (!string.IsNullOrWhiteSpace(f.Keyword))
+        {
+            var kw = f.Keyword;
+            q = q.Where(x => x.Name.Contains(kw) || x.Notes.Contains(kw));
+        }
+
+        return await q.OrderBy(x => x.SortOrder).ToListAsync();
     }
 
     public async Task<WbsItem?> GetByIdAsync(int id) =>

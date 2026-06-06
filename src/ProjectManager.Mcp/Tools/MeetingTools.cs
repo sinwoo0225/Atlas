@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -19,16 +20,22 @@ public static class MeetingTools
     };
 
     [McpServerTool(Name = "atlas_meeting_list"),
-     Description("프로젝트의 회의록 목록. keyword 옵션으로 제목/내용 검색, category 로 내부/외부 필터")]
+     Description("프로젝트 회의록 조회 (필터 + 출력 셰이핑). keyword 제목/내용 검색, category 내부/외부, from/to 회의일 범위.")]
     public static async Task<string> List(
         MeetingService svc,
         [Description("프로젝트 ID")] int projectId,
         [Description("키워드 — 없으면 전체")] string? keyword = null,
-        [Description("구분 필터: Internal | External — 없으면 전부")] MeetingCategory? category = null)
+        [Description("구분 필터: Internal | External — 없으면 전부")] MeetingCategory? category = null,
+        [Description("회의일 >= YYYY-MM-DD")] DateTime? from = null,
+        [Description("회의일 <= YYYY-MM-DD (해당일 포함)")] DateTime? to = null,
+        [Description("개수만 반환")] bool count = false,
+        [Description("최대 N 건")] int? limit = null,
+        [Description("축약 필드만")] bool brief = false,
+        [Description("쉼표구분 필드만 (예: id,date,topic)")] string? fields = null)
     {
-        var list = await svc.GetByProjectAsync(projectId, keyword);
-        if (category is MeetingCategory cat) list = list.Where(m => m.Category == cat);
-        return McpJson.Serialize(list.Select(Project));
+        var filter = new MeetingListFilter(Category: category, From: from, To: to, Keyword: keyword);
+        var list = await svc.GetByProjectAsync(projectId, filter);
+        return McpJson.SerializeList(list.Select(Project), McpJson.View(count, limit, brief, fields, BriefPresets.Meeting));
     }
 
     [McpServerTool(Name = "atlas_meeting_get"), Description("단일 회의록 상세 조회")]

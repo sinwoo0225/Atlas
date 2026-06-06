@@ -1,18 +1,45 @@
 using Microsoft.EntityFrameworkCore;
 using ProjectManager.Core.Domain;
+using ProjectManager.Core.DTOs;
 using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Infrastructure.Persistence;
 
 public class ChangeLogRepository(AppDbContext db) : IChangeLogRepository
 {
-    public async Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId) =>
-        await db.ChangeLogs
-            .Where(x => x.ProjectId == projectId)
+    public async Task<IEnumerable<ChangeLog>> GetByProjectAsync(int projectId, ChangeLogListFilter? filter = null)
+    {
+        var f = filter ?? ChangeLogListFilter.None;
+        var q = db.ChangeLogs.Where(x => x.ProjectId == projectId);
+
+        if (f.Impacts is { Count: > 0 })
+        {
+            var impacts = f.Impacts.ToArray();
+            q = q.Where(x => impacts.Contains(x.Impact));
+        }
+        if (f.From is DateTime from)
+            q = q.Where(x => x.Date >= from);
+        if (f.To is DateTime to)
+        {
+            var end = to.Date.AddDays(1);
+            q = q.Where(x => x.Date < end);
+        }
+        if (f.SourceIssueId is int si)
+            q = q.Where(x => x.SourceIssueId == si);
+        if (f.SourceWbsItemId is int sw)
+            q = q.Where(x => x.SourceWbsItemId == sw);
+        if (!string.IsNullOrWhiteSpace(f.Keyword))
+        {
+            var kw = f.Keyword;
+            q = q.Where(x => x.Content.Contains(kw));
+        }
+
+        return await q
             .Include(x => x.SourceIssue)
             .Include(x => x.SourceWbsItem)
             .OrderByDescending(x => x.Date)
             .ToListAsync();
+    }
 
     public async Task<ChangeLog?> GetByIdAsync(int id) =>
         await db.ChangeLogs

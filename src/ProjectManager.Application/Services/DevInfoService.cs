@@ -13,8 +13,8 @@ public class DevInfoService(
     DevFilesStorage fileStorage,
     PathResolver pathResolver)
 {
-    public async Task<IEnumerable<DevInfoItemDto>> GetByProjectAsync(int projectId) =>
-        (await repo.GetByProjectAsync(projectId)).Select(ToDto);
+    public async Task<IEnumerable<DevInfoItemDto>> GetByProjectAsync(int projectId, DevInfoListFilter? filter = null) =>
+        (await repo.GetByProjectAsync(projectId, filter)).Select(ToDto);
 
     // 프로젝트 안 DevInfo 의 콤마 Tags 컬럼에서 distinct 태그 list 반환.
     // SQLite 는 string split 불가 — Tags 문자열만 가져와 메모리에서 split·distinct·정렬.

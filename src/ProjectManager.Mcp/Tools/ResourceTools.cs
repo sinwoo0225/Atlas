@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -10,9 +11,21 @@ namespace ProjectManager.Mcp.Tools;
 public static class ResourceTools
 {
     [McpServerTool(Name = "atlas_resource_list"),
-     Description("모든 리소스 조회 (전역 — 프로젝트 무관)")]
-    public static async Task<string> List(ResourceService svc) =>
-        McpJson.Serialize(await svc.GetAllAsync());
+     Description("리소스 조회 (전역 — 프로젝트 무관). type/부서/키워드 필터 + 출력 셰이핑.")]
+    public static async Task<string> List(
+        ResourceService svc,
+        [Description("Person | Equipment (없으면 전부)")] ResourceType? type = null,
+        [Description("부서 부분일치")] string? department = null,
+        [Description("이름·이메일 부분일치")] string? keyword = null,
+        [Description("개수만 반환")] bool count = false,
+        [Description("최대 N 건")] int? limit = null,
+        [Description("축약 필드만")] bool brief = false,
+        [Description("쉼표구분 필드만 (예: id,name,type)")] string? fields = null)
+    {
+        var filter = new ResourceListFilter(Type: type, Department: department, Keyword: keyword);
+        var list = await svc.GetAllAsync(filter);
+        return McpJson.SerializeList(list, McpJson.View(count, limit, brief, fields, BriefPresets.Resource));
+    }
 
     [McpServerTool(Name = "atlas_resource_get"), Description("단일 리소스 조회")]
     public static async Task<string> Get(ResourceService svc, int id)

@@ -6,8 +6,8 @@ namespace ProjectManager.Application.Services;
 
 public class ChangeLogService(IChangeLogRepository repo)
 {
-    public async Task<IEnumerable<ChangeLogDto>> GetByProjectAsync(int projectId) =>
-        (await repo.GetByProjectAsync(projectId)).Select(ToDto);
+    public async Task<IEnumerable<ChangeLogDto>> GetByProjectAsync(int projectId, ChangeLogListFilter? filter = null) =>
+        (await repo.GetByProjectAsync(projectId, filter)).Select(ToDto);
 
     public async Task<ChangeLogDto?> GetByIdAsync(int id)
     {

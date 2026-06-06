@@ -1,6 +1,5 @@
-using System.Text.Encodings.Web;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using ProjectManager.Application.Output;
 
 namespace ProjectManager.Cli.Commands;
 
@@ -8,22 +7,18 @@ namespace ProjectManager.Cli.Commands;
 // stderr = 에러 시 {"error":"...","code":"..."} + exit code != 0. PowerShell ConvertFrom-Json 으로 파싱 가능.
 internal static class CliJson
 {
-    public static readonly JsonSerializerOptions Options = new()
-    {
-        Converters = { new JsonStringEnumConverter() },
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        WriteIndented = Environment.GetEnvironmentVariable("ATLAS_CLI_PRETTY") == "1",
-        ReferenceHandler = ReferenceHandler.IgnoreCycles,
-        // 한글이 \uXXXX 로 escape 되지 않게 — JSON 표준 안 한글 그대로 허용.
-        // Console.OutputEncoding 이 UTF-8 이므로 안전.
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
+    // 직렬화 옵션 본체는 AtlasJson(Application) 공유 — MCP 와 동일. 들여쓰기만 ATLAS_CLI_PRETTY 로 분기.
+    public static readonly JsonSerializerOptions Options =
+        AtlasJson.CreateOptions(Environment.GetEnvironmentVariable("ATLAS_CLI_PRETTY") == "1");
 
     public static void WriteSuccess(object? value)
     {
         Console.WriteLine(JsonSerializer.Serialize(value, Options));
     }
+
+    // list 결과를 셰이핑(count/limit/brief/fields)해 출력. 셰이핑 로직은 ListShaping 공유.
+    public static void WriteList<T>(IEnumerable<T> items, ListView view) =>
+        WriteSuccess(ListShaping.Shape(items, view, Options));
 
     public static int WriteError(string code, string message)
     {

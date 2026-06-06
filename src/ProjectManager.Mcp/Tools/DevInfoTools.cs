@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -10,9 +11,28 @@ namespace ProjectManager.Mcp.Tools;
 public static class DevInfoTools
 {
     [McpServerTool(Name = "atlas_devinfo_list"),
-     Description("프로젝트 업무 정보 (DevInfo) 조회 → JSON 배열")]
-    public static async Task<string> List(DevInfoService svc, int projectId) =>
-        McpJson.Serialize(await svc.GetByProjectAsync(projectId));
+     Description("프로젝트 업무 정보 조회 (필터 + 출력 셰이핑). types 타입 다중, tags 태그(모두 포함 AND), keyword 제목/내용.")]
+    public static async Task<string> List(
+        DevInfoService svc,
+        [Description("프로젝트 ID")] int projectId,
+        [Description("타입 다중 필터 (Markdown|File|Link|GitRepo)")] DevInfoType[]? types = null,
+        [Description("태그 부분일치 (다중 = 모두 포함 AND)")] string[]? tags = null,
+        [Description("수정일 >= YYYY-MM-DD")] DateTime? updatedFrom = null,
+        [Description("수정일 <= YYYY-MM-DD (해당일 포함)")] DateTime? updatedTo = null,
+        [Description("제목·내용 부분일치")] string? keyword = null,
+        [Description("개수만 반환")] bool count = false,
+        [Description("최대 N 건")] int? limit = null,
+        [Description("축약 필드만")] bool brief = false,
+        [Description("쉼표구분 필드만 (예: id,title,type)")] string? fields = null)
+    {
+        var filter = new DevInfoListFilter(
+            Types: types is { Length: > 0 } ? types : null,
+            Tags: tags is { Length: > 0 } ? tags : null,
+            UpdatedFrom: updatedFrom, UpdatedTo: updatedTo,
+            Keyword: keyword);
+        var list = await svc.GetByProjectAsync(projectId, filter);
+        return McpJson.SerializeList(list, McpJson.View(count, limit, brief, fields, BriefPresets.DevInfo));
+    }
 
     [McpServerTool(Name = "atlas_devinfo_get"), Description("단일 업무 정보 조회")]
     public static async Task<string> Get(DevInfoService svc, int id)
