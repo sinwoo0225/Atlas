@@ -16,7 +16,7 @@ import {
   type AttendeeOrg,
   type ActionItem,
 } from '../utils/meetingHelpers';
-import { Button, Card, Modal, EmptyState, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -820,7 +820,7 @@ export function MeetingsPage() {
         }
       />
 
-      <div className="flex gap-2 flex-wrap items-center">
+      <FilterBar>
         <div className="relative w-72">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           <input
@@ -843,7 +843,7 @@ export function MeetingsPage() {
           </Button>
         )}
         <span className="text-xs text-muted ml-auto">{filtered.length} / {meetings.length}</span>
-      </div>
+      </FilterBar>
 
       {loading ? (
         <div className="space-y-3">

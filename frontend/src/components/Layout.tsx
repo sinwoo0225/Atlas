@@ -193,7 +193,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen bg-base text-primary">
-      <aside className={`${collapsed ? 'w-14' : 'w-60'} bg-sidebar border-r border-default flex flex-col shrink-0 transition-all`}>
+      <aside className={`${collapsed ? 'w-14' : 'w-60'} bg-sidebar sidebar-edge border-r border-default flex flex-col shrink-0 transition-all`}>
         {/* collapsed (56px) 에서는 로고/버튼 세로 스택 — 가로 justify-between 으로는 w-full 로고가 버튼을 밀어냄. */}
         <div className={`py-4 border-b border-default ${collapsed ? 'px-2 flex flex-col items-center gap-2' : 'px-4 flex items-center justify-between gap-2'}`}>
           {collapsed ? (

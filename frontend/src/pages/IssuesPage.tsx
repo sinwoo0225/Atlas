@@ -9,7 +9,7 @@ import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
-import { Badge, Button, Card, Input, BadgeMenu, EmptyState, Skeleton, DirtyDot, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { Badge, Button, Card, Input, BadgeMenu, EmptyState, FilterBar, Skeleton, DirtyDot, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -219,7 +219,7 @@ export function IssuesPage() {
     <div className="p-6 space-y-4">
       <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title={t('issues:title')} />
 
-      <div className="space-y-2">
+      <FilterBar className="flex-col items-stretch">
         <div className="flex gap-2 flex-wrap items-center">
           <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>
             {t('issues:filter.all', { count: issues.length })}
@@ -290,7 +290,7 @@ export function IssuesPage() {
             </Button>
           )}
         </div>
-      </div>
+      </FilterBar>
 
       <Card padding="none" className="overflow-x-auto">
         <table className="w-full min-w-[720px]">

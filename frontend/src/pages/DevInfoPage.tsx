@@ -8,7 +8,7 @@ import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Uploa
 import { devInfoApi } from '../api/devinfo';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
-import { Button, Card, Modal, Input, Badge, EmptyState, Skeleton, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, FilterBar, Skeleton, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
@@ -476,6 +476,7 @@ export function DevInfoPage() {
         </Card>
       ) : (
       <>
+      <FilterBar className="flex-col items-stretch">
       <div className="flex gap-2 flex-wrap items-center">
         <Button
           variant={!filterType ? 'primary' : 'secondary'}
@@ -569,6 +570,7 @@ export function DevInfoPage() {
           </div>
         </div>
       )}
+      </FilterBar>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
         <div className="lg:col-span-1 overflow-y-auto space-y-2">

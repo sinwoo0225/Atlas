@@ -9,6 +9,7 @@ export { FormField, inputClass, inputClassNoW } from './FormField';
 export { Input } from './Input';
 export { Select } from './Select';
 export { Textarea } from './Textarea';
+export { FilterBar } from './FilterBar';
 export { EmptyState } from './EmptyState';
 export { Spinner } from './Spinner';
 export { Skeleton } from './Skeleton';

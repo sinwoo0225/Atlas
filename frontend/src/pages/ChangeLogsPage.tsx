@@ -9,7 +9,7 @@ import { changeLogsApi } from '../api/changelogs';
 import { meetingsApi } from '../api/meetings';
 import { issuesApi } from '../api/issues';
 import { wbsApi } from '../api/wbs';
-import { Button, Card, Modal, Input, Badge, EmptyState, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { IssuePicker } from '../components/IssuePicker';
@@ -616,7 +616,7 @@ export function ChangeLogsPage() {
       )}
 
       {!loading && !error && logs.length > 0 && (
-        <div className="flex gap-2 flex-wrap items-center">
+        <FilterBar>
           <Input
             type="search"
             value={keyword}
@@ -666,7 +666,7 @@ export function ChangeLogsPage() {
             </Button>
           )}
           <span className="text-xs text-muted ml-auto">{filtered.length} / {logs.length}</span>
-        </div>
+        </FilterBar>
       )}
 
       {!loading && !error && (

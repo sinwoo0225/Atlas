@@ -34,7 +34,7 @@
   color-scheme: dark;
   /* Surfaces — cool blue 가미된 5-stop 다크 elevation (v2) */
   --bg-base:         #12151b;
-  --bg-sidebar:      #181b22;
+  --bg-sidebar:      #0c0e13;   /* v3: 캔버스(base)보다 한 단계 어두운 '크롬' 평면 — 콘텐츠가 앞으로 떠오름 (Linear/Slack 다크) */
   --bg-surface:      #1f232b;
   --bg-surface-2:    #2a2f3a;
   --bg-surface-3:    #383d49;
@@ -91,13 +91,16 @@
   --elev-md:      0 4px 12px rgba(0, 0, 0, 0.45);
   --elev-lg:      0 12px 32px rgba(0, 0, 0, 0.50);
   --elev-overlay: 0 24px 64px rgba(0, 0, 0, 0.55);
+
+  /* 사이드바↔본문 경계 그림자 — 다크는 평면 대비+hairline 만으로 충분(세로 그림자 거의 안 보임)이라 none. */
+  --sidebar-edge-shadow: none;
 }
 
 html.light {
   color-scheme: light;
   /* Surfaces — warm paper (v2). 다크 cool surface + warm gold 와 chromatic 페어. */
   --bg-base:         #f6f3ec;
-  --bg-sidebar:      #fdfaf3;
+  --bg-sidebar:      #ece5d6;   /* v3: 캔버스(cream)보다 짙은 warm 틴트 크롬 — 흰 카드(surface)가 또렷이 떠오름 (Notion/Vercel 라이트) */
   --bg-surface:      #ffffff;
   --bg-surface-2:    #f0ebe0;
   --bg-surface-3:    #e3ddcb;
@@ -144,6 +147,9 @@ html.light {
   --elev-md:      0 4px 12px rgba(40, 38, 30, 0.10);
   --elev-lg:      0 12px 32px rgba(40, 38, 30, 0.14);
   --elev-overlay: 0 24px 64px rgba(40, 38, 30, 0.18);
+
+  /* 라이트는 옅은 그림자가 잘 읽혀 사이드바 우측 모서리에 깊이 한 겹 추가. */
+  --sidebar-edge-shadow: 1px 0 4px rgba(40, 38, 30, 0.06);
 }
 
 /* ========== Spacing scale (사용 규칙 — 단순 참고용, CSS 미적용) ==========
@@ -182,6 +188,8 @@ body {
 .bg-surface-3  { background-color: var(--bg-surface-3); }
 .bg-accent      { background-color: var(--accent); }
 .bg-accent-soft { background-color: var(--accent-soft); }
+/* 사이드바 우측 경계 깊이 — 테마-aware(다크 none / 라이트 옅은 그림자). border-r 와 병행. */
+.sidebar-edge   { box-shadow: var(--sidebar-edge-shadow); }
 .btn-danger       { background-color: var(--btn-danger-bg); color: var(--btn-danger-fg); }
 .btn-danger:hover { background-color: var(--btn-danger-bg-hover); }
 

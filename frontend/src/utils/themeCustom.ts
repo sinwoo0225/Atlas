@@ -36,7 +36,7 @@ export const BASE_COLOR_FIELDS: { key: keyof BaseColors; labelKey: string; hintK
 // index.css :root (다크) 미러 — 커스텀 시드 / defaults.
 export const DARK_BASE: BaseColors = {
   bgBase: '#12151b',
-  bgSidebar: '#181b22',
+  bgSidebar: '#0c0e13',
   bgSurface: '#1f232b',
   textPrimary: '#f0f2f7',
   textSecondary: '#cfd3dc',
@@ -52,7 +52,7 @@ export const DARK_BASE: BaseColors = {
 // index.css html.light 미러 — 커스텀 시드.
 export const LIGHT_BASE: BaseColors = {
   bgBase: '#f6f3ec',
-  bgSidebar: '#fdfaf3',
+  bgSidebar: '#ece5d6',
   bgSurface: '#ffffff',
   textPrimary: '#1a1d24',
   textSecondary: '#3d4250',

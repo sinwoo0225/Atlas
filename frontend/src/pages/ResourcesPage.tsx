@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, Users, User, Wrench, Mail, Phone, Building, ChevronDown, ChevronRight } from 'lucide-react';
 import { resourcesApi } from '../api/resources';
-import { Button, Card, Modal, Badge, EmptyState, FormField, Spinner, CopyButton, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, EmptyState, FilterBar, FormField, Spinner, CopyButton, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import { useCreateForm } from '../hooks/useCreateForm';
@@ -281,7 +281,7 @@ export function ResourcesPage() {
         <div className="p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
 
-      <div className="flex gap-2 flex-wrap">
+      <FilterBar>
         <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>{t('resources:filterAll')}</Button>
         <Button
           variant={filter === 'Person' ? 'primary' : 'secondary'}
@@ -299,7 +299,7 @@ export function ResourcesPage() {
         >
           {t('resources:form.equipment')}
         </Button>
-      </div>
+      </FilterBar>
 
       {filtered.length === 0 ? (
         <EmptyState
