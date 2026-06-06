@@ -31,7 +31,7 @@
     "issues": "Issues",
     "recentMeetings": "Recent meetings",
     "recentChanges": "Recent changes",
-    "devInfo": "Dev info",
+    "devInfo": "Work info",
     "thisWeekWorklog": "This week's work log",
     "recentActivity": "Recent activity",
     "deliverables": "Deliverables",
@@ -42,7 +42,7 @@
     "issues": "No issues",
     "meetings": "No meetings",
     "changes": "No changes",
-    "devInfo": "No dev info",
+    "devInfo": "No work info",
     "thisWeekWorklog": "No entries this week",
     "activity": "No activity"
   },

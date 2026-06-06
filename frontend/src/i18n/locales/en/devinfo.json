@@ -1,5 +1,5 @@
 {
-  "title": "Dev info",
+  "title": "Work info",
   "newBtn": "Add info",
   "filterAll": "All",
   "searchPlaceholder": "Search title / tags / body…",
@@ -10,7 +10,7 @@
   "sortAlpha": "A–Z",
   "sortFreq": "Frequency",
   "form": {
-    "newTitle": "Add dev info",
+    "newTitle": "Add work info",
     "editTitle": "Edit info",
     "title": "Title",
     "type": "Type",
@@ -36,7 +36,14 @@
     "tagsHint": "Add with Enter or comma. ↑/↓ to pick existing tags, Backspace to remove the last chip.",
     "tagsPlaceholder": "API, Design, Docs",
     "noFolderInfo": "Can't determine the project folder.",
-    "uploadFailed": "File upload failed"
+    "uploadFailed": "File upload failed",
+    "gitRepoPath": "Git repository path",
+    "gitRepoPlaceholder": "C:\\... (folder containing .git)",
+    "gitHint": "Point to a local git repo folder to see its commit history graph on the right.",
+    "gitClientHint": "In Client mode, only paths on the server machine can be read.",
+    "gitChecking": "Checking…",
+    "gitValid": "Valid git repository",
+    "browse": "Browse"
   },
   "preview": {
     "loadError": "Couldn't load the preview.",
@@ -44,8 +51,8 @@
     "imageError": "Couldn't load the image. Check the file path: {{path}}"
   },
   "card": {
-    "editAria": "Edit dev info — {{title}}",
-    "deleteAria": "Delete dev info — {{title}}"
+    "editAria": "Edit work info — {{title}}",
+    "deleteAria": "Delete work info — {{title}}"
   },
   "detail": {
     "selectPrompt": "Select an item to see its details.",
@@ -54,19 +61,19 @@
     "link": "Link"
   },
   "empty": {
-    "titleNone": "No dev info.",
+    "titleNone": "No work info.",
     "titleFiltered": "No matching items.",
     "descNone": "Start with the 'Add info' button at the top right.",
     "descAdjust": "Try adjusting filters / search.",
     "descEmpty": "No items."
   },
   "delete": {
-    "title": "Delete dev info",
-    "message": "Delete this dev info item? This can't be undone."
+    "title": "Delete work info",
+    "message": "Delete this work info item? This can't be undone."
   },
   "toast": {
-    "created": "New dev info '{{title}}' added",
-    "createdNoName": "New dev info added",
+    "created": "New work info '{{title}}' added",
+    "createdNoName": "New work info added",
     "openFailed": "Couldn't open the file.{{msg}}",
     "openError": "Error opening the file: {{msg}}"
   },

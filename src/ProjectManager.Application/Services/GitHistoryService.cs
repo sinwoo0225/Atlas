@@ -1,13 +1,14 @@
 using System.Globalization;
 using ProjectManager.Core.DTOs;
-using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.ExternalTools;
 
 namespace ProjectManager.Application.Services;
 
-// 프로젝트에 연결된 소스 저장소(.git)의 커밋 이력·동기화 상태를 git CLI 로 읽어 DTO 로 빚는다.
+// 업무 정보(GitRepo 타입)에 연결된 소스 저장소(.git)의 커밋 이력·동기화 상태를 git CLI 로 읽어 DTO 로 빚는다.
 // 저장소를 수정하지 않는 읽기 전용. 경로 검증·git 미설치는 친절한 에러로 흡수.
-public class GitHistoryService(IProjectRepository projectRepo, GitCliService git)
+// 저장소 경로(path)를 인자로 받는다 — 한 프로젝트에 GitRepo 업무 정보를 여러 개 둘 수 있어
+// projectId 가 아니라 path 기준으로 동작한다. 호출자(컨트롤러)가 DevInfoItem 의 FilePath 를 해석해 넘긴다.
+public class GitHistoryService(GitCliService git)
 {
     // git log pretty-format 의 필드/레코드 구분자 — 한글·공백·특수문자 안전(US/RS 제어문자).
     private const char FieldSep = (char)0x1F;   // %x1f
@@ -15,10 +16,8 @@ public class GitHistoryService(IProjectRepository projectRepo, GitCliService git
 
     public Task<(bool Valid, string? Error)> ValidateAsync(string path) => git.ValidateRepoAsync(path);
 
-    public async Task<GitStatusDto> GetStatusAsync(int projectId)
+    public async Task<GitStatusDto> GetStatusByPathAsync(string path)
     {
-        var project = await projectRepo.GetByIdAsync(projectId);
-        var path = project?.GitRepoPath ?? string.Empty;
         if (string.IsNullOrWhiteSpace(path))
             return new GitStatusDto(false, null, false, null, false, 0, 0, false, null);
 
@@ -55,12 +54,10 @@ public class GitHistoryService(IProjectRepository projectRepo, GitCliService git
         return new GitStatusDto(true, path, true, branch, hasUpstream, ahead, behind, dirty, null);
     }
 
-    public async Task<GitLogDto> GetLogAsync(int projectId, int limit, int skip, bool all)
+    public async Task<GitLogDto> GetLogByPathAsync(string path, int limit, int skip, bool all)
     {
-        var project = await projectRepo.GetByIdAsync(projectId);
-        var path = project?.GitRepoPath ?? string.Empty;
         if (string.IsNullOrWhiteSpace(path))
-            throw new InvalidOperationException("이 프로젝트에 연결된 git 저장소 경로가 없습니다.");
+            throw new InvalidOperationException("이 항목에 연결된 git 저장소 경로가 없습니다.");
 
         var (valid, error) = await git.ValidateRepoAsync(path);
         if (!valid)

@@ -2,10 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users, LayoutTemplate, FolderGit2, Check, AlertCircle } from 'lucide-react';
+import { Plus, Pencil, X, Save, Download, Upload, FolderOpen, Calendar, Users, LayoutTemplate } from 'lucide-react';
 import { projectsApi } from '../api/projects';
-import { gitApi } from '../api/git';
-import { isHostBridgeAvailable, pickFolder, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 import { wbsTemplatesApi } from '../api/wbsTemplates';
 import { startPageApi } from '../api/startPage';
 import { useProjectStore } from '../store/useProjectStore';
@@ -61,31 +59,9 @@ function ProjectForm({
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Git 저장소 경로 — 폴더 선택기(데스크톱) + .git 유효성 검증.
-  const bridgeAvailable = isHostBridgeAvailable();
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('Local');
-  useEffect(() => { getConnectionConfig().then((c) => { if (c) setConnectionMode(c.mode); }); }, []);
-  const isClientMode = connectionMode === 'Client';
-  const [gitCheck, setGitCheck] = useState<{ valid: boolean; error: string | null } | null>(null);
-  const [gitChecking, setGitChecking] = useState(false);
-
-  const validateGitPath = async (path: string) => {
-    const p = path.trim();
-    if (!p) { setGitCheck(null); return; }
-    setGitChecking(true);
-    try {
-      // validate 는 프로젝트와 무관(경로만 검사)하므로 신규 모드면 id 0 사용.
-      const r = await gitApi.validate(initial?.id ?? 0, p);
-      setGitCheck(r);
-    } catch { setGitCheck(null); }
-    finally { setGitChecking(false); }
-  };
-
-  const handlePickGitFolder = async () => {
-    const picked = await pickFolder(form.gitRepoPath || undefined);
-    if (picked) { set('gitRepoPath', picked); validateGitPath(picked); }
-  };
-
+  // gitRepoPath 는 더 이상 프로젝트 폼에서 편집하지 않는다 — git 이력은 '업무 정보'(GitRepo 타입)로 이전됨.
+  // 다만 기존 값 보존을 위해 initialForm/buildPayload 의 ...form 스프레드로 그대로 라운드트립한다
+  // (ProjectService.UpdateAsync 가 null→empty 코얼레스라 payload 에서 빼면 컬럼이 비워짐).
   const buildPayload = () => ({
     ...form,
     budget: form.budget ? parseFloat(form.budget) : undefined,
@@ -161,41 +137,6 @@ function ProjectForm({
             </FormField>
             <FormField label={t('projects:form.relatedLinks')}>
               <input value={form.relatedLinks} onChange={(e) => set('relatedLinks', e.target.value)} className={inputClass} />
-            </FormField>
-            <FormField label={t('projects:form.gitRepoPath')}>
-              <div className="flex gap-2">
-                <input
-                  value={form.gitRepoPath}
-                  onChange={(e) => { set('gitRepoPath', e.target.value); setGitCheck(null); }}
-                  onBlur={(e) => validateGitPath(e.target.value)}
-                  placeholder={t('projects:form.gitRepoPlaceholder')}
-                  className={inputClass}
-                />
-                {bridgeAvailable && !isClientMode && (
-                  <Button variant="secondary" onClick={handlePickGitFolder} leadingIcon={<FolderGit2 size={16} />} className="shrink-0">
-                    {t('projects:form.browse')}
-                  </Button>
-                )}
-              </div>
-              {isClientMode ? (
-                <p className="text-xs text-muted mt-1">
-                  {t('projects:form.gitClientHint')}
-                </p>
-              ) : gitChecking ? (
-                <p className="text-xs text-muted mt-1">{t('projects:form.gitChecking')}</p>
-              ) : gitCheck ? (
-                gitCheck.valid ? (
-                  <p className="text-xs text-on-success mt-1 flex items-center gap-1">
-                    <Check size={12} /> {t('projects:form.gitValid')}
-                  </p>
-                ) : (
-                  <p className="text-xs text-on-danger mt-1 flex items-center gap-1">
-                    <AlertCircle size={12} /> {gitCheck.error}
-                  </p>
-                )
-              ) : (
-                <p className="text-xs text-muted mt-1">{t('projects:form.gitHint')}</p>
-              )}
             </FormField>
           </div>
 

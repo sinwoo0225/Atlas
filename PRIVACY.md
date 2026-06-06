@@ -10,8 +10,8 @@ Atlas 는 **로컬 우선(local-first)** 데스크톱 앱입니다. 계정 가�
 
 Atlas 가 다루는 데이터는 전부 **사용자가 직접 입력**하며, 사용자 기기에만 보관됩니다.
 
-- **프로젝트 데이터** (SQLite DB) — 프로젝트·WBS·이슈·회의록·변경 이력·업무 일지·개발 정보·리소스(인원/장비) 등. 여기에는 사용자가 입력한 **이름·이메일·전화번호·부서**(리소스), 작성자/수정자 이름(감사 로그), 회의 참석자 같은 개인 식별 가능 정보가 포함될 수 있습니다. 기본 위치는 `%USERPROFILE%\Documents\ProjectManager\projectmanager.db` 이며, 설정에서 다른 폴더(외부 드라이브·사내 공유 폴더 등)로 변경할 수 있습니다.
-- **프로젝트별 파일** — 첨부·참조 파일, 자동 export 된 회의록/개발 정보 마크다운. 데이터 폴더 하위에 저장됩니다.
+- **프로젝트 데이터** (SQLite DB) — 프로젝트·WBS·이슈·회의록·변경 이력·업무 일지·업무 정보·리소스(인원/장비) 등. 여기에는 사용자가 입력한 **이름·이메일·전화번호·부서**(리소스), 작성자/수정자 이름(감사 로그), 회의 참석자 같은 개인 식별 가능 정보가 포함될 수 있습니다. 기본 위치는 `%USERPROFILE%\Documents\ProjectManager\projectmanager.db` 이며, 설정에서 다른 폴더(외부 드라이브·사내 공유 폴더 등)로 변경할 수 있습니다.
+- **프로젝트별 파일** — 첨부·참조 파일, 자동 export 된 회의록/업무 정보 마크다운. 데이터 폴더 하위에 저장됩니다.
 - **앱 설정** — `%LOCALAPPDATA%\Atlas\config.json` (구동 모드·데이터 폴더 경로·업데이트 설정 등, 머신 계정 전용).
 - **브라우저(WebView2) 상태** — `%LOCALAPPDATA%\Atlas\WebView2\` (테마·마지막 프로젝트 등 화면 상태).
 - **디버그 로그** — `%LOCALAPPDATA%\Atlas\atlas-debug.log` (로컬에만 append, 외부 전송 없음).
@@ -59,7 +59,7 @@ Atlas is a **local-first** desktop app. There is no account sign-up and no remot
 
 All data Atlas handles is **entered by you** and kept on your device.
 
-- **Project data** (SQLite DB) — projects, WBS, issues, meetings, change logs, worklogs, dev info, and resources (people/equipment). This can include personally identifiable information you enter, such as **names, emails, phone numbers, and departments** (resources), author/editor names (audit log), and meeting attendees. The default location is `%USERPROFILE%\Documents\ProjectManager\projectmanager.db`; you can point it to another folder (external drive, corporate share, etc.) in Settings.
+- **Project data** (SQLite DB) — projects, WBS, issues, meetings, change logs, worklogs, work info, and resources (people/equipment). This can include personally identifiable information you enter, such as **names, emails, phone numbers, and departments** (resources), author/editor names (audit log), and meeting attendees. The default location is `%USERPROFILE%\Documents\ProjectManager\projectmanager.db`; you can point it to another folder (external drive, corporate share, etc.) in Settings.
 - **Per-project files** — attachments/reference files and auto-exported meeting/dev-info Markdown, stored under the data folder.
 - **App settings** — `%LOCALAPPDATA%\Atlas\config.json` (run mode, data folder path, update settings; per machine account).
 - **Browser (WebView2) state** — `%LOCALAPPDATA%\Atlas\WebView2\` (UI state such as theme and last project).

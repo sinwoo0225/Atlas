@@ -4,14 +4,16 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from 'react-i18next';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight } from 'lucide-react';
+import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight, FolderGit2, Check, AlertCircle } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
+import { gitApi } from '../api/git';
+import { GitHistoryView } from '../components/GitHistoryView';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
 import { projectsApi } from '../api/projects';
 import { Button, Card, Modal, Input, Badge, EmptyState, FilterBar, Skeleton, FormField, inputClass } from '../components/ui';
 import { devInfoTypeBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
-import { isHostBridgeAvailable, pickFile, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
+import { isHostBridgeAvailable, pickFile, pickFolder, getConnectionConfig, type ConnectionMode } from '../utils/hostBridge';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
 import { TagSuggestionInput } from '../components/TagSuggestionInput';
@@ -23,6 +25,7 @@ const typeIcon: Record<DevInfoType, React.ComponentType<{ size?: number; classNa
   Markdown: FileText,
   File: Folder,
   Link: LinkIcon,
+  GitRepo: FolderGit2,
 };
 
 const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
@@ -74,8 +77,25 @@ function DevInfoForm({
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
+  // GitRepo 타입 — 저장소 폴더 선택 + .git 유효성 검증 (ProjectList 의 git 폼 패턴 재사용).
+  const [gitCheck, setGitCheck] = useState<{ valid: boolean; error: string | null } | null>(null);
+  const [gitChecking, setGitChecking] = useState(false);
+  const validateGitPath = async (path: string) => {
+    const p = path.trim();
+    if (!p) { setGitCheck(null); return; }
+    setGitChecking(true);
+    try { setGitCheck(await gitApi.validate(projectId, p)); }
+    catch { setGitCheck(null); }
+    finally { setGitChecking(false); }
+  };
+  const handlePickGitFolder = async () => {
+    const picked = await pickFolder(form.filePath || undefined);
+    if (picked) { set('filePath', picked); validateGitPath(picked); }
+  };
+
   const handleSubmit = async () => {
-    const payload = { projectId, ...form };
+    // GitRepo 는 외부 저장소 참조 — 항상 Reference (삭제 시 원본 저장소 보존).
+    const payload = { projectId, ...form, storageMode: form.type === 'GitRepo' ? ('Reference' as DevInfoStorageMode) : form.storageMode };
     if (initial) {
       await devInfoApi.update(projectId, initial.id, payload);
     } else {
@@ -131,7 +151,7 @@ function DevInfoForm({
         <div>
           <label className="block text-xs text-muted font-medium mb-1">{t('devinfo:form.type')}</label>
           <div className="flex gap-2">
-            {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((dt) => {
+            {(['Markdown', 'File', 'Link', 'GitRepo'] as DevInfoType[]).map((dt) => {
               const Icon = typeIcon[dt];
               return (
                 <Button
@@ -253,6 +273,42 @@ function DevInfoForm({
               placeholder="https://..."
               className={inputClass}
             />
+          </FormField>
+        )}
+
+        {form.type === 'GitRepo' && (
+          <FormField label={t('devinfo:form.gitRepoPath')}>
+            <div className="flex gap-2">
+              <input
+                value={form.filePath}
+                onChange={(e) => { set('filePath', e.target.value); setGitCheck(null); }}
+                onBlur={(e) => validateGitPath(e.target.value)}
+                placeholder={t('devinfo:form.gitRepoPlaceholder')}
+                className={inputClass}
+              />
+              {bridgeAvailable && !isClientMode && (
+                <Button variant="secondary" onClick={handlePickGitFolder} leadingIcon={<FolderGit2 size={16} />} className="shrink-0">
+                  {t('devinfo:form.browse')}
+                </Button>
+              )}
+            </div>
+            {isClientMode ? (
+              <p className="text-xs text-muted mt-1">{t('devinfo:form.gitClientHint')}</p>
+            ) : gitChecking ? (
+              <p className="text-xs text-muted mt-1">{t('devinfo:form.gitChecking')}</p>
+            ) : gitCheck ? (
+              gitCheck.valid ? (
+                <p className="text-xs text-on-success mt-1 flex items-center gap-1">
+                  <Check size={12} /> {t('devinfo:form.gitValid')}
+                </p>
+              ) : (
+                <p className="text-xs text-on-danger mt-1 flex items-center gap-1">
+                  <AlertCircle size={12} /> {gitCheck.error}
+                </p>
+              )
+            ) : (
+              <p className="text-xs text-muted mt-1">{t('devinfo:form.gitHint')}</p>
+            )}
           </FormField>
         )}
 
@@ -485,7 +541,7 @@ export function DevInfoPage() {
         >
           {t('devinfo:filterAll')}
         </Button>
-        {(['Markdown', 'File', 'Link'] as DevInfoType[]).map((dt) => {
+        {(['Markdown', 'File', 'Link', 'GitRepo'] as DevInfoType[]).map((dt) => {
           const Icon = typeIcon[dt];
           return (
             <Button
@@ -668,6 +724,10 @@ export function DevInfoPage() {
                     </div>
                   )}
                 </div>
+              )}
+
+              {selected.type === 'GitRepo' && (
+                <GitHistoryView projectId={pid} devInfoId={selected.id} />
               )}
 
               {selected.tags && (

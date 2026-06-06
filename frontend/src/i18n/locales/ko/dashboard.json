@@ -31,7 +31,7 @@
     "issues": "이슈",
     "recentMeetings": "최근 회의록",
     "recentChanges": "최근 변경 이력",
-    "devInfo": "개발 정보",
+    "devInfo": "업무 정보",
     "thisWeekWorklog": "이번 주 업무일지",
     "recentActivity": "최근 활동",
     "deliverables": "주요 산출물",
@@ -42,7 +42,7 @@
     "issues": "등록된 이슈 없음",
     "meetings": "회의록 없음",
     "changes": "변경 이력 없음",
-    "devInfo": "개발 정보 없음",
+    "devInfo": "업무 정보 없음",
     "thisWeekWorklog": "이번 주 기록 없음",
     "activity": "활동 기록 없음"
   },

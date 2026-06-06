@@ -16,7 +16,7 @@
     "goWbs": "일정/WBS",
     "goMeetings": "회의록",
     "goChangelogs": "변경이력",
-    "goDevinfo": "개발정보",
+    "goDevinfo": "업무 정보",
     "goResources": "리소스",
     "goSettings": "설정",
     "newItem": "신규 항목 생성 (현재 페이지 컨텍스트)",
@@ -27,7 +27,7 @@
     "mapToggleWbs": "WBS 노드 토글",
     "mapToggleChangelog": "변경이력 노드 토글",
     "mapToggleMeeting": "회의록 노드 토글",
-    "mapToggleDevinfo": "개발정보 노드 토글",
+    "mapToggleDevinfo": "업무 정보 노드 토글",
     "mapToggleIssue": "이슈 노드 토글",
     "mapFocusSearch": "검색 입력 포커스",
     "mapFitReset": "맵 fit 리셋"

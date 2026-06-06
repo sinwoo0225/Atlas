@@ -1,7 +1,7 @@
 import { api } from './client';
 
 export interface GitStatus {
-  configured: boolean;        // 프로젝트에 저장소 경로가 설정됐는지
+  configured: boolean;        // 업무 정보 항목에 저장소 경로가 설정됐는지
   repoPath: string | null;
   isValidRepo: boolean;       // 경로가 실제 git 저장소인지
   currentBranch: string | null;
@@ -34,17 +34,19 @@ export interface GitValidateResult {
   error: string | null;
 }
 
+// git 이력은 'GitRepo' 타입 업무 정보(DevInfo) 항목에 종속 — 한 프로젝트에 저장소를 여러 개 둘 수 있다.
+// status/log 는 (projectId, devInfoId) 로 항목을 특정, validate 는 저장 전 경로 검증(아직 항목 없음).
 export const gitApi = {
-  getStatus: (projectId: number) =>
-    api.get<GitStatus>(`/projects/${projectId}/git/status`),
-  getLog: (projectId: number, opts?: { limit?: number; skip?: number; all?: boolean }) => {
+  getStatus: (projectId: number, devInfoId: number) =>
+    api.get<GitStatus>(`/projects/${projectId}/devinfo/${devInfoId}/git/status`),
+  getLog: (projectId: number, devInfoId: number, opts?: { limit?: number; skip?: number; all?: boolean }) => {
     const q = new URLSearchParams();
     if (opts?.limit != null) q.set('limit', String(opts.limit));
     if (opts?.skip != null) q.set('skip', String(opts.skip));
     if (opts?.all != null) q.set('all', String(opts.all));
     const qs = q.toString();
-    return api.get<GitLog>(`/projects/${projectId}/git/log${qs ? `?${qs}` : ''}`);
+    return api.get<GitLog>(`/projects/${projectId}/devinfo/${devInfoId}/git/log${qs ? `?${qs}` : ''}`);
   },
   validate: (projectId: number, path: string) =>
-    api.get<GitValidateResult>(`/projects/${projectId}/git/validate?path=${encodeURIComponent(path)}`),
+    api.get<GitValidateResult>(`/projects/${projectId}/devinfo/git/validate?path=${encodeURIComponent(path)}`),
 };

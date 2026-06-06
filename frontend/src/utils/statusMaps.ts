@@ -50,4 +50,5 @@ export const devInfoTypeBadge: Record<DevInfoType, { variant: BadgeVariant }> = 
   Markdown: { variant: 'neutral' },
   File:     { variant: 'warning' },
   Link:     { variant: 'success' },
+  GitRepo:  { variant: 'info' },
 };

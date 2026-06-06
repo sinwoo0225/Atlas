@@ -1,6 +1,6 @@
 {
   "placeholderCommand": "명령 실행 (이동·생성·토글) — 텍스트 입력 시 전체 검색",
-  "placeholderSearch": "프로젝트·WBS·이슈·회의록·변경·개발정보·업무일지 검색",
+  "placeholderSearch": "프로젝트·WBS·이슈·회의록·변경·업무 정보·업무일지 검색",
   "searching": "검색 중…",
   "close": "닫기 (Esc)",
   "noCommands": "일치하는 명령이 없습니다.",
@@ -15,7 +15,7 @@
     "Issue": "이슈",
     "Meeting": "회의록",
     "ChangeLog": "변경",
-    "DevInfoItem": "개발정보",
+    "DevInfoItem": "업무 정보",
     "WorkLog": "업무일지"
   },
   "group": {
@@ -30,7 +30,7 @@
     "go-issues": "이슈로 이동",
     "go-meetings": "회의록으로 이동",
     "go-changelogs": "변경이력으로 이동",
-    "go-devinfo": "개발정보로 이동",
+    "go-devinfo": "업무 정보로 이동",
     "go-worklog": "업무일지로 이동",
     "go-map": "프로젝트 맵으로 이동",
     "go-projects": "프로젝트 목록으로 이동",
@@ -43,7 +43,7 @@
     "new-wbs": "신규 WBS",
     "new-meeting": "신규 회의록",
     "new-changelog": "신규 변경이력",
-    "new-devinfo": "신규 개발정보",
+    "new-devinfo": "신규 업무 정보",
     "new-resource": "신규 리소스",
     "new-project": "신규 프로젝트",
     "toggle-sidebar": "사이드바 접기/펼치기",

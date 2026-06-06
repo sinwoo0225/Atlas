@@ -1,5 +1,5 @@
 {
-  "title": "개발 정보",
+  "title": "업무 정보",
   "newBtn": "정보 추가",
   "filterAll": "전체",
   "searchPlaceholder": "제목·태그·본문 검색…",
@@ -10,7 +10,7 @@
   "sortAlpha": "가나다",
   "sortFreq": "빈도",
   "form": {
-    "newTitle": "개발 정보 추가",
+    "newTitle": "업무 정보 추가",
     "editTitle": "정보 수정",
     "title": "제목",
     "type": "타입",
@@ -36,7 +36,14 @@
     "tagsHint": "Enter 또는 콤마로 추가. ↑/↓ 로 기존 태그 선택, Backspace 로 마지막 칩 제거.",
     "tagsPlaceholder": "API, 설계, 문서",
     "noFolderInfo": "프로젝트 폴더 정보를 알 수 없습니다.",
-    "uploadFailed": "파일 업로드 실패"
+    "uploadFailed": "파일 업로드 실패",
+    "gitRepoPath": "Git 저장소 경로",
+    "gitRepoPlaceholder": "C:\\... (.git 이 있는 폴더)",
+    "gitHint": "로컬 git 저장소 폴더를 지정하면 우측에 커밋 이력 그래프가 표시됩니다.",
+    "gitClientHint": "Client 모드에서는 서버 머신의 경로만 읽을 수 있어요.",
+    "gitChecking": "확인 중…",
+    "gitValid": "유효한 git 저장소",
+    "browse": "폴더 선택"
   },
   "preview": {
     "loadError": "미리보기를 불러올 수 없습니다.",
@@ -44,8 +51,8 @@
     "imageError": "이미지를 불러올 수 없습니다. 파일 경로를 확인하세요: {{path}}"
   },
   "card": {
-    "editAria": "개발 정보 수정 — {{title}}",
-    "deleteAria": "개발 정보 삭제 — {{title}}"
+    "editAria": "업무 정보 수정 — {{title}}",
+    "deleteAria": "업무 정보 삭제 — {{title}}"
   },
   "detail": {
     "selectPrompt": "항목을 선택하면 상세 내용이 표시됩니다.",
@@ -54,19 +61,19 @@
     "link": "링크"
   },
   "empty": {
-    "titleNone": "개발 정보가 없습니다.",
+    "titleNone": "업무 정보가 없습니다.",
     "titleFiltered": "조건에 맞는 항목이 없습니다.",
     "descNone": "우측 상단 '정보 추가' 버튼으로 시작해보세요.",
     "descAdjust": "필터·검색어를 조정해 보세요.",
     "descEmpty": "항목이 없습니다."
   },
   "delete": {
-    "title": "개발 정보 삭제",
-    "message": "이 개발 정보 항목을 삭제하시겠습니까? 되돌릴 수 없습니다."
+    "title": "업무 정보 삭제",
+    "message": "이 업무 정보 항목을 삭제하시겠습니까? 되돌릴 수 없습니다."
   },
   "toast": {
-    "created": "새 개발 정보 '{{title}}' 이(가) 추가됐어요",
-    "createdNoName": "새 개발 정보가 추가됐어요",
+    "created": "새 업무 정보 '{{title}}' 이(가) 추가됐어요",
+    "createdNoName": "새 업무 정보가 추가됐어요",
     "openFailed": "파일을 열 수 없습니다.{{msg}}",
     "openError": "파일 열기 중 오류가 발생했습니다: {{msg}}"
   },

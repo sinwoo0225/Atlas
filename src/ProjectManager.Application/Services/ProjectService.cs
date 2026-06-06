@@ -779,7 +779,7 @@ public class ProjectService(
         db.DevInfoItems.AddRange(newItems);
         await db.SaveChangesAsync(ct);
         if (refCount > 0)
-            warnings.Add($"개발정보 {refCount} 건은 외부 경로 참조(Reference) 모드라 원본 머신의 경로를 그대로 유지합니다. 이 머신에서 파일이 없을 수 있습니다.");
+            warnings.Add($"업무 정보 {refCount} 건은 외부 경로 참조(Reference) 모드라 원본 머신의 경로를 그대로 유지합니다. 이 머신에서 파일이 없을 수 있습니다.");
         return (newItems.Count, warnings);
     }
 

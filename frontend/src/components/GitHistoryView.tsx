@@ -197,7 +197,7 @@ function SyncBar({ status }: { status: GitStatus }) {
   );
 }
 
-export function GitHistoryView({ projectId }: { projectId: number }) {
+export function GitHistoryView({ projectId, devInfoId }: { projectId: number; devInfoId: number }) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [commits, setCommits] = useState<GitCommit[]>([]);
@@ -214,10 +214,10 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
     setLoading(true);
     setError(null);
     try {
-      const st = await gitApi.getStatus(projectId);
+      const st = await gitApi.getStatus(projectId, devInfoId);
       setStatus(st);
       if (st.configured && st.isValidRepo) {
-        const lg = await gitApi.getLog(projectId, { limit: PAGE, all });
+        const lg = await gitApi.getLog(projectId, devInfoId, { limit: PAGE, all });
         setCommits(lg.commits);
         setHasMore(lg.hasMore);
       } else {
@@ -229,14 +229,14 @@ export function GitHistoryView({ projectId }: { projectId: number }) {
     } finally {
       setLoading(false);
     }
-  }, [projectId, all, t]);
+  }, [projectId, devInfoId, all, t]);
 
   useEffect(() => { load(); }, [load]);
 
   const loadMore = async () => {
     setLoadingMore(true);
     try {
-      const lg = await gitApi.getLog(projectId, { limit: PAGE, skip: commits.length, all });
+      const lg = await gitApi.getLog(projectId, devInfoId, { limit: PAGE, skip: commits.length, all });
       setCommits((prev) => [...prev, ...lg.commits]);
       setHasMore(lg.hasMore);
     } catch { /* client.ts 토스트 처리 */ }

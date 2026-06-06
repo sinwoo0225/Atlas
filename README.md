@@ -44,8 +44,8 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **이슈 관리** — Open / InProgress / Resolved / Closed × Low / Medium / High, 표 위에서 BadgeMenu 로 인라인 상태 변경.
 - **변경 이력** — 영향도 (Low ~ Critical), 일자별 스택 바 차트, 관련 문서·회의록 링크.
 - **회의록** — 30 분 단위 시작/종료, 참석자, 논의 내용, 의사 결정, 액션 아이템 (담당자·마감일). 데이터 폴더의 `Meetings/` 에 사람이 읽기 좋은 md 로 자동 export (Obsidian 등 외부 리더 호환). 로컬 Claude CLI 가 있으면 논의 내용 'AI 요약' 옵션.
-- **개발 정보** — 마크다운 (frontmatter + `DevInfo/` 폴더에 자동 export) / 파일 (Copy: 데이터 폴더 카피 / Reference: 원위치 경로만 저장) / 외부 링크 3 가지 타입 + 태그.
-- **프로젝트 맵** — Cytoscape + dagre 그래프로 WBS·이슈·회의·변경·개발 정보 간 관계를 시각화 (정오각형 5 hub 방사형 / 타임라인 레이아웃, 미니맵).
+- **업무 정보** — 마크다운 (frontmatter + `DevInfo/` 폴더에 자동 export) / 파일 (Copy: 데이터 폴더 카피 / Reference: 원위치 경로만 저장) / 외부 링크 / 깃 저장소 (여러 개 등록, 우측에 커밋 이력 그래프) + 태그.
+- **프로젝트 맵** — Cytoscape + dagre 그래프로 WBS·이슈·회의·변경·업무 정보 간 관계를 시각화 (정오각형 5 hub 방사형 / 타임라인 레이아웃, 미니맵).
 - **모니터링** — 전 프로젝트 통합 뷰: 종합 시각화 4종 (프로젝트 상태 분포 / 이슈 상태×우선순위 매트릭스 / 다가오는 30일 마일스톤 / 프로젝트별 WBS 진행률), 오늘 예정 마일스톤, 금주·지난주 업무 일지.
 - **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용. 한 작업에 여러 담당자가 있어도 정확히 매칭.
 - **외관·설정** — 다크/라이트 + **커스텀 색 테마**(핵심 12색 지정 → 나머지 자동 파생), **브랜드 워드마크·앱 아이콘 커스터마이즈**, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그), **설정 내보내기/가져오기**(JSON), **UI 언어 한국어·영어 전환**, **오픈소스 라이선스 고지**(설정 > 시스템).
@@ -90,8 +90,8 @@ Atlas 는 두 가지 외부 진입로를 제공합니다 — `Atlas-Cli.exe` (CL
 ### 변경 이력 — 영향도 · 출처 (Issue/WBS) · 일자별 스택 차트
 ![Change Log](screenshots/changelog.png)
 
-### 개발 정보 — Markdown / File (Copy·Reference) / Link 3 타입 + 태그
-![Dev Info](screenshots/devinfo.png)
+### 업무 정보 — Markdown / File (Copy·Reference) / Link / GitRepo + 태그
+![Work info](screenshots/devinfo.png)
 
 ### 통합 모니터링 — 전 프로젝트 종합 시각화 + 담당자 × 마감 히트맵
 ![Monitoring](screenshots/monitoring.png)
@@ -166,8 +166,8 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 - **Issues** — Open / InProgress / Resolved / Closed × Low / Medium / High, with inline status edits via a portal-based BadgeMenu.
 - **Change log** — Impact level (Low ~ Critical), stacked daily bar chart, links to related documents and meetings.
 - **Meetings** — 30-minute time slots, attendees, discussion, decisions, action items (assignee, due date). Auto-exported as a human-readable Markdown file under `Meetings/` (compatible with Obsidian and other external readers). Optional 'AI summary' of the discussion when a local Claude CLI is present.
-- **Dev info** — Three item types (Markdown — auto-exported with frontmatter to `DevInfo/` / File — choose between Copy: copied into the data folder, or Reference: only the original absolute path is stored / external Link) plus tagging.
-- **Project map** — Cytoscape + dagre graph visualising relationships between WBS items, issues, meetings, change logs, and dev info (regular-pentagon 5-hub radial / timeline layouts, minimap).
+- **Work info** — item types: Markdown (auto-exported with frontmatter to `DevInfo/`) / File (Copy: copied into the data folder, or Reference: only the original absolute path is stored) / external Link / Git repository (register multiple, commit-history graph on the right) plus tagging.
+- **Project map** — Cytoscape + dagre graph visualising relationships between WBS items, issues, meetings, change logs, and work info (regular-pentagon 5-hub radial / timeline layouts, minimap).
 - **Monitoring** — Cross-project view: four summary charts (project-status breakdown / issue status×priority matrix / upcoming-30-day milestones / per-project WBS progress), today's milestones, and this/last week's worklogs.
 - **Resources** — People and equipment, used as the autocomplete source for WBS assignees. Matches correctly even when a task has multiple assignees.
 - **Appearance & settings** — Dark / light + **custom color theme** (pick 12 core colors, the rest auto-derived), **brand wordmark & app-icon customization**, Markdown font size and line height, remember last project, change data folder location (native folder picker), **settings export/import** (JSON), **Korean / English UI toggle**, **open-source license notices** (Settings > System).
@@ -212,8 +212,8 @@ Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config
 #### Change log — Impact, source (Issue/WBS) backlinks, daily stacked chart
 ![Change Log](screenshots/changelog.png)
 
-#### Dev info — Markdown / File (Copy·Reference) / Link types, tagging
-![Dev Info](screenshots/devinfo.png)
+#### Work info — Markdown / File (Copy·Reference) / Link / GitRepo, tagging
+![Work info](screenshots/devinfo.png)
 
 #### Monitoring — Cross-project summary charts + assignee × deadline heatmap
 ![Monitoring](screenshots/monitoring.png)

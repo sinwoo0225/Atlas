@@ -31,20 +31,20 @@
     "wbs": "WBS",
     "changes": "Change logs",
     "meetings": "Meetings",
-    "dev": "Dev info",
+    "dev": "Work info",
     "issues": "Issues"
   },
   "filterShort": {
     "changes": "Changes",
     "meetings": "Meetings",
-    "dev": "Dev",
+    "dev": "Work",
     "issues": "Issues"
   },
   "toggle": {
     "wbs": "Toggle WBS (1)",
     "changes": "Toggle change logs (2)",
     "meetings": "Toggle meetings (3)",
-    "dev": "Toggle dev info (4)",
+    "dev": "Toggle work info (4)",
     "issues": "Toggle issues (5)"
   },
   "catNode": "{{label}}\n({{count}})",
@@ -54,7 +54,7 @@
     "wbs": "{{kind}} · {{name}}\nStatus: {{status}} / Due: {{date}}\nAssignee: {{assignee}}",
     "change": "Change · {{impact}}\n{{content}}\n{{date}}",
     "meeting": "Meeting · {{topic}}\n{{date}}",
-    "dev": "Dev info · {{type}}\n{{title}}",
+    "dev": "Work info · {{type}}\n{{title}}",
     "issue": "Issue · {{priority}} / {{status}}\n{{title}}\nDue: {{due}}"
   },
   "help": {

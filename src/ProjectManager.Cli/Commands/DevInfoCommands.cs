@@ -23,7 +23,7 @@ internal static class DevInfoCommands
 
     public static Command Build(IServiceProvider services)
     {
-        var cmd = new Command("devinfo", "개발 정보 (list/get/create/update/delete/tags)");
+        var cmd = new Command("devinfo", "업무 정보 (list/get/create/update/delete/tags)");
         cmd.AddCommand(BuildList(services));
         cmd.AddCommand(BuildGet(services));
         cmd.AddCommand(BuildCreate(services));
@@ -36,7 +36,7 @@ internal static class DevInfoCommands
     private static Command BuildList(IServiceProvider services)
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
-        var c = new Command("list", "프로젝트 개발 정보 조회") { projOpt };
+        var c = new Command("list", "프로젝트 업무 정보 조회") { projOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pid = ctx.ParseResult.GetValueForOption(projOpt);
@@ -48,8 +48,8 @@ internal static class DevInfoCommands
 
     private static Command BuildGet(IServiceProvider services)
     {
-        var idOpt = new Option<int>("--id", "개발 정보 ID") { IsRequired = true };
-        var c = new Command("get", "단일 개발 정보 조회") { idOpt };
+        var idOpt = new Option<int>("--id", "업무 정보 ID") { IsRequired = true };
+        var c = new Command("get", "단일 업무 정보 조회") { idOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var id = ctx.ParseResult.GetValueForOption(idOpt);
@@ -65,15 +65,15 @@ internal static class DevInfoCommands
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
         var titleOpt = new Option<string>("--title", "제목") { IsRequired = true };
-        var typeOpt = new Option<DevInfoType>("--type", "Markdown|File|Link") { IsRequired = true };
+        var typeOpt = new Option<DevInfoType>("--type", "Markdown|File|Link|GitRepo") { IsRequired = true };
         var storageOpt = new Option<DevInfoStorageMode?>("--storage", "Copy(기본)|Reference — File 타입에만 의미");
         var contentOpt = new Option<string?>("--content", "내용 (markdown — Markdown 타입에 사용)");
         var contentFileOpt = new Option<string?>("--content-file", "내용을 파일/stdin('-') 에서 읽기 — --content 보다 우선");
-        var filePathOpt = new Option<string?>("--file-path", "파일 경로 (File 타입에 사용 — Copy 면 백엔드가 DevFiles 로 복사)");
+        var filePathOpt = new Option<string?>("--file-path", "파일 경로 (File 타입은 Copy 면 DevFiles 로 복사 / GitRepo 타입은 로컬 저장소 절대경로)");
         var urlOpt = new Option<string?>("--url", "URL (Link 타입에 사용)");
         var tagsOpt = new Option<string?>("--tags", "콤마 구분 태그 (예: \"api, auth\")");
 
-        var c = new Command("create", "개발 정보 생성 (Markdown 타입은 디스크에 .md 파일도 자동 export)")
+        var c = new Command("create", "업무 정보 생성 (Markdown 타입은 디스크에 .md 파일도 자동 export)")
         { projOpt, titleOpt, typeOpt, storageOpt, contentOpt, contentFileOpt, filePathOpt, urlOpt, tagsOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
@@ -96,9 +96,9 @@ internal static class DevInfoCommands
 
     private static Command BuildUpdate(IServiceProvider services)
     {
-        var idOpt = new Option<int>("--id", "개발 정보 ID") { IsRequired = true };
+        var idOpt = new Option<int>("--id", "업무 정보 ID") { IsRequired = true };
         var titleOpt = new Option<string?>("--title", "제목");
-        var typeOpt = new Option<DevInfoType?>("--type", "Markdown|File|Link");
+        var typeOpt = new Option<DevInfoType?>("--type", "Markdown|File|Link|GitRepo");
         var storageOpt = new Option<DevInfoStorageMode?>("--storage", "Copy|Reference");
         var contentOpt = new Option<string?>("--content", "내용 (markdown)");
         var contentFileOpt = new Option<string?>("--content-file", "내용을 파일/stdin('-') 에서 읽기 — --content 보다 우선. 둘 다 미지정 시 기존 값 유지.");
@@ -106,7 +106,7 @@ internal static class DevInfoCommands
         var urlOpt = new Option<string?>("--url", "URL");
         var tagsOpt = new Option<string?>("--tags", "콤마 구분 태그");
 
-        var c = new Command("update", "개발 정보 부분 갱신 (지정한 옵션만 덮어쓰기)")
+        var c = new Command("update", "업무 정보 부분 갱신 (지정한 옵션만 덮어쓰기)")
         { idOpt, titleOpt, typeOpt, storageOpt, contentOpt, contentFileOpt, filePathOpt, urlOpt, tagsOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
@@ -133,8 +133,8 @@ internal static class DevInfoCommands
 
     private static Command BuildDelete(IServiceProvider services)
     {
-        var idOpt = new Option<int>("--id", "개발 정보 ID") { IsRequired = true };
-        var c = new Command("delete", "개발 정보 삭제 (Markdown / Copy 모드는 디스크 파일도 함께 제거)") { idOpt };
+        var idOpt = new Option<int>("--id", "업무 정보 ID") { IsRequired = true };
+        var c = new Command("delete", "업무 정보 삭제 (Markdown / Copy 모드는 디스크 파일도 함께 제거)") { idOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var id = ctx.ParseResult.GetValueForOption(idOpt);

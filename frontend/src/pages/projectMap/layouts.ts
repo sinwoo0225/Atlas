@@ -133,7 +133,7 @@ export const TIMELINE_LANES: { key: LaneKey; label: string; strokeColor: string;
   { key: 'wbs',     label: 'WBS',       strokeColor: '#a5b4fc', bgColor: 'rgba(129, 140, 248, 0.05)' },
   { key: 'change',  label: '변경이력',   strokeColor: '#fdba74', bgColor: 'rgba(251, 146, 60, 0.05)' },
   { key: 'meeting', label: '회의록',     strokeColor: '#6ee7b7', bgColor: 'rgba(110, 231, 183, 0.05)' },
-  { key: 'dev',     label: '개발 정보',  strokeColor: '#67e8f9', bgColor: 'rgba(103, 232, 249, 0.05)' },
+  { key: 'dev',     label: '업무 정보',  strokeColor: '#67e8f9', bgColor: 'rgba(103, 232, 249, 0.05)' },
   { key: 'issue',   label: '이슈',       strokeColor: '#fda4af', bgColor: 'rgba(244, 63, 94, 0.05)' },
 ];
 

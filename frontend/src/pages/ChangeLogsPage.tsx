@@ -21,7 +21,6 @@ import { useCreateForm } from '../hooks/useCreateForm';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import { findItemName } from '../utils/wbsHelpers';
 import { applyTextareaTab } from '../utils/textareaTab';
-import { GitHistoryView } from '../components/GitHistoryView';
 import type { ChangeLog, ImpactLevel, Meeting, Issue, WbsItem } from '../types';
 
 const impactColor: Record<ImpactLevel, string> = {
@@ -461,8 +460,7 @@ export function ChangeLogsPage() {
   const [showForm, setShowForm] = useState(initialNewWithSourceIssue != null);
   const [defaultSourceIssueId, setDefaultSourceIssueId] = useState<number | null>(initialNewWithSourceIssue);
   const [editing, setEditing] = useState<ChangeLog | null>(null);
-  // '변경 이력'(수기 기록) ↔ 'Git 이력'(연결된 .git 커밋 그래프) 탭 전환.
-  const [tab, setTab] = useState<'changelog' | 'git'>('changelog');
+  // Git 이력은 '업무 정보'(GitRepo 타입)로 이전됨 — 여기는 수기 변경 이력만.
 
   useCreateForm(() => { setEditing(null); setShowForm(true); });
   const [keyword, setKeyword] = useState('');
@@ -566,33 +564,12 @@ export function ChangeLogsPage() {
         breadcrumb={project?.name}
         title={t('changelog:title')}
         actions={
-          tab === 'changelog' ? (
-            <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
-              {t('changelog:newBtn')}
-            </Button>
-          ) : undefined
+          <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
+            {t('changelog:newBtn')}
+          </Button>
         }
       />
 
-      <div className="flex gap-1 border-b border-default">
-        {(['changelog', 'git'] as const).map((key) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-              tab === key ? 'text-primary' : 'border-transparent text-muted hover:text-primary'
-            }`}
-            style={tab === key ? { borderColor: 'var(--accent)' } : undefined}
-          >
-            {t('changelog:tab.' + key)}
-          </button>
-        ))}
-      </div>
-
-      {tab === 'git' ? (
-        <GitHistoryView projectId={pid} />
-      ) : (
-      <>
       {loading && (
         <Card padding="spacious">
           <Skeleton height={18} width="30%" />
@@ -788,8 +765,6 @@ export function ChangeLogsPage() {
           );
         })}
       </div>
-      )}
-      </>
       )}
 
       {showForm && (

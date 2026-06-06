@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
+using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
 using ProjectManager.Infrastructure.FileStorage;
 
@@ -8,7 +9,7 @@ namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
 [Route("api/projects/{projectId:int}/devinfo")]
-public class DevInfoController(DevInfoService svc, DevFilesStorage storage) : ControllerBase
+public class DevInfoController(DevInfoService svc, DevFilesStorage storage, GitHistoryService git) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAll(int projectId) =>
@@ -93,6 +94,46 @@ public class DevInfoController(DevInfoService svc, DevFilesStorage storage) : Co
         using var stream = file.OpenReadStream();
         var path = await storage.SaveFileAsync(projectFolder, file.FileName, stream);
         return Ok(new { filePath = path });
+    }
+
+    // ── GitRepo 타입 업무 정보의 읽기 전용 git 이력 ──
+    // 저장소 경로는 항목(FilePath)에서 해석 — 클라이언트가 임의 경로를 넘길 수 없어 주입 위험 없음.
+    // 항목이 이 프로젝트 소속이고 GitRepo 타입일 때만. 백엔드 머신 파일시스템만 읽으므로 사실상 Local 모드 전용.
+    [HttpGet("{id:int}/git/status")]
+    public async Task<IActionResult> GitStatus(int projectId, int id)
+    {
+        var item = await svc.GetByIdAsync(id);
+        if (item is null || item.ProjectId != projectId || item.Type != DevInfoType.GitRepo)
+            return NotFound();
+        return Ok(await git.GetStatusByPathAsync(item.FilePath));
+    }
+
+    [HttpGet("{id:int}/git/log")]
+    public async Task<IActionResult> GitLog(
+        int projectId, int id,
+        [FromQuery] int limit = 200,
+        [FromQuery] int skip = 0,
+        [FromQuery] bool all = false)
+    {
+        var item = await svc.GetByIdAsync(id);
+        if (item is null || item.ProjectId != projectId || item.Type != DevInfoType.GitRepo)
+            return NotFound();
+        try
+        {
+            return Ok(await git.GetLogByPathAsync(item.FilePath, limit, skip, all));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // 폼에서 GitRepo 경로 저장 전 .git 유효성 확인 (id 불필요 — 아직 미저장 경로).
+    [HttpGet("git/validate")]
+    public async Task<IActionResult> GitValidate(int projectId, [FromQuery] string path)
+    {
+        var (valid, error) = await git.ValidateAsync(path ?? string.Empty);
+        return Ok(new { valid, error });
     }
 }
 

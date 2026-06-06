@@ -31,20 +31,20 @@
     "wbs": "WBS",
     "changes": "변경이력",
     "meetings": "회의록",
-    "dev": "개발 정보",
+    "dev": "업무 정보",
     "issues": "이슈"
   },
   "filterShort": {
     "changes": "변경",
     "meetings": "회의",
-    "dev": "개발",
+    "dev": "업무",
     "issues": "이슈"
   },
   "toggle": {
     "wbs": "WBS 토글 (1)",
     "changes": "변경이력 토글 (2)",
     "meetings": "회의록 토글 (3)",
-    "dev": "개발 정보 토글 (4)",
+    "dev": "업무 정보 토글 (4)",
     "issues": "이슈 토글 (5)"
   },
   "catNode": "{{label}}\n({{count}})",
@@ -54,7 +54,7 @@
     "wbs": "{{kind}} · {{name}}\n상태: {{status}} / 종료: {{date}}\n담당: {{assignee}}",
     "change": "변경이력 · {{impact}}\n{{content}}\n{{date}}",
     "meeting": "회의록 · {{topic}}\n{{date}}",
-    "dev": "개발 정보 · {{type}}\n{{title}}",
+    "dev": "업무 정보 · {{type}}\n{{title}}",
     "issue": "이슈 · {{priority}} / {{status}}\n{{title}}\n마감: {{due}}"
   },
   "help": {

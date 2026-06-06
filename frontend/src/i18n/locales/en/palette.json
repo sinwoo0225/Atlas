@@ -1,6 +1,6 @@
 {
   "placeholderCommand": "Run a command (go / create / toggle) — type text for full search",
-  "placeholderSearch": "Search projects, WBS, issues, meetings, change log, dev info, work log",
+  "placeholderSearch": "Search projects, WBS, issues, meetings, change log, work info, work log",
   "searching": "Searching…",
   "close": "Close (Esc)",
   "noCommands": "No matching commands.",
@@ -15,7 +15,7 @@
     "Issue": "Issue",
     "Meeting": "Meeting",
     "ChangeLog": "Change",
-    "DevInfoItem": "Dev info",
+    "DevInfoItem": "Work info",
     "WorkLog": "Work log"
   },
   "group": {
@@ -30,7 +30,7 @@
     "go-issues": "Go to Issues",
     "go-meetings": "Go to Meetings",
     "go-changelogs": "Go to Change log",
-    "go-devinfo": "Go to Dev info",
+    "go-devinfo": "Go to Work info",
     "go-worklog": "Go to Work log",
     "go-map": "Go to Project map",
     "go-projects": "Go to Projects",
@@ -43,7 +43,7 @@
     "new-wbs": "New WBS",
     "new-meeting": "New meeting",
     "new-changelog": "New change log",
-    "new-devinfo": "New dev info",
+    "new-devinfo": "New work info",
     "new-resource": "New resource",
     "new-project": "New project",
     "toggle-sidebar": "Toggle sidebar",

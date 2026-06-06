@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
 using ProjectManager.Application.Search;
 using ProjectManager.AppHost.Composition;
+using ProjectManager.Core.Domain;
 using ProjectManager.Core.Interfaces;
 using ProjectManager.Infrastructure.Config;
 using ProjectManager.Infrastructure.Persistence;
@@ -73,6 +74,43 @@ public static class AppHostFactory
                     UPDATE WbsItems SET SortOrder = (SELECT rn FROM ranked WHERE ranked.Id = WbsItems.Id);
                 ");
                 Console.WriteLine($"[wbs-sortorder] backfilled {allSortOrder.Count} rows.");
+            }
+
+            // 기존 Project.GitRepoPath(프로젝트당 1개) → GitRepo 타입 업무 정보로 1회 이관.
+            // git 이력이 업무 정보(DevInfo)로 이전됨에 따라, 이미 경로를 설정해 둔 프로젝트의 저장소를
+            // 업무 정보 항목 1건으로 자동 등록한다. Project.GitRepoPath 컬럼은 보존(롤백 안전·시드 소스), UI 만 비노출.
+            // 멱등 가드: 해당 프로젝트에 GitRepo 항목이 아직 없을 때만. DbContext 경유라 audit·검색 인덱스 정상 기록.
+            var gitProjects = db.Projects.AsNoTracking()
+                .Where(p => p.GitRepoPath != "")
+                .Select(p => new { p.Id, p.GitRepoPath })
+                .ToList();
+            if (gitProjects.Count > 0)
+            {
+                var seeded = db.DevInfoItems.AsNoTracking()
+                    .Where(d => d.Type == DevInfoType.GitRepo)
+                    .Select(d => d.ProjectId)
+                    .ToHashSet();
+                var toAdd = new List<DevInfoItem>();
+                foreach (var p in gitProjects)
+                {
+                    if (seeded.Contains(p.Id)) continue;
+                    var name = Path.GetFileName(p.GitRepoPath.TrimEnd('\\', '/'));
+                    if (string.IsNullOrWhiteSpace(name)) name = "git";
+                    toAdd.Add(new DevInfoItem
+                    {
+                        ProjectId = p.Id,
+                        Title = name,
+                        Type = DevInfoType.GitRepo,
+                        StorageMode = DevInfoStorageMode.Reference,
+                        FilePath = p.GitRepoPath,
+                    });
+                }
+                if (toAdd.Count > 0)
+                {
+                    db.DevInfoItems.AddRange(toAdd);
+                    db.SaveChanges();
+                    Console.WriteLine($"[git-devinfo] migrated {toAdd.Count} project git repos to work-info.");
+                }
             }
         }
 
