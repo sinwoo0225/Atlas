@@ -383,7 +383,7 @@ function EditablePreviewField({
       {empty ? (
         <span className="text-sm text-muted italic whitespace-pre-wrap">{placeholder}</span>
       ) : (
-        <div className="markdown-body text-sm">
+        <div className="markdown-body markdown-body--wide text-sm">
           <ReactMarkdown>{value}</ReactMarkdown>
         </div>
       )}

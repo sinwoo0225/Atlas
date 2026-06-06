@@ -318,7 +318,7 @@ function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem
     if (text === null) return <p className="text-sm text-muted">{t('common:loading')}</p>;
     if (ext === 'md') {
       return (
-        <div className="markdown-body text-secondary">
+        <div className="markdown-body markdown-body--wide text-secondary">
           <ReactMarkdown>{text}</ReactMarkdown>
         </div>
       );
@@ -634,7 +634,7 @@ export function DevInfoPage() {
               </div>
 
               {selected.type === 'Markdown' && (
-                <div className="markdown-body text-secondary">
+                <div className="markdown-body markdown-body--wide text-secondary">
                   <ReactMarkdown>{selected.content}</ReactMarkdown>
                 </div>
               )}

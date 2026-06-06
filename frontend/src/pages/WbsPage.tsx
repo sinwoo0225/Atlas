@@ -278,7 +278,7 @@ function WbsItemForm({
               ) : (
                 <div
                   onClick={() => setNotesEditing(true)}
-                  className="markdown-body flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+                  className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
                 >
                   <ReactMarkdown>{form.notes}</ReactMarkdown>
                 </div>
