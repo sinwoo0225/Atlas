@@ -564,6 +564,12 @@ function MeetingDetail({ meeting, projectId, onChange }: {
   const navigate = useNavigate();
   const decisions = parseDecisions(meeting.decisions);
   const actions = parseActionItems(meeting.actionItems);
+  // 레거시 평문 폴백 대상 판별: 빈 문자열·공백뿐 아니라 빈 JSON 컨테이너("[]"/"{}")도 제외.
+  // (폼 저장은 비어 있으면 '' 를 넣지만, seed/CLI 는 "[]" 를 넣을 수 있어 그대로 렌더하면 "[]" 가 노출됨.)
+  const hasLegacyText = (raw?: string) => {
+    const s = (raw ?? '').trim();
+    return s !== '' && s !== '[]' && s !== '{}';
+  };
   const [busy, setBusy] = useState<string | null>(null);
 
   const promote = async (a: ActionItem, target: 'issue' | 'wbs') => {
@@ -603,7 +609,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
           </ul>
         </div>
       )}
-      {!decisions.length && meeting.decisions && (
+      {!decisions.length && hasLegacyText(meeting.decisions) && (
         <div>
           <p className="text-xs text-muted font-medium mb-1">{t('meetings:detail.decisions')}</p>
           <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.decisions}</p>
@@ -677,7 +683,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
           </table>
         </div>
       )}
-      {!actions.length && meeting.actionItems && (
+      {!actions.length && hasLegacyText(meeting.actionItems) && (
         <div>
           <p className="text-xs text-muted font-medium mb-1">Action Items</p>
           <p className="text-sm text-secondary whitespace-pre-wrap">{meeting.actionItems}</p>
