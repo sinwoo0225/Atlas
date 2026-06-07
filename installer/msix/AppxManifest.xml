@@ -9,7 +9,9 @@
     __VERSION__           4파트 버전 (예: 1.22.0.0). 제출마다 증가.
   full-trust 데스크톱(Win32) 앱: EntryPoint=Windows.FullTrustApplication + rescap:runFullTrust.
   CLI/MCP(Atlas-Cli.exe·Atlas-Mcp.exe)는 같은 패키지에 동봉되고 App Execution Alias(atlas-cli·atlas-mcp)로
-  터미널 PATH 에 노출된다 — 별도 Start 타일 없이 명령으로만. publish.ps1 -Msix 가 두 exe 를 stage 에 함께 publish.
+  터미널 PATH 에 노출된다. Store 는 alias 만 있고 앱 목록에 안 뜨는 앱을 '헤드리스'로 보고 거부하므로
+  (AppListEntry="none" → 헤드리스 entitlement 필요) CLI/MCP 도 앱 목록에 표시한다(Start 타일은 GUI 만).
+  publish.ps1 -Msix 가 두 exe 를 stage 에 함께 publish.
 -->
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
@@ -52,16 +54,15 @@
       </uap:VisualElements>
     </Application>
 
-    <!-- CLI 진입점 — App Execution Alias 'atlas-cli' 로 터미널 PATH 노출. AppListEntry=none 으로 Start 타일 숨김.
-         windows.appExecutionAlias 는 Application 당 1회만 허용 → exe 마다 별도(숨김) Application 이 필요하다. -->
+    <!-- CLI 진입점 — App Execution Alias 'atlas-cli' 로 터미널 PATH 노출. 앱 목록에 표시(헤드리스 거부 회피).
+         windows.appExecutionAlias 는 Application 당 1회만 허용 → exe 마다 별도 Application 이 필요하다. -->
     <Application Id="AtlasCli" Executable="Atlas-Cli.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="Atlas CLI"
         Description="Atlas 외부 자동화 CLI"
         BackgroundColor="#15171C"
         Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png"
-        AppListEntry="none" />
+        Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <uap5:Extension Category="windows.appExecutionAlias">
           <uap5:AppExecutionAlias>
@@ -71,15 +72,14 @@
       </Extensions>
     </Application>
 
-    <!-- MCP stdio 서버 — App Execution Alias 'atlas-mcp'. 마찬가지로 숨김 Application. -->
+    <!-- MCP stdio 서버 — App Execution Alias 'atlas-mcp'. 마찬가지로 앱 목록에 표시(헤드리스 거부 회피). -->
     <Application Id="AtlasMcp" Executable="Atlas-Mcp.exe" EntryPoint="Windows.FullTrustApplication">
       <uap:VisualElements
         DisplayName="Atlas MCP"
         Description="Atlas stdio MCP 서버"
         BackgroundColor="#15171C"
         Square150x150Logo="Assets\Square150x150Logo.png"
-        Square44x44Logo="Assets\Square44x44Logo.png"
-        AppListEntry="none" />
+        Square44x44Logo="Assets\Square44x44Logo.png" />
       <Extensions>
         <uap5:Extension Category="windows.appExecutionAlias">
           <uap5:AppExecutionAlias>
