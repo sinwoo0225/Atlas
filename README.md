@@ -6,6 +6,8 @@
 
 Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 이력·자료를 한 곳에서 관리하기 위한 Windows 데스크톱 앱입니다. 모든 데이터는 SQLite DB 와 프로젝트별 파일 폴더로 로컬에 저장됩니다 — 기본 위치는 `%USERPROFILE%\Documents\ProjectManager\` 이며, 설정에서 다른 폴더(예: 본인 멀티 디바이스용 외부 드라이브, 사내 SMB 공유 폴더)로 변경할 수 있습니다. 원격 백엔드나 계정 가입은 없습니다. WPF + WebView2 셸 안에서 ASP.NET Core 가 인프로세스로 실행되고 그 위에 React SPA UI 가 올라가는 구조입니다. UI 언어는 한국어·영어 (설정에서 전환, 기본 한국어).
 
+또한 **외부 자동화(CLI · MCP · Claude Code 스킬)를 1급 기능으로** 지원합니다 — 에이전틱 AI 가 셸/도구 콜로 데이터를 조회·갱신하고, 한 작업의 관련 자료·깃 저장소·이슈·이력을 한 번에 모아(`wbs context`) 실제 개발까지 이어가도록 설계했습니다. 자세히는 아래 [외부 자동화](#외부-자동화-claude-code-등).
+
 ## 시작하기 (사용자)
 
 - **Microsoft Store** (권장) — Microsoft Store 에서 **Atlas**(게시자 SlnU)를 검색해 설치합니다. 설치와 업데이트가 Store 를 통해 자동으로 관리되고, 별도 관리자 권한이 필요 없으며, WebView2 등 런타임 의존성도 함께 처리됩니다. 외부 자동화 도구(`atlas-cli`·`atlas-mcp` 명령)도 함께 설치됩니다. **일반 사용자는 이 방법을 권장합니다.**
@@ -39,7 +41,8 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 ## 주요 기능
 
 - **프로젝트 단위 관리** — 프로젝트 카드 목록, 대시보드 (개요·예산·인원·D-day·최근 활동 위젯), 프로젝트 단위 zip 백업.
-- **WBS + 간트차트** — 계층 작업 트리, 마일스톤, 상태 (예정/진행/완료), 중요도, 멀티 담당자 칩 입력(Enter/콤마 단위), 버전 관리, 마크다운 노트.
+- **글로벌 검색 · 명령 팔레트** — `Ctrl+K` 로 전 프로젝트·전 항목(프로젝트·WBS·이슈·회의·변경이력·업무 정보·업무 일지)을 전체 텍스트 검색(FTS5, 하이라이트·스니펫)하고 결과로 바로 이동, 명령도 실행.
+- **WBS + 간트차트** — 계층 작업 트리, 마일스톤, 상태 (예정/진행/완료), 중요도, 멀티 담당자 칩 입력(Enter/콤마 단위), 버전 관리, 마크다운 노트, **관련 이슈·업무 정보 연결**(상세의 '관련 Issue'·'관련 정보' 섹션 — 한 작업에서 자료·깃 저장소·이슈를 바로 연결).
 - **업무 일지** — 주 단위로 "한 일 / 계획 / 이슈" 3 필드를 일별로 마크다운 기록. 통합 모니터링에서 주간 md 파일 내보내기.
 - **이슈 관리** — Open / InProgress / Resolved / Closed × Low / Medium / High, 표 위에서 BadgeMenu 로 인라인 상태 변경.
 - **변경 이력** — 영향도 (Low ~ Critical), 일자별 스택 바 차트, 관련 문서·회의록 링크.
@@ -50,6 +53,7 @@ Atlas 는 한 사람이 여러 프로젝트의 일정·이슈·회의·변경 �
 - **리소스 관리** — 인원·장비 리소스, WBS 담당자 자동완성에 사용. 한 작업에 여러 담당자가 있어도 정확히 매칭.
 - **외관·설정** — 다크/라이트 + **커스텀 색 테마**(핵심 12색 지정 → 나머지 자동 파생), **브랜드 워드마크·앱 아이콘 커스터마이즈**, 마크다운 글자 크기·줄간격, 최근 프로젝트 기억, 데이터 폴더 위치 변경(네이티브 폴더 다이얼로그), **설정 내보내기/가져오기**(JSON), **UI 언어 한국어·영어 전환**, **오픈소스 라이선스 고지**(설정 > 시스템).
 - **자동 백업** — 전체 데이터(DB + 첨부)를 지정 폴더로 주기적으로 zip 백업(보관 개수 관리). 동기화 폴더(OneDrive 등) 지정 시 오프사이트 백업.
+- **외부 자동화 · 에이전틱 AI** — `atlas-cli`(셸)·`atlas-mcp`(MCP)·Claude Code 스킬로 모든 데이터를 조회·생성·갱신. 전엔티티 DB-side 필터(상태·기간·담당자…)·출력 셰이핑(개수/축약/필드)·전 엔티티 전문 검색·작업 컨텍스트 번들(`wbs context`)로 에이전트가 "관련 정보 참고해 개발·상태 갱신" 까지 한 흐름으로. → [외부 자동화](#외부-자동화-claude-code-등).
 - **자동 업데이트** — Microsoft Store 로 설치한 경우 Store 가 새 버전을 자동으로 업데이트합니다. GitHub 설치형(`Atlas-Setup-*.exe`)으로 받은 경우에는 앱이 주기적으로 GitHub 릴리스를 확인해 알려주고, 설정 > 업데이트 에서 직접 확인·다운로드·설치할 수 있습니다 (다운로드까지만 자동, 설치 실행은 사용자가 직접).
 - **위젯 모드** — 데스크톱 한쪽에 항상 떠 있는 컴팩트 플로팅 위젯. 시계·날씨, 시스템 음악 재생 제어(Windows SMTC — 어떤 앱이든 재생 중인 곡의 제목·아트워크·재생/정지/이전/다음·타임라인), 최근 활성 창(머문 시간), 오늘 내 작업, 빠른 작성(이슈·변경이력·리소스). 사이드바 버튼 또는 `Ctrl+Alt+W` 로 토글하고 투명도·항상 위 고정·확장(2열)·크기 조정·드래그를 지원합니다. (데스크톱 전용)
 
@@ -130,6 +134,8 @@ cd frontend; npm install; cd ..
 
 Atlas is a Windows desktop application that lets one person manage schedules, issues, meetings, change logs, and notes across multiple projects in one place. All data is stored locally as a SQLite database and per-project file folders — the default location is `%USERPROFILE%\Documents\ProjectManager\`, but you can change it from Settings to any other folder (e.g. an external drive for multi-device use, or a corporate SMB share). No remote backend, no account. The shell is WPF + WebView2 hosting ASP.NET Core in-process, with a React SPA on top. The UI is available in Korean and English (switch in Settings; Korean by default).
 
+It also treats **external automation (CLI · MCP · a Claude Code skill) as a first-class feature** — an agentic AI can query and update data over the shell/tool calls, gather everything related to one task (its notes, linked work info, git repos, issues, and history) in a single call (`wbs context`), and carry the work through to actual development. See [External automation](#external-automation-claude-code-etc) below.
+
 ### Getting started (end users)
 
 - **Microsoft Store** (recommended) — search for **Atlas** (publisher SlnU) on the Microsoft Store and install. Installation and updates are managed automatically through the Store, no admin rights are needed, and runtime dependencies (WebView2 etc.) are handled for you. The external-automation commands (`atlas-cli` / `atlas-mcp`) are installed alongside it. **This is the recommended option for most users.**
@@ -163,7 +169,8 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 ### Features
 
 - **Project hub** — Project card list, dashboard (overview, budget, members, D-day, recent activity widgets), per-project zip backup.
-- **WBS + Gantt chart** — Hierarchical task tree, milestones, status (Planned / InProgress / Done), priority, multi-assignee chip input (commit per Enter / comma), version management, Markdown notes.
+- **Global search · command palette** — `Ctrl+K` runs a full-text search (FTS5, with highlight/snippet) across every project and item type (projects, WBS, issues, meetings, change logs, work info, worklogs), jumps straight to a result, and runs commands.
+- **WBS + Gantt chart** — Hierarchical task tree, milestones, status (Planned / InProgress / Done), priority, multi-assignee chip input (commit per Enter / comma), version management, Markdown notes, and **links to related issues & work info** (the detail panel's "Related issues" / "Related info" sections — wire a task to its notes, git repos, and issues in one place).
 - **Worklog** — Weekly journal with three Markdown fields per day: Done / Plan / Issues. Export the week as a Markdown file from the monitoring page.
 - **Issues** — Open / InProgress / Resolved / Closed × Low / Medium / High, with inline status edits via a portal-based BadgeMenu.
 - **Change log** — Impact level (Low ~ Critical), stacked daily bar chart, links to related documents and meetings.
@@ -174,6 +181,7 @@ To let a team share the same data, run `Atlas-Server.exe` on one machine and hav
 - **Resources** — People and equipment, used as the autocomplete source for WBS assignees. Matches correctly even when a task has multiple assignees.
 - **Appearance & settings** — Dark / light + **custom color theme** (pick 12 core colors, the rest auto-derived), **brand wordmark & app-icon customization**, Markdown font size and line height, remember last project, change data folder location (native folder picker), **settings export/import** (JSON), **Korean / English UI toggle**, **open-source license notices** (Settings > System).
 - **Automatic backup** — Periodically zip the full data (DB + attachments) into a folder you choose, with retention. Point it at a synced folder (OneDrive/Dropbox) for off-site backups.
+- **External automation · agentic AI** — Query, create, and update all data via `atlas-cli` (shell), `atlas-mcp` (MCP), and a Claude Code skill. Per-entity DB-side filters (status, dates, assignee…), output shaping (count/brief/fields), full-text search across entities, and a task-context bundle (`wbs context`) let an agent "gather the related info, then develop and update status" in one flow. → [External automation](#external-automation-claude-code-etc).
 - **Automatic updates** — If you installed from the Microsoft Store, the Store updates the app automatically. For the GitHub installer (`Atlas-Setup-*.exe`), the app periodically checks GitHub Releases and notifies you when a newer version exists; you can check, download, and install from Settings > Update (download is automatic, running the installer is up to you).
 - **Widget mode** — A compact, always-on-top floating widget. Clock & weather, system media controls (Windows SMTC — title, artwork, play/pause/prev/next, and a seekable timeline for whatever app is playing), recent active windows (with dwell time), today's tasks, and quick-create (issue / change log / resource). Toggle from the sidebar or `Ctrl+Alt+W`; supports adjustable transparency, always-on-top pin, an expanded 2-column layout, resizing, and dragging. (Desktop only.)
 
