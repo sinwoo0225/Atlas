@@ -111,9 +111,10 @@ internal static class WbsCommands
         var importanceOpt = new Option<int?>("--importance", "중요도 1=낮음 / 2=중간 (기본) / 3=높음");
         importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환 (옛 --order = 중요도 의미)
         var notesOpt = new Option<string?>("--notes", "메모");
+        var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동");
 
         var c = new Command("create", "WBS 항목 생성 (SortOrder 는 시작일 그룹 끝에 자동 추가)")
-        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt };
+        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -128,7 +129,8 @@ internal static class WbsCommands
                 Status: pr.GetValueForOption(statusOpt) ?? WbsStatus.Planned,
                 IsMilestone: pr.GetValueForOption(msOpt) ?? false,
                 Importance: pr.GetValueForOption(importanceOpt) ?? 2,
-                Notes: pr.GetValueForOption(notesOpt) ?? string.Empty);
+                Notes: pr.GetValueForOption(notesOpt) ?? string.Empty,
+                CompletedDate: pr.GetValueForOption(completedOpt));
             var svc = services.GetRequiredService<WbsService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -149,9 +151,10 @@ internal static class WbsCommands
         importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환
         var sortOrderOpt = new Option<int?>("--sort-order", "정렬 위치 (드물게 수동, 보통 dnd-kit reorder 사용)");
         var notesOpt = new Option<string?>("--notes", "메모");
+        var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능");
 
         var c = new Command("update", "WBS 항목 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt };
+        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -170,6 +173,7 @@ internal static class WbsCommands
                 Importance: pr.GetValueForOption(importanceOpt) ?? existing.Importance,
                 Notes: pr.GetValueForOption(notesOpt) ?? existing.Notes,
                 SortOrder: pr.GetValueForOption(sortOrderOpt) ?? existing.SortOrder,
+                CompletedDate: pr.GetValueForOption(completedOpt) ?? existing.CompletedDate,
                 UpdatedAt: existing.UpdatedAt);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
@@ -204,6 +208,7 @@ internal static class WbsCommands
                 Status: existing.Status, IsMilestone: existing.IsMilestone,
                 Importance: existing.Importance, Notes: existing.Notes,
                 SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
+                CompletedDate: existing.CompletedDate,
                 UpdatedAt: existing.UpdatedAt);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));

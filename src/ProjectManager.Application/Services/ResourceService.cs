@@ -31,6 +31,20 @@ public class ResourceService(IResourceRepository repo, AppDbContext db)
         return ToDto(await repo.CreateAsync(r));
     }
 
+    // '나' 신원 통일 — 설정의 내 이름으로 Person 리소스를 찾고(대소문자 무시), 없으면 생성해 반환.
+    // 작성자(defaultAuthor)·담당자·회고 주체를 단일 Resource 로 묶기 위한 진입점. 멱등.
+    public async Task<ResourceDto> GetOrCreateByNameAsync(string name)
+    {
+        var trimmed = (name ?? string.Empty).Trim();
+        if (string.IsNullOrEmpty(trimmed))
+            throw new ArgumentException("이름이 비어 있습니다.", nameof(name));
+        var existing = (await repo.GetAllAsync())
+            .FirstOrDefault(r => r.Type == ResourceType.Person
+                && string.Equals(r.Name, trimmed, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null) return ToDto(existing);
+        return ToDto(await repo.CreateAsync(new Resource { Name = trimmed, Type = ResourceType.Person }));
+    }
+
     public async Task<ResourceDto?> UpdateAsync(int id, UpdateResourceDto dto)
     {
         var r = await repo.GetByIdAsync(id);

@@ -1,0 +1,56 @@
+{
+  "title": "My work (TODO)",
+  "newBtn": "New TODO",
+  "completeBtn": "Done",
+  "personal": "Personal",
+  "dueShort": "Due",
+  "summary": "{{total}} total · {{overdue}} overdue",
+  "noIdentityHint": "Set 'Default author name (me)' in Settings > Behavior to see only the work assigned to you. Showing everything for now.",
+  "scope": {
+    "mine": "My work",
+    "all": "All",
+    "noIdentity": "Set your name (author) in Settings first."
+  },
+  "source": {
+    "wbs": "Task",
+    "issue": "Issue",
+    "todo": "TODO"
+  },
+  "recurrence": {
+    "None": "No repeat",
+    "Daily": "Daily",
+    "Weekly": "Weekly",
+    "Monthly": "Monthly",
+    "Yearly": "Yearly"
+  },
+  "empty": {
+    "title": "Nothing to do.",
+    "desc": "All open tasks, issues and TODOs are cleared. Try adding a new TODO."
+  },
+  "form": {
+    "newTitle": "New TODO",
+    "editTitle": "Edit TODO",
+    "titleLabel": "Title",
+    "titleRequired": "Please enter a title.",
+    "due": "Due date",
+    "recurrence": "Repeat",
+    "recurrenceHint": "When completed, the next occurrence is created automatically.",
+    "interval": "Interval (every N periods)",
+    "notes": "Notes"
+  },
+  "delete": {
+    "title": "Delete TODO",
+    "message": "Delete the TODO '{{title}}'?"
+  },
+  "toast": {
+    "completed": "Completed '{{title}}'.",
+    "created": "TODO added."
+  },
+  "error": {
+    "load": "Failed to load the list.",
+    "complete": "Failed to complete.",
+    "create": "Failed to create the TODO.",
+    "update": "Failed to update the TODO.",
+    "delete": "Failed to delete the TODO."
+  }
+}

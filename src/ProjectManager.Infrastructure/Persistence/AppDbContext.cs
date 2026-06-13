@@ -23,6 +23,7 @@ public class AppDbContext(
     public DbSet<WbsDevInfoLink> WbsDevInfoLinks => Set<WbsDevInfoLink>();
     public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +57,8 @@ public class AppDbContext(
             // 모니터링 집계가 EndDate 범위·마일스톤으로 across-project 스캔 (MonitoringService 히트맵/차트) → 데이터 多 시 인덱스.
             e.HasIndex(x => x.EndDate);
             e.HasIndex(x => x.IsMilestone);
+            // 회고 번업·지연 집계가 CompletedDate 로 across-project 스캔 → 인덱스.
+            e.HasIndex(x => x.CompletedDate);
         });
 
         modelBuilder.Entity<WbsTemplate>(e =>
@@ -126,6 +129,8 @@ public class AppDbContext(
             e.HasIndex(x => x.AssigneeResourceId);
             // 히트맵·모니터링이 DueDate 범위로 across-project 필터 (MonitoringService) → 데이터 多 시 인덱스.
             e.HasIndex(x => x.DueDate);
+            // 회고 해결 소요·지연 집계가 ResolvedDate 로 across-project 스캔 → 인덱스.
+            e.HasIndex(x => x.ResolvedDate);
         });
 
         modelBuilder.Entity<IssueWbsLink>(e =>
@@ -180,6 +185,23 @@ public class AppDbContext(
             e.HasIndex(x => new { x.ProjectId, x.Timestamp });
             // prune 쿼리(전체 across)에서 Timestamp 단독 필터에도 인덱스 사용 가능하게.
             e.HasIndex(x => x.Timestamp);
+        });
+
+        modelBuilder.Entity<TodoItem>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 신규 enum 은 string 저장 (순서 변경 안전, SQL 가독성) — 기존 Meeting.Category/IssueWbsLink.Type 관례.
+            e.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).HasDefaultValue(TodoStatus.Open);
+            e.Property(x => x.Recurrence).HasConversion<string>().HasMaxLength(16).HasDefaultValue(TodoRecurrence.None);
+            // 담당자 리소스 삭제 시 TODO 본체는 보존하고 담당자만 비운다.
+            e.HasOne(x => x.AssigneeResource).WithMany().HasForeignKey(x => x.AssigneeResourceId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => x.Status);
+            e.HasIndex(x => x.DueDate);
+            e.HasIndex(x => x.AssigneeResourceId);
         });
     }
 

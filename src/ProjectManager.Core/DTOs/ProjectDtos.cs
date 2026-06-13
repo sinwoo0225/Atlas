@@ -7,21 +7,22 @@ public record ProjectDto(
     ProjectStatus Status,
     DateTime? StartDate, DateTime? EndDate, decimal? Budget,
     string Participants, string Deliverables, string RelatedLinks,
-    string FolderPath, string GitRepoPath, DateTime CreatedAt, DateTime UpdatedAt);
+    string FolderPath, string GitRepoPath, DateTime CreatedAt, DateTime UpdatedAt,
+    DateTime? CompletedDate = null);
 
 public record CreateProjectDto(
     string Name, string Category, string Description, string Goal,
     ProjectStatus Status,
     DateTime? StartDate, DateTime? EndDate, decimal? Budget,
     string Participants, string Deliverables, string RelatedLinks,
-    string? GitRepoPath = null);
+    string? GitRepoPath = null, DateTime? CompletedDate = null);
 
 public record UpdateProjectDto(
     string Name, string Category, string Description, string Goal,
     ProjectStatus Status,
     DateTime? StartDate, DateTime? EndDate, decimal? Budget,
     string Participants, string Deliverables, string RelatedLinks,
-    string? GitRepoPath = null);
+    string? GitRepoPath = null, DateTime? CompletedDate = null);
 
 public record ProjectDashboardDto(
     ProjectDto Project,

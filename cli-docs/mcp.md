@@ -33,9 +33,9 @@ claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
 기본 `claude-code-mcp` — 활동 페이지에서 CLI(`claude-code`)와 분리 추적.
 
 ## 검증
-Claude Code 재시작 후 `/mcp` → `atlas` connected + **57 tools**.
+Claude Code 재시작 후 `/mcp` → `atlas` connected + **65 tools**.
 
-## 도구 목록 (57개 — CLI verb 와 대응)
+## 도구 목록 (65개 — CLI verb 와 대응)
 
 | 도구 군 | 개수 | 비고 |
 |---|---|---|
@@ -47,7 +47,8 @@ Claude Code 재시작 후 `/mcp` → `atlas` connected + **57 tools**.
 | `atlas_changelog_*` | 5 | list 에 impacts/from/to/source* /keyword + 셰이핑 |
 | `atlas_worklog_*` (week/upsert) | 2 | |
 | `atlas_devinfo_*` (+ tags) | 6 | list 에 types/tags/updated*/keyword + 셰이핑 |
-| `atlas_resource_*` (+ assignments) | 6 | 전역. list 에 type/department/keyword + 셰이핑 |
+| `atlas_resource_*` (+ assignments, **resolve**) | 7 | 전역. `resolve` = 이름으로 Person 찾기/생성(멱등, '나' 신원 통일) |
+| `atlas_todo_*` (list/get/create/update/complete/delete) + **`atlas_my_work`** | 7 | 독립 TODO(+반복) + 통합 '내 업무'(미완 WBS/이슈/TODO) |
 | `atlas_wbs_devinfo_links` / `atlas_devinfo_wbs_links` / `atlas_wbs_link_devinfo` / `atlas_wbs_unlink_devinfo` | 4 | WBS ↔ 업무 정보 연결 |
 | `atlas_wbs_issue_links` / `atlas_issue_wbs_links` / `atlas_issue_link_wbs` / `atlas_issue_unlink_wbs` | 4 | Issue ↔ WBS 연결 (type: RelatesTo/Blocks/ParentOf) |
 | `atlas_search` | 1 | 전체 텍스트 검색(엔티티 횡단) |

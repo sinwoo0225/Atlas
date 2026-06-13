@@ -66,7 +66,8 @@ public static class IssueTools
         [Description("Low|Medium|High (기본 Medium)")] IssuePriority? priority = null,
         [Description("담당자 Resource ID")] int? assigneeResourceId = null,
         [Description("마감일 YYYY-MM-DD")] DateTime? dueDate = null,
-        [Description("발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)")] DateTime? occurredOn = null) =>
+        [Description("발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)")] DateTime? occurredOn = null,
+        [Description("해결일(실적) YYYY-MM-DD — 생략 시 Resolved/Closed 면 오늘 자동")] DateTime? resolvedDate = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateIssueDto(
             ProjectId: projectId,
             Title: title,
@@ -75,7 +76,8 @@ public static class IssueTools
             Priority: priority ?? IssuePriority.Medium,
             AssigneeResourceId: assigneeResourceId,
             DueDate: dueDate,
-            OccurredOn: occurredOn)));
+            OccurredOn: occurredOn,
+            ResolvedDate: resolvedDate)));
 
     [McpServerTool(Name = "atlas_issue_update"),
      Description("이슈 부분 갱신 — null 인 필드는 기존 값 유지")]
@@ -84,7 +86,8 @@ public static class IssueTools
         string? title = null, string? description = null,
         IssueStatus? status = null, IssuePriority? priority = null,
         int? assigneeResourceId = null, DateTime? dueDate = null,
-        DateTime? occurredOn = null)
+        DateTime? occurredOn = null,
+        [Description("해결일(실적) YYYY-MM-DD — Resolved/Closed 전환 시 자동, 직접 보정 가능")] DateTime? resolvedDate = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Issue {id} 없음");
@@ -95,7 +98,8 @@ public static class IssueTools
             Priority: priority ?? existing.Priority,
             AssigneeResourceId: assigneeResourceId ?? existing.AssigneeResourceId,
             DueDate: dueDate ?? existing.DueDate,
-            OccurredOn: occurredOn ?? existing.OccurredOn)));
+            OccurredOn: occurredOn ?? existing.OccurredOn,
+            ResolvedDate: resolvedDate ?? existing.ResolvedDate)));
     }
 
     [McpServerTool(Name = "atlas_issue_delete"),

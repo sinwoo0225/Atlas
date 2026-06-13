@@ -32,9 +32,11 @@ atlas-cli project create --name "..."
    --status Waiting|InProgress|Done|Maintenance
    --start YYYY-MM-DD --end YYYY-MM-DD --budget DEC
    --participants "..." --deliverables "..." --links "..."
-   --git "C:\path\to\repo"]      # 레거시 깃 경로(현재는 업무 정보 GitRepo 타입 권장 — devinfo.md)
+   --git "C:\path\to\repo"      # 레거시 깃 경로(현재는 업무 정보 GitRepo 타입 권장 — devinfo.md)
+   --completed YYYY-MM-DD]
 atlas-cli project update --id N [...]    # 부분 갱신
 atlas-cli project delete --id N
 ```
 
 > status 기본 Waiting. `--git` 는 레거시 — 깃 이력은 이제 업무 정보의 GitRepo 타입으로 관리(여러 저장소 가능).
+> **계획 vs 실적**: `--start`/`--end` = 계획 일자. `--completed`(completedDate) = 실제 완료일 — Done 전환 시 오늘로 자동 스탬프·직접 보정 가능·해제 시 클리어. 프로젝트 회고(완료 프로젝트 비교)의 지연 측정 기준.

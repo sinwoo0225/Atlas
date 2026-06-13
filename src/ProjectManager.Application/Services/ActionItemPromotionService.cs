@@ -63,7 +63,7 @@ public class ActionItemPromotionService(
             full.Id, full.ProjectId, full.Title, full.Description,
             full.Status, full.Priority,
             full.AssigneeResourceId, full.AssigneeResource?.Name,
-            full.DueDate, full.OccurredOn, full.CreatedAt, full.UpdatedAt);
+            full.DueDate, full.OccurredOn, full.CreatedAt, full.UpdatedAt, full.ResolvedDate);
     }
 
     public async Task<WbsItemDto> PromoteToWbsAsync(int meetingId, string actionItemId)
@@ -119,7 +119,7 @@ public class ActionItemPromotionService(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
             item.Status, item.IsMilestone, item.Importance, item.Notes,
-            item.CreatedAt, item.UpdatedAt, item.SortOrder, null);
+            item.CreatedAt, item.UpdatedAt, item.SortOrder, item.CompletedDate, null);
     }
 
     private static (JsonArray Items, JsonObject Target) FindActionItem(string raw, string actionItemId)

@@ -61,7 +61,8 @@ public static class ProjectTools
         [Description("참여자 (자유 문자열)")] string? participants = null,
         [Description("산출물")] string? deliverables = null,
         [Description("관련 링크 (줄바꿈 구분)")] string? relatedLinks = null,
-        [Description("git 저장소 경로 (git 이력 보기용, 절대 경로). 열람은 데스크톱 앱 전용.")] string? gitRepoPath = null) =>
+        [Description("git 저장소 경로 (git 이력 보기용, 절대 경로). 열람은 데스크톱 앱 전용.")] string? gitRepoPath = null,
+        [Description("완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동")] DateTime? completedDate = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateProjectDto(
             Name: name,
             Category: category ?? string.Empty,
@@ -74,7 +75,8 @@ public static class ProjectTools
             Participants: participants ?? string.Empty,
             Deliverables: deliverables ?? string.Empty,
             RelatedLinks: relatedLinks ?? string.Empty,
-            GitRepoPath: gitRepoPath)));
+            GitRepoPath: gitRepoPath,
+            CompletedDate: completedDate)));
 
     [McpServerTool(Name = "atlas_project_update"),
      Description("프로젝트 부분 갱신 — null 인 필드는 기존 값 유지")]
@@ -85,7 +87,8 @@ public static class ProjectTools
         DateTime? startDate = null, DateTime? endDate = null,
         decimal? budget = null,
         string? participants = null, string? deliverables = null, string? relatedLinks = null,
-        [Description("git 저장소 경로 (미지정 시 기존 값 유지)")] string? gitRepoPath = null)
+        [Description("git 저장소 경로 (미지정 시 기존 값 유지)")] string? gitRepoPath = null,
+        [Description("완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능")] DateTime? completedDate = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Project {id} 없음");
@@ -101,7 +104,8 @@ public static class ProjectTools
             Participants: participants ?? existing.Participants,
             Deliverables: deliverables ?? existing.Deliverables,
             RelatedLinks: relatedLinks ?? existing.RelatedLinks,
-            GitRepoPath: gitRepoPath ?? existing.GitRepoPath)));
+            GitRepoPath: gitRepoPath ?? existing.GitRepoPath,
+            CompletedDate: completedDate ?? existing.CompletedDate)));
     }
 
     [McpServerTool(Name = "atlas_project_delete"),

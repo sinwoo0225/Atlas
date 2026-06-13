@@ -16,7 +16,8 @@
     "priority": "Priority",
     "assignee": "Assignee",
     "occurred": "Occurred",
-    "due": "Due"
+    "due": "Due",
+    "resolved": "Resolved (actual)"
   },
   "empty": {
     "title": "No issues.",
@@ -33,6 +34,7 @@
     "viewSourceChangelogAria": "View {{count}} sourced change log entries",
     "changeStatus": "Change status",
     "changePriority": "Change priority",
+    "resolvedHint": "Set automatically when resolved/closed. You can adjust it to the real resolution date.",
     "unassigned": "-- Unassigned --",
     "descriptionLabel": "Description (markdown, rendered on blur)"
   },

@@ -44,7 +44,7 @@ atlas-cli wbs list --project 1 --open --brief --limit 30
 atlas-cli wbs get --id N
 atlas-cli wbs create --project N --name "..."
   [--parent N --version V --assignee "..." --start YYYY-MM-DD --end YYYY-MM-DD
-   --status Planned --milestone --importance 2 (--order 별칭) --notes "..."]
+   --status Planned --milestone --importance 2 (--order 별칭) --notes "..." --completed YYYY-MM-DD]
 atlas-cli wbs update --id N [...]                # 부분 갱신
 atlas-cli wbs move --id N (--parent N | --root)  # subtree 이동, SortOrder 자동 재계산
 atlas-cli wbs delete --id N                      # 회의록 ActionItem.promotedWbsItemId 자동 정리
@@ -52,6 +52,7 @@ atlas-cli wbs delete --id N                      # 회의록 ActionItem.promoted
 
 > SortOrder 는 생성 시 시작일 그룹 끝에 자동 부여. root 로 옮기려면 `move --root`(update 로는 불가).
 > 리프(자식 없는) 항목 완료 시 업무일지 '한 일'에 자동 기록.
+> **계획 vs 실적**: `--start`/`--end` = 계획 일자. `--completed`(completedDate) = 실제 완료일 — Done 전환 시 오늘로 자동 스탬프되며 직접 보정 가능(완료 처리가 늦은 경우). Done 에서 벗어나면 클리어. 계획 종료(`--end`) 대비 지연 측정 기준(회고).
 
 ## 연결 (관련 정보·이슈)
 

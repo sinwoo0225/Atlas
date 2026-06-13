@@ -131,7 +131,8 @@ public class ProjectService(
             Participants = dto.Participants,
             Deliverables = dto.Deliverables,
             RelatedLinks = dto.RelatedLinks,
-            GitRepoPath = dto.GitRepoPath ?? string.Empty
+            GitRepoPath = dto.GitRepoPath ?? string.Empty,
+            CompletedDate = dto.CompletedDate ?? (dto.Status == ProjectStatus.Done ? DateTime.Today : null)
         };
         project.FolderPath = pathResolver.GetProjectFolder(project.Name);
         return ToDto(await projectRepo.CreateAsync(project));
@@ -141,6 +142,7 @@ public class ProjectService(
     {
         var project = await projectRepo.GetByIdAsync(id);
         if (project is null) return null;
+        var wasDone = project.Status == ProjectStatus.Done;
         project.Name = dto.Name;
         project.Category = dto.Category ?? string.Empty;
         project.Description = dto.Description;
@@ -153,6 +155,12 @@ public class ProjectService(
         project.Deliverables = dto.Deliverables;
         project.RelatedLinks = dto.RelatedLinks;
         project.GitRepoPath = dto.GitRepoPath ?? string.Empty;
+        // 완료일(실적): 클라값 우선. Done 진입 시 없으면 오늘, 벗어나면 클리어.
+        project.CompletedDate = dto.CompletedDate;
+        if (!wasDone && dto.Status == ProjectStatus.Done && project.CompletedDate is null)
+            project.CompletedDate = DateTime.Today;
+        else if (wasDone && dto.Status != ProjectStatus.Done)
+            project.CompletedDate = null;
         return ToDto(await projectRepo.UpdateAsync(project));
     }
 
@@ -236,13 +244,13 @@ public class ProjectService(
         p.Id, p.Name, p.Category, p.Description, p.Goal, p.Status,
         p.StartDate, p.EndDate, p.Budget,
         p.Participants, p.Deliverables, p.RelatedLinks,
-        p.FolderPath, p.GitRepoPath, p.CreatedAt, p.UpdatedAt);
+        p.FolderPath, p.GitRepoPath, p.CreatedAt, p.UpdatedAt, p.CompletedDate);
 
     internal static WbsItemDto WbsToDto(WbsItem w) => new(
         w.Id, w.ProjectId, w.VersionId, w.ParentId,
         w.Name, w.Assignee, w.StartDate, w.EndDate,
         w.Status, w.IsMilestone, w.Importance, w.Notes,
-        w.CreatedAt, w.UpdatedAt, w.SortOrder, null);
+        w.CreatedAt, w.UpdatedAt, w.SortOrder, w.CompletedDate, null);
 
     internal static ChangeLogDto ChangeLogToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,
@@ -267,7 +275,7 @@ public class ProjectService(
         i.Id, i.ProjectId, i.Title, i.Description,
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
-        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt);
+        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate);
 
     // ============== Import (백업 zip → 단일 프로젝트 머지) ==============
     // 백업 zip 안 db/projectmanager.db 에서 import 가능한 프로젝트 목록 미리보기.
@@ -581,6 +589,7 @@ public class ProjectService(
             Deliverables = src.Deliverables ?? string.Empty,
             RelatedLinks = src.RelatedLinks ?? string.Empty,
             FolderPath = folder,
+            CompletedDate = src.CompletedDate,
         };
         db.Projects.Add(newProject);
         await db.SaveChangesAsync(ct);
@@ -632,6 +641,7 @@ public class ProjectService(
             Importance = w.Importance,
             SortOrder = w.SortOrder,
             Notes = w.Notes ?? string.Empty,
+            CompletedDate = w.CompletedDate,
         }).ToList();
         db.WbsItems.AddRange(newItems);
         await db.SaveChangesAsync(ct);
@@ -688,6 +698,7 @@ public class ProjectService(
                 AssigneeResourceId = assignee,
                 DueDate = i.DueDate,
                 OccurredOn = i.OccurredOn,
+                ResolvedDate = i.ResolvedDate,
             };
         }).ToList();
         db.Issues.AddRange(newIssues);

@@ -17,6 +17,9 @@ export interface AppSettings {
   autoSelectLastProject: boolean;
   lastProjectId: number | null;
   defaultAuthor: string;
+  // '나' 신원 — defaultAuthor 이름으로 resolve 한 Person 리소스 ID. TODO('내 업무') 집계의 기준.
+  // 설정에서 내 이름을 저장할 때 /resources/resolve 로 채워진다. null 이면 미연동.
+  myResourceId: number | null;
   markdownFontSize: number;
   markdownLineHeight: number;
   sidebarCollapsed: boolean;
@@ -61,6 +64,7 @@ const defaults: AppSettings = {
   autoSelectLastProject: true,
   lastProjectId: null,
   defaultAuthor: '',
+  myResourceId: null,
   markdownFontSize: 14,
   markdownLineHeight: 1.7,
   sidebarCollapsed: false,

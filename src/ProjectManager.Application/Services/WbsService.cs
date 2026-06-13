@@ -44,6 +44,8 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
             Status = dto.Status, IsMilestone = dto.IsMilestone,
             Importance = dto.Importance, Notes = dto.Notes,
             SortOrder = nextSortOrder,
+            // 완료 상태로 생성되면 완료일도 함께(명시값 우선, 없으면 오늘).
+            CompletedDate = dto.CompletedDate ?? (dto.Status == WbsStatus.Done ? DateTime.Today : null),
         };
         return ToDto(await repo.CreateAsync(item), []);
     }
@@ -94,6 +96,13 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Importance = dto.Importance;
         if (!parentChanged) item.SortOrder = dto.SortOrder;
         item.Notes = dto.Notes;
+        // 완료일(실적): 클라가 보낸 값을 우선 반영(수동 보정·명시적 클리어 라운드트립).
+        // Done 진입 시 값이 없으면 오늘로 자동 스탬프. Done 에서 벗어나면 클리어.
+        item.CompletedDate = dto.CompletedDate;
+        if (!wasDone && dto.Status == WbsStatus.Done && item.CompletedDate is null)
+            item.CompletedDate = DateTime.Today;
+        else if (wasDone && dto.Status != WbsStatus.Done)
+            item.CompletedDate = null;
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
         // 리프(자식 없음)만 업무일지 자동 등록 — 자식이 있는 상위 업무는 요약 노드라 완료해도 등록 제외.
         // item 은 GetByIdAsync 로 .Include(Children) 로드되어 추가 쿼리 없이 판별 가능.
@@ -115,7 +124,8 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         if (item.Status == status) return true;
         var dto = new UpdateWbsItemDto(
             item.ParentId, item.Name, item.Assignee, item.StartDate, item.EndDate,
-            status, item.IsMilestone, item.Importance, item.Notes, item.SortOrder, item.UpdatedAt);
+            status, item.IsMilestone, item.Importance, item.Notes, item.SortOrder,
+            item.CompletedDate, item.UpdatedAt);
         await UpdateAsync(id, dto);
         return true;
     }
@@ -154,6 +164,7 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Status, item.IsMilestone, item.Importance, item.Notes,
         item.CreatedAt, item.UpdatedAt,
         item.SortOrder,
+        item.CompletedDate,
         item.Children?.Select(c => ToDto(c, all)));
 
     // 평면 결과용 — Children 을 null 로 둬 출력에서 생략(WhenWritingNull). 계층은 ParentId 로 표현.
@@ -163,6 +174,7 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Status, item.IsMilestone, item.Importance, item.Notes,
         item.CreatedAt, item.UpdatedAt,
         item.SortOrder,
+        item.CompletedDate,
         null);
 
     private static WbsVersionDto ToVersionDto(WbsVersion v) => new(

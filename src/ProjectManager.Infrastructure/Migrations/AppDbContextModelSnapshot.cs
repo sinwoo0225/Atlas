@@ -212,6 +212,9 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.Property<int>("ProjectId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Status")
                         .HasColumnType("INTEGER");
 
@@ -236,6 +239,8 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.HasIndex("DueDate");
 
                     b.HasIndex("ProjectId");
+
+                    b.HasIndex("ResolvedDate");
 
                     b.ToTable("Issues");
                 });
@@ -375,6 +380,9 @@ namespace ProjectManager.Infrastructure.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("");
 
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -494,6 +502,78 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.ToTable("Resources");
                 });
 
+            modelBuilder.Entity("ProjectManager.Core.Domain.TodoItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("AssigneeResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Recurrence")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("None");
+
+                    b.Property<int>("RecurrenceInterval")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Open");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssigneeResourceId");
+
+                    b.HasIndex("DueDate");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("TodoItems");
+                });
+
             modelBuilder.Entity("ProjectManager.Core.Domain.WbsDevInfoLink", b =>
                 {
                     b.Property<int>("Id")
@@ -541,6 +621,9 @@ namespace ProjectManager.Infrastructure.Migrations
 
                     b.Property<string>("Assignee")
                         .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -597,6 +680,8 @@ namespace ProjectManager.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CompletedDate");
 
                     b.HasIndex("EndDate");
 
@@ -820,6 +905,16 @@ namespace ProjectManager.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Project");
+                });
+
+            modelBuilder.Entity("ProjectManager.Core.Domain.TodoItem", b =>
+                {
+                    b.HasOne("ProjectManager.Core.Domain.Resource", "AssigneeResource")
+                        .WithMany()
+                        .HasForeignKey("AssigneeResourceId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("AssigneeResource");
                 });
 
             modelBuilder.Entity("ProjectManager.Core.Domain.WbsDevInfoLink", b =>

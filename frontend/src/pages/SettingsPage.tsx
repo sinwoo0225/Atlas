@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { openShortcutsModal } from '../data/shortcuts';
 import { aiApi } from '../api/ai';
+import { resourcesApi } from '../api/resources';
 import {
   loadSettings,
   saveSettings,
@@ -117,6 +118,19 @@ export function SettingsPage() {
 
   const update = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [k]: v }));
+  };
+
+  // '나' 신원 통일 — 작성자 이름을 입력하고 포커스를 벗어나면 같은 이름의 Person 리소스를 찾거나 생성해
+  // myResourceId 를 연동한다(멱등). 작성자·담당자·TODO 집계 주체가 한 리소스로 묶인다. 저장 시 persist.
+  const resolveMyResource = async () => {
+    const name = settings.defaultAuthor.trim();
+    if (!name) { update('myResourceId', null); return; }
+    try {
+      const r = await resourcesApi.resolve(name);
+      update('myResourceId', r.id);
+    } catch {
+      // resolve 실패는 무시 — 저장 자체는 막지 않음.
+    }
   };
 
   const updateColor = (key: keyof BaseColors, v: string) =>
@@ -533,10 +547,11 @@ export function SettingsPage() {
           </label>
         </FormField>
 
-        <FormField label={t('settings:behavior.defaultAuthor')}>
+        <FormField label={t('settings:behavior.defaultAuthor')} hint={t('settings:behavior.defaultAuthorHint')}>
           <input
             value={settings.defaultAuthor}
             onChange={(e) => update('defaultAuthor', e.target.value)}
+            onBlur={resolveMyResource}
             placeholder={t('settings:behavior.defaultAuthorPlaceholder')}
             className={inputClass}
           />

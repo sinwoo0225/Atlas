@@ -12,8 +12,12 @@ public class Project : IAuditable
     public string Description { get; set; } = string.Empty;
     public string Goal { get; set; } = string.Empty;
     public ProjectStatus Status { get; set; } = ProjectStatus.Waiting;
+    // StartDate/EndDate 는 '계획' 일자(목표 시작·완료). 실적은 CompletedDate.
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    // 완료 일자(실적). Status 가 Done 으로 전환될 때 자동 스탬프(DateTime.Today), 직접 수정 가능.
+    // Done 에서 벗어나면 클리어. 프로젝트 회고의 계획 대비 지연 측정 기준.
+    public DateTime? CompletedDate { get; set; }
     public decimal? Budget { get; set; }
     public string Participants { get; set; } = string.Empty;
     public string Deliverables { get; set; } = string.Empty;

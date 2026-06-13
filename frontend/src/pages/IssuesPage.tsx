@@ -303,6 +303,7 @@ export function IssuesPage() {
               <th className="text-left py-3 px-3 font-medium w-48">{t('issues:th.assignee')}</th>
               <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.occurred')}</th>
               <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.due')}</th>
+              <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.resolved')}</th>
               <th className="text-left py-3 px-3 font-medium w-16"></th>
             </tr>
           </thead>
@@ -395,10 +396,12 @@ function IssueRow({
   const [title, setTitle] = useState(issue.title);
   const [dueDate, setDueDate] = useState(issue.dueDate?.slice(0, 10) ?? '');
   const [occurredOn, setOccurredOn] = useState(issue.occurredOn?.slice(0, 10) ?? '');
+  const [resolvedDate, setResolvedDate] = useState(issue.resolvedDate?.slice(0, 10) ?? '');
 
   useEffect(() => { setTitle(issue.title); }, [issue.title]);
   useEffect(() => { setDueDate(issue.dueDate?.slice(0, 10) ?? ''); }, [issue.dueDate]);
   useEffect(() => { setOccurredOn(issue.occurredOn?.slice(0, 10) ?? ''); }, [issue.occurredOn]);
+  useEffect(() => { setResolvedDate(issue.resolvedDate?.slice(0, 10) ?? ''); }, [issue.resolvedDate]);
 
   return (
     <>
@@ -515,6 +518,22 @@ function IssueRow({
           </div>
         </td>
         <td className="py-2 px-3">
+          <div className="relative">
+            <input
+              type="date"
+              value={resolvedDate}
+              onChange={(e) => setResolvedDate(e.target.value)}
+              onBlur={() => onUpdate(issue.id, 'resolvedDate', resolvedDate || undefined)}
+              title={t('issues:row.resolvedHint')}
+              className={`${ghostFieldClass} text-xs pr-6`}
+            />
+            <DirtyDot
+              visible={resolvedDate !== (issue.resolvedDate?.slice(0, 10) ?? '')}
+              className="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none"
+            />
+          </div>
+        </td>
+        <td className="py-2 px-3">
           <button
             onClick={(e) => onDelete(issue.id, e)}
             className="p-1 text-on-danger hover:opacity-80 transition-opacity"
@@ -527,7 +546,7 @@ function IssueRow({
       {expanded && (
         <tr className="border-b border-default bg-surface-2/30">
           <td />
-          <td colSpan={6} className="py-3 px-3 pr-4 space-y-3">
+          <td colSpan={7} className="py-3 px-3 pr-4 space-y-3">
             <div>
               <p className="text-xs text-muted font-medium mb-1">{t('issues:row.descriptionLabel')}</p>
               <DescriptionField

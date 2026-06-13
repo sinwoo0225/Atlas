@@ -26,7 +26,9 @@ import { loadSettings } from '../store/settings';
 // 라벨은 nav 네임스페이스 재사용(설정 아이콘 피커에서 t(labelKey) 로 해석).
 export const MENU_ICON_SLOTS: { slot: string; labelKey: string; default: string }[] = [
   { slot: '/', labelKey: 'nav:projects', default: 'FolderOpen' },
+  { slot: '/todos', labelKey: 'nav:todos', default: 'ListTodo' },
   { slot: '/monitoring', labelKey: 'nav:monitoring', default: 'BarChart3' },
+  { slot: '/retrospective', labelKey: 'nav:retrospective', default: 'History' },
   { slot: '/activity', labelKey: 'nav:activity', default: 'Activity' },
   { slot: '/resources', labelKey: 'nav:resources', default: 'Users' },
   { slot: '/wbs-templates', labelKey: 'nav:wbsTemplates', default: 'ClipboardList' },

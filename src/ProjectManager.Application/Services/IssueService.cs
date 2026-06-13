@@ -28,7 +28,8 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
             Priority = dto.Priority,
             AssigneeResourceId = dto.AssigneeResourceId,
             DueDate = dto.DueDate,
-            OccurredOn = dto.OccurredOn
+            OccurredOn = dto.OccurredOn,
+            ResolvedDate = dto.ResolvedDate ?? (IsCompleted(dto.Status) ? DateTime.Today : null)
         };
         var created = await repo.CreateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(created.Id))!;
@@ -51,6 +52,12 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         issue.AssigneeResourceId = dto.AssigneeResourceId;
         issue.DueDate = dto.DueDate;
         issue.OccurredOn = dto.OccurredOn;
+        // 해결일(실적): 클라값 우선(수동 보정·명시적 클리어). 완료(Resolved/Closed) 진입 시 없으면 오늘, 벗어나면 클리어.
+        issue.ResolvedDate = dto.ResolvedDate;
+        if (!wasCompleted && IsCompleted(dto.Status) && issue.ResolvedDate is null)
+            issue.ResolvedDate = DateTime.Today;
+        else if (wasCompleted && !IsCompleted(dto.Status))
+            issue.ResolvedDate = null;
         var updated = await repo.UpdateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(updated.Id))!;
         if (!wasCompleted && IsCompleted(updated.Status))
@@ -70,7 +77,8 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         if (issue is null) return false;
         if (issue.Status == status) return true;
         var dto = new UpdateIssueDto(
-            issue.Title, issue.Description, status, issue.Priority, issue.AssigneeResourceId, issue.DueDate, issue.OccurredOn);
+            issue.Title, issue.Description, status, issue.Priority, issue.AssigneeResourceId,
+            issue.DueDate, issue.OccurredOn, issue.ResolvedDate);
         await UpdateAsync(id, dto);
         return true;
     }
@@ -90,5 +98,5 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         i.Id, i.ProjectId, i.Title, i.Description,
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
-        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt);
+        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate);
 }

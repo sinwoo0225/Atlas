@@ -106,9 +106,10 @@ internal static class IssueCommands
         var assignOpt = new Option<int?>("--assignee", "Resource ID (담당자)");
         var dueOpt = new Option<DateTime?>("--due", "마감일 YYYY-MM-DD");
         var occurredOpt = new Option<DateTime?>("--occurred", "발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)");
+        var resolvedOpt = new Option<DateTime?>("--resolved", "해결일(실적) YYYY-MM-DD — 생략 시 Resolved/Closed 면 오늘 자동");
 
         var c = new Command("create", "이슈 생성")
-        { projOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt };
+        { projOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt, resolvedOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -120,7 +121,8 @@ internal static class IssueCommands
                 Priority: pr.GetValueForOption(prioOpt) ?? IssuePriority.Medium,
                 AssigneeResourceId: pr.GetValueForOption(assignOpt),
                 DueDate: pr.GetValueForOption(dueOpt),
-                OccurredOn: pr.GetValueForOption(occurredOpt));
+                OccurredOn: pr.GetValueForOption(occurredOpt),
+                ResolvedDate: pr.GetValueForOption(resolvedOpt));
             var svc = services.GetRequiredService<IssueService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -137,9 +139,10 @@ internal static class IssueCommands
         var assignOpt = new Option<int?>("--assignee", "Resource ID (담당자)");
         var dueOpt = new Option<DateTime?>("--due", "마감일 YYYY-MM-DD");
         var occurredOpt = new Option<DateTime?>("--occurred", "발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)");
+        var resolvedOpt = new Option<DateTime?>("--resolved", "해결일(실적) YYYY-MM-DD — Resolved/Closed 전환 시 자동, 직접 보정 가능");
 
         var c = new Command("update", "이슈 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt };
+        { idOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt, resolvedOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -154,7 +157,8 @@ internal static class IssueCommands
                 Priority: pr.GetValueForOption(prioOpt) ?? existing.Priority,
                 AssigneeResourceId: pr.GetValueForOption(assignOpt) ?? existing.AssigneeResourceId,
                 DueDate: pr.GetValueForOption(dueOpt) ?? existing.DueDate,
-                OccurredOn: pr.GetValueForOption(occurredOpt) ?? existing.OccurredOn);
+                OccurredOn: pr.GetValueForOption(occurredOpt) ?? existing.OccurredOn,
+                ResolvedDate: pr.GetValueForOption(resolvedOpt) ?? existing.ResolvedDate);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;

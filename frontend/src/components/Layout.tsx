@@ -21,7 +21,9 @@ import { useActiveProjectId } from '../hooks/useActiveProjectId';
 // key = nav 네임스페이스의 i18n 키. 라벨은 렌더 시점에 t('nav:'+key) 로 해석.
 const navItems = [
   { path: '/', key: 'projects' },
+  { path: '/todos', key: 'todos' },
   { path: '/monitoring', key: 'monitoring' },
+  { path: '/retrospective', key: 'retrospective' },
   { path: '/activity', key: 'activity' },
   { path: '/resources', key: 'resources' },
   { path: '/wbs-templates', key: 'wbsTemplates' },

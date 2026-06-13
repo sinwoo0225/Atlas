@@ -1,0 +1,51 @@
+{
+  "title": "Project retrospective",
+  "subtitle": "Pick several completed projects to compare schedule delay, issues and pace — useful when planning your next project's schedule.",
+  "select": {
+    "title": "Select completed projects ({{count}}/{{max}})",
+    "none": "No projects are marked Done yet. Completed projects show up here."
+  },
+  "empty": {
+    "title": "Select projects to compare.",
+    "desc": "Pick one or more completed projects above to see the comparison."
+  },
+  "table": {
+    "project": "Project",
+    "delay": "Delay",
+    "wbsLate": "Late tasks",
+    "issues": "Issues",
+    "density": "Issue density",
+    "resolution": "Avg resolution"
+  },
+  "unit": {
+    "day": "d",
+    "week": "wk"
+  },
+  "priority": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "chart": {
+    "delayTitle": "Schedule delay (vs planned end)",
+    "delayDesc": "How many days actual completion ran past the planned end. Negative = finished early.",
+    "delayDays": "Delay (days)",
+    "delayTip": "{{days}} days late ({{ratio}}% of plan)",
+    "burnTitle": "Pace (burn-up S-curve)",
+    "burnDesc": "x = % of planned time elapsed, y = % completed. Below the diagonal (ideal) means the schedule slipped.",
+    "elapsedPct": "Elapsed %",
+    "donePct": "Done %",
+    "ideal": "Ideal",
+    "burnTip": "Elapsed {{elapsed}}% · Done {{done}}%",
+    "issuesTitle": "Issues raised (by priority)",
+    "issuesDesc": "Issue count per project, stacked by priority.",
+    "resolutionTitle": "Avg issue resolution time",
+    "resolutionDesc": "Average days from occurrence (or created) to resolution.",
+    "resolutionDays": "Days",
+    "resolutionTip": "Avg {{days}} days ({{count}} samples)"
+  },
+  "error": {
+    "loadProjects": "Failed to load projects.",
+    "load": "Failed to load retrospective data."
+  }
+}

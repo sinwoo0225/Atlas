@@ -10,8 +10,12 @@ public class WbsItem : IAuditable
     public int? ParentId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Assignee { get; set; } = string.Empty;
+    // StartDate/EndDate 는 '계획' 일자. 실적(실제 완료)은 CompletedDate 로 별도 기록.
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    // 완료 일자(실적). Status 가 Done 으로 전환될 때 자동 스탬프(DateTime.Today), 사용자가 직접 수정 가능
+    // (완료 처리가 늦어진 경우 실제 완료일로 보정). Done 에서 벗어나면 클리어. 계획 종료(EndDate) 대비 지연 측정의 기준.
+    public DateTime? CompletedDate { get; set; }
     public WbsStatus Status { get; set; } = WbsStatus.Planned;
     public bool IsMilestone { get; set; }
     // 사이클 14 — Order 분리. Importance = 중요도 (1=낮음/2=중간/3=높음, 기본 2).

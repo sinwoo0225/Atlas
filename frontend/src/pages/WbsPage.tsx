@@ -53,7 +53,7 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
 type WbsFormData = {
   name: string; assignee: string; startDate: string; endDate: string;
   status: string; isMilestone: boolean; importance: string; notes: string;
-  parentId: number | null;
+  parentId: number | null; completedDate: string;
 };
 
 function WbsItemForm({
@@ -78,6 +78,7 @@ function WbsItemForm({
     importance: (initial?.importance ?? 2).toString(),
     notes: initial?.notes ?? '',
     parentId: initial?.parentId ?? parentId ?? null,
+    completedDate: initial?.completedDate?.slice(0, 10) ?? '',
   };
   const [form, setForm] = useState<WbsFormData>(initialForm);
   const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(initialForm));
@@ -105,6 +106,7 @@ function WbsItemForm({
       startDate: form.startDate || null, endDate: form.endDate || null,
       status: form.status as WbsStatus, isMilestone: form.isMilestone,
       importance: parseInt(form.importance) || 2, notes: form.notes,
+      completedDate: form.completedDate || null,
       ...(initial ? { updatedAt: snapshotUpdatedAt, sortOrder: initial.sortOrder } : {}),
     };
     if (initial) {
@@ -133,6 +135,7 @@ function WbsItemForm({
                     importance: (fresh.importance ?? 2).toString(),
                     notes: fresh.notes ?? '',
                     parentId: fresh.parentId ?? null,
+                    completedDate: fresh.completedDate?.slice(0, 10) ?? '',
                   };
                   setForm(freshForm);
                   setInitialSnapshot(JSON.stringify(freshForm));
@@ -212,6 +215,9 @@ function WbsItemForm({
                 <option value="InProgress">{t('status:wbs.InProgress')}</option>
                 <option value="Done">{t('status:wbs.Done')}</option>
               </select>
+            </FormField>
+            <FormField label={t('wbs:form.completedDate')} hint={t('wbs:form.completedHint')}>
+              <input type="date" value={form.completedDate} onChange={(e) => set('completedDate', e.target.value)} className={inputClass} />
             </FormField>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.isMilestone} onChange={(e) => set('isMilestone', e.target.checked)} className="rounded" />
@@ -537,12 +543,14 @@ function DateEditModal({
   const { t } = useTranslation();
   const [start, setStart] = useState(item.startDate?.slice(0, 10) ?? '');
   const [end, setEnd] = useState(item.endDate?.slice(0, 10) ?? '');
+  const [completed, setCompleted] = useState(item.completedDate?.slice(0, 10) ?? '');
 
   const handleSave = async () => {
     await wbsApi.update(projectId, item.id, {
       ...item,
       startDate: start || undefined,
       endDate: end || undefined,
+      completedDate: completed || undefined,
     });
     onSave();
   };
@@ -566,6 +574,9 @@ function DateEditModal({
         </FormField>
         <FormField label={t('wbs:form.endDate')}>
           <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className={inputClass} />
+        </FormField>
+        <FormField label={t('wbs:form.completedDate')} hint={t('wbs:form.completedHint')}>
+          <input type="date" value={completed} onChange={(e) => setCompleted(e.target.value)} className={inputClass} />
         </FormField>
       </div>
     </Modal>

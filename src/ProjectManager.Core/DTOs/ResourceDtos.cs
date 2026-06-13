@@ -19,3 +19,6 @@ public record ResourceAssignmentDto(
     int WbsItemId, int ProjectId, string ProjectName,
     string WbsItemName, DateTime? StartDate, DateTime? EndDate,
     WbsStatus Status);
+
+// '나' 신원 통일 — 설정의 내 이름으로 Person 리소스를 찾거나 생성.
+public record ResolveResourceDto(string Name);

@@ -32,7 +32,7 @@ atlas-cli issue list --project 1 --overdue --brief
 atlas-cli issue get --id N
 atlas-cli issue create --project N --title "..."
   [--description "..." --status Open --priority Medium
-   --assignee RESOURCE_ID --due YYYY-MM-DD --occurred YYYY-MM-DD]
+   --assignee RESOURCE_ID --due YYYY-MM-DD --occurred YYYY-MM-DD --resolved YYYY-MM-DD]
 atlas-cli issue update --id N [위 옵션 중 변경할 것만]    # 부분 갱신
 atlas-cli issue delete --id N                            # 회의록 ActionItem.promotedIssueId 자동 정리
 atlas-cli issue wbs-links --id N                         # 이 이슈에 연결된 WBS 항목 목록
@@ -42,3 +42,4 @@ atlas-cli issue wbs-links --id N                         # 이 이슈에 연결�
 
 > create/update 의 `--assignee` 는 **Resource ID**(int). list 의 담당자 필터는 `--assignee-id`(정확) / `--assignee-name`(이름 부분일치)로 분리돼 있다.
 > status 기본 Open, priority 기본 Medium. 신규 이슈는 등록 당일 업무일지 '이슈' 필드에 자동 추가, 완료(Resolved/Closed) 전환 시 '한 일'에 자동 기록.
+> **계획 vs 실적**: `--due` = 계획 마감일. `--resolved`(resolvedDate) = 실제 해결일 — Resolved/Closed 전환 시 오늘로 자동 스탬프되며 직접 보정 가능(완료 처리가 늦은 경우). 완료 상태에서 벗어나면 클리어. 회고의 지연·해결 소요 측정 기준.

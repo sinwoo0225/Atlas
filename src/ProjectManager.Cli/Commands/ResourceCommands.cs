@@ -19,7 +19,21 @@ internal static class ResourceCommands
         cmd.AddCommand(BuildUpdate(services));
         cmd.AddCommand(BuildDelete(services));
         cmd.AddCommand(BuildAssignments(services));
+        cmd.AddCommand(BuildResolve(services));
         return cmd;
+    }
+
+    private static Command BuildResolve(IServiceProvider services)
+    {
+        var nameOpt = new Option<string>("--name", "이름") { IsRequired = true };
+        var c = new Command("resolve", "이름으로 Person 리소스 찾기/없으면 생성 (멱등) — '나' 신원 통일용") { nameOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var name = ctx.ParseResult.GetValueForOption(nameOpt)!;
+            var svc = services.GetRequiredService<ResourceService>();
+            CliJson.WriteSuccess(await svc.GetOrCreateByNameAsync(name));
+        }));
+        return c;
     }
 
     private static Command BuildList(IServiceProvider services)

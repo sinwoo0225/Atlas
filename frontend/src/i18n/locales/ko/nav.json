@@ -1,6 +1,8 @@
 {
   "projects": "프로젝트 목록",
+  "todos": "내 업무",
   "monitoring": "통합 모니터링",
+  "retrospective": "프로젝트 회고",
   "activity": "전체 활동",
   "resources": "리소스 관리",
   "wbsTemplates": "일정 템플릿",

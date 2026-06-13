@@ -53,6 +53,7 @@ function ProjectForm({
     deliverables: initial?.deliverables ?? '',
     relatedLinks: initial?.relatedLinks ?? '',
     gitRepoPath: initial?.gitRepoPath ?? '',
+    completedDate: initial?.completedDate?.slice(0, 10) ?? '',
   };
   const [form, setForm] = useState(initialForm);
   const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
@@ -67,6 +68,7 @@ function ProjectForm({
     budget: form.budget ? parseFloat(form.budget) : undefined,
     startDate: form.startDate || undefined,
     endDate: form.endDate || undefined,
+    completedDate: form.completedDate || undefined,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 폼 문자열 budget/date 를 변환한 payload, onSave 타입과 구조 동일
   } as any);
 
@@ -126,6 +128,9 @@ function ProjectForm({
                 <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
               </FormField>
             </div>
+            <FormField label={t('projects:form.completedDate')} hint={t('projects:form.completedHint')}>
+              <input type="date" value={form.completedDate} onChange={(e) => set('completedDate', e.target.value)} className={inputClass} />
+            </FormField>
             <FormField label={t('projects:form.budget')}>
               <input type="number" value={form.budget} onChange={(e) => set('budget', e.target.value)} className={inputClass} />
             </FormField>

@@ -18,6 +18,7 @@
 | **빠른 조회 레시피** — "진행 중 업무", "오늘 기간 내", "미해결 이슈", "작업 컨텍스트" 등 자연어→명령 | [`cli-docs/query-cookbook.md`](./cli-docs/query-cookbook.md) |
 | 이슈 조회/필터/CRUD | [`cli-docs/issue.md`](./cli-docs/issue.md) |
 | WBS 조회/필터/트리/CRUD | [`cli-docs/wbs.md`](./cli-docs/wbs.md) |
+| **내 업무(my-work)** — 독립 TODO + 미완 WBS/이슈 통합·반복 TODO | [`cli-docs/todo.md`](./cli-docs/todo.md) |
 | 프로젝트 조회/필터/CRUD | [`cli-docs/project.md`](./cli-docs/project.md) |
 | 회의록 조회/필터/CRUD + ActionItems | [`cli-docs/meeting.md`](./cli-docs/meeting.md) |
 | 변경이력 조회/필터/CRUD | [`cli-docs/changelog.md`](./cli-docs/changelog.md) |
@@ -36,12 +37,13 @@ atlas-cli issue    list|get|create|update|delete                      # cli-docs
 atlas-cli wbs      list|get|create|update|move|delete                 # cli-docs/wbs.md
 atlas-cli wbs      context --id W                                     # ⭐ 작업 종합 컨텍스트 한 방
 atlas-cli wbs      devinfo-links|issue-links|link-devinfo|link-issue|unlink-*  # 연결
+atlas-cli todo     list|get|create|update|complete|delete|my-work     # cli-docs/todo.md  ⭐ 내 업무 통합
 atlas-cli template list|get|create|update|delete|apply|from-project   # cli-docs/template.md
 atlas-cli meeting  list|get|create|update|delete                      # cli-docs/meeting.md
 atlas-cli changelog list|get|create|update|delete                     # cli-docs/changelog.md
 atlas-cli worklog  week|upsert                                        # cli-docs/worklog.md
 atlas-cli devinfo  list|get|create|update|delete|tags                 # cli-docs/devinfo.md
-atlas-cli resource list|get|create|update|delete|assignments          # cli-docs/resource.md
+atlas-cli resource list|get|create|update|delete|assignments|resolve  # cli-docs/resource.md
 atlas-cli search   <query> [--project N] [--type ...] [--limit N]     # cli-docs/search.md
 ```
 

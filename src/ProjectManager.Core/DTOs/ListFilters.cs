@@ -117,3 +117,18 @@ public sealed record ResourceListFilter(
 {
     public static readonly ResourceListFilter None = new();
 }
+
+public sealed record TodoListFilter(
+    IReadOnlyList<TodoStatus>? Statuses = null,
+    int? AssigneeResourceId = null,
+    bool Open = false,
+    string? Keyword = null)
+{
+    public static readonly TodoListFilter None = new();
+
+    public bool IsEmpty =>
+        (Statuses is null || Statuses.Count == 0) &&
+        AssigneeResourceId is null &&
+        !Open &&
+        string.IsNullOrWhiteSpace(Keyword);
+}

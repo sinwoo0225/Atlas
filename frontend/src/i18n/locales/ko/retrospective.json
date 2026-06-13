@@ -1,0 +1,51 @@
+{
+  "title": "프로젝트 회고",
+  "subtitle": "완료한 프로젝트를 여러 개 골라 계획 대비 지연·이슈·진행 속도를 비교하고, 다음 프로젝트 일정 수립에 참고하세요.",
+  "select": {
+    "title": "완료 프로젝트 선택 ({{count}}/{{max}})",
+    "none": "완료(Done) 상태의 프로젝트가 없습니다. 프로젝트를 완료 처리하면 여기에 나타납니다."
+  },
+  "empty": {
+    "title": "비교할 프로젝트를 선택하세요.",
+    "desc": "위에서 완료 프로젝트를 하나 이상 고르면 비교 분석이 표시됩니다."
+  },
+  "table": {
+    "project": "프로젝트",
+    "delay": "일정 지연",
+    "wbsLate": "지연 작업",
+    "issues": "이슈",
+    "density": "이슈 밀도",
+    "resolution": "평균 해결"
+  },
+  "unit": {
+    "day": "일",
+    "week": "주"
+  },
+  "priority": {
+    "high": "높음",
+    "medium": "보통",
+    "low": "낮음"
+  },
+  "chart": {
+    "delayTitle": "일정 지연 (계획 종료 대비)",
+    "delayDesc": "실제 완료일이 계획 종료일보다 얼마나 늦었는지(일). 음수면 앞당겨 완료.",
+    "delayDays": "지연(일)",
+    "delayTip": "지연 {{days}}일 (계획 대비 {{ratio}}%)",
+    "burnTitle": "진행 속도 (번업 S곡선)",
+    "burnDesc": "x=계획 기간 경과 %, y=누적 완료 %. 대각선(이상선)보다 아래면 일정이 뒤로 밀린 것.",
+    "elapsedPct": "기간 경과 %",
+    "donePct": "완료 %",
+    "ideal": "이상선",
+    "burnTip": "경과 {{elapsed}}% · 완료 {{done}}%",
+    "issuesTitle": "이슈 발생 (우선순위별)",
+    "issuesDesc": "프로젝트별 발생 이슈 수를 우선순위로 누적.",
+    "resolutionTitle": "평균 이슈 해결 소요",
+    "resolutionDesc": "발생일(없으면 등록일)부터 해결일까지 평균 일수.",
+    "resolutionDays": "해결(일)",
+    "resolutionTip": "평균 {{days}}일 (표본 {{count}}건)"
+  },
+  "error": {
+    "loadProjects": "프로젝트 목록을 불러오지 못했습니다.",
+    "load": "회고 데이터를 불러오지 못했습니다."
+  }
+}

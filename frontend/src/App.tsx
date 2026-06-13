@@ -15,6 +15,8 @@ import { SettingsPage } from './pages/SettingsPage';
 import { ResourcesPage } from './pages/ResourcesPage';
 import { WbsTemplatesPage } from './pages/WbsTemplatesPage';
 import { MonitoringPage } from './pages/MonitoringPage';
+import { TodosPage } from './pages/TodosPage';
+import { RetrospectivePage } from './pages/RetrospectivePage';
 import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
 import { ActivityPage } from './pages/ActivityPage';
@@ -105,7 +107,9 @@ export default function App() {
         <Route path="/widget" element={<WidgetDashboard />} />
         <Route element={<MainShell />}>
           <Route path="/" element={<ProjectList />} />
+          <Route path="/todos" element={<TodosPage />} />
           <Route path="/monitoring" element={<MonitoringPage />} />
+          <Route path="/retrospective" element={<RetrospectivePage />} />
           <Route path="/resources" element={<ResourcesPage />} />
           <Route path="/wbs-templates" element={<WbsTemplatesPage />} />
           <Route path="/activity" element={<ActivityPage />} />

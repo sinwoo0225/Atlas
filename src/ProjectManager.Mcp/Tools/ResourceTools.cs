@@ -85,4 +85,11 @@ public static class ResourceTools
      Description("이 리소스가 할당된 WBS 작업 목록 (Assignee 이름 매칭)")]
     public static async Task<string> Assignments(ResourceService svc, int id) =>
         McpJson.Serialize(await svc.GetAssignmentsAsync(id));
+
+    [McpServerTool(Name = "atlas_resource_resolve"),
+     Description("이름으로 Person 리소스를 찾고 없으면 생성해 반환(멱등). '나' 신원 통일·담당자 매핑용.")]
+    public static async Task<string> Resolve(
+        ResourceService svc,
+        [Description("이름")] string name) =>
+        McpJson.Serialize(await svc.GetOrCreateByNameAsync(name));
 }

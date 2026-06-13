@@ -4,6 +4,8 @@ export type DevInfoType = 'Markdown' | 'File' | 'Link' | 'GitRepo';
 // Planned 는 '대기/보류'(Waiting)로 통합 — 기존 데이터 호환 위해 타입엔 남기되 UI 옵션에선 미노출.
 export type ProjectStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done' | 'Maintenance';
 export type ProjectCategory = '과제' | '내부' | '사업';
+export type TodoStatus = 'Open' | 'Done';
+export type TodoRecurrence = 'None' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
 
 export interface Project {
   id: number;
@@ -22,6 +24,7 @@ export interface Project {
   gitRepoPath: string;
   createdAt: string;
   updatedAt: string;
+  completedDate?: string; // 실적 완료일 (Done 전환 시 자동, 수정 가능)
 }
 
 export interface ProjectDashboard {
@@ -104,6 +107,7 @@ export interface WbsItem {
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
+  completedDate?: string; // 실적 완료일 (StartDate/EndDate 는 계획). Done 전환 시 자동, 수정 가능.
   children?: WbsItem[];
 }
 
@@ -244,8 +248,73 @@ export interface Issue {
   assigneeName?: string | null;
   dueDate?: string;
   occurredOn?: string;
+  resolvedDate?: string; // 실적 해결일 (Resolved/Closed 전환 시 자동, 수정 가능)
   createdAt: string;
   updatedAt: string;
+}
+
+// 독립 TODO — 어느 프로젝트에도 속하지 않는 개인 할 일. 반복 설정 시 완료하면 다음 회차 자동 생성.
+export interface TodoItem {
+  id: number;
+  title: string;
+  notes: string;
+  assigneeResourceId?: number | null;
+  assigneeName?: string | null;
+  dueDate?: string;
+  status: TodoStatus;
+  completedDate?: string;
+  recurrence: TodoRecurrence;
+  recurrenceInterval: number;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 통합 '내 업무' 한 줄 — WBS/이슈/독립 TODO 를 한 리스트로 합친 결과.
+export interface MyWorkItem {
+  sourceType: 'wbs' | 'issue' | 'todo';
+  id: number;
+  projectId?: number | null;
+  projectName?: string | null;
+  title: string;
+  status: string;
+  priority?: string | null;
+  dueDate?: string | null;
+  completedDate?: string | null;
+  recurrence?: string | null;
+}
+
+// 프로젝트 회고 — 완료 프로젝트 비교 분석.
+export interface SCurvePoint {
+  elapsedPct: number;
+  donePct: number;
+}
+
+export interface ProjectRetrospective {
+  projectId: number;
+  projectName: string;
+  status: ProjectStatus;
+  plannedStart?: string | null;
+  plannedEnd?: string | null;
+  actualCompletion?: string | null;
+  scheduleDelayDays?: number | null;
+  scheduleDelayRatio?: number | null;
+  wbsTotal: number;
+  wbsDone: number;
+  wbsLatePastPlannedEnd: number;
+  wbsLateRatio: number;
+  issuesTotal: number;
+  issuesHigh: number;
+  issuesMedium: number;
+  issuesLow: number;
+  issueDensity?: number | null;
+  avgResolutionDays?: number | null;
+  resolutionSampleCount: number;
+  burnUp: SCurvePoint[];
+}
+
+export interface RetrospectiveData {
+  projects: ProjectRetrospective[];
 }
 
 export interface TodayWbs {

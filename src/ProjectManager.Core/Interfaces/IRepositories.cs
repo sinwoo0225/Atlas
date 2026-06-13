@@ -107,6 +107,18 @@ public interface IIssueRepository
     Task<IEnumerable<Issue>> GetOpenAcrossProjectsAsync();
 }
 
+// 독립 TODO(프로젝트 무관). expectedUpdatedAt 동시성 토큰은 WbsRepository 와 동일 패턴.
+public interface ITodoRepository
+{
+    Task<IEnumerable<TodoItem>> GetAllAsync(TodoListFilter? filter = null);
+    Task<TodoItem?> GetByIdAsync(int id);
+    Task<TodoItem> CreateAsync(TodoItem item);
+    Task<TodoItem> UpdateAsync(TodoItem item, DateTime? expectedUpdatedAt = null);
+    Task DeleteAsync(int id);
+    // '내 업무' 집계용 — 미완(Open) 독립 TODO. assigneeResourceId 지정 시 그 담당자만(null=전부). AssigneeResource 포함.
+    Task<IEnumerable<TodoItem>> GetOpenAsync(int? assigneeResourceId = null);
+}
+
 public interface IWorkLogRepository
 {
     Task<IEnumerable<WorkLog>> GetByProjectWeekAsync(int projectId, DateTime weekStart);
