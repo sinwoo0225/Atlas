@@ -27,6 +27,8 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 
 ## Features (bullets)
 - Project hub — card list + dashboard (overview, budget, members, D-day, recent activity)
+- My work (unified to-dos) — open tasks & issues across projects plus personal to-dos on one screen, recurring & one-click done
+- Project retrospective — compare completed projects (burn-up S-curve, slippage, issue density, avg resolution time)
 - WBS + Gantt chart — hierarchical task tree, milestones, status/priority, multi-assignee, linked work info & repos
 - Issue tracking — status (Open/In progress/Resolved/Closed) × priority, inline edits in the table
 - Meetings — internal/external, attendees, decisions, discussion, action items; auto Markdown export
@@ -43,11 +45,11 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Work info + Git repositories — "Dev info" broadened to "Work info"; register multiple Git repos per project with a commit graph
-- Link WBS ↔ Work info — attach documents, links, and repositories under a task's "Related info"
-- Meeting internal/external classification + 1:3 master-detail view (keyboard ↑/↓)
-- Visual hierarchy & consistency (unified sidebar, filter bar, Markdown width)
-- Stronger external automation & AI — targeted queries/updates via atlas-cli / MCP, plus a Claude Code skill
+- My work (unified to-dos) — open tasks & issues across projects plus personal to-dos on one screen, recurring & one-click done
+- Project retrospective — compare completed projects (burn-up S-curve, schedule slippage, issue density, avg resolution time)
+- Planned vs. actual dates — actual completion date tracked for tasks/issues/projects (existing schedule kept as "planned")
+- Personal to-dos stay yours — on a shared remote server, others' personal to-dos never appear, even in the "All" view
+- Redesigned sidebar — Main/Insights/Manage groups + an icon rail with an expandable menu to save vertical space while in a project
 
 ## Search terms (keywords)
 project management, WBS, gantt chart, meeting notes, issue tracker, local-first, productivity
