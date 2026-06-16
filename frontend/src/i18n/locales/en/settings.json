@@ -95,6 +95,10 @@
   },
   "about": {
     "title": "About",
+    "eula": "License (EULA)",
+    "eulaHint": "You may use this app for personal and commercial (business) purposes. Shows the full terms.",
+    "viewEula": "View license",
+    "eulaTitle": "End User License Agreement (EULA)",
     "licenses": "Open-source licenses",
     "licensesHint": "Atlas is built with the open-source components below. Their copyright and license notices are shown here.",
     "viewLicenses": "View licenses",

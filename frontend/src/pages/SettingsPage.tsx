@@ -8,6 +8,7 @@ import {
   Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon, FileText,
 } from 'lucide-react';
 import { openShortcutsModal } from '../data/shortcuts';
+import { EULA_KO, EULA_EN } from '../data/eula';
 import { aiApi } from '../api/ai';
 import { resourcesApi } from '../api/resources';
 import {
@@ -762,6 +763,9 @@ function AboutSection() {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // 사용권(EULA) 모달 — 전문을 번들 상수에서 직접 표시(fetch 없음 → 오프라인·모든 모드 보장).
+  const [eulaOpen, setEulaOpen] = useState(false);
+  const eulaText = i18n.language === 'en' ? EULA_EN : EULA_KO;
 
   const openModal = async () => {
     setOpen(true);
@@ -779,11 +783,28 @@ function AboutSection() {
 
   return (
     <Section title={t('settings:about.title')}>
+      <FormField label={t('settings:about.eula')} hint={t('settings:about.eulaHint')}>
+        <Button variant="secondary" size="md" onClick={() => setEulaOpen(true)} leadingIcon={<FileText size={14} />}>
+          {t('settings:about.viewEula')}
+        </Button>
+      </FormField>
       <FormField label={t('settings:about.licenses')} hint={t('settings:about.licensesHint')}>
         <Button variant="secondary" size="md" onClick={openModal} leadingIcon={<FileText size={14} />}>
           {t('settings:about.viewLicenses')}
         </Button>
       </FormField>
+      <Modal
+        open={eulaOpen}
+        onClose={() => setEulaOpen(false)}
+        title={t('settings:about.eulaTitle')}
+        size="xxl"
+        fixedHeight
+        showCloseButton
+      >
+        <div className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-auto text-sm leading-relaxed">
+          <ReactMarkdown>{eulaText}</ReactMarkdown>
+        </div>
+      </Modal>
       <Modal
         open={open}
         onClose={() => setOpen(false)}

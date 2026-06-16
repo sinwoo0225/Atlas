@@ -51,6 +51,10 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Personal to-dos stay yours — on a shared remote server, others' personal to-dos never appear, even in the "All" view
 - Redesigned sidebar — Main/Insights/Manage groups + an icon rail with an expandable menu to save vertical space while in a project
 
+## License (EULA)
+Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
+Note: Register the full EULA (repo `EULA.md`) in Partner Center's "Custom license terms/EULA" field so it applies instead of the standard (personal, non-commercial) terms. Without it, this statement has no effect.
+
 ## Search terms (keywords)
 project management, WBS, gantt chart, meeting notes, issue tracker, local-first, productivity
 

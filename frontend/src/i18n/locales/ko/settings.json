@@ -95,6 +95,10 @@
   },
   "about": {
     "title": "정보",
+    "eula": "사용권 (EULA)",
+    "eulaHint": "개인 및 상업적(업무) 용도로 사용할 수 있습니다. 전체 약관을 표시합니다.",
+    "viewEula": "사용권 보기",
+    "eulaTitle": "최종 사용자 사용권 계약 (EULA)",
     "licenses": "오픈소스 라이선스",
     "licensesHint": "Atlas 는 아래 오픈소스 구성요소를 사용합니다. 각 라이선스의 저작권·고지를 표시합니다.",
     "viewLicenses": "라이선스 보기",
