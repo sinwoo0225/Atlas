@@ -386,6 +386,20 @@ MakeWorkLog $pData 2 "- Grafana 대시보드 2종 추가" "- 이상 탐지 대�
 # Mobile 이번 주 1일 (킥오프만)
 MakeWorkLog $pMobile 0 "- 킥오프 회의 진행`n- 제품 명세서 v0.1 작성 시작" "- 디자인 시스템 모바일 어댑테이션 가이드 확보" "- 오프라인 모드 정책 미결"
 
+Write-Host '== 8) Personal TODOs (standalone) ==' -ForegroundColor Cyan
+$todoData = @(
+  @{ title='주간 보고서 작성';        notes='지난주 진행 + 이번주 계획 정리'; assigneeResourceId=(FindResId '윤서아'); dueDate=(Iso $today.AddDays(1));  status='Open'; recurrence='Weekly';  recurrenceInterval=1 }
+  @{ title='스토어 스크린샷 점검';     assigneeResourceId=(FindResId '최유나'); dueDate=(Iso $today.AddDays(2));  status='Open'; recurrence='None' }
+  @{ title='v1.5 릴리스 노트 초안';    assigneeResourceId=(FindResId '이서연'); dueDate=(Iso $today.AddDays(3));  status='Open'; recurrence='None' }
+  @{ title='의존성 업데이트 점검';     notes='월간 점검 — npm/nuget 보안 패치'; assigneeResourceId=(FindResId '박지훈'); dueDate=(Iso $today.AddDays(-1)); status='Open'; recurrence='Monthly'; recurrenceInterval=1 }
+  @{ title='백업 폴더 용량 확인';       assigneeResourceId=(FindResId '강하늘'); dueDate=(Iso $today.AddDays(5));  status='Open'; recurrence='None' }
+  @{ title='데모 환경 점검';            assigneeResourceId=(FindResId '정도현'); dueDate=(Iso $today.AddDays(4));  status='Open'; recurrence='None' }
+)
+foreach ($t in $todoData) {
+  $created = Post '/todos' $t
+  Write-Host "  + TODO $($t.title)"
+}
+
 Write-Host '== DONE ==' -ForegroundColor Green
 Write-Host "Created:"
 Write-Host "  Resources: $($resources.Count)"
