@@ -8,7 +8,9 @@ public class TodoService(
     ITodoRepository repo,
     IWbsRepository wbsRepo,
     IIssueRepository issueRepo,
-    IResourceRepository resourceRepo)
+    IResourceRepository resourceRepo,
+    ResourceService resourceService,
+    IActorAccessor actorAccessor)
 {
     public async Task<IEnumerable<TodoItemDto>> GetAllAsync(TodoListFilter? filter = null) =>
         (await repo.GetAllAsync(filter)).Select(ToDto);
@@ -24,11 +26,22 @@ public class TodoService(
         // SortOrder 자동 — 기존 항목 max+1 (없으면 0). 사용자 정렬은 이후 update 로.
         var all = await repo.GetAllAsync(TodoListFilter.None);
         var nextSort = all.Any() ? all.Max(x => x.SortOrder) + 1 : 0;
+
+        // 담당자 미지정이면 작성자(actor = 설정의 기본작성자/X-Atlas-Actor)에게 자동 귀속 —
+        // 개인 TODO 는 '항상 내 할 일' 개념. 신원이 리소스로 존재하도록 멱등 get-or-create.
+        var assigneeId = dto.AssigneeResourceId;
+        if (assigneeId is null)
+        {
+            var actor = actorAccessor.GetActor();
+            if (!string.IsNullOrWhiteSpace(actor))
+                assigneeId = (await resourceService.GetOrCreateByNameAsync(actor)).Id;
+        }
+
         var item = new TodoItem
         {
             Title = dto.Title,
             Notes = dto.Notes,
-            AssigneeResourceId = dto.AssigneeResourceId,
+            AssigneeResourceId = assigneeId,
             DueDate = dto.DueDate,
             Status = dto.Status,
             CompletedDate = dto.CompletedDate ?? (dto.Status == TodoStatus.Done ? DateTime.Today : null),
@@ -85,7 +98,8 @@ public class TodoService(
     }
 
     // 통합 '내 업무' — 내게 할당된 미완 WBS + 미해결 이슈 + 미완 독립 TODO 를 한 리스트로.
-    // assigneeResourceId 가 null 이면 필터 없이 전체(= '전체 보기').
+    // WBS/이슈: assigneeResourceId 가 null 이면 필터 없이 전체(= '전체 보기', 프로젝트 공유물).
+    // 개인 TODO: 개인 메모 성격이라 scope(mine/all) 와 무관하게 '항상 본인 것'만 노출.
     public async Task<MyWorkDto> GetMyWorkAsync(int? assigneeResourceId)
     {
         string? myName = null;
@@ -94,12 +108,28 @@ public class TodoService(
 
         var items = new List<MyWorkItemDto>();
 
-        // 1) 독립 TODO
-        foreach (var t in await repo.GetOpenAsync(assigneeResourceId))
+        // 1) 독립 TODO — '전체' 에서도 본인 것만. 본인 판정:
+        //    내 리소스에 할당됐거나(담당자 기준), 담당자 없이 내가 작성한 항목(레거시/무할당 보완).
+        //    '나' 리소스 id 는 전달된 assigneeResourceId, 없으면 actor(작성자) 이름으로 조회(읽기 — create 안 함).
+        var actor = actorAccessor.GetActor();
+        var myTodoResId = assigneeResourceId;
+        if (myTodoResId is null && !string.IsNullOrWhiteSpace(actor))
+            myTodoResId = (await resourceRepo.GetAllAsync())
+                .FirstOrDefault(r => r.Type == ResourceType.Person
+                    && string.Equals(r.Name, actor, StringComparison.OrdinalIgnoreCase))?.Id;
+
+        foreach (var t in await repo.GetOpenAsync(null))
+        {
+            var mine =
+                (myTodoResId is int tid && t.AssigneeResourceId == tid)
+                || (t.AssigneeResourceId is null && !string.IsNullOrWhiteSpace(actor)
+                    && string.Equals(t.CreatedBy, actor, StringComparison.OrdinalIgnoreCase));
+            if (!mine) continue;
             items.Add(new MyWorkItemDto(
                 "todo", t.Id, null, null, t.Title, t.Status.ToString(), null,
                 t.DueDate, t.CompletedDate,
                 t.Recurrence == TodoRecurrence.None ? null : t.Recurrence.ToString()));
+        }
 
         // 2) WBS (미완) — Assignee 자유문자열을 내 리소스 이름과 토큰 매칭.
         foreach (var w in await wbsRepo.GetOpenAcrossProjectsAsync())

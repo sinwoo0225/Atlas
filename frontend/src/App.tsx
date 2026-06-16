@@ -24,11 +24,28 @@ import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
-import { applyAppearance, loadSettings, seedDefaultAuthorIfEmpty } from './store/settings';
+import { applyAppearance, loadSettings, patchSettings, seedDefaultAuthorIfEmpty } from './store/settings';
 import i18n from './i18n';
 import { isCustomDark } from './utils/themeCustom';
 import { getMachineAccount } from './utils/hostBridge';
 import { systemApi, EXPECTED_API_VERSION } from './api/system';
+import { resourcesApi } from './api/resources';
+
+// '나' 신원 보정 — defaultAuthor 는 있는데 myResourceId 가 비면 한 번 resolve 해 저장.
+// 효과: 새 클라이언트도 '내 업무' 기본 보기가 본인 것으로 필터되고, 개인 TODO 가 본인에게 귀속된다.
+// (서버가 개인 TODO 를 actor 기준으로도 본인 것만 보여주므로 이건 UX 보조 — 실패해도 다음 부팅에 재시도.)
+async function ensureMyResourceId(): Promise<void> {
+  const cur = loadSettings();
+  if (cur.myResourceId != null) return;
+  const name = cur.defaultAuthor.trim();
+  if (!name) return;
+  try {
+    const r = await resourcesApi.resolve(name);
+    patchSettings({ myResourceId: r.id });
+  } catch {
+    // 백엔드 미연결 등 — 무시. 다음 부팅에 재시도.
+  }
+}
 
 // 메인 앱 셸 — 사이드바 Layout + 전역 컴포넌트 + 시작 시 핑/업데이트 체크.
 // 위젯(/widget)은 이 셸 밖에서 독립 렌더되므로 핑·업데이트 토스트·커맨드팔레트가 뜨지 않는다.
@@ -54,7 +71,10 @@ function MainShell() {
     if (s.defaultAuthor === '') {
       getMachineAccount().then((name) => {
         if (name) seedDefaultAuthorIfEmpty(name);
+        ensureMyResourceId();
       });
+    } else {
+      ensureMyResourceId();
     }
 
     // 시작 시 백엔드 ping — apiVersion 불일치 시 경고, 연결 실패 시 에러.
