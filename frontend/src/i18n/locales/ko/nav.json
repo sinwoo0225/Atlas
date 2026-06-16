@@ -1,4 +1,9 @@
 {
+  "group": {
+    "main": "주요",
+    "insights": "분석",
+    "manage": "관리"
+  },
   "projects": "프로젝트 목록",
   "todos": "내 업무",
   "monitoring": "통합 모니터링",
@@ -19,6 +24,8 @@
   "searchTitle": "검색 (Ctrl+K)",
   "sidebarExpand": "사이드바 펼치기",
   "sidebarCollapse": "사이드바 접기",
+  "railExpand": "통합 메뉴 펼치기",
+  "railCollapse": "통합 메뉴 접기",
   "widgetToggle": "위젯 토글",
   "widgetToggleTitle": "위젯 토글 (Ctrl+Alt+W)",
   "widgetDesktopOnly": "데스크톱 앱에서만 사용할 수 있어요"

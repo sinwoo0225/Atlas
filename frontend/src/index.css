@@ -265,6 +265,13 @@ html.light .cmd-hit mark {
   from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+/* 3행 사이드바의 통합 메뉴 모달 드로어 — 좌→우 슬라이드 인(분할 바가 우측으로 이동).
+   reduced-motion 시 위 미디어쿼리가 무력화. */
+@keyframes sidebar-drawer-in {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+.sidebar-drawer-in { animation: sidebar-drawer-in 200ms ease-out; }
 
 /* 접근성(WCAG 2.3.3): OS '동작 줄이기'(prefers-reduced-motion) 설정 시 애니메이션·트랜지션 최소화.
    전정기관 민감 사용자 보호. 0 이 아닌 0.01ms 로 둬 onTransitionEnd 등 이벤트는 보존. */

@@ -8,6 +8,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   LayoutGrid,
+  ChevronsRight,
+  ChevronsLeft,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { loadSettings, patchSettings } from '../store/settings';
@@ -19,14 +21,21 @@ import { useActiveProjectId } from '../hooks/useActiveProjectId';
 
 // path = iconRegistry 의 메뉴 슬롯키. 아이콘은 getMenuIcon(slot) 으로 조회(커스터마이즈 가능).
 // key = nav 네임스페이스의 i18n 키. 라벨은 렌더 시점에 t('nav:'+key) 로 해석.
-const navItems = [
-  { path: '/', key: 'projects' },
-  { path: '/todos', key: 'todos' },
-  { path: '/monitoring', key: 'monitoring' },
-  { path: '/retrospective', key: 'retrospective' },
-  { path: '/activity', key: 'activity' },
-  { path: '/resources', key: 'resources' },
-  { path: '/wbs-templates', key: 'wbsTemplates' },
+// 전역 메뉴는 빈도/성격별 3개 섹션으로 그룹화 — 헤더 라벨은 t('nav:group.'+groupKey).
+const navGroups = [
+  { groupKey: 'main', items: [
+    { path: '/', key: 'projects' },
+    { path: '/todos', key: 'todos' },
+  ] },
+  { groupKey: 'insights', items: [
+    { path: '/monitoring', key: 'monitoring' },
+    { path: '/retrospective', key: 'retrospective' },
+    { path: '/activity', key: 'activity' },
+  ] },
+  { groupKey: 'manage', items: [
+    { path: '/resources', key: 'resources' },
+    { path: '/wbs-templates', key: 'wbsTemplates' },
+  ] },
 ];
 
 const projectNavItems = [
@@ -186,138 +195,293 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [selectedProjectId]);
 
-  const linkClass = (active: boolean) =>
-    `flex items-center gap-2 ${collapsed ? 'px-2 justify-center' : 'px-3'} py-2 rounded-lg text-sm transition-colors border-l-2 ${
+  // 프로젝트 작업 중(펼침+프로젝트 선택)에는 3행 레이아웃 — 2행이 좌(전역 아이콘 레일)+우(프로젝트 라벨 메인).
+  const dualPane = !collapsed && !!selectedProject;
+
+  // 통합(전역) 메뉴 펼침 — 명시적 확장 버튼으로 토글하는 모달 드로어(호버 아님, 미영속).
+  const [integratedExpanded, setIntegratedExpanded] = useState(false);
+  const expandBtnRef = useRef<HTMLButtonElement | null>(null);
+  const closeIntegrated = () => {
+    setIntegratedExpanded(false);
+    // 닫힐 때 트리거(확장 버튼)로 포커스 복귀 — 키보드 맥락 유지.
+    requestAnimationFrame(() => expandBtnRef.current?.focus());
+  };
+  // 드로어가 열려 있을 때 Esc 로 닫기.
+  useEffect(() => {
+    if (!integratedExpanded) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIntegratedExpanded(false);
+        requestAnimationFrame(() => expandBtnRef.current?.focus());
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [integratedExpanded]);
+  // dual 상태를 벗어나면(접힘/프로젝트 해제) 드로어 상태 초기화.
+  useEffect(() => { if (!dualPane) setIntegratedExpanded(false); }, [dualPane]);
+
+  const linkClass = (active: boolean, iconOnly: boolean) =>
+    `flex items-center gap-2 ${iconOnly ? 'px-2 justify-center' : 'px-3'} py-2 rounded-lg text-sm transition-colors border-l-2 ${
       active
         ? 'bg-accent-soft text-accent font-medium border-accent'
         : 'text-secondary hover:bg-surface-2 border-transparent'
     }`;
 
-  return (
-    <div className="flex h-screen bg-base text-primary">
-      <aside className={`${collapsed ? 'w-14' : 'w-60'} bg-sidebar sidebar-edge border-r border-default flex flex-col shrink-0 transition-all`}>
-        {/* collapsed (56px) 에서는 로고/버튼 세로 스택 — 가로 justify-between 으로는 w-full 로고가 버튼을 밀어냄. */}
-        <div className={`py-4 border-b border-default ${collapsed ? 'px-2 flex flex-col items-center gap-2' : 'px-4 flex items-center justify-between gap-2'}`}>
-          {collapsed ? (
-            <h1 className="text-xl leading-none tracking-tight">
-              <span className="logo-primary">{brand.primary.slice(0, 1) || 'A'}</span>
-              <span className="logo-accent">{brand.accent.slice(0, 1) || 't'}</span>
-            </h1>
-          ) : (
-            <div className="min-w-0">
-              <h1 className="text-2xl leading-none tracking-tight">
-                <span className="logo-primary">{brand.primary}</span><span className="logo-accent">{brand.accent}</span>
-              </h1>
-              <p className="text-[11px] text-muted mt-1 tracking-wide">The map of your projects</p>
-            </div>
-          )}
+  // ---- 공유 렌더 헬퍼 (접힘/무프로젝트/2단 3상태가 같은 링크 마크업을 재사용) ----
+  const renderGlobalGroups = (iconOnly: boolean) =>
+    navGroups.map((group, gi) => (
+      <div key={group.groupKey} className="space-y-1">
+        {!iconOnly ? (
+          <div className={gi === 0 ? 'pb-1' : 'pt-3 pb-1'}>
+            <p className="text-[10px] text-muted px-3 font-medium uppercase tracking-wider">
+              {t('nav:group.' + group.groupKey)}
+            </p>
+          </div>
+        ) : (
+          gi > 0 && <div className="border-t border-default mt-2 mb-1" />
+        )}
+        {group.items.map(({ path, key }) => {
+          const active = location.pathname === path;
+          const label = t('nav:' + key);
+          return (
+            <Link
+              key={path}
+              to={path}
+              className={linkClass(active, iconOnly)}
+              aria-current={active ? 'page' : undefined}
+              title={iconOnly ? label : undefined}
+              aria-label={iconOnly ? label : undefined}
+            >
+              <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
+              {!iconOnly && label}
+            </Link>
+          );
+        })}
+      </div>
+    ));
+
+  const renderProjectMenu = (iconOnly: boolean) =>
+    projectNavItems.map(({ path, key }) => {
+      const fullPath = `/projects/${selectedProjectId}/${path}`;
+      const active = location.pathname === fullPath;
+      const label = t('nav:' + key);
+      return (
+        <Link
+          key={path}
+          to={fullPath}
+          className={linkClass(active, iconOnly)}
+          aria-current={active ? 'page' : undefined}
+          title={iconOnly ? label : undefined}
+          aria-label={iconOnly ? label : undefined}
+        >
+          <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
+          {!iconOnly && label}
+        </Link>
+      );
+    });
+
+  const renderBottom = (iconOnly: boolean) => (
+    <>
+      {(() => {
+        const bridge = isHostBridgeAvailable();
+        return (
           <button
             type="button"
-            onClick={toggleCollapsed}
-            title={`${t(collapsed ? 'nav:sidebarExpand' : 'nav:sidebarCollapse')} (Ctrl+B)`}
-            aria-label={t(collapsed ? 'nav:sidebarExpand' : 'nav:sidebarCollapse')}
-            className="p-1 text-muted hover:text-primary transition-colors shrink-0"
+            onClick={() => toggleWidget()}
+            disabled={!bridge}
+            title={bridge ? t('nav:widgetToggleTitle') : t('nav:widgetDesktopOnly')}
+            aria-label={t('nav:widgetToggle')}
+            className={`${linkClass(false, iconOnly)} w-full disabled:opacity-40 disabled:cursor-not-allowed`}
           >
-            {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+            <LayoutGrid size={16} />
+            {!iconOnly && t('nav:widget')}
           </button>
-        </div>
+        );
+      })()}
+      {(() => {
+        const active = location.pathname === '/settings';
+        return (
+          <Link
+            to="/settings"
+            className={linkClass(active, iconOnly)}
+            aria-current={active ? 'page' : undefined}
+            title={iconOnly ? t('nav:settings') : undefined}
+            aria-label={iconOnly ? t('nav:settings') : undefined}
+          >
+            <MenuIcon slot="settings" overrides={brand.menuIcons} size={16} />
+            {!iconOnly && t('nav:settings')}
+          </Link>
+        );
+      })()}
+    </>
+  );
 
+  const logoMark = (
+    <h1 className="text-xl leading-none tracking-tight">
+      <span className="logo-primary">{brand.primary.slice(0, 1) || 'A'}</span>
+      <span className="logo-accent">{brand.accent.slice(0, 1) || 't'}</span>
+    </h1>
+  );
+  const logoFull = (
+    <div className="min-w-0">
+      <h1 className="text-2xl leading-none tracking-tight">
+        <span className="logo-primary">{brand.primary}</span><span className="logo-accent">{brand.accent}</span>
+      </h1>
+      <p className="text-[11px] text-muted mt-1 tracking-wide">The map of your projects</p>
+    </div>
+  );
+  const collapseBtn = (
+    <button
+      type="button"
+      onClick={toggleCollapsed}
+      title={`${t(collapsed ? 'nav:sidebarExpand' : 'nav:sidebarCollapse')} (Ctrl+B)`}
+      aria-label={t(collapsed ? 'nav:sidebarExpand' : 'nav:sidebarCollapse')}
+      className="p-1 text-muted hover:text-primary transition-colors shrink-0"
+    >
+      {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+    </button>
+  );
+  const searchIconBtn = (
+    <button
+      type="button"
+      onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, bubbles: true }))}
+      title={t('nav:searchTitle')}
+      aria-label={t('search')}
+      className={`${linkClass(false, true)} w-full`}
+    >
+      <Search size={16} />
+    </button>
+  );
+
+  // ---- 상태 ①접힘 / ②펼침-무프로젝트: 단일 컬럼 (기존 동작 유지) ----
+  const singleColumn = (
+    <aside className={`${collapsed ? 'w-14' : 'w-60'} bg-sidebar sidebar-edge border-r border-default flex flex-col shrink-0 transition-all`}>
+      {/* collapsed (56px) 에서는 로고/버튼 세로 스택 — 가로 justify-between 으로는 w-full 로고가 버튼을 밀어냄. */}
+      <div className={`py-4 border-b border-default ${collapsed ? 'px-2 flex flex-col items-center gap-2' : 'px-4 flex items-center justify-between gap-2'}`}>
+        {collapsed ? logoMark : logoFull}
+        {collapseBtn}
+      </div>
+
+      {!collapsed && (
+        <div className="px-3 pt-3">
+          <SearchTrigger />
+        </div>
+      )}
+
+      <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
+        {renderGlobalGroups(collapsed)}
+
+        {/* 프로젝트 선택 드롭다운 — 펼침 상태에서만(무프로젝트일 때 프로젝트 고르기). */}
         {!collapsed && (
-          <div className="px-3 pt-3">
-            <SearchTrigger />
+          <div className="px-1 pt-3">
+            <ProjectSwitcher />
           </div>
         )}
 
-        <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
-          {navItems.map(({ path, key }) => {
-            const active = location.pathname === path;
-            const label = t('nav:' + key);
-            return (
-              <Link
-                key={path}
-                to={path}
-                className={linkClass(active)}
-                aria-current={active ? 'page' : undefined}
-                title={collapsed ? label : undefined}
+        {/* 접힘 + 프로젝트 선택: 프로젝트 메뉴를 아이콘으로. (펼침+프로젝트는 dualPane 분기로 빠짐) */}
+        {collapsed && selectedProject && (
+          <>
+            <div className="border-t border-default mt-3 mb-1" />
+            {renderProjectMenu(true)}
+          </>
+        )}
+      </nav>
+
+      <div className={`${collapsed ? 'p-2' : 'p-3'} border-t border-default space-y-1`}>
+        {renderBottom(collapsed)}
+      </div>
+    </aside>
+  );
+
+  // ---- 상태 ③ 펼침 + 프로젝트 선택: 3행(브랜드 / 2열 / 하단) + 통합 메뉴 모달 드로어 ----
+  // 1·3행은 전폭, 2행만 좌(전역 아이콘 레일)+우(프로젝트 메인). 확장 버튼으로 통합 메뉴가
+  // 프로젝트 위로 펼쳐지고(드로어), 우측 peek 는 scrim 음영으로 하위 계층임을 표시.
+  const dualPaneSidebar = (
+    <aside className="w-[248px] shrink-0 h-screen bg-sidebar sidebar-edge border-r border-default flex flex-col">
+      {/* 1행 — 브랜드 + 열림/닫힘 (전폭) */}
+      <div className="py-4 px-4 border-b border-default flex items-center justify-between gap-2">
+        {logoFull}
+        {collapseBtn}
+      </div>
+
+      {/* 2행 — 좌 전역 아이콘 레일 / 우 프로젝트 메뉴(메인). 통합 펼침 시 드로어+scrim 오버레이. */}
+      <div className="relative flex-1 flex min-h-0">
+        {/* 좌: 통합 레일 (아이콘). relative — 우측 경계 확장 핸들의 기준. */}
+        <div className="relative w-14 shrink-0 border-r border-default flex flex-col">
+          <div className="px-2 pt-3 pb-1">{searchIconBtn}</div>
+          <nav className="flex-1 px-2 pt-1 pb-3 space-y-1 overflow-y-auto">
+            {renderGlobalGroups(true)}
+          </nav>
+          {/* 확장 핸들 — 레일↔프로젝트 분할선 우측 경계·세로 중앙. ▶=오른쪽으로 펼침. */}
+          {!integratedExpanded && (
+            <button
+              ref={expandBtnRef}
+              type="button"
+              onClick={() => setIntegratedExpanded(true)}
+              aria-expanded={integratedExpanded}
+              title={t('nav:railExpand')}
+              aria-label={t('nav:railExpand')}
+              className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 z-20 h-7 w-5 rounded-full bg-surface border border-default shadow-sm flex items-center justify-center text-muted hover:text-primary hover:bg-surface-2 transition-colors"
+            >
+              <ChevronsRight size={13} />
+            </button>
+          )}
+        </div>
+
+        {/* 우: 프로젝트 패널 (메인) */}
+        <div className="flex-1 min-w-0 flex flex-col">
+          <div className="px-3 py-3 border-b border-default">
+            <ProjectSwitcher />
+          </div>
+          <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
+            {renderProjectMenu(false)}
+          </nav>
+        </div>
+
+        {/* 통합 메뉴 모달 드로어 — 확장 버튼으로 열림. 프로젝트 영역을 덮고 우측 peek 는 scrim 음영. */}
+        {integratedExpanded && (
+          <>
+            <div
+              className="modal-fade-in absolute inset-y-0 right-0 left-14 z-30 bg-black/40"
+              onClick={closeIntegrated}
+              aria-hidden="true"
+            />
+            <div className="sidebar-drawer-in absolute inset-y-0 left-0 w-48 z-40 bg-sidebar sidebar-edge border-r border-default shadow-xl flex flex-col">
+              <div className="px-3 pt-3 pb-1">
+                <SearchTrigger />
+              </div>
+              <nav
+                className="flex-1 px-2 pt-2 pb-3 space-y-1 overflow-y-auto"
+                onClick={(e) => { if ((e.target as HTMLElement).closest('a')) closeIntegrated(); }}
               >
-                <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
-                {!collapsed && label}
-              </Link>
-            );
-          })}
-
-          {/* 프로젝트 선택 드롭다운 — 루트 메뉴와 프로젝트 메뉴 사이. 아래 프로젝트 메뉴를 제어함을 시각적으로 연결. */}
-          {!collapsed && (
-            <div className="px-1 pt-3">
-              <ProjectSwitcher />
-            </div>
-          )}
-
-          {selectedProject && (
-            <>
-              {!collapsed && (
-                <div className="pt-3 pb-1">
-                  <p className="text-[10px] text-muted px-3 font-medium uppercase tracking-wider">
-                    {t('projectMenu')}
-                  </p>
-                </div>
-              )}
-              {collapsed && <div className="border-t border-default mt-3 mb-1" />}
-              {projectNavItems.map(({ path, key }) => {
-                const fullPath = `/projects/${selectedProjectId}/${path}`;
-                const active = location.pathname === fullPath;
-                const label = t('nav:' + key);
-                return (
-                  <Link
-                    key={path}
-                    to={fullPath}
-                    className={linkClass(active)}
-                    aria-current={active ? 'page' : undefined}
-                    title={collapsed ? label : undefined}
-                  >
-                    <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
-                    {!collapsed && label}
-                  </Link>
-                );
-              })}
-            </>
-          )}
-        </nav>
-
-        <div className={`${collapsed ? 'p-2' : 'p-3'} border-t border-default space-y-1`}>
-          {(() => {
-            const bridge = isHostBridgeAvailable();
-            return (
+                {renderGlobalGroups(false)}
+              </nav>
+              {/* 축소 핸들 — 드로어 우측 경계·세로 중앙. ◀=접기. 드로어와 함께 슬라이드(분할선을 탐). */}
               <button
                 type="button"
-                onClick={() => toggleWidget()}
-                disabled={!bridge}
-                title={bridge ? t('nav:widgetToggleTitle') : t('nav:widgetDesktopOnly')}
-                aria-label={t('nav:widgetToggle')}
-                className={`${linkClass(false)} w-full disabled:opacity-40 disabled:cursor-not-allowed`}
+                onClick={closeIntegrated}
+                title={t('nav:railCollapse')}
+                aria-label={t('nav:railCollapse')}
+                className="absolute top-1/2 right-0 -translate-y-1/2 translate-x-1/2 z-50 h-7 w-5 rounded-full bg-surface border border-default shadow-sm flex items-center justify-center text-muted hover:text-primary hover:bg-surface-2 transition-colors"
               >
-                <LayoutGrid size={16} />
-                {!collapsed && t('nav:widget')}
+                <ChevronsLeft size={13} />
               </button>
-            );
-          })()}
-          {(() => {
-            const active = location.pathname === '/settings';
-            return (
-              <Link
-                to="/settings"
-                className={linkClass(active)}
-                aria-current={active ? 'page' : undefined}
-                title={collapsed ? t('nav:settings') : undefined}
-              >
-                <MenuIcon slot="settings" overrides={brand.menuIcons} size={16} />
-                {!collapsed && t('nav:settings')}
-              </Link>
-            );
-          })()}
-        </div>
-      </aside>
+            </div>
+          </>
+        )}
+      </div>
 
+      {/* 3행 — 위젯 / 설정 (전폭) */}
+      <div className="p-3 border-t border-default space-y-1">
+        {renderBottom(false)}
+      </div>
+    </aside>
+  );
+
+  return (
+    <div className="flex h-screen bg-base text-primary">
+      {dualPane ? dualPaneSidebar : singleColumn}
       <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );

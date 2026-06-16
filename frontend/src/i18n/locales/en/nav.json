@@ -1,4 +1,9 @@
 {
+  "group": {
+    "main": "Main",
+    "insights": "Insights",
+    "manage": "Manage"
+  },
   "projects": "Projects",
   "todos": "My work",
   "monitoring": "Monitoring",
@@ -19,6 +24,8 @@
   "searchTitle": "Search (Ctrl+K)",
   "sidebarExpand": "Expand sidebar",
   "sidebarCollapse": "Collapse sidebar",
+  "railExpand": "Expand menu",
+  "railCollapse": "Collapse menu",
   "widgetToggle": "Toggle widget",
   "widgetToggleTitle": "Toggle widget (Ctrl+Alt+W)",
   "widgetDesktopOnly": "Available only in the desktop app"
