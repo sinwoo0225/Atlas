@@ -45,11 +45,9 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- My work (unified to-dos) — open tasks & issues across projects plus personal to-dos on one screen, recurring & one-click done
-- Project retrospective — compare completed projects (burn-up S-curve, schedule slippage, issue density, avg resolution time)
-- Planned vs. actual dates — actual completion date tracked for tasks/issues/projects (existing schedule kept as "planned")
-- Personal to-dos stay yours — on a shared remote server, others' personal to-dos never appear, even in the "All" view
-- Redesigned sidebar — Main/Insights/Manage groups + an icon rail with an expandable menu to save vertical space while in a project
+- Monitoring task kanban — group columns by project or assignee (not just status), and cross-filter by the remaining axes
+- Remember WBS/schedule filters — turn on "Remember filters" to auto-restore the last filters (status, assignee, unassigned, late) per project
+- Unified "done" styling — completed tasks, issues, and schedule labels shown dimmed with a strikethrough
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
