@@ -106,7 +106,7 @@ function ProjectSwitcher() {
         onClick={() => setOpen((v) => !v)}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-md bg-surface-2 hover:bg-surface-3 border border-default text-sm"
       >
-        <div className="flex flex-col items-start min-w-0">
+        <div className="flex flex-col min-w-0">
           <span className="text-[10px] uppercase tracking-wider text-muted">{t('currentProject')}</span>
           <span className="truncate text-secondary font-medium">{current?.name ?? t('selectProject')}</span>
         </div>
@@ -121,7 +121,7 @@ function ProjectSwitcher() {
                 onClick={() => handlePick(p.id)}
                 className="w-full text-left px-3 py-2 text-sm flex items-center justify-between hover:bg-surface-2"
               >
-                <span className={`truncate ${p.id === selectedId ? 'text-accent font-medium' : 'text-secondary'}`}>
+                <span className={`min-w-0 truncate ${p.id === selectedId ? 'text-accent font-medium' : 'text-secondary'}`}>
                   {p.name}
                 </span>
                 {p.id === selectedId && <Check size={14} className="text-accent shrink-0" />}

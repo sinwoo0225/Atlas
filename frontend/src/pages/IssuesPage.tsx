@@ -393,6 +393,8 @@ function IssueRow({
     () => PRIORITY_VALUES.map((p) => ({ value: p, label: t(issuePriorityBadge[p].labelKey), variant: issuePriorityBadge[p].variant })),
     [t],
   );
+  // 완료(Resolved/Closed) 이슈는 WBS·일정과 동일한 item-done(흐림+취소선) 공통 스타일.
+  const isDone = issue.status === 'Resolved' || issue.status === 'Closed';
   const [title, setTitle] = useState(issue.title);
   const [dueDate, setDueDate] = useState(issue.dueDate?.slice(0, 10) ?? '');
   const [occurredOn, setOccurredOn] = useState(issue.occurredOn?.slice(0, 10) ?? '');
@@ -425,7 +427,7 @@ function IssueRow({
                 onBlur={() => onUpdate(issue.id, 'title', title)}
                 onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                 title={t('issues:row.editTitle')}
-                className="w-full bg-transparent text-sm text-primary font-medium focus:outline-none hover:bg-surface-3 focus:bg-surface-2 rounded pl-1.5 pr-5 py-1 transition-colors border border-transparent hover:border-default focus:border-default cursor-text"
+                className={`w-full bg-transparent text-sm ${isDone ? 'item-done' : 'text-primary'} font-medium focus:outline-none hover:bg-surface-3 focus:bg-surface-2 rounded pl-1.5 pr-5 py-1 transition-colors border border-transparent hover:border-default focus:border-default cursor-text`}
               />
               <DirtyDot visible={title !== issue.title} className="absolute top-1/2 right-2 -translate-y-1/2" />
             </div>

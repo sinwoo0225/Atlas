@@ -51,15 +51,17 @@ export function SortableWbsRow({
   const startIsComputed = !item.startDate && !!computedSpan?.start;
   const endIsComputed   = !item.endDate   && !!computedSpan?.end;
 
-  // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태(완료/예정 흐리게, 완료 취소선).
+  // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태.
+  // 완료(Done): item-done(흐림+또렷한 취소선) 공통 스타일. 예정(Planned): 흐림만. 그 외: 레벨색.
   const nameWeight = depth === 0 ? 'font-semibold' : '';
   const nameColor =
-    item.status === 'Done' || item.status === 'Planned'
-      ? 'text-muted'
-      : depth === 0
-        ? 'text-accent'
-        : 'text-primary';
-  const nameDecoration = item.status === 'Done' ? 'line-through' : '';
+    item.status === 'Done'
+      ? 'item-done'
+      : item.status === 'Planned'
+        ? 'text-muted'
+        : depth === 0
+          ? 'text-accent'
+          : 'text-primary';
 
   const {
     attributes, listeners,
@@ -119,7 +121,7 @@ export function SortableWbsRow({
             )}
             {item.isMilestone && <Diamond size={12} className="text-accent" />}
             <span
-              className={`text-sm ${nameWeight} ${nameColor} ${nameDecoration} hover:text-accent cursor-pointer transition-colors`}
+              className={`text-sm ${nameWeight} ${nameColor} hover:text-accent cursor-pointer transition-colors`}
               onClick={() => onEdit(item)}
             >
               {item.name}

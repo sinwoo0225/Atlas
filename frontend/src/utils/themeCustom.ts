@@ -112,7 +112,7 @@ function pickTextOn(hex: string): string {
 /** applyTheme 가 'custom' 해제 시 제거할 인라인 토큰 이름 (logo 는 브랜드가 관리). */
 export const CUSTOM_TOKEN_NAMES: string[] = [
   '--bg-base', '--bg-sidebar', '--bg-surface', '--bg-surface-2', '--bg-surface-3',
-  '--text-primary', '--text-secondary', '--text-muted',
+  '--text-primary', '--text-secondary', '--text-muted', '--text-done', '--strike-line',
   '--border-default', '--border-strong',
   '--accent', '--accent-hover', '--accent-2', '--accent-soft',
   '--success', '--warning', '--danger', '--info',
@@ -137,6 +137,8 @@ export function deriveTokens(b: BaseColors): Record<string, string> {
     '--text-primary': b.textPrimary,
     '--text-secondary': b.textSecondary,
     '--text-muted': mix(b.textSecondary, b.bgBase, 0.35),
+    '--text-done': mix(b.textSecondary, b.bgBase, 0.52),    // 완료 글자 — muted(0.35)보다 더 흐림
+    '--strike-line': mix(b.textSecondary, b.bgBase, 0.22),  // 완료 취소선 — muted보다 또렷(약간 톤다운)
     '--border-default': b.borderDefault,
     '--border-strong': up(b.borderDefault, isDark ? 0.12 : 0.18),
     '--accent': b.accent,

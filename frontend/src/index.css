@@ -41,6 +41,8 @@
   --text-primary:    #f0f2f7;
   --text-secondary:  #cfd3dc;
   --text-muted:      #a8aebd;
+  --text-done:       #6c7282;   /* 완료 항목 글자 — text-muted 보다 더 흐림(저대비) */
+  --strike-line:     #969cab;   /* 완료 취소선 — 글자보다 밝아 선이 또렷(약간 톤다운) */
   --border-default:  #3a4051;
   --border-strong:   #545b6e;
   --accent:          #9eb2ce;   /* steel blue family — Atlas 워드마크와 톤 일치 */
@@ -107,6 +109,8 @@ html.light {
   --text-primary:    #1a1d24;
   --text-secondary:  #3d4250;
   --text-muted:      #6e7180;
+  --text-done:       #a8acb7;     /* 완료 항목 글자 — text-muted 보다 더 밝음 = 흐림(저대비) */
+  --strike-line:     #565a68;     /* 완료 취소선 — 글자보다 어두워 선이 또렷(더 진하게) */
   --border-default:  #d6d0bd;     /* warm beige */
   --border-strong:   #a39d8a;
   --accent:          #4a6797;     /* deep steel blue (v2) — 라이트 warm 표면 위에서 대비 강화 */
@@ -196,6 +200,15 @@ body {
 .text-primary   { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-muted     { color: var(--text-muted); }
+
+/* 완료 항목 공통 — 글자 흐림(--text-done) + 또렷한 중립 회색 취소선(--strike-line).
+   WBS 표·일정(Gantt) 라벨·이슈 목록이 동일하게 사용. */
+.item-done {
+  color: var(--text-done);
+  text-decoration-line: line-through;
+  text-decoration-color: var(--strike-line);
+  text-decoration-thickness: 2px;
+}
 .text-accent    { color: var(--accent); }
 .text-accent-2  { color: var(--accent-2); }
 

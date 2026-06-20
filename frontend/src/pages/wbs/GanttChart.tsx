@@ -179,7 +179,11 @@ function LabelColumn({
               <Diamond size={11} className="text-accent-2 flex-shrink-0 mr-1" />
             )}
             <span
-              className={`truncate ${row.hasChildren ? 'text-primary font-medium' : 'text-secondary'}`}
+              className={`truncate ${
+                row.item.status === 'Done'
+                  ? `item-done ${row.hasChildren ? 'font-medium' : ''}`
+                  : row.hasChildren ? 'text-primary font-medium' : 'text-secondary'
+              }`}
               title={row.item.name}
             >
               {row.item.name}
