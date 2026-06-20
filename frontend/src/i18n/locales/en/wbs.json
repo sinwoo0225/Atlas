@@ -13,6 +13,8 @@
     "searchPlaceholder": "Task, assignee, notes…",
     "filter": "Filter",
     "matchOnly": "Matches only",
+    "rememberFilters": "Remember filters",
+    "rememberFiltersHint": "Save this project's filters and reapply on your next visit.",
     "filterStatus": "Status",
     "late": "Late",
     "lateTitle": "Past due & incomplete",

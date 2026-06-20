@@ -25,6 +25,8 @@ export interface AppSettings {
   sidebarCollapsed: boolean;
   // 통합 모니터링 '작업' 탭을 열 때 기본 보기 (URL 에 view 파라미터가 없을 때 적용).
   defaultTaskView: 'list' | 'calendar' | 'kanban';
+  // WBS/일정 필터 기억 옵트인. ON 이면 프로젝트별 필터 선택을 저장(atlas:wbsFilters:<id>)해 다음 방문 시 복원.
+  rememberWbsFilters: boolean;
   // 회의록 'AI 요약' 버튼 노출 여부. 로컬 Claude CLI 가 있어야 동작 — 설정에서 옵트인.
   aiSummaryEnabled: boolean;
   // 위젯 '최근 활성 창' 추적 ON/OFF (프라이버시). 기본 ON. 창 제목은 이 PC 메모리에만, 외부 전송 없음.
@@ -69,6 +71,7 @@ const defaults: AppSettings = {
   markdownLineHeight: 1.7,
   sidebarCollapsed: false,
   defaultTaskView: 'list',
+  rememberWbsFilters: false,
   aiSummaryEnabled: false,
   widgetActiveWindowsEnabled: true,
   widgetWeatherLat: null,

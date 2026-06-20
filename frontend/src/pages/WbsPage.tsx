@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
@@ -41,6 +41,8 @@ import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
 import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem } from '../types';
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
+import { loadSettings, patchSettings } from '../store/settings';
+import { loadWbsFilters, saveWbsFilters, clearWbsFilters, type StoredWbsFilters } from '../utils/wbsFilterStore';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
   return items.map((it) => {
@@ -658,6 +660,48 @@ export function WbsPage() {
     setMatchOnly(false);
   };
 
+  // 필터 기억(persist) — 전역 옵트인(settings.rememberWbsFilters) + 프로젝트별 저장본(wbsFilterStore).
+  const [rememberFilters, setRememberFilters] = useState(() => loadSettings().rememberWbsFilters);
+
+  const currentStoredFilters = useCallback((): StoredWbsFilters => ({
+    statuses: [...filterStatuses],
+    assignees: [...filterAssignees],
+    unassignedOnly,
+    lateOnly,
+    matchOnly,
+  }), [filterStatuses, filterAssignees, unassignedOnly, lateOnly, matchOnly]);
+
+  // 하이드레이션 직후 1회의 저장(아직 반영 안 된 이전 렌더 값) 을 건너뛰기 위한 플래그.
+  const skipNextSaveRef = useRef(false);
+
+  // 프로젝트 진입/전환 시 1회: 기억 ON 이면 저장본 복원, 아니면 기본값(프로젝트 간 필터 누수도 방지).
+  useEffect(() => {
+    skipNextSaveRef.current = true; // 곧 이어질 저장 effect 는 아직 갱신 전 값이라 스킵.
+    const saved = loadSettings().rememberWbsFilters ? loadWbsFilters(pid) : null;
+    if (!saved) { resetFilters(); return; }
+    setKeyword('');
+    setFilterStatuses(new Set(saved.statuses));
+    setFilterAssignees(new Set(saved.assignees));
+    setUnassignedOnly(saved.unassignedOnly);
+    setLateOnly(saved.lateOnly);
+    setMatchOnly(saved.matchOnly);
+  }, [pid]);
+
+  // 기억 ON 인 동안 필터(상태·담당자·미할당·지연·matchOnly) 변경 시 저장. keyword 는 제외(일회성).
+  useEffect(() => {
+    const skip = skipNextSaveRef.current;
+    skipNextSaveRef.current = false;
+    if (!rememberFilters || skip) return;
+    saveWbsFilters(pid, currentStoredFilters());
+  }, [rememberFilters, currentStoredFilters, pid]);
+
+  const handleRememberChange = (checked: boolean) => {
+    setRememberFilters(checked);
+    patchSettings({ rememberWbsFilters: checked });
+    if (checked) saveWbsFilters(pid, currentStoredFilters());
+    else clearWbsFilters(pid);
+  };
+
   const matchedIds = useMemo(
     () => hasAnyFilter(filterOpts) ? collectMatchedIds(items, filterOpts) : new Set<number>(),
     [items, filterOpts],
@@ -958,6 +1002,18 @@ export function WbsPage() {
               {t('common:reset')}
             </Button>
           )}
+          <label
+            className="text-xs text-muted flex items-center gap-1 cursor-pointer ml-auto"
+            title={t('wbs:page.rememberFiltersHint')}
+          >
+            <input
+              type="checkbox"
+              checked={rememberFilters}
+              onChange={(e) => handleRememberChange(e.target.checked)}
+              className="rounded"
+            />
+            {t('wbs:page.rememberFilters')}
+          </label>
         </div>
       </Card>
 

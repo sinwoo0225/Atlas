@@ -13,6 +13,8 @@
     "searchPlaceholder": "작업명·담당자·노트…",
     "filter": "필터",
     "matchOnly": "매칭만 보기",
+    "rememberFilters": "필터 기억",
+    "rememberFiltersHint": "이 프로젝트의 필터를 저장해 다음 방문 시 자동 적용합니다.",
     "filterStatus": "상태",
     "late": "지연",
     "lateTitle": "마감 지난 미완료",
