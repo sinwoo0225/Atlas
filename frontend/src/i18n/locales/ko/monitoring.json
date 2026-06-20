@@ -129,7 +129,15 @@
     "colDoing": "진행 중",
     "colDone": "완료",
     "doneNote": "최근 2주",
-    "empty": "보드에 표시할 작업이 없습니다."
+    "empty": "보드에 표시할 작업이 없습니다.",
+    "groupLabel": "그룹",
+    "groupStatus": "상태",
+    "groupProject": "프로젝트",
+    "groupAssignee": "담당자",
+    "filterStatus": "상태",
+    "filterProject": "프로젝트",
+    "filterAssignee": "담당자",
+    "unassigned": "미할당"
   },
   "calendar": {
     "today": "오늘로",

@@ -129,7 +129,15 @@
     "colDoing": "In progress",
     "colDone": "Done",
     "doneNote": "last 2 weeks",
-    "empty": "No tasks to show on the board."
+    "empty": "No tasks to show on the board.",
+    "groupLabel": "Group",
+    "groupStatus": "Status",
+    "groupProject": "Project",
+    "groupAssignee": "Assignee",
+    "filterStatus": "Status",
+    "filterProject": "Project",
+    "filterAssignee": "Assignee",
+    "unassigned": "Unassigned"
   },
   "calendar": {
     "today": "Today",
