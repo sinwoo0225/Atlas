@@ -75,16 +75,19 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 project  list|get|create|update|delete
 issue    list|get|create|update|delete|wbs-links
 wbs      list|get|create|update|move|delete|context|devinfo-links|issue-links|link-devinfo|unlink-devinfo|link-issue|unlink-issue
+wbs      link-dep|unlink-dep|deps|critical-path|reschedule|assign|assignments|baseline|backfill-assignments  # 의존성·CPM·자동일정·배정·기준선
+plan     context --project N                          # ⭐ 용량인지 계획 번들(작업+의존성+배정+자원+임계경로+진단) 1콜
 devinfo  list|get|create|update|delete|tags|wbs-links
-meeting  list|get|create|update|delete
+meeting  list|get|create|update|delete|promote        # promote: ActionItem → Issue/WBS 승격
 changelog list|get|create|update|delete
 worklog  week|upsert
-resource list|get|create|update|delete|assignments
+resource list|get|create|update|delete|assignments|capacity|utilization|availability  # capacity/utilization: 시간기반 용량·가동률
 template list|get|create|update|delete|apply|from-project
 search   <query> [--project N] [--type ...] [--limit N]
 ```
 
 심화(엔티티별 전체 플래그·예시)는 Atlas 레포의 `cli-docs/<기능>.md`(또는 CLI 옆 동봉본) / `cli-docs/agentic-workflow.md`.
+용량·일정 지능·plan context·회의록 승격은 **`cli-docs/scheduling.md`**. 용량인지 리스케줄은 `plan context` → 검토 → `wbs reschedule --apply`.
 
 ## 주의
 - 포터블/절대경로로 호출하면 위 `allowed-tools` 가 안 맞을 수 있음 — 그 경우 settings 권한에 `Bash(*Atlas-Cli.exe *)` 추가.

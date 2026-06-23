@@ -50,13 +50,40 @@ internal static class MeetingCommands
 
     public static Command Build(IServiceProvider services)
     {
-        var cmd = new Command("meeting", "회의록 (list/get/create/update/delete)");
+        var cmd = new Command("meeting", "회의록 (list/get/create/update/delete/promote)");
         cmd.AddCommand(BuildList(services));
         cmd.AddCommand(BuildGet(services));
         cmd.AddCommand(BuildCreate(services));
         cmd.AddCommand(BuildUpdate(services));
         cmd.AddCommand(BuildDelete(services));
+        cmd.AddCommand(BuildPromote(services));
         return cmd;
+    }
+
+    private static Command BuildPromote(IServiceProvider services)
+    {
+        var idOpt = new Option<int>("--id", "회의록 ID") { IsRequired = true };
+        var actionOpt = new Option<string>("--action", "ActionItem id(uuid)") { IsRequired = true };
+        var toOpt = new Option<string>("--to", "issue | wbs") { IsRequired = true };
+        var c = new Command("promote", "회의록 ActionItem 을 Issue/WBS 로 승격 (담당자 이름 매칭·마감일 파싱). 이미 승격됐으면 거부")
+        { idOpt, actionOpt, toOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<ActionItemPromotionService>();
+            var id = pr.GetValueForOption(idOpt);
+            var action = pr.GetValueForOption(actionOpt)!;
+            var to = (pr.GetValueForOption(toOpt) ?? "").Trim().ToLowerInvariant();
+            try
+            {
+                if (to == "issue") CliJson.WriteSuccess(await svc.PromoteToIssueAsync(id, action));
+                else if (to == "wbs") CliJson.WriteSuccess(await svc.PromoteToWbsAsync(id, action));
+                else ctx.ExitCode = CliJson.WriteError("bad_arg", "--to 는 issue 또는 wbs");
+            }
+            catch (ActionItemNotFoundException ex) { ctx.ExitCode = CliJson.WriteError("not_found", ex.Message); }
+            catch (ActionItemAlreadyPromotedException ex) { ctx.ExitCode = CliJson.WriteError("already_promoted", ex.Message); }
+        }));
+        return c;
     }
 
     private static Command BuildList(IServiceProvider services)

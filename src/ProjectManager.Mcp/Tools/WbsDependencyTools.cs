@@ -45,13 +45,16 @@ public static class WbsDependencyTools
         McpJson.Serialize(await svc.ComputeCriticalPathAsync(projectId, versionId, skipWeekends));
 
     [McpServerTool(Name = "atlas_wbs_reschedule"),
-     Description("의존성 기반 자동 일정 — fromWbsItemId 의 후행을 push-only(늦추기만)로 이동. apply=false 면 미리보기(저장 안 함), true 면 적용.")]
+     Description("의존성 기반 자동 일정 — push-only(늦추기만). fromWbsItemId 지정 시 그 후행만, 생략(null) 시 프로젝트 전체. apply=false 면 미리보기(저장 안 함), true 면 적용.")]
     public static async Task<string> Reschedule(
-        SchedulingService svc, int projectId, int fromWbsItemId,
+        SchedulingService svc, int projectId,
+        [Description("기준 작업 ID. 생략 시 프로젝트 전체 리스케줄")] int? fromWbsItemId = null,
         [Description("true 면 실제 적용, false(기본) 면 미리보기")] bool apply = false,
         [Description("주말 제외 (기본 true)")] bool skipWeekends = true)
     {
-        var preview = await svc.PreviewRescheduleAsync(projectId, fromWbsItemId, skipWeekends);
+        var preview = fromWbsItemId is int from
+            ? await svc.PreviewRescheduleAsync(projectId, from, skipWeekends)
+            : await svc.PreviewProjectRescheduleAsync(projectId, skipWeekends);
         if (apply) await svc.ApplyRescheduleAsync(projectId, preview.Shifts, preview.SkipWeekends);
         return McpJson.Serialize(new { applied = apply, preview.Shifts });
     }

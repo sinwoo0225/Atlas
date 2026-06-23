@@ -405,19 +405,22 @@ internal static class WbsCommands
     private static Command BuildReschedule(IServiceProvider services)
     {
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
-        var fromOpt = new Option<int>("--from", "기준 작업 ID (이 작업 기준 후행 이동)") { IsRequired = true };
+        var fromOpt = new Option<int?>("--from", "기준 작업 ID(이 작업 기준 후행 이동). 생략 시 프로젝트 전체 리스케줄");
         var applyOpt = new Option<bool>("--apply", "미리보기 대신 실제 적용");
         var skipOpt = new Option<bool>("--skip-weekends", () => true, "주말 제외(기본 true)");
-        var c = new Command("reschedule", "의존성 기반 자동 일정 — 후행 push-only 이동. 기본 미리보기, --apply 시 적용")
+        var c = new Command("reschedule", "의존성 기반 자동 일정 — push-only 이동. --from 지정 시 그 후행만, 생략 시 프로젝트 전체. 기본 미리보기, --apply 시 적용")
         { projOpt, fromOpt, applyOpt, skipOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
             var svc = services.GetRequiredService<SchedulingService>();
-            var preview = await svc.PreviewRescheduleAsync(
-                pr.GetValueForOption(projOpt), pr.GetValueForOption(fromOpt), pr.GetValueForOption(skipOpt));
+            var pid = pr.GetValueForOption(projOpt);
+            var skip = pr.GetValueForOption(skipOpt);
+            var preview = pr.GetValueForOption(fromOpt) is int from
+                ? await svc.PreviewRescheduleAsync(pid, from, skip)
+                : await svc.PreviewProjectRescheduleAsync(pid, skip);
             if (pr.GetValueForOption(applyOpt))
-                await svc.ApplyRescheduleAsync(pr.GetValueForOption(projOpt), preview.Shifts, preview.SkipWeekends);
+                await svc.ApplyRescheduleAsync(pid, preview.Shifts, preview.SkipWeekends);
             CliJson.WriteSuccess(new { applied = pr.GetValueForOption(applyOpt), preview.Shifts });
         }));
         return c;

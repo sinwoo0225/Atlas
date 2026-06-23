@@ -25,6 +25,7 @@
 | 업무 정보(DevInfo) 조회/필터/CRUD/태그 | [`cli-docs/devinfo.md`](./cli-docs/devinfo.md) |
 | 업무일지(WorkLog) 주간/upsert | [`cli-docs/worklog.md`](./cli-docs/worklog.md) |
 | 리소스(인원/장비) 조회/필터/CRUD | [`cli-docs/resource.md`](./cli-docs/resource.md) |
+| **자원 용량·일정 지능·계획 컨텍스트** — 용량/가동률·의존성·임계경로(CPM)·자동 리스케줄·기준선·plan context·회의록 승격 | [`cli-docs/scheduling.md`](./cli-docs/scheduling.md) |
 | WBS/일정 템플릿 | [`cli-docs/template.md`](./cli-docs/template.md) |
 | **전체 텍스트 검색**(엔티티 횡단) | [`cli-docs/search.md`](./cli-docs/search.md) |
 | **MCP** 등록·도구 목록·CLI vs MCP·다른 머신 세팅 | [`cli-docs/mcp.md`](./cli-docs/mcp.md) |
@@ -44,6 +45,11 @@ atlas-cli changelog list|get|create|update|delete                     # cli-docs
 atlas-cli worklog  week|upsert                                        # cli-docs/worklog.md
 atlas-cli devinfo  list|get|create|update|delete|tags                 # cli-docs/devinfo.md
 atlas-cli resource list|get|create|update|delete|assignments|resolve  # cli-docs/resource.md
+atlas-cli resource capacity|utilization|availability                  # ⭐ 용량/가동률 (cli-docs/scheduling.md)
+atlas-cli wbs      link-dep|unlink-dep|deps|critical-path|reschedule  # ⭐ 의존성·CPM·자동일정
+atlas-cli wbs      assign|assignments|baseline|backfill-assignments   # 자원배정·기준선
+atlas-cli plan     context --project N                                # ⭐ 용량인지 계획 번들 1콜
+atlas-cli meeting  promote --id M --action <uuid> --to issue|wbs      # ActionItem 승격
 atlas-cli search   <query> [--project N] [--type ...] [--limit N]     # cli-docs/search.md
 ```
 

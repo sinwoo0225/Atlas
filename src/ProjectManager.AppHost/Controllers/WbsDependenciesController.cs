@@ -6,8 +6,20 @@ namespace ProjectManager.AppHost.Controllers;
 
 [ApiController]
 [Route("api/wbs-dependencies")]
-public class WbsDependenciesController(WbsDependencyService svc, SchedulingService scheduling) : ControllerBase
+public class WbsDependenciesController(WbsDependencyService svc, SchedulingService scheduling, PlanContextService planContext) : ControllerBase
 {
+    // 용량인지 계획 컨텍스트 번들 — 작업·의존성·배정·자원·임계경로·진단 1콜.
+    [HttpGet("plan-context/{projectId:int}")]
+    public async Task<IActionResult> PlanContext(int projectId, [FromQuery] int? versionId = null,
+        [FromQuery] bool includeResources = true, [FromQuery] bool includeCriticalPath = true)
+        => await planContext.GetPlanContextAsync(projectId, versionId, includeResources, includeCriticalPath) is { } ctx
+            ? Ok(ctx) : NotFound();
+
+    // 프로젝트 전체 리스케줄 미리보기(전 작업 의존성 충족, push-only).
+    [HttpGet("reschedule-project-preview/{projectId:int}")]
+    public async Task<IActionResult> RescheduleProjectPreview(int projectId, [FromQuery] bool skipWeekends = true)
+        => Ok(await scheduling.PreviewProjectRescheduleAsync(projectId, skipWeekends));
+
     [HttpGet("by-project/{projectId:int}")]
     public async Task<IActionResult> GetByProject(int projectId, [FromQuery] int? versionId = null) =>
         Ok(await svc.GetByProjectAsync(projectId, versionId));

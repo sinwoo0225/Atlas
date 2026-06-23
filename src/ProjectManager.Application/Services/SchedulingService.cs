@@ -182,6 +182,54 @@ public class SchedulingService(IWbsRepository wbsRepo, IWbsDependencyRepository 
         return new RescheduleResultDto(fromWbsItemId, skipWeekends, shifts);
     }
 
+    // 프로젝트 전체 리스케줄 미리보기 — 전 작업을 위상순으로 push-only 정렬해 모든 의존성을 충족. 저장 안 함.
+    // 에이전트 propose→apply 의 propose: "일정 전체를 의존성에 맞게 고쳐줘".
+    public async Task<RescheduleResultDto> PreviewProjectRescheduleAsync(int projectId, bool skipWeekends = true)
+    {
+        var all = (await wbsRepo.GetByProjectAsync(projectId, null)).ToList();
+        var byId = all.ToDictionary(x => x.Id);
+        var edges = (await depRepo.GetByProjectAsync(projectId)).ToList();
+        var preds = edges.GroupBy(e => e.SuccessorId).ToDictionary(g => g.Key, g => g.ToList());
+
+        var curStart = all.ToDictionary(x => x.Id, x => x.StartDate);
+        var curEnd = all.ToDictionary(x => x.Id, x => x.EndDate);
+        var shifts = new List<RescheduleShiftDto>();
+
+        foreach (var id in TopoAll(all.Select(x => x.Id), edges))
+        {
+            if (!byId.TryGetValue(id, out var w)) continue;
+            if (curStart[id] is not DateTime s0 || curEnd[id] is not DateTime e0) continue;
+            var durDays = (e0.Date - s0.Date).Days;
+
+            DateTime? requiredStart = null;
+            if (preds.TryGetValue(id, out var ps))
+                foreach (var e in ps)
+                {
+                    if (curEnd[e.PredecessorId] is not DateTime pe || curStart[e.PredecessorId] is not DateTime psd) continue;
+                    var req = e.Type switch
+                    {
+                        WbsDependencyType.FinishToStart => WorkdayCalendar.Advance(pe.Date, 1 + e.LagDays, skipWeekends),
+                        WbsDependencyType.StartToStart => WorkdayCalendar.Advance(psd.Date, e.LagDays, skipWeekends),
+                        WbsDependencyType.FinishToFinish => WorkdayCalendar.Advance(pe.Date, e.LagDays - durDays, skipWeekends),
+                        WbsDependencyType.StartToFinish => WorkdayCalendar.Advance(psd.Date, e.LagDays - durDays, skipWeekends),
+                        _ => s0.Date,
+                    };
+                    if (requiredStart is null || req > requiredStart) requiredStart = req;
+                }
+
+            if (requiredStart is DateTime rs && rs.Date > s0.Date)
+            {
+                var newStart = rs.Date;
+                var newEnd = newStart.AddDays(durDays);
+                curStart[id] = newStart;
+                curEnd[id] = newEnd;
+                shifts.Add(new RescheduleShiftDto(id, w.Name, s0, e0, newStart, newEnd, (newEnd - e0.Date).Days));
+            }
+        }
+
+        return new RescheduleResultDto(0, skipWeekends, shifts);
+    }
+
     // 적용 — 각 이동을 WbsService.UpdateAsync 경유(동시성 토큰·완료 스탬프·동기화 보존).
     public async Task<RescheduleResultDto> ApplyRescheduleAsync(int projectId, IReadOnlyList<RescheduleShiftDto> shifts, bool skipWeekends = true)
     {
@@ -210,6 +258,29 @@ public class SchedulingService(IWbsRepository wbsRepo, IWbsDependencyRepository 
                 foreach (var d in DescendantLeafIds(all, c.Id, parentIds)) yield return d;
             else yield return c.Id;
         }
+    }
+
+    // 전 작업 위상정렬(Kahn) — 의존성 없는 작업도 포함. 프로젝트 전체 리스케줄용.
+    private static List<int> TopoAll(IEnumerable<int> ids, List<WbsDependency> edges)
+    {
+        var all = ids.ToHashSet();
+        var succs = edges.GroupBy(e => e.PredecessorId).ToDictionary(g => g.Key, g => g.Select(e => e.SuccessorId).ToList());
+        var indeg = all.ToDictionary(x => x, _ => 0);
+        foreach (var e in edges)
+            if (all.Contains(e.SuccessorId)) indeg[e.SuccessorId]++;
+        var q = new Queue<int>(indeg.Where(kv => kv.Value == 0).Select(kv => kv.Key));
+        var order = new List<int>();
+        while (q.Count > 0)
+        {
+            var id = q.Dequeue();
+            order.Add(id);
+            if (succs.TryGetValue(id, out var outs))
+                foreach (var s in outs)
+                    if (all.Contains(s) && --indeg[s] == 0) q.Enqueue(s);
+        }
+        // 사이클로 남은 노드는 뒤에 그냥 추가(가드는 생성 시점에 이미 됨).
+        foreach (var id in all) if (!order.Contains(id)) order.Add(id);
+        return order;
     }
 
     // fromId 에서 후행(succ) 방향 BFS 후 부분 위상정렬 — 다이아몬드(여러 선행 합류) 대비 reachable 전체를 위상순으로.

@@ -19,6 +19,20 @@ public static class MeetingTools
         m.MarkdownPath, m.CreatedAt, m.UpdatedAt,
     };
 
+    [McpServerTool(Name = "atlas_meeting_promote_action"),
+     Description("회의록 ActionItem 을 Issue/WBS 로 승격 — 담당자 이름 매칭·마감일 파싱. target=Issue|Wbs. 이미 승격됐으면 에러. (UI 전용이던 승격을 에이전트에 노출)")]
+    public static async Task<string> PromoteAction(
+        ActionItemPromotionService svc,
+        [Description("회의록 ID")] int meetingId,
+        [Description("ActionItem id(uuid)")] string actionItemId,
+        [Description("Issue | Wbs")] string target)
+    {
+        var t = (target ?? string.Empty).Trim().ToLowerInvariant();
+        if (t == "issue") return McpJson.Serialize(await svc.PromoteToIssueAsync(meetingId, actionItemId));
+        if (t == "wbs") return McpJson.Serialize(await svc.PromoteToWbsAsync(meetingId, actionItemId));
+        throw new InvalidOperationException("target 은 Issue 또는 Wbs 여야 합니다.");
+    }
+
     [McpServerTool(Name = "atlas_meeting_list"),
      Description("프로젝트 회의록 조회 (필터 + 출력 셰이핑). keyword 제목/내용 검색, category 내부/외부, from/to 회의일 범위.")]
     public static async Task<string> List(

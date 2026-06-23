@@ -47,6 +47,9 @@ public class WbsAssignmentService(IWbsAssignmentRepository repo, ResourceService
     public async Task<IEnumerable<WbsAssignmentDto>> ListByWbsAsync(int wbsItemId) =>
         (await repo.GetByWbsItemAsync(wbsItemId)).Select(ToDto);
 
+    public async Task<IEnumerable<WbsAssignmentDto>> ListByProjectAsync(int projectId, int? versionId = null) =>
+        (await repo.GetByProjectAsync(projectId, versionId)).Select(ToDto);
+
     // 명시적 배정/배분 편집 — 없으면 생성, 있으면 배분율만 갱신. 자유텍스트 동기화 대상이 아닌 정밀 편집용.
     public async Task<WbsAssignmentDto> UpsertAsync(int wbsItemId, int resourceId, int allocationPercent)
     {

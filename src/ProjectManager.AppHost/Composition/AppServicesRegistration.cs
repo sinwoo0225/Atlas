@@ -83,6 +83,7 @@ public static class AppServicesRegistration
         services.AddScoped<WbsDependencyService>();
         services.AddScoped<SchedulingService>();
         services.AddScoped<WbsContextService>();
+        services.AddScoped<PlanContextService>();
         services.AddScoped<TodoService>();
         services.AddScoped<StartPageService>();
         services.AddScoped<BackupService>();
