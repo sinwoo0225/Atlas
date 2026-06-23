@@ -89,7 +89,8 @@ public static class WbsTools
         [Description("마일스톤 여부")] bool? isMilestone = null,
         [Description("중요도 1=낮음 / 2=중간 (기본) / 3=높음")] int? importance = null,
         string? notes = null,
-        [Description("완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동")] DateTime? completedDate = null) =>
+        [Description("완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동")] DateTime? completedDate = null,
+        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateWbsItemDto(
             ProjectId: projectId,
             VersionId: versionId,
@@ -102,7 +103,8 @@ public static class WbsTools
             IsMilestone: isMilestone ?? false,
             Importance: importance ?? 2,
             Notes: notes ?? string.Empty,
-            CompletedDate: completedDate)));
+            CompletedDate: completedDate,
+            EstimateHours: estimateHours)));
 
     [McpServerTool(Name = "atlas_wbs_update"),
      Description("WBS 항목 부분 갱신 — null 인 필드는 기존 값 유지. root 로 옮기려면 atlas_wbs_move 사용")]
@@ -116,7 +118,8 @@ public static class WbsTools
         [Description("중요도 1=낮음 / 2=중간 / 3=높음")] int? importance = null,
         [Description("정렬 위치 — 보통 생략 (신규 시 자동 끝에 추가, reorder 는 GUI dnd 사용)")] int? sortOrder = null,
         string? notes = null,
-        [Description("완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능")] DateTime? completedDate = null)
+        [Description("완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능")] DateTime? completedDate = null,
+        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"WbsItem {id} 없음");
@@ -132,7 +135,8 @@ public static class WbsTools
             Notes: notes ?? existing.Notes,
             SortOrder: sortOrder ?? existing.SortOrder,
             CompletedDate: completedDate ?? existing.CompletedDate,
-            UpdatedAt: existing.UpdatedAt)));
+            UpdatedAt: existing.UpdatedAt,
+            EstimateHours: estimateHours ?? existing.EstimateHours)));
     }
 
     [McpServerTool(Name = "atlas_wbs_move"),
@@ -155,7 +159,8 @@ public static class WbsTools
             Importance: existing.Importance, Notes: existing.Notes,
             SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
             CompletedDate: existing.CompletedDate,
-            UpdatedAt: existing.UpdatedAt)));
+            UpdatedAt: existing.UpdatedAt,
+            EstimateHours: existing.EstimateHours)));
     }
 
     [McpServerTool(Name = "atlas_wbs_delete"),

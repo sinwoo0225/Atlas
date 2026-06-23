@@ -33,6 +33,15 @@ public class WbsController(WbsService svc) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int projectId, int id) =>
         await svc.DeleteAsync(id) ? NoContent() : NotFound();
+
+    // 기준선 캡처 — 현재 계획 일정을 baseline 으로 박제(선택 시 버전 한정).
+    [HttpPost("baseline/capture")]
+    public async Task<IActionResult> CaptureBaseline(int projectId, [FromQuery] int? versionId) =>
+        Ok(new { captured = await svc.CaptureBaselineAsync(projectId, versionId) });
+
+    [HttpPost("baseline/clear")]
+    public async Task<IActionResult> ClearBaseline(int projectId, [FromQuery] int? versionId) =>
+        Ok(new { cleared = await svc.ClearBaselineAsync(projectId, versionId) });
 }
 
 [ApiController]

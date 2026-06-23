@@ -45,6 +45,7 @@ export interface ChartColors {
   ganttBarInProgress: string;
   ganttBarDone: string;
   ganttBarParent: string;       // 펼친 부모(자식 합산 범위) — 반투명 얇은 음영
+  ganttBarCritical: string;     // 임계경로(CPM) 작업 테두리 강조
   ganttMilestone: string;       // 마일스톤 다이아몬드
   ganttToday: string;           // 오늘 표시선
   ganttWeekend: string;         // 토/일 음영
@@ -66,6 +67,7 @@ const DARK_CHART_COLORS: ChartColors = {
   ganttBarInProgress: '#e69a3b',                  // --warning (v3 amber-orange)
   ganttBarDone:       '#5cbf92',                  // --success (v3 teal-green)
   ganttBarParent:     'rgba(158, 178, 206, 0.35)',  // accent rgba
+  ganttBarCritical:   '#f87171',                  // --danger (임계경로)
   ganttMilestone:     '#e6b552',                  // --accent-2 (warm gold)
   ganttToday:         '#f87171',                  // --danger
   ganttWeekend:       'rgba(255, 255, 255, 0.03)',
@@ -87,6 +89,7 @@ const LIGHT_CHART_COLORS: ChartColors = {
   ganttBarInProgress: '#b16412',                  // --warning (brown-orange)
   ganttBarDone:       '#047857',                  // --success
   ganttBarParent:     'rgba(74, 103, 151, 0.30)',   // accent rgba v2
+  ganttBarCritical:   '#b91c1c',                  // --danger (임계경로)
   ganttMilestone:     '#a3742d',                  // --accent-2 (warm gold, warning 과 분리)
   ganttToday:         '#b91c1c',                  // --danger
   ganttWeekend:       'rgba(0, 0, 0, 0.035)',
@@ -140,6 +143,7 @@ function readChartColorsFromCss(): ChartColors {
     ganttBarInProgress: cssVar('--warning', '#f5b955'),
     ganttBarDone: cssVar('--success', '#4ade80'),
     ganttBarParent: rgbaFromHexVar('--accent', 0.35, 'rgba(158, 178, 206, 0.35)'),
+    ganttBarCritical: cssVar('--danger', '#f87171'),
     ganttMilestone: cssVar('--accent-2', '#e6b552'),
     ganttToday: cssVar('--danger', '#f87171'),
     ganttWeekend: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.035)',

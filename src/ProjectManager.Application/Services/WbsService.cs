@@ -6,7 +6,11 @@ namespace ProjectManager.Application.Services;
 
 public class WbsInvalidParentException(string message) : Exception(message);
 
-public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMeetingRepository meetingRepo)
+public class WbsService(
+    IWbsRepository repo,
+    WorkLogService workLogService,
+    IMeetingRepository meetingRepo,
+    WbsAssignmentService assignmentService)
 {
     public async Task<IEnumerable<WbsItemDto>> GetByProjectAsync(int projectId, int? versionId = null)
     {
@@ -44,10 +48,13 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
             Status = dto.Status, IsMilestone = dto.IsMilestone,
             Importance = dto.Importance, Notes = dto.Notes,
             SortOrder = nextSortOrder,
+            EstimateHours = dto.EstimateHours,
             // 완료 상태로 생성되면 완료일도 함께(명시값 우선, 없으면 오늘).
             CompletedDate = dto.CompletedDate ?? (dto.Status == WbsStatus.Done ? DateTime.Today : null),
         };
-        return ToDto(await repo.CreateAsync(item), []);
+        var created = await repo.CreateAsync(item);
+        await assignmentService.ReconcileFromFreeTextAsync(created);
+        return ToDto(created, []);
     }
 
     public async Task<WbsItemDto?> UpdateAsync(int id, UpdateWbsItemDto dto)
@@ -96,6 +103,7 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.Importance = dto.Importance;
         if (!parentChanged) item.SortOrder = dto.SortOrder;
         item.Notes = dto.Notes;
+        item.EstimateHours = dto.EstimateHours;
         // 완료일(실적): 클라가 보낸 값을 우선 반영(수동 보정·명시적 클리어 라운드트립).
         // Done 진입 시 값이 없으면 오늘로 자동 스탬프. Done 에서 벗어나면 클리어.
         item.CompletedDate = dto.CompletedDate;
@@ -104,6 +112,8 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         else if (wasDone && dto.Status != WbsStatus.Done)
             item.CompletedDate = null;
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
+        // 자유텍스트 Assignee → WbsAssignment 동기화(배정·배분율 정본).
+        await assignmentService.ReconcileFromFreeTextAsync(updated);
         // 리프(자식 없음)만 업무일지 자동 등록 — 자식이 있는 상위 업무는 요약 노드라 완료해도 등록 제외.
         // item 은 GetByIdAsync 로 .Include(Children) 로드되어 추가 쿼리 없이 판별 가능.
         if (!wasDone && updated.Status == WbsStatus.Done && updated.Children.Count == 0)
@@ -125,7 +135,7 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         var dto = new UpdateWbsItemDto(
             item.ParentId, item.Name, item.Assignee, item.StartDate, item.EndDate,
             status, item.IsMilestone, item.Importance, item.Notes, item.SortOrder,
-            item.CompletedDate, item.UpdatedAt);
+            item.CompletedDate, item.UpdatedAt, item.EstimateHours);
         await UpdateAsync(id, dto);
         return true;
     }
@@ -158,16 +168,37 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
     public async Task SetCurrentVersionAsync(int projectId, int versionId) =>
         await repo.SetCurrentVersionAsync(projectId, versionId);
 
-    private static WbsItemDto ToDto(WbsItem item, IEnumerable<WbsItem> all) => new(
-        item.Id, item.ProjectId, item.VersionId, item.ParentId,
-        item.Name, item.Assignee, item.StartDate, item.EndDate,
-        item.Status, item.IsMilestone, item.Importance, item.Notes,
-        item.CreatedAt, item.UpdatedAt,
-        item.SortOrder,
-        item.CompletedDate,
-        item.Children?.Select(c => ToDto(c, all)));
+    // 기준선 캡처/클리어 — 현재 계획 일정을 BaselineStart/End 로 박제(또는 비움). 영향 행 수 반환.
+    public Task<int> CaptureBaselineAsync(int projectId, int? versionId) => repo.CaptureBaselineAsync(projectId, versionId);
+    public Task<int> ClearBaselineAsync(int projectId, int? versionId) => repo.ClearBaselineAsync(projectId, versionId);
+
+    private static WbsItemDto ToDto(WbsItem item, IEnumerable<WbsItem> all)
+    {
+        var children = item.Children?.Select(c => ToDto(c, all)).ToList();
+        // 부모는 자손 leaf 의 추정 합(저장 안 함, 표시용). 추정된 자손이 하나도 없으면 null.
+        double? rolled;
+        if (children is { Count: > 0 })
+        {
+            double sum = 0; var any = false;
+            foreach (var c in children)
+                if (c.RolledUpEstimateHours is double v) { sum += v; any = true; }
+            rolled = any ? sum : null;
+        }
+        else rolled = item.EstimateHours;
+        return new(
+            item.Id, item.ProjectId, item.VersionId, item.ParentId,
+            item.Name, item.Assignee, item.StartDate, item.EndDate,
+            item.Status, item.IsMilestone, item.Importance, item.Notes,
+            item.CreatedAt, item.UpdatedAt,
+            item.SortOrder,
+            item.CompletedDate,
+            item.EstimateHours, rolled,
+            item.BaselineStart, item.BaselineEnd,
+            children);
+    }
 
     // 평면 결과용 — Children 을 null 로 둬 출력에서 생략(WhenWritingNull). 계층은 ParentId 로 표현.
+    // 평면 컨텍스트라 rollup 불가 → RolledUp 은 자기 추정으로.
     private static WbsItemDto ToFlatDto(WbsItem item) => new(
         item.Id, item.ProjectId, item.VersionId, item.ParentId,
         item.Name, item.Assignee, item.StartDate, item.EndDate,
@@ -175,6 +206,8 @@ public class WbsService(IWbsRepository repo, WorkLogService workLogService, IMee
         item.CreatedAt, item.UpdatedAt,
         item.SortOrder,
         item.CompletedDate,
+        item.EstimateHours, item.EstimateHours,
+        item.BaselineStart, item.BaselineEnd,
         null);
 
     private static WbsVersionDto ToVersionDto(WbsVersion v) => new(

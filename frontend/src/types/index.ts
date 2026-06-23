@@ -108,6 +108,12 @@ export interface WbsItem {
   updatedAt: string;
   sortOrder: number;
   completedDate?: string; // 실적 완료일 (StartDate/EndDate 는 계획). Done 전환 시 자동, 수정 가능.
+  // 공수 추정(시간) — 용량 계획 기준. rolledUpEstimateHours 는 부모 표시용 자손 leaf 합(읽기 전용).
+  estimateHours?: number | null;
+  rolledUpEstimateHours?: number | null;
+  // 기준선 일정(캡처된 계획) — Gantt 고스트 막대·variance 기준.
+  baselineStart?: string | null;
+  baselineEnd?: string | null;
   children?: WbsItem[];
 }
 
@@ -222,6 +228,12 @@ export interface Resource {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  // 용량 계획 필드.
+  weeklyCapacityHours: number;
+  costRate: number | null;
+  billRate: number | null;
+  skills: string;
+  isActive: boolean;
 }
 
 export interface ResourceAssignment {
@@ -489,6 +501,109 @@ export interface ResourceHeatmap {
   rows: ResourceHeatmapRow[];
   totalItems: number;
   unassignedItems: number;
+}
+
+// 용량 히트맵 — 자원 × 주 수요/가용/가동률(시간 기반).
+export interface CapacityCell {
+  weekStart: string;
+  demandHours: number;
+  capacityHours: number;
+  utilizationPercent: number;
+  overallocated: boolean;
+}
+
+export interface ResourceCapacityRow {
+  resourceId: number;
+  name: string;
+  department: string;
+  skills: string;
+  weeklyCapacityHours: number;
+  weeks: CapacityCell[];
+  totalDemandHours: number;
+  avgUtilizationPercent: number;
+  overallocatedWeeks: number;
+}
+
+export interface CapacityHeatmap {
+  weekStarts: string[];
+  rows: ResourceCapacityRow[];
+  unscheduledDemandHours: number;
+  unestimatedTaskCount: number;
+}
+
+// 카테고리별 포트폴리오 롤업.
+export interface PortfolioRow {
+  category: string;
+  projectCount: number;
+  wbsTotal: number;
+  wbsDone: number;
+  wbsProgressPercent: number;
+  openIssues: number;
+  demandHours: number;
+  atRisk: number;
+}
+export interface PortfolioRollup {
+  rows: PortfolioRow[];
+}
+
+// 주의(Attention) 피드 — 마감/과배분/미배정/마일스톤/정체 합성 알림.
+export interface AttentionItem {
+  kind: 'overdue' | 'overallocated' | 'dueSoon' | 'unassigned' | 'milestone' | 'stale';
+  severity: 'high' | 'medium' | 'low';
+  count: number;
+  link: string;
+}
+export interface AttentionFeed {
+  items: AttentionItem[];
+  highCount: number;
+}
+
+// 일정 지능 — 작업 의존성·임계경로·자동 리스케줄.
+export type WbsDependencyType = 'FinishToStart' | 'StartToStart' | 'FinishToFinish' | 'StartToFinish';
+
+export interface WbsDependency {
+  id: number;
+  predecessorId: number;
+  successorId: number;
+  predecessorName?: string | null;
+  successorName?: string | null;
+  type: WbsDependencyType;
+  lagDays: number;
+}
+
+export interface CriticalPathItem {
+  wbsItemId: number;
+  isCritical: boolean;
+  totalFloatDays: number | null;
+  earlyStart: string | null;
+  earlyFinish: string | null;
+  lateStart: string | null;
+  lateFinish: string | null;
+  indeterminate: boolean;
+}
+
+export interface CriticalPath {
+  projectStart: string | null;
+  projectFinish: string | null;
+  hasCycle: boolean;
+  criticalPath: number[];
+  items: CriticalPathItem[];
+}
+
+export interface RescheduleShift {
+  wbsItemId: number;
+  name: string;
+  oldStart: string | null;
+  oldEnd: string | null;
+  newStart: string | null;
+  newEnd: string | null;
+  deltaDays: number;
+}
+
+export interface RescheduleResult {
+  fromWbsItemId: number;
+  skipWeekends: boolean;
+  shifts: RescheduleShift[];
 }
 
 // 마감 캘린더 이벤트 — WBS 종료일 / 이슈 마감일. date 는 yyyy-MM-dd.

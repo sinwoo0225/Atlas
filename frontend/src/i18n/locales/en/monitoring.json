@@ -173,6 +173,43 @@
     "modalTitle": "{{label}} — {{count}}",
     "cellTooltip": "{{name}} · W{{week}} (week of {{date}}): {{count}}"
   },
+  "capacity": {
+    "title": "Capacity utilization",
+    "gapsTip": "Gaps in demand calc (add estimates / dates)",
+    "unestimated": "{{count}} unestimated",
+    "unscheduled": "{{hours}}h unscheduled",
+    "sortTitle": "Sort",
+    "sortLoad": "By total demand",
+    "sortOver": "By over-allocated weeks",
+    "sortName": "By name",
+    "empty": "No capacity data",
+    "emptyDesc": "Assign effort (hours) and people to tasks to see weekly utilization",
+    "cellTooltip": "{{name}} · week of {{date}} — demand {{demand}}h / capacity {{capacity}}h · {{util}}%"
+  },
+  "portfolio": {
+    "title": "Portfolio (by category)",
+    "category": "Category",
+    "projects": "Projects",
+    "progress": "WBS progress",
+    "openIssues": "Open issues",
+    "demand": "Demand",
+    "atRisk": "At risk",
+    "uncategorized": "Uncategorized",
+    "empty": "No projects"
+  },
+  "attention": {
+    "title": "Attention — what needs you now",
+    "highBadge": "{{count}} urgent",
+    "allClear": "Nothing needs attention right now 👍",
+    "kind": {
+      "overdue": "Overdue",
+      "overallocated": "Over-allocated (this week)",
+      "dueSoon": "Due soon (within 3d)",
+      "unassigned": "Unassigned tasks & issues",
+      "milestone": "Upcoming milestones (30d)",
+      "stale": "Stale projects"
+    }
+  },
   "people": {
     "workloadTitle": "Workload balance by assignee",
     "workloadEmpty": "No assigned open work",

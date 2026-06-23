@@ -24,6 +24,9 @@ public class AppDbContext(
     public DbSet<WorkLog> WorkLogs => Set<WorkLog>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<TodoItem> TodoItems => Set<TodoItem>();
+    public DbSet<WbsAssignment> WbsAssignments => Set<WbsAssignment>();
+    public DbSet<ResourceAvailability> ResourceAvailabilities => Set<ResourceAvailability>();
+    public DbSet<WbsDependency> WbsDependencies => Set<WbsDependency>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -114,6 +117,54 @@ public class AppDbContext(
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 용량 계획 필드 — 기존 행은 기본 40h/활성으로 마이그레이션. Skills 는 콤마 태그(부분일치 필터).
+            e.Property(x => x.WeeklyCapacityHours).HasDefaultValue(40d);
+            e.Property(x => x.Skills).HasMaxLength(500).HasDefaultValue("");
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+        });
+
+        modelBuilder.Entity<ResourceAvailability>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            e.Property(x => x.Note).HasMaxLength(300).HasDefaultValue("");
+            // 사유는 string 저장 — enum 순서 변경 안전(Meeting.Category 관례).
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(16).HasDefaultValue(AvailabilityType.PTO);
+            e.HasOne(x => x.Resource).WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
+            // 자원별 기간 조회(용량 차감)에 인덱스.
+            e.HasIndex(x => new { x.ResourceId, x.StartDate });
+        });
+
+        modelBuilder.Entity<WbsAssignment>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            e.HasOne(x => x.WbsItem).WithMany(w => w.Assignments).HasForeignKey(x => x.WbsItemId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Resource).WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
+            // 중복 배정 방지 + by-wbs(선두 컬럼) 조회 커버. by-resource 는 별도 인덱스(후행 컬럼이라 미커버).
+            e.HasIndex(x => new { x.WbsItemId, x.ResourceId }).IsUnique();
+            e.HasIndex(x => x.ResourceId);
+        });
+
+        modelBuilder.Entity<WbsDependency>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(16).HasDefaultValue(WbsDependencyType.FinishToStart);
+            // 같은 WbsItems 테이블로 가는 FK 2개 — 양쪽 Cascade. SQLite(EF Core)는 다중 cascade 경로를 허용하므로
+            // 작업 삭제 시 어느 쪽 엣지든 함께 삭제되고, Project cascade-delete 의 순서 문제도 피한다(WbsItem.Parent 자기참조 Cascade 와 동일 전제).
+            // 마이그레이션 추가 직후 프로젝트 생성→삭제로 정상 동작 확인할 것.
+            e.HasOne(x => x.Predecessor).WithMany().HasForeignKey(x => x.PredecessorId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Successor).WithMany().HasForeignKey(x => x.SuccessorId).OnDelete(DeleteBehavior.Cascade);
+            // 중복 의존성 방지 + by-predecessor(선두) 조회 커버. by-successor 는 별도 인덱스.
+            e.HasIndex(x => new { x.PredecessorId, x.SuccessorId }).IsUnique();
+            e.HasIndex(x => x.SuccessorId);
         });
 
         modelBuilder.Entity<Issue>(e =>

@@ -119,7 +119,9 @@ public class ActionItemPromotionService(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
             item.Status, item.IsMilestone, item.Importance, item.Notes,
-            item.CreatedAt, item.UpdatedAt, item.SortOrder, item.CompletedDate, null);
+            item.CreatedAt, item.UpdatedAt, item.SortOrder, item.CompletedDate,
+            item.EstimateHours, item.EstimateHours,
+            item.BaselineStart, item.BaselineEnd, null);
     }
 
     private static (JsonArray Items, JsonObject Target) FindActionItem(string raw, string actionItemId)

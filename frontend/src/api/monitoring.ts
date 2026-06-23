@@ -1,7 +1,7 @@
 import { api } from './client';
 import type {
-  ActivityByProject, AgingWipItem, CalendarEvent, CategoryCount, ForecastBundle, KanbanColumn, KanbanItem,
-  MonitoringCharts, MonitoringData, MonitoringRisk, MonitoringTrends, OpenIssuesByProject,
+  ActivityByProject, AgingWipItem, AttentionFeed, CalendarEvent, CapacityHeatmap, CategoryCount, ForecastBundle, KanbanColumn, KanbanItem,
+  MonitoringCharts, MonitoringData, MonitoringRisk, MonitoringTrends, OpenIssuesByProject, PortfolioRollup,
   ResourceHeatmap, StaleProject, WeeklyReview, WorkloadOverview,
 } from '../types';
 
@@ -9,6 +9,12 @@ export const monitoringApi = {
   getToday: () => api.get<MonitoringData>('/monitoring/today'),
   getCharts: () => api.get<MonitoringCharts>('/monitoring/charts'),
   getResourceHeatmap: () => api.get<ResourceHeatmap>('/monitoring/resource-heatmap'),
+  // 용량 히트맵 — 자원 × 주 가동률(시간 기반). 담당자 탭 지연 로드.
+  getResourceCapacity: (weeks = 8) => api.get<CapacityHeatmap>(`/monitoring/resource-capacity?weeks=${weeks}`),
+  // 주의 피드 — 마감/과배분/미배정/마일스톤/정체 합성 알림.
+  getAttention: () => api.get<AttentionFeed>('/monitoring/attention'),
+  // 카테고리별 포트폴리오 롤업.
+  getPortfolio: () => api.get<PortfolioRollup>('/monitoring/portfolio'),
   // Phase 1 인사이트 — 개요 Risk Radar / 방치 프로젝트 / 담당자 워크로드 / Aging WIP.
   getRisk: () => api.get<MonitoringRisk>('/monitoring/risk'),
   getStale: (days = 14) => api.get<StaleProject[]>(`/monitoring/stale?days=${days}`),

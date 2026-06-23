@@ -44,14 +44,24 @@ public static class ResourceTools
         [Description("부서")] string? department = null,
         [Description("이메일")] string? email = null,
         [Description("전화번호")] string? phone = null,
-        [Description("비고")] string? notes = null) =>
+        [Description("비고")] string? notes = null,
+        [Description("주당 가용 시간 (기본 40) — 용량 계획 기준")] double? weeklyCapacityHours = null,
+        [Description("원가 단가(시간당)")] decimal? costRate = null,
+        [Description("청구 단가(시간당)")] decimal? billRate = null,
+        [Description("스킬 태그 (콤마 구분)")] string? skills = null,
+        [Description("활성 여부 (기본 활성)")] bool? isActive = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateResourceDto(
             Name: name,
             Type: type ?? ResourceType.Person,
             Department: department ?? string.Empty,
             Email: email ?? string.Empty,
             Phone: phone ?? string.Empty,
-            Notes: notes ?? string.Empty)));
+            Notes: notes ?? string.Empty,
+            WeeklyCapacityHours: weeklyCapacityHours ?? 40,
+            CostRate: costRate,
+            BillRate: billRate,
+            Skills: skills ?? string.Empty,
+            IsActive: isActive ?? true)));
 
     [McpServerTool(Name = "atlas_resource_update"),
      Description("리소스 부분 갱신 — null 인 필드는 기존 값 유지")]
@@ -59,7 +69,11 @@ public static class ResourceTools
         ResourceService svc, int id,
         string? name = null, ResourceType? type = null,
         string? department = null, string? email = null,
-        string? phone = null, string? notes = null)
+        string? phone = null, string? notes = null,
+        [Description("주당 가용 시간 — 용량 계획 기준")] double? weeklyCapacityHours = null,
+        decimal? costRate = null, decimal? billRate = null,
+        [Description("스킬 태그 (콤마 구분)")] string? skills = null,
+        [Description("활성 여부")] bool? isActive = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Resource {id} 없음");
@@ -69,7 +83,12 @@ public static class ResourceTools
             Department: department ?? existing.Department,
             Email: email ?? existing.Email,
             Phone: phone ?? existing.Phone,
-            Notes: notes ?? existing.Notes));
+            Notes: notes ?? existing.Notes,
+            WeeklyCapacityHours: weeklyCapacityHours ?? existing.WeeklyCapacityHours,
+            CostRate: costRate ?? existing.CostRate,
+            BillRate: billRate ?? existing.BillRate,
+            Skills: skills ?? existing.Skills,
+            IsActive: isActive ?? existing.IsActive));
         return McpJson.Serialize(updated);
     }
 
@@ -92,4 +111,28 @@ public static class ResourceTools
         ResourceService svc,
         [Description("이름")] string name) =>
         McpJson.Serialize(await svc.GetOrCreateByNameAsync(name));
+
+    [McpServerTool(Name = "atlas_resource_capacity"),
+     Description("자원 용량 — 주별 수요(배정 작업 공수 영업일 분배) vs 가용 → 가동률·과배분. id 생략 시 전 자원 히트맵.")]
+    public static async Task<string> Capacity(
+        CapacityService svc,
+        [Description("자원 ID (생략 시 전 자원 히트맵)")] int? id = null,
+        [Description("조회 주 수 (기본 8)")] int weeks = 8)
+    {
+        if (id is int rid)
+        {
+            var row = await svc.GetResourceCapacityAsync(rid, weeks)
+                ?? throw new InvalidOperationException($"Resource {rid} 없음");
+            return McpJson.Serialize(row);
+        }
+        return McpJson.Serialize(await svc.GetHeatmapAsync(weeks));
+    }
+
+    [McpServerTool(Name = "atlas_resource_utilization"),
+     Description("교차 프로젝트 가동률 리포트 — 자원별 기간 합계·평균 가동률·과배분 주수. 과배분 자원 식별용.")]
+    public static async Task<string> Utilization(
+        CapacityService svc,
+        [Description("조회 주 수 (기본 8)")] int weeks = 8,
+        [Description("부서 필터")] string? department = null) =>
+        McpJson.Serialize(await svc.GetUtilizationReportAsync(weeks, department));
 }

@@ -56,9 +56,13 @@ public static class AppServicesRegistration
         services.AddScoped<IIssueWbsLinkRepository, IssueWbsLinkRepository>();
         services.AddScoped<IWbsDevInfoLinkRepository, WbsDevInfoLinkRepository>();
         services.AddScoped<ITodoRepository, TodoRepository>();
+        services.AddScoped<IWbsAssignmentRepository, WbsAssignmentRepository>();
+        services.AddScoped<IResourceAvailabilityRepository, ResourceAvailabilityRepository>();
+        services.AddScoped<IWbsDependencyRepository, WbsDependencyRepository>();
 
         services.AddSingleton<BuiltInTemplateProvider>();
         services.AddScoped<ProjectService>();
+        services.AddScoped<WbsAssignmentService>();
         services.AddScoped<WbsService>();
         services.AddScoped<WbsTemplateService>();
         services.AddScoped<ChangeLogService>();
@@ -66,14 +70,18 @@ public static class AppServicesRegistration
         services.AddScoped<MeetingService>();
         services.AddScoped<DevInfoService>();
         services.AddScoped<ResourceService>();
+        services.AddScoped<CapacityService>();
         services.AddScoped<IssueService>();
         services.AddScoped<WorkLogService>();
         services.AddScoped<ActivityLogService>();
         services.AddScoped<MonitoringService>();
+        services.AddScoped<AttentionService>();
         services.AddScoped<RetrospectiveService>();
         services.AddScoped<ActionItemPromotionService>();
         services.AddScoped<IssueWbsLinkService>();
         services.AddScoped<WbsDevInfoLinkService>();
+        services.AddScoped<WbsDependencyService>();
+        services.AddScoped<SchedulingService>();
         services.AddScoped<WbsContextService>();
         services.AddScoped<TodoService>();
         services.AddScoped<StartPageService>();

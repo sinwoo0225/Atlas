@@ -418,6 +418,49 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             .ToList();
     }
 
+    // 카테고리별 포트폴리오 롤업 — 프로젝트수·WBS진척·미결이슈·자원수요·위험(마감초과) 집계. 관리자 한눈 뷰.
+    public async Task<PortfolioRollupDto> GetPortfolioRollupAsync()
+    {
+        var today = DateTime.Now.Date;
+        var parentWbsIds = await GetParentWbsIdsAsync();
+
+        var projects = await db.Projects.Select(p => new { p.Id, p.Category }).ToListAsync();
+        var catByProject = projects.ToDictionary(
+            p => p.Id, p => string.IsNullOrWhiteSpace(p.Category) ? "" : p.Category.Trim());
+
+        var leaf = await db.WbsItems
+            .Where(w => !parentWbsIds.Contains(w.Id))
+            .Select(w => new { w.ProjectId, w.Status, w.EndDate, w.IsMilestone, w.EstimateHours })
+            .ToListAsync();
+        var issues = await db.Issues
+            .Select(i => new { i.ProjectId, i.Status, i.DueDate })
+            .ToListAsync();
+
+        var rows = projects
+            .GroupBy(p => catByProject[p.Id], StringComparer.CurrentCultureIgnoreCase)
+            .Select(g =>
+            {
+                var pids = g.Select(p => p.Id).ToHashSet();
+                var cw = leaf.Where(w => pids.Contains(w.ProjectId)).ToList();
+                var totalLeaf = cw.Count;
+                var done = cw.Count(w => w.Status == WbsStatus.Done);
+                var progress = totalLeaf > 0 ? (int)Math.Round(done * 100.0 / totalLeaf) : 0;
+                var ci = issues.Where(i => pids.Contains(i.ProjectId)).ToList();
+                var openIssues = ci.Count(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress);
+                var demand = cw.Where(w => w.Status != WbsStatus.Done && w.EstimateHours.HasValue).Sum(w => w.EstimateHours!.Value);
+                var atRisk =
+                    cw.Count(w => w.Status != WbsStatus.Done && !w.IsMilestone && w.EndDate.HasValue && w.EndDate.Value.Date < today)
+                    + ci.Count(i => (i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress) && i.DueDate.HasValue && i.DueDate.Value.Date < today);
+                return new PortfolioRowDto(g.Key, g.Count(), totalLeaf, done, progress, openIssues, Math.Round(demand, 1), atRisk);
+            })
+            .OrderByDescending(r => r.AtRisk)
+            .ThenByDescending(r => r.ProjectCount)
+            .ThenBy(r => r.Category, StringComparer.CurrentCulture)
+            .ToList();
+
+        return new PortfolioRollupDto(rows);
+    }
+
     // ===== Phase 2: 흐름·추세 (ActivityLog 상태전이 재구성) =====
 
     private static readonly JsonSerializerOptions ChangesJsonOptions = new() { PropertyNameCaseInsensitive = true };

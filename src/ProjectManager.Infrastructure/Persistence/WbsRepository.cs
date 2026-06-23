@@ -15,6 +15,26 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         return await query.Include(x => x.Children).OrderBy(x => x.SortOrder).ToListAsync();
     }
 
+    // 기준선 캡처 — 프로젝트(선택 시 버전)의 모든 작업 BaselineStart/End 를 현재 계획 일정으로 복사. 영향 행 수 반환.
+    public async Task<int> CaptureBaselineAsync(int projectId, int? versionId)
+    {
+        var q = db.WbsItems.Where(x => x.ProjectId == projectId);
+        if (versionId.HasValue) q = q.Where(x => x.VersionId == versionId);
+        return await q.ExecuteUpdateAsync(s => s
+            .SetProperty(x => x.BaselineStart, x => x.StartDate)
+            .SetProperty(x => x.BaselineEnd, x => x.EndDate));
+    }
+
+    // 기준선 클리어 — BaselineStart/End 를 비움.
+    public async Task<int> ClearBaselineAsync(int projectId, int? versionId)
+    {
+        var q = db.WbsItems.Where(x => x.ProjectId == projectId);
+        if (versionId.HasValue) q = q.Where(x => x.VersionId == versionId);
+        return await q.ExecuteUpdateAsync(s => s
+            .SetProperty(x => x.BaselineStart, (DateTime?)null)
+            .SetProperty(x => x.BaselineEnd, (DateTime?)null));
+    }
+
     // 평면 필터 조회 — 트리 조립/Children Include 없음. SortOrder 순.
     public async Task<IEnumerable<WbsItem>> QueryAsync(int projectId, int? versionId, WbsListFilter filter)
     {

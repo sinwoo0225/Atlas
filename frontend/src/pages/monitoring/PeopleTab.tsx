@@ -10,8 +10,9 @@ import type { TFunction } from 'i18next';
 import { Card, Badge, Skeleton, EmptyState } from '../../components/ui';
 import { getChartColors, useThemeMode, effectiveLightDark } from '../../utils/themeColors';
 import { ResourceHeatmapCard } from './ResourceHeatmapCard';
+import { CapacityHeatmapCard } from './CapacityHeatmapCard';
 import type {
-  AssigneeCycleTime, AssigneeThroughput, AssigneeWorkload, ResourceHeatmap, UnassignedItem, WorkloadOverview,
+  AssigneeCycleTime, AssigneeThroughput, AssigneeWorkload, CapacityHeatmap, ResourceHeatmap, UnassignedItem, WorkloadOverview,
 } from '../../types';
 
 const CHART_HEIGHT = 280;
@@ -19,6 +20,8 @@ const CHART_HEIGHT = 280;
 interface Props {
   workload: WorkloadOverview | null;
   heatmap: ResourceHeatmap | null;
+  capacity: CapacityHeatmap | null;
+  capacityLoading: boolean;
   loading: boolean;
   // Phase 2 (추세 번들 지연 로드) — 담당자별 처리량·사이클타임.
   assigneeThroughput: AssigneeThroughput | null;
@@ -28,7 +31,7 @@ interface Props {
 
 // '담당자' 탭 — 관리자 렌즈. 여러 담당자의 업무 부하·위험·미할당·처리량·사이클타임을 한 화면에.
 // 귀속은 엔티티 Assignee/AssigneeResource(백엔드), Actor 아님.
-export function PeopleTab({ workload, heatmap, loading, assigneeThroughput, assigneeCycleTime, trendsLoading }: Props) {
+export function PeopleTab({ workload, heatmap, capacity, capacityLoading, loading, assigneeThroughput, assigneeCycleTime, trendsLoading }: Props) {
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -36,11 +39,14 @@ export function PeopleTab({ workload, heatmap, loading, assigneeThroughput, assi
         <PersonRiskCard data={workload?.assignees ?? []} loading={loading} />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <UnassignedQueueCard data={workload?.unassigned ?? []} loading={loading} />
+        <CapacityHeatmapCard data={capacity} loading={capacityLoading} height={CHART_HEIGHT} />
         <ResourceHeatmapCard data={heatmap} loading={loading} height={CHART_HEIGHT} />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <UnassignedQueueCard data={workload?.unassigned ?? []} loading={loading} />
         <PersonThroughputCard data={assigneeThroughput} loading={trendsLoading} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PersonCycleTimeCard data={assigneeCycleTime} loading={trendsLoading} />
       </div>
     </section>

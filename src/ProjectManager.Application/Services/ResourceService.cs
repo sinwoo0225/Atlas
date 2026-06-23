@@ -6,8 +6,35 @@ using ProjectManager.Infrastructure.Persistence;
 
 namespace ProjectManager.Application.Services;
 
-public class ResourceService(IResourceRepository repo, AppDbContext db)
+public class ResourceService(IResourceRepository repo, AppDbContext db, IResourceAvailabilityRepository availabilityRepo)
 {
+    public async Task<IEnumerable<ResourceAvailabilityDto>> ListAvailabilityAsync(int resourceId) =>
+        (await availabilityRepo.GetByResourceAsync(resourceId)).Select(ToAvailabilityDto);
+
+    public async Task<ResourceAvailabilityDto> AddAvailabilityAsync(CreateResourceAvailabilityDto dto)
+    {
+        var a = await availabilityRepo.CreateAsync(new ResourceAvailability
+        {
+            ResourceId = dto.ResourceId,
+            StartDate = dto.StartDate.Date,
+            EndDate = dto.EndDate.Date,
+            Type = dto.Type,
+            Hours = dto.Hours,
+            Note = dto.Note ?? string.Empty,
+        });
+        return ToAvailabilityDto(a);
+    }
+
+    public async Task<bool> DeleteAvailabilityAsync(int id)
+    {
+        if (await availabilityRepo.GetByIdAsync(id) is null) return false;
+        await availabilityRepo.DeleteAsync(id);
+        return true;
+    }
+
+    private static ResourceAvailabilityDto ToAvailabilityDto(ResourceAvailability a) => new(
+        a.Id, a.ResourceId, a.StartDate, a.EndDate, a.Type, a.Hours, a.Note);
+
     public async Task<IEnumerable<ResourceDto>> GetAllAsync(ResourceListFilter? filter = null) =>
         (await repo.GetAllAsync(filter)).Select(ToDto);
 
@@ -26,7 +53,12 @@ public class ResourceService(IResourceRepository repo, AppDbContext db)
             Department = dto.Department,
             Email = dto.Email,
             Phone = dto.Phone,
-            Notes = dto.Notes
+            Notes = dto.Notes,
+            WeeklyCapacityHours = dto.WeeklyCapacityHours,
+            CostRate = dto.CostRate,
+            BillRate = dto.BillRate,
+            Skills = dto.Skills,
+            IsActive = dto.IsActive,
         };
         return ToDto(await repo.CreateAsync(r));
     }
@@ -55,6 +87,11 @@ public class ResourceService(IResourceRepository repo, AppDbContext db)
         r.Email = dto.Email;
         r.Phone = dto.Phone;
         r.Notes = dto.Notes;
+        r.WeeklyCapacityHours = dto.WeeklyCapacityHours;
+        r.CostRate = dto.CostRate;
+        r.BillRate = dto.BillRate;
+        r.Skills = dto.Skills;
+        r.IsActive = dto.IsActive;
         return ToDto(await repo.UpdateAsync(r));
     }
 
@@ -99,5 +136,6 @@ public class ResourceService(IResourceRepository repo, AppDbContext db)
     public static ResourceDto ToDto(Resource r) => new(
         r.Id, r.Name, r.Type,
         r.Department, r.Email, r.Phone, r.Notes,
-        r.CreatedAt, r.UpdatedAt);
+        r.CreatedAt, r.UpdatedAt,
+        r.WeeklyCapacityHours, r.CostRate, r.BillRate, r.Skills, r.IsActive);
 }

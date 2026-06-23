@@ -9,8 +9,12 @@ public record KanbanMoveRequest(string Kind, int Id, string Column);
 
 [ApiController]
 [Route("api/monitoring")]
-public class MonitoringController(MonitoringService svc, WbsService wbsSvc, IssueService issueSvc) : ControllerBase
+public class MonitoringController(MonitoringService svc, WbsService wbsSvc, IssueService issueSvc, CapacityService capacitySvc, AttentionService attentionSvc) : ControllerBase
 {
+    // 주의 피드 — 마감 초과/임박·과배분·미배정·임박 마일스톤·정체 프로젝트 합성 알림.
+    [HttpGet("attention")]
+    public async Task<IActionResult> Attention() => Ok(await attentionSvc.GetAttentionAsync());
+
     [HttpGet("today")]
     public async Task<IActionResult> Today() => Ok(await svc.GetTodayAsync());
 
@@ -19,6 +23,16 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
 
     [HttpGet("resource-heatmap")]
     public async Task<IActionResult> ResourceHeatmap() => Ok(await svc.GetResourceHeatmapAsync());
+
+    // 용량 히트맵 — 자원 × 주 수요/가용/가동률(시간 기반). 건수 기반 resource-heatmap 의 상위호환.
+    [HttpGet("resource-capacity")]
+    public async Task<IActionResult> ResourceCapacity([FromQuery] int weeks = 8)
+        => Ok(await capacitySvc.GetHeatmapAsync(weeks));
+
+    // 교차 프로젝트 가동률 리포트.
+    [HttpGet("utilization")]
+    public async Task<IActionResult> Utilization([FromQuery] int weeks = 8, [FromQuery] string? department = null)
+        => Ok(await capacitySvc.GetUtilizationReportAsync(weeks, department));
 
     // 개요 Risk Radar — 전 프로젝트 마감 초과/임박 WBS + High Open 이슈.
     [HttpGet("risk")]
@@ -40,6 +54,10 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
     // 카테고리별 프로젝트 분포 (개요 도넛).
     [HttpGet("category-breakdown")]
     public async Task<IActionResult> CategoryBreakdown() => Ok(await svc.GetCategoryBreakdownAsync());
+
+    // 카테고리별 포트폴리오 롤업 — 프로젝트수·WBS진척·미결이슈·자원수요·위험.
+    [HttpGet("portfolio")]
+    public async Task<IActionResult> Portfolio() => Ok(await svc.GetPortfolioRollupAsync());
 
     // Phase 2 추세 번들 — Throughput/이슈순증감/사이클타임/활동추세 + 담당자별 처리량·사이클타임.
     // weeks 4~52, activityDays 7~120 으로 clamp. 추세/담당자 탭 지연 로드용.

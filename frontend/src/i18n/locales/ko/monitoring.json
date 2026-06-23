@@ -173,6 +173,43 @@
     "modalTitle": "{{label}} — {{count}}건",
     "cellTooltip": "{{name}} · W{{week}} ({{date}} 주): {{count}}건"
   },
+  "capacity": {
+    "title": "용량 가동률",
+    "gapsTip": "수요 계산에서 빠진 부분 (공수·일정 보완 필요)",
+    "unestimated": "미추정 {{count}}건",
+    "unscheduled": "미일정 {{hours}}h",
+    "sortTitle": "정렬",
+    "sortLoad": "수요 합계순",
+    "sortOver": "과배분 주수순",
+    "sortName": "이름순",
+    "empty": "용량 데이터 없음",
+    "emptyDesc": "작업에 공수(시간)·담당자를 배정하면 주별 가동률이 표시됩니다",
+    "cellTooltip": "{{name}} · {{date}} 주 — 수요 {{demand}}h / 가용 {{capacity}}h · {{util}}%"
+  },
+  "portfolio": {
+    "title": "포트폴리오 (카테고리별 롤업)",
+    "category": "카테고리",
+    "projects": "프로젝트",
+    "progress": "WBS 진척",
+    "openIssues": "미결 이슈",
+    "demand": "자원 수요",
+    "atRisk": "위험",
+    "uncategorized": "미분류",
+    "empty": "프로젝트가 없습니다"
+  },
+  "attention": {
+    "title": "주의 — 지금 봐야 할 것",
+    "highBadge": "긴급 {{count}}",
+    "allClear": "지금 주의할 항목 없음 👍",
+    "kind": {
+      "overdue": "마감 초과",
+      "overallocated": "과배분 자원 (이번 주)",
+      "dueSoon": "마감 임박 (3일 내)",
+      "unassigned": "미배정 작업·이슈",
+      "milestone": "임박 마일스톤 (30일 내)",
+      "stale": "정체 프로젝트"
+    }
+  },
   "people": {
     "workloadTitle": "담당자별 워크로드 밸런스",
     "workloadEmpty": "배정된 미완료 작업 없음",

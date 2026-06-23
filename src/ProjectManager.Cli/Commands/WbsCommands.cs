@@ -4,6 +4,7 @@ using ProjectManager.Application.Output;
 using ProjectManager.Application.Services;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
+using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Cli.Commands;
 
@@ -19,6 +20,18 @@ internal static class WbsCommands
         cmd.AddCommand(BuildMove(services));
         cmd.AddCommand(BuildDelete(services));
         cmd.AddCommand(BuildContext(services));
+        // 자원 배정/배분 (자유텍스트 Assignee 와 동기화되는 구조화 배정)
+        cmd.AddCommand(BuildAssign(services));
+        cmd.AddCommand(BuildUnassign(services));
+        cmd.AddCommand(BuildAssignments(services));
+        cmd.AddCommand(BuildBackfillAssignments(services));
+        // 일정 지능 — 의존성·임계경로·자동 리스케줄
+        cmd.AddCommand(BuildLinkDep(services));
+        cmd.AddCommand(BuildUnlinkDep(services));
+        cmd.AddCommand(BuildDeps(services));
+        cmd.AddCommand(BuildCriticalPath(services));
+        cmd.AddCommand(BuildReschedule(services));
+        cmd.AddCommand(BuildBaseline(services));
         // 연결(관련 정보/이슈) 조회·관리
         cmd.AddCommand(BuildDevInfoLinks(services));
         cmd.AddCommand(BuildIssueLinks(services));
@@ -112,9 +125,10 @@ internal static class WbsCommands
         importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환 (옛 --order = 중요도 의미)
         var notesOpt = new Option<string?>("--notes", "메모");
         var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동");
+        var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, leaf 에 입력");
 
         var c = new Command("create", "WBS 항목 생성 (SortOrder 는 시작일 그룹 끝에 자동 추가)")
-        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt };
+        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt, estimateOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -130,7 +144,8 @@ internal static class WbsCommands
                 IsMilestone: pr.GetValueForOption(msOpt) ?? false,
                 Importance: pr.GetValueForOption(importanceOpt) ?? 2,
                 Notes: pr.GetValueForOption(notesOpt) ?? string.Empty,
-                CompletedDate: pr.GetValueForOption(completedOpt));
+                CompletedDate: pr.GetValueForOption(completedOpt),
+                EstimateHours: pr.GetValueForOption(estimateOpt));
             var svc = services.GetRequiredService<WbsService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -152,9 +167,10 @@ internal static class WbsCommands
         var sortOrderOpt = new Option<int?>("--sort-order", "정렬 위치 (드물게 수동, 보통 dnd-kit reorder 사용)");
         var notesOpt = new Option<string?>("--notes", "메모");
         var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능");
+        var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, leaf 에 입력");
 
         var c = new Command("update", "WBS 항목 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt };
+        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt, estimateOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -174,7 +190,8 @@ internal static class WbsCommands
                 Notes: pr.GetValueForOption(notesOpt) ?? existing.Notes,
                 SortOrder: pr.GetValueForOption(sortOrderOpt) ?? existing.SortOrder,
                 CompletedDate: pr.GetValueForOption(completedOpt) ?? existing.CompletedDate,
-                UpdatedAt: existing.UpdatedAt);
+                UpdatedAt: existing.UpdatedAt,
+                EstimateHours: pr.GetValueForOption(estimateOpt) ?? existing.EstimateHours);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;
@@ -209,7 +226,8 @@ internal static class WbsCommands
                 Importance: existing.Importance, Notes: existing.Notes,
                 SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
                 CompletedDate: existing.CompletedDate,
-                UpdatedAt: existing.UpdatedAt);
+                UpdatedAt: existing.UpdatedAt,
+                EstimateHours: existing.EstimateHours);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;
@@ -227,6 +245,209 @@ internal static class WbsCommands
             if (!ok) { ctx.ExitCode = CliJson.WriteError("not_found", $"WbsItem {id} 없음"); return; }
             CliJson.WriteSuccess(new { deleted = true, id });
         }));
+        return c;
+    }
+
+    private static Command BuildAssign(IServiceProvider services)
+    {
+        var idOpt = new Option<int>("--id", "WBS 항목 ID") { IsRequired = true };
+        var resourceOpt = new Option<string>("--resource", "자원 이름 또는 ID (이름이면 없을 시 생성)") { IsRequired = true };
+        var allocOpt = new Option<int>("--allocation", () => 100, "배분율 % (작업 공수 중 이 자원 몫, 기본 100)");
+        var c = new Command("assign", "WBS 작업에 자원 배정 + 배분율 (자유텍스트 Assignee 와 병행, 용량 계산의 정본)")
+        { idOpt, resourceOpt, allocOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var id = pr.GetValueForOption(idOpt);
+            var resource = pr.GetValueForOption(resourceOpt)!;
+            var alloc = pr.GetValueForOption(allocOpt);
+            var assignSvc = services.GetRequiredService<WbsAssignmentService>();
+            var resourceSvc = services.GetRequiredService<ResourceService>();
+            int resourceId;
+            if (int.TryParse(resource, out var rid)) resourceId = rid;
+            else resourceId = (await resourceSvc.GetOrCreateByNameAsync(resource)).Id;
+            CliJson.WriteSuccess(await assignSvc.UpsertAsync(id, resourceId, alloc));
+        }));
+        return c;
+    }
+
+    private static Command BuildUnassign(IServiceProvider services)
+    {
+        var idOpt = new Option<int>("--id", "WBS 항목 ID") { IsRequired = true };
+        var resourceOpt = new Option<int>("--resource-id", "자원 ID") { IsRequired = true };
+        var c = new Command("unassign", "WBS 작업에서 자원 배정 제거") { idOpt, resourceOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var id = pr.GetValueForOption(idOpt);
+            var resourceId = pr.GetValueForOption(resourceOpt);
+            var assignSvc = services.GetRequiredService<WbsAssignmentService>();
+            var ok = await assignSvc.RemoveAsync(id, resourceId);
+            if (!ok) { ctx.ExitCode = CliJson.WriteError("not_found", "배정을 찾을 수 없습니다."); return; }
+            CliJson.WriteSuccess(new { unassigned = true, id, resourceId });
+        }));
+        return c;
+    }
+
+    private static Command BuildAssignments(IServiceProvider services)
+    {
+        var idOpt = new Option<int>("--id", "WBS 항목 ID") { IsRequired = true };
+        var c = new Command("assignments", "WBS 작업의 구조화 배정(자원 + 배분율) 조회") { idOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var id = ctx.ParseResult.GetValueForOption(idOpt);
+            var assignSvc = services.GetRequiredService<WbsAssignmentService>();
+            CliJson.WriteSuccess(await assignSvc.ListByWbsAsync(id));
+        }));
+        return c;
+    }
+
+    private static Command BuildBackfillAssignments(IServiceProvider services)
+    {
+        var c = new Command("backfill-assignments",
+            "전 프로젝트 WBS 의 자유텍스트 담당자 → WbsAssignment 동기화 (멱등, 이름→Person 자원 해석/생성)");
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var projectRepo = services.GetRequiredService<IProjectRepository>();
+            var wbsRepo = services.GetRequiredService<IWbsRepository>();
+            var assignSvc = services.GetRequiredService<WbsAssignmentService>();
+            var projects = await projectRepo.GetAllAsync();
+            var items = 0; var withAssignee = 0;
+            foreach (var p in projects)
+            {
+                var wbsItems = await wbsRepo.GetByProjectAsync(p.Id, null);
+                foreach (var w in wbsItems)
+                {
+                    items++;
+                    if (!string.IsNullOrWhiteSpace(w.Assignee)) withAssignee++;
+                    await assignSvc.ReconcileFromFreeTextAsync(w);
+                }
+            }
+            CliJson.WriteSuccess(new { backfilled = true, items, withAssignee });
+        }));
+        return c;
+    }
+
+    private static Command BuildLinkDep(IServiceProvider services)
+    {
+        var predOpt = new Option<int>("--pred", "선행 작업 ID") { IsRequired = true };
+        var succOpt = new Option<int>("--succ", "후행 작업 ID") { IsRequired = true };
+        var typeOpt = new Option<WbsDependencyType?>("--type", "FinishToStart(기본)|StartToStart|FinishToFinish|StartToFinish");
+        var lagOpt = new Option<int>("--lag", () => 0, "지연(영업일). 양수=간격, 음수=중첩");
+        var c = new Command("link-dep", "작업 의존성 추가 (선행→후행). 사이클·다른 프로젝트 거부")
+        { predOpt, succOpt, typeOpt, lagOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<WbsDependencyService>();
+            try
+            {
+                CliJson.WriteSuccess(await svc.CreateAsync(new CreateWbsDependencyDto(
+                    PredecessorId: pr.GetValueForOption(predOpt),
+                    SuccessorId: pr.GetValueForOption(succOpt),
+                    Type: pr.GetValueForOption(typeOpt) ?? WbsDependencyType.FinishToStart,
+                    LagDays: pr.GetValueForOption(lagOpt))));
+            }
+            catch (WbsDependencyConflictException ex) { ctx.ExitCode = CliJson.WriteError("conflict", ex.Message); }
+        }));
+        return c;
+    }
+
+    private static Command BuildUnlinkDep(IServiceProvider services)
+    {
+        var predOpt = new Option<int>("--pred", "선행 작업 ID") { IsRequired = true };
+        var succOpt = new Option<int>("--succ", "후행 작업 ID") { IsRequired = true };
+        var c = new Command("unlink-dep", "작업 의존성 제거") { predOpt, succOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<WbsDependencyService>();
+            var ok = await svc.DeleteAsync(pr.GetValueForOption(predOpt), pr.GetValueForOption(succOpt));
+            if (!ok) { ctx.ExitCode = CliJson.WriteError("not_found", "의존성을 찾을 수 없습니다."); return; }
+            CliJson.WriteSuccess(new { unlinked = true });
+        }));
+        return c;
+    }
+
+    private static Command BuildDeps(IServiceProvider services)
+    {
+        var projOpt = new Option<int?>("--project", "프로젝트 ID (전체 의존성)");
+        var idOpt = new Option<int?>("--id", "작업 ID (이 작업에 닿는 의존성)");
+        var c = new Command("deps", "의존성 조회 — --project 전체 또는 --id 작업별") { projOpt, idOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<WbsDependencyService>();
+            if (pr.GetValueForOption(idOpt) is int wid) CliJson.WriteSuccess(await svc.GetByWbsItemAsync(wid));
+            else if (pr.GetValueForOption(projOpt) is int pid) CliJson.WriteSuccess(await svc.GetByProjectAsync(pid));
+            else ctx.ExitCode = CliJson.WriteError("missing_arg", "--project 또는 --id 중 하나 필요");
+        }));
+        return c;
+    }
+
+    private static Command BuildCriticalPath(IServiceProvider services)
+    {
+        var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
+        var verOpt = new Option<int?>("--version", "WBS 버전 ID");
+        var skipOpt = new Option<bool>("--skip-weekends", () => true, "주말 제외(기본 true)");
+        var c = new Command("critical-path", "임계경로(CPM) — ES/EF/LS/LF·부동·임계 여부. 날짜 부족 작업은 indeterminate")
+        { projOpt, verOpt, skipOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<SchedulingService>();
+            CliJson.WriteSuccess(await svc.ComputeCriticalPathAsync(
+                pr.GetValueForOption(projOpt), pr.GetValueForOption(verOpt), pr.GetValueForOption(skipOpt)));
+        }));
+        return c;
+    }
+
+    private static Command BuildReschedule(IServiceProvider services)
+    {
+        var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
+        var fromOpt = new Option<int>("--from", "기준 작업 ID (이 작업 기준 후행 이동)") { IsRequired = true };
+        var applyOpt = new Option<bool>("--apply", "미리보기 대신 실제 적용");
+        var skipOpt = new Option<bool>("--skip-weekends", () => true, "주말 제외(기본 true)");
+        var c = new Command("reschedule", "의존성 기반 자동 일정 — 후행 push-only 이동. 기본 미리보기, --apply 시 적용")
+        { projOpt, fromOpt, applyOpt, skipOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<SchedulingService>();
+            var preview = await svc.PreviewRescheduleAsync(
+                pr.GetValueForOption(projOpt), pr.GetValueForOption(fromOpt), pr.GetValueForOption(skipOpt));
+            if (pr.GetValueForOption(applyOpt))
+                await svc.ApplyRescheduleAsync(pr.GetValueForOption(projOpt), preview.Shifts, preview.SkipWeekends);
+            CliJson.WriteSuccess(new { applied = pr.GetValueForOption(applyOpt), preview.Shifts });
+        }));
+        return c;
+    }
+
+    private static Command BuildBaseline(IServiceProvider services)
+    {
+        var c = new Command("baseline", "기준선(계획 스냅샷) — capture/clear. Gantt 고스트 막대·variance 기준");
+        var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
+        var verOpt = new Option<int?>("--version", "WBS 버전 ID (생략 시 전체)");
+
+        var cap = new Command("capture", "현재 계획 일정을 기준선으로 박제") { projOpt, verOpt };
+        cap.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<WbsService>();
+            var n = await svc.CaptureBaselineAsync(pr.GetValueForOption(projOpt), pr.GetValueForOption(verOpt));
+            CliJson.WriteSuccess(new { captured = n });
+        }));
+
+        var clr = new Command("clear", "기준선 비우기") { projOpt, verOpt };
+        clr.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var svc = services.GetRequiredService<WbsService>();
+            var n = await svc.ClearBaselineAsync(pr.GetValueForOption(projOpt), pr.GetValueForOption(verOpt));
+            CliJson.WriteSuccess(new { cleared = n });
+        }));
+
+        c.AddCommand(cap); c.AddCommand(clr);
         return c;
     }
 

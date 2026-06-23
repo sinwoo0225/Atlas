@@ -7,9 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsInstance } from 'echarts-for-react';
 import * as htmlToImage from 'html-to-image';
-import { ChevronDown, ChevronRight, Diamond, Download } from 'lucide-react';
+import { ChevronDown, ChevronRight, Diamond, Download, Flag } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { WbsItem, WbsStatus } from '../../types';
+import type { WbsItem, WbsStatus, WbsDependency } from '../../types';
 import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
 import { wbsStatusBadge } from '../../utils/statusMaps';
@@ -229,18 +229,27 @@ export function GanttChart({
   filterAssignees,
   unassignedOnly,
   lateOnly,
+  criticalIds,
+  dependencies,
+  onDateChanged,
 }: {
   items: WbsItem[];
   projectId: number;
   onDoubleClick: (item: WbsItem) => void;
   /** 드래그로 일정이 바뀐 뒤 부모에서 다시 fetch 하도록 알리는 콜백. */
   onItemsChanged: () => void;
+  /** 드래그로 날짜가 바뀐 작업 id — 후행 자동 리스케줄 미리보기 트리거(있으면). */
+  onDateChanged?: (itemId: number) => void;
   /** 상단 공통 필터 — 표/간트가 같은 선택을 공유. 비어있으면 전체. */
   filterStatuses: Set<WbsStatus>;
   filterAssignees: Set<string>;
   /** 미할당(담당자 없음)·지연(마감 지난 미완료) 토글 — 공통 필터. */
   unassignedOnly: boolean;
   lateOnly: boolean;
+  /** 임계경로(CPM) 작업 id — 해당 막대를 적색 테두리로 강조. */
+  criticalIds?: Set<number>;
+  /** 작업 의존성 — 막대 사이 화살표(선행 종료 → 후행 시작)로 표시. */
+  dependencies?: WbsDependency[];
 }) {
   const { t } = useTranslation();
   const theme = useThemeMode();
@@ -254,6 +263,10 @@ export function GanttChart({
 
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [scale, setScale] = useState<Scale>('day');
+  const [showBaseline, setShowBaseline] = useState(false);
+  const hasBaseline = items.some(function hb(i): boolean {
+    return !!i.baselineStart || (i.children?.some(hb) ?? false);
+  });
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   // 사용자가 줌·팬으로 설정한 dataZoom 백분율. notMerge=true 라도 옵션에 매번 명시해 유지.
   const [zoomRange, setZoomRange] = useState<{ start: number; end: number }>({ start: 0, end: 100 });
@@ -267,6 +280,7 @@ export function GanttChart({
   const rowsRef = useRef<GanttRow[]>([]);
   const projectIdRef = useRef(projectId);
   const onItemsChangedRef = useRef(onItemsChanged);
+  const onDateChangedRef = useRef(onDateChanged);
 
   const rows = useMemo(() => flattenForGantt(items, collapsed), [items, collapsed]);
   const visibleRows = rows;
@@ -274,6 +288,7 @@ export function GanttChart({
   useEffect(() => { rowsRef.current = rows; }, [rows]);
   useEffect(() => { projectIdRef.current = projectId; }, [projectId]);
   useEffect(() => { onItemsChangedRef.current = onItemsChanged; }, [onItemsChanged]);
+  useEffect(() => { onDateChangedRef.current = onDateChanged; }, [onDateChanged]);
 
   const [todayMs] = useState(() => { const t = new Date(); t.setHours(0, 0, 0, 0); return t.getTime(); });
 
@@ -428,6 +443,7 @@ export function GanttChart({
           endDate: toIsoDate(drag.curEnd),
         });
         onItemsChangedRef.current();
+        onDateChangedRef.current?.(item.id); // 후행 리스케줄 미리보기 트리거
       } catch (err) {
         console.error('drag update failed', err);
       }
@@ -613,14 +629,41 @@ export function GanttChart({
         kind = 'parent';
         color = colors.ganttBarParent;
       }
+      const crit = criticalIds?.has(row.item.id) ? 1 : 0;
       return {
         name: row.item.name,
         itemId: row.item.id,
         kind,
-        value: [idx, row.effStart, row.effEnd, color, kind, dim ? 1 : 0],
+        value: [idx, row.effStart, row.effEnd, color, kind, dim ? 1 : 0, crit],
       };
     })
     .filter((d): d is NonNullable<typeof d> => d !== null);
+
+  // 의존성 화살표 데이터 — 양 끝점이 모두 보이는 행이고 날짜가 있을 때만. value=[predIdx, predEnd, succIdx, succStart].
+  const rowIndexById = new Map<number, number>();
+  const rowEff = new Map<number, { start?: number; end?: number }>();
+  rows.forEach((r, i) => { rowIndexById.set(r.item.id, i); rowEff.set(r.item.id, { start: r.effStart, end: r.effEnd }); });
+  const depEdges = (dependencies ?? [])
+    .map((d) => {
+      const pi = rowIndexById.get(d.predecessorId);
+      const si = rowIndexById.get(d.successorId);
+      if (pi == null || si == null) return null;
+      const pe = rowEff.get(d.predecessorId)?.end;
+      const ss = rowEff.get(d.successorId)?.start;
+      if (pe == null || ss == null) return null;
+      return { value: [pi, pe, si, ss] };
+    })
+    .filter((d): d is { value: number[] } => d !== null);
+
+  // 기준선 고스트 막대 데이터 — 토글 ON 일 때만. value=[idx, baselineStartMs, baselineEndMs].
+  const baselineData = (showBaseline ? rows : [])
+    .map((row, idx) => {
+      const bs = row.item.baselineStart ? new Date(row.item.baselineStart).getTime() : undefined;
+      const be = row.item.baselineEnd ? new Date(row.item.baselineEnd).getTime() : undefined;
+      if (bs == null || be == null) return null;
+      return { value: [idx, bs, be] };
+    })
+    .filter((d): d is { value: number[] } => d !== null);
 
   const axisLabelFormatter = (val: number): string => {
     const d = new Date(val);
@@ -647,9 +690,18 @@ export function GanttChart({
         const end = toIsoDate(v[2]);
         const status = item ? t(wbsStatusBadge[item.status].labelKey) : '';
         const assignee = item?.assignee ? ` · ${item.assignee}` : '';
+        let baselineLine = '';
+        if (showBaseline && item?.baselineEnd) {
+          const bStart = item.baselineStart ? item.baselineStart.slice(0, 10) : '';
+          const bEnd = item.baselineEnd.slice(0, 10);
+          const dvar = Math.round((v[2] - new Date(item.baselineEnd).getTime()) / DAY_MS);
+          const varStr = dvar === 0 ? '' : ` (${dvar > 0 ? '+' : ''}${dvar}d)`;
+          baselineLine = `<div style="font-size:11px;opacity:.6">${t('wbs:gantt.baseline')}: ${bStart} ~ ${bEnd}${varStr}</div>`;
+        }
         return `<div style="font-weight:600">${p.name}</div>` +
                `<div style="font-size:11px;opacity:.85">${start} ~ ${end}</div>` +
-               `<div style="font-size:11px;opacity:.7">${status}${assignee}</div>`;
+               `<div style="font-size:11px;opacity:.7">${status}${assignee}</div>` +
+               baselineLine;
       },
     },
     grid: { left: 4, right: 16, top: TOP_PAD, bottom: BOTTOM_PAD, containLabel: false },
@@ -692,6 +744,54 @@ export function GanttChart({
       },
     ],
     series: [
+      // 기준선 고스트 막대 — 현재 막대 뒤에 깔려, 일정이 변한 만큼 삐져나와 variance 가 보인다.
+      {
+        type: 'custom',
+        silent: true,
+        encode: { x: [1, 2], y: 0 },
+        renderItem: (_: any, api: any) => {
+          const yC = api.coord([0, api.value(0)])[1];
+          const x0 = api.coord([api.value(1), 0])[0];
+          const x1 = api.coord([api.value(2), 0])[0];
+          // 현재 막대 바로 아래 얇은 바 — 일정이 이동/연장돼도 항상 보인다(MS Project 기준선 표시).
+          return {
+            type: 'rect',
+            z: 1,
+            shape: { x: x0, y: yC + 9, width: Math.max(x1 - x0, 2), height: 3, r: 1 },
+            style: { fill: colors.mutedBar, opacity: 0.75 },
+            silent: true,
+          };
+        },
+        data: baselineData,
+      },
+      // 의존성 화살표 — 선행 막대 끝 → 후행 막대 시작(엘보 + 화살촉). graphic 채널과 분리(별도 series)라 hover/drag 와 충돌 없음.
+      {
+        type: 'custom',
+        silent: true,
+        encode: { x: [1, 3], y: [0, 2] },
+        renderItem: (_: any, api: any) => {
+          const predIdx = api.value(0);
+          const predEnd = api.value(1);
+          const succIdx = api.value(2);
+          const succStart = api.value(3);
+          const p0 = api.coord([predEnd, predIdx]);   // 선행 막대 오른쪽 중심
+          const p1 = api.coord([succStart, succIdx]); // 후행 막대 왼쪽 중심
+          if (!p0 || !p1) return null;
+          const pad = 9;
+          const elbowX = p0[0] + pad;
+          const ax = p1[0]; const ay = p1[1];
+          const line = colors.mutedBar;
+          return {
+            type: 'group',
+            z: 2,
+            children: [
+              { type: 'polyline', shape: { points: [[p0[0], p0[1]], [elbowX, p0[1]], [elbowX, ay], [ax, ay]] }, style: { stroke: line, lineWidth: 1, fill: 'none' }, silent: true },
+              { type: 'polygon', shape: { points: [[ax, ay], [ax - 6, ay - 4], [ax - 6, ay + 4]] }, style: { fill: line }, silent: true },
+            ],
+          };
+        },
+        data: depEdges,
+      },
       {
         type: 'custom',
         encode: { x: [1, 2], y: 0, tooltip: [1, 2] },
@@ -702,7 +802,12 @@ export function GanttChart({
           const color = api.value(3);
           const kind = api.value(4);
           const dimFlag = api.value(5);
+          const critFlag = api.value(6);
           const baseOpacity = dimFlag ? 0.25 : 1;
+          // 임계경로 강조 — 적색 테두리(상태 색 유지). dim 이면 강조 약화.
+          const critStroke = critFlag && !dimFlag
+            ? { stroke: colors.ganttBarCritical, lineWidth: 2 }
+            : {};
 
           if (kind === 'milestone') {
             const cx = x1;
@@ -717,7 +822,7 @@ export function GanttChart({
                   [cx - size, y],
                 ],
               },
-              style: { fill: color, opacity: baseOpacity },
+              style: { fill: color, opacity: baseOpacity, ...critStroke },
               z: 5,
             };
           }
@@ -726,7 +831,7 @@ export function GanttChart({
             return {
               type: 'rect',
               shape: { x: x0, y: y - h / 2, width: Math.max(x1 - x0, 2), height: h, r: 2 },
-              style: { fill: color, opacity: baseOpacity },
+              style: { fill: color, opacity: baseOpacity, ...critStroke },
               z: 1,
             };
           }
@@ -735,11 +840,11 @@ export function GanttChart({
           return {
             type: 'rect',
             shape: { x: x0, y: y - h / 2, width: Math.max(x1 - x0, 2), height: h, r: 3 },
-            style: { fill: color, opacity: baseOpacity * 0.95 },
+            style: { fill: color, opacity: baseOpacity * 0.95, ...critStroke },
             z: 4,
           };
         },
-        dimensions: ['y', 'start', 'end', 'color', 'kind', 'dim'],
+        dimensions: ['y', 'start', 'end', 'color', 'kind', 'dim', 'crit'],
         data: seriesData,
         markLine: {
           silent: true,
@@ -778,6 +883,17 @@ export function GanttChart({
         <Button variant="secondary" size="sm" onClick={handleExportPng} leadingIcon={<Download size={14} />}>
           {t('wbs:gantt.exportPng')}
         </Button>
+        {hasBaseline && (
+          <Button
+            variant={showBaseline ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setShowBaseline((v) => !v)}
+            leadingIcon={<Flag size={14} />}
+            title={t('wbs:gantt.baselineHint')}
+          >
+            {t('wbs:gantt.baseline')}
+          </Button>
+        )}
         <span className="ml-auto text-xs text-muted">
           {t('wbs:gantt.help')}
         </span>

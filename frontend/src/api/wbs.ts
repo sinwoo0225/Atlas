@@ -19,4 +19,9 @@ export const wbsApi = {
     api.post<WbsVersion>(`/projects/${data.projectId}/wbs-versions`, data),
   setCurrentVersion: (projectId: number, versionId: number) =>
     api.put<void>(`/projects/${projectId}/wbs-versions/${versionId}/set-current`, {}),
+  // 기준선 — 현재 계획 일정을 baseline 으로 박제/비움(선택 시 버전 한정).
+  captureBaseline: (projectId: number, versionId?: number) =>
+    api.post<{ captured: number }>(`/projects/${projectId}/wbs/baseline/capture${versionId ? `?versionId=${versionId}` : ''}`, {}),
+  clearBaseline: (projectId: number, versionId?: number) =>
+    api.post<{ cleared: number }>(`/projects/${projectId}/wbs/baseline/clear${versionId ? `?versionId=${versionId}` : ''}`, {}),
 };

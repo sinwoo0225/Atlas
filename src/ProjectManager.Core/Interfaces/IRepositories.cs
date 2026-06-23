@@ -31,6 +31,9 @@ public interface IWbsRepository
     Task SetCurrentVersionAsync(int projectId, int versionId);
     // 시작 화면 위젯(E-2) — 모든 프로젝트의 미완(!Done) WBS, Project navigation 포함.
     Task<IEnumerable<WbsItem>> GetOpenAcrossProjectsAsync();
+    // 기준선 캡처/클리어 — 프로젝트(선택 시 버전)의 작업 BaselineStart/End 일괄 갱신. 영향 행 수 반환.
+    Task<int> CaptureBaselineAsync(int projectId, int? versionId);
+    Task<int> ClearBaselineAsync(int projectId, int? versionId);
 }
 
 public interface IWbsTemplateRepository
@@ -155,6 +158,42 @@ public interface IIssueWbsLinkRepository
     Task<bool> DeleteAsync(int issueId, int wbsItemId);
     // 프로젝트의 모든 link tuple 반환 (카운트 배지용). Issue.ProjectId 기준 — Issue/WBS 양쪽 ProjectId 는 동일하다는 서비스 가드 전제.
     Task<IReadOnlyList<(int IssueId, int WbsItemId)>> GetByProjectAsync(int projectId);
+}
+
+// WbsItem ↔ Resource 배정 + 배분율. ReconcileFromFreeText 가 자유텍스트 Assignee 와 동기화.
+public interface IWbsAssignmentRepository
+{
+    Task<IEnumerable<WbsAssignment>> GetByWbsItemAsync(int wbsItemId);
+    Task<IEnumerable<WbsAssignment>> GetByResourceAsync(int resourceId);
+    Task<WbsAssignment?> GetAsync(int wbsItemId, int resourceId);
+    Task<WbsAssignment> CreateAsync(WbsAssignment assignment);
+    Task<WbsAssignment> UpdateAsync(WbsAssignment assignment);
+    Task<bool> DeleteAsync(int wbsItemId, int resourceId);
+    // 프로젝트의 모든 배정(작업 + 자원 navigation 포함). 용량 계산·plan context 용. WbsItem.ProjectId 기준.
+    Task<IEnumerable<WbsAssignment>> GetByProjectAsync(int projectId, int? versionId = null);
+}
+
+// 자원 비가용 구간(휴가·공휴일). CapacityService 가 주별 용량 차감에 사용.
+public interface IResourceAvailabilityRepository
+{
+    Task<IEnumerable<ResourceAvailability>> GetByResourceAsync(int resourceId);
+    Task<ResourceAvailability?> GetByIdAsync(int id);
+    Task<ResourceAvailability> CreateAsync(ResourceAvailability availability);
+    Task DeleteAsync(int id);
+    // 기간 겹치는 모든 자원의 비가용 구간 — 용량 집계 윈도우용.
+    Task<IEnumerable<ResourceAvailability>> GetOverlappingAsync(DateTime fromInclusive, DateTime toInclusive);
+}
+
+// WbsItem(선행) → WbsItem(후행) 의존성. SchedulingService 의 CPM·리스케줄용.
+public interface IWbsDependencyRepository
+{
+    Task<IEnumerable<WbsDependency>> GetByProjectAsync(int projectId, int? versionId = null);
+    Task<IEnumerable<WbsDependency>> GetByWbsItemAsync(int wbsItemId);
+    Task<WbsDependency?> GetAsync(int predecessorId, int successorId);
+    Task<WbsDependency?> GetByIdAsync(int id);
+    Task<WbsDependency> CreateAsync(WbsDependency dependency);
+    Task<WbsDependency> UpdateAsync(WbsDependency dependency);
+    Task<bool> DeleteAsync(int predecessorId, int successorId);
 }
 
 // WbsItem ↔ DevInfoItem "관련 정보" 다대다 (무타입). UpdateAsync 없음 — audit 외 변경 가능한 필드 없음.

@@ -18,6 +18,8 @@ import { AgingWipCard } from './monitoring/AgingWipCard';
 import { CategoryBreakdownCard } from './monitoring/CategoryBreakdownCard';
 import { OverviewKpiCard } from './monitoring/OverviewKpiCard';
 import { PeopleTab } from './monitoring/PeopleTab';
+import { AttentionFeedCard } from './monitoring/AttentionFeedCard';
+import { PortfolioCard } from './monitoring/PortfolioCard';
 import { TrendsTab } from './monitoring/TrendsTab';
 import { WeeklyReviewCard } from './monitoring/WeeklyReviewCard';
 import type {
@@ -30,6 +32,9 @@ import type {
   MonitoringTrends,
   OpenIssuesByProject,
   ResourceHeatmap,
+  CapacityHeatmap,
+  AttentionFeed,
+  PortfolioRollup,
   StaleProject,
   TodayWbs, WeeklyReview, WeeklyWorkLog, WeeklyWorkLogDay, WeeklyWorkLogProject,
   WorkloadOverview,
@@ -112,9 +117,14 @@ export function MonitoringPage() {
   const [lastWeek, setLastWeek] = useState<WeeklyWorkLog | null>(null);
   const [charts, setCharts] = useState<MonitoringChartsData | null>(null);
   const [heatmap, setHeatmap] = useState<ResourceHeatmap | null>(null);
+  // 용량 히트맵 — 담당자 탭 첫 진입 시 지연 로드(시간 기반 가동률, 건수 히트맵과 별도).
+  const [capacity, setCapacity] = useState<CapacityHeatmap | null>(null);
+  const [capacityLoading, setCapacityLoading] = useState(false);
   const [activityByProject, setActivityByProject] = useState<ActivityByProject[]>([]);
   const [openIssues, setOpenIssues] = useState<OpenIssuesByProject[]>([]);
   const [risk, setRisk] = useState<MonitoringRisk | null>(null);
+  const [attention, setAttention] = useState<AttentionFeed | null>(null);
+  const [portfolio, setPortfolio] = useState<PortfolioRollup | null>(null);
   const [stale, setStale] = useState<StaleProject[]>([]);
   const [agingWip, setAgingWip] = useState<AgingWipItem[]>([]);
   const [workload, setWorkload] = useState<WorkloadOverview | null>(null);
@@ -137,6 +147,8 @@ export function MonitoringPage() {
     setForecastLoading(false);
     setReview(null); // 새로고침 시 회고도 무효화 → '일지' 탭 재진입 시 재로드
     setReviewLoading(false);
+    setCapacity(null); // 새로고침 시 용량도 무효화 → '담당자' 탭 재진입 시 재로드
+    setCapacityLoading(false);
     const thisMon = startOfWeek(new Date());
     const lastMon = addDays(thisMon, -7);
     Promise.all([
@@ -152,8 +164,10 @@ export function MonitoringPage() {
       monitoringApi.getAgingWip(),
       monitoringApi.getWorkload(),
       monitoringApi.getCategoryBreakdown(),
+      monitoringApi.getAttention(),
+      monitoringApi.getPortfolio(),
     ])
-      .then(([today, thisW, lastW, ch, hm, abp, oi, rk, st, aw, wl, cat]) => {
+      .then(([today, thisW, lastW, ch, hm, abp, oi, rk, st, aw, wl, cat, att, pf]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
@@ -166,6 +180,8 @@ export function MonitoringPage() {
         setAgingWip(aw);
         setWorkload(wl);
         setCategories(cat);
+        setAttention(att);
+        setPortfolio(pf);
       })
       .catch(() => setError(t('monitoring:loadFailed')))
       .finally(() => setLoading(false));
@@ -183,6 +199,17 @@ export function MonitoringPage() {
         .finally(() => setTrendsLoading(false));
     }
   }, [tab, trends, trendsLoading]);
+
+  // 담당자 탭 첫 진입(또는 새로고침 후 재진입) 시 용량 히트맵 지연 로드.
+  useEffect(() => {
+    if (tab === 'people' && capacity === null && !capacityLoading) {
+      setCapacityLoading(true);
+      monitoringApi.getResourceCapacity()
+        .then(setCapacity)
+        .catch(() => { /* 용량은 보조 — 실패해도 페이지 유지 */ })
+        .finally(() => setCapacityLoading(false));
+    }
+  }, [tab, capacity, capacityLoading]);
 
   // 추세 탭 '실험(Phase 3)' 섹션 — 예측 번들 지연 로드(추세 탭 전용).
   useEffect(() => {
@@ -238,6 +265,8 @@ export function MonitoringPage() {
 
       {tab === 'overview' && (
         <div className="space-y-4">
+          <AttentionFeedCard data={attention} loading={loading} onSelectTab={(tb) => setTab(tb as MonitoringTab)} />
+          <PortfolioCard data={portfolio} loading={loading} />
           <MonitoringRiskCard risk={risk} />
           <MonitoringChartGrid
             data={charts}
@@ -258,6 +287,8 @@ export function MonitoringPage() {
         <PeopleTab
           workload={workload}
           heatmap={heatmap}
+          capacity={capacity}
+          capacityLoading={capacityLoading}
           loading={loading}
           assigneeThroughput={trends?.assigneeThroughput ?? null}
           assigneeCycleTime={trends?.assigneeCycleTime ?? []}

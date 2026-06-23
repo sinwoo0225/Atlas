@@ -22,10 +22,16 @@ function ResourceForm({ initial, onSave, onCancel }: {
     email: initial?.email ?? '',
     phone: initial?.phone ?? '',
     notes: initial?.notes ?? '',
+    weeklyCapacityHours: initial?.weeklyCapacityHours ?? 40,
+    costRate: initial?.costRate ?? null,
+    billRate: initial?.billRate ?? null,
+    skills: initial?.skills ?? '',
+    isActive: initial?.isActive ?? true,
   };
   const [form, setForm] = useState(initialForm);
   const dirty = JSON.stringify(form) !== JSON.stringify(initialForm);
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const setField = (k: string, v: unknown) => setForm((f) => ({ ...f, [k]: v }));
 
   return (
     <Modal
@@ -81,6 +87,45 @@ function ResourceForm({ initial, onSave, onCancel }: {
             </div>
           </FormField>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label={t('resources:form.weeklyCapacity')}>
+            <input
+              type="number" min={0} step={1}
+              value={form.weeklyCapacityHours}
+              onChange={(e) => setField('weeklyCapacityHours', e.target.value === '' ? 0 : Number(e.target.value))}
+              className={inputClass}
+            />
+          </FormField>
+          <FormField label={t('resources:form.skills')}>
+            <input value={form.skills} onChange={(e) => set('skills', e.target.value)} className={inputClass} placeholder={t('resources:form.skillsPlaceholder')} />
+          </FormField>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label={t('resources:form.costRate')}>
+            <input
+              type="number" min={0} step={1}
+              value={form.costRate ?? ''}
+              onChange={(e) => setField('costRate', e.target.value === '' ? null : Number(e.target.value))}
+              className={inputClass}
+            />
+          </FormField>
+          <FormField label={t('resources:form.billRate')}>
+            <input
+              type="number" min={0} step={1}
+              value={form.billRate ?? ''}
+              onChange={(e) => setField('billRate', e.target.value === '' ? null : Number(e.target.value))}
+              className={inputClass}
+            />
+          </FormField>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-secondary cursor-pointer">
+          <input type="checkbox" checked={form.isActive} onChange={(e) => setField('isActive', e.target.checked)} />
+          {t('resources:form.active')}
+          <span className="text-xs text-muted">{t('resources:form.activeHint')}</span>
+        </label>
 
         <FormField label={t('resources:form.notes')}>
           <textarea

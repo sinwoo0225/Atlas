@@ -54,6 +54,8 @@
     "endDate": "계획 종료일",
     "completedDate": "완료일(실적)",
     "completedHint": "완료 처리 시 자동 기록됩니다. 실제 완료일에 맞게 직접 수정할 수 있습니다.",
+    "estimateHours": "공수 추정(시간)",
+    "estimateHint": "용량 계획 기준 — 최하위(leaf) 작업에 입력. 담당자·일정과 함께 주별 수요로 분배됩니다.",
     "importance": "중요도",
     "status": "상태",
     "milestone": "마일스톤",
@@ -67,6 +69,40 @@
     "moved": "'{{name}}' 을(를) '{{target}}' 아래로 이동",
     "movedWithChildren": "'{{name}}' 을(를) '{{target}}' 아래로 이동 (하위 {{count}}건 포함)",
     "created": "새 작업 '{{name}}' 이(가) 추가됐어요"
+  },
+  "deps": {
+    "title": "선행 작업 · 의존성 ({{count}})",
+    "add": "추가",
+    "none": "선행 작업 없음",
+    "remove": "의존성 제거",
+    "selectPred": "선행 작업 선택…",
+    "lag": "지연(영업일)",
+    "successors": "후행: {{names}}",
+    "type": {
+      "FinishToStart": "FS 종료→시작",
+      "StartToStart": "SS 시작→시작",
+      "FinishToFinish": "FF 종료→종료",
+      "StartToFinish": "SF 시작→종료"
+    }
+  },
+  "reschedule": {
+    "title": "후행 일정 자동 이동 ({{count}})",
+    "desc": "선행 일정 변경에 따라 아래 후행 작업이 이동합니다 (늦추기만, 의존성 충족).",
+    "apply": "적용"
+  },
+  "views": {
+    "save": "뷰 저장",
+    "saveHint": "현재 필터를 명명 뷰로 저장",
+    "namePrompt": "저장할 뷰 이름:",
+    "apply": "이 뷰 적용",
+    "delete": "뷰 삭제",
+    "deleteAria": "뷰 삭제 — {{name}}"
+  },
+  "baseline": {
+    "capture": "기준선 캡처",
+    "captureTitle": "기준선 캡처",
+    "captureMessage": "현재 계획 일정을 기준선으로 저장합니다. 이후 Gantt '기준선' 토글로 변동을 비교할 수 있습니다. 기존 기준선은 덮어씁니다.",
+    "captured": "기준선 캡처 완료 ({{count}}개 작업)"
   },
   "related": {
     "title": "관련 Issue ({{count}})",
@@ -110,6 +146,8 @@
     "scaleWeek": "주",
     "scaleMonth": "월",
     "exportPng": "PNG 저장",
+    "baseline": "기준선",
+    "baselineHint": "캡처된 계획을 고스트 막대로 표시 (계획 대비 변동 확인)",
     "help": "막대 호버=핸들 표시 · 가운데=이동 / 좌우 끝=리사이즈 · 더블클릭=날짜 모달",
     "empty": "간트 차트 표시 가능한 작업이 없습니다.",
     "today": "오늘",

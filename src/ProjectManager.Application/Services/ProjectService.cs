@@ -250,7 +250,9 @@ public class ProjectService(
         w.Id, w.ProjectId, w.VersionId, w.ParentId,
         w.Name, w.Assignee, w.StartDate, w.EndDate,
         w.Status, w.IsMilestone, w.Importance, w.Notes,
-        w.CreatedAt, w.UpdatedAt, w.SortOrder, w.CompletedDate, null);
+        w.CreatedAt, w.UpdatedAt, w.SortOrder, w.CompletedDate,
+        w.EstimateHours, w.EstimateHours,
+        w.BaselineStart, w.BaselineEnd, null);
 
     internal static ChangeLogDto ChangeLogToDto(ChangeLog c) => new(
         c.Id, c.ProjectId, c.Date, c.Content, c.Impact,

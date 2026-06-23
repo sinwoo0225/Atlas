@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using ProjectManager.Application.Scheduling;
 using ProjectManager.Application.Templates;
 using ProjectManager.Core.Domain;
 using ProjectManager.Core.DTOs;
@@ -213,31 +214,12 @@ public class WbsTemplateService(
         WbsTemplateNodeDto node, DateTime anchor, bool skipWeekends)
     {
         if (node.OffsetStartDays is null) return (null, null);
-        var start = Advance(anchor, node.OffsetStartDays.Value, skipWeekends);
+        var start = WorkdayCalendar.Advance(anchor, node.OffsetStartDays.Value, skipWeekends);
         if (node.IsMilestone) return (start, start);
         if (node.DurationDays is null) return (start, null);
         var span = Math.Max(0, node.DurationDays.Value - 1); // 기간 inclusive
-        return (start, Advance(start, span, skipWeekends));
+        return (start, WorkdayCalendar.Advance(start, span, skipWeekends));
     }
-
-    // skipWeekends=true 면 토·일 제외하고 days 영업일 전진 (음수면 후진). 앵커가 주말이면 먼저 평일로 정규화.
-    private static DateTime Advance(DateTime from, int days, bool skipWeekends)
-    {
-        if (!skipWeekends) return from.AddDays(days);
-        var d = from;
-        while (IsWeekend(d)) d = d.AddDays(1);
-        var step = days >= 0 ? 1 : -1;
-        var remaining = Math.Abs(days);
-        while (remaining > 0)
-        {
-            d = d.AddDays(step);
-            if (!IsWeekend(d)) remaining--;
-        }
-        return d;
-    }
-
-    private static bool IsWeekend(DateTime d) =>
-        d.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday;
 
     private static int CountNodes(IReadOnlyList<WbsTemplateNodeDto> nodes) =>
         nodes.Sum(n => 1 + CountNodes(n.Children));

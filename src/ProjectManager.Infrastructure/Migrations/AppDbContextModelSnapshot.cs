@@ -456,6 +456,12 @@ namespace ProjectManager.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<decimal?>("BillRate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("CostRate")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -472,6 +478,11 @@ namespace ProjectManager.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -485,6 +496,13 @@ namespace ProjectManager.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Skills")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(500)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
                     b.Property<int>("Type")
                         .HasColumnType("INTEGER");
 
@@ -497,9 +515,70 @@ namespace ProjectManager.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<double>("WeeklyCapacityHours")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("REAL")
+                        .HasDefaultValue(40.0);
+
                     b.HasKey("Id");
 
                     b.ToTable("Resources");
+                });
+
+            modelBuilder.Entity("ProjectManager.Core.Domain.ResourceAvailability", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<double?>("Hours")
+                        .HasColumnType("REAL");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("PTO");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResourceId", "StartDate");
+
+                    b.ToTable("ResourceAvailabilities");
                 });
 
             modelBuilder.Entity("ProjectManager.Core.Domain.TodoItem", b =>
@@ -574,6 +653,97 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.ToTable("TodoItems");
                 });
 
+            modelBuilder.Entity("ProjectManager.Core.Domain.WbsAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AllocationPercent")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ResourceId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WbsItemId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("WbsItemId", "ResourceId")
+                        .IsUnique();
+
+                    b.ToTable("WbsAssignments");
+                });
+
+            modelBuilder.Entity("ProjectManager.Core.Domain.WbsDependency", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LagDays")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("PredecessorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SuccessorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("FinishToStart");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .IsConcurrencyToken()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SuccessorId");
+
+                    b.HasIndex("PredecessorId", "SuccessorId")
+                        .IsUnique();
+
+                    b.ToTable("WbsDependencies");
+                });
+
             modelBuilder.Entity("ProjectManager.Core.Domain.WbsDevInfoLink", b =>
                 {
                     b.Property<int>("Id")
@@ -623,6 +793,12 @@ namespace ProjectManager.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime?>("BaselineEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("BaselineStart")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("TEXT");
 
@@ -636,6 +812,9 @@ namespace ProjectManager.Infrastructure.Migrations
 
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("TEXT");
+
+                    b.Property<double?>("EstimateHours")
+                        .HasColumnType("REAL");
 
                     b.Property<int>("Importance")
                         .HasColumnType("INTEGER");
@@ -907,6 +1086,17 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.Navigation("Project");
                 });
 
+            modelBuilder.Entity("ProjectManager.Core.Domain.ResourceAvailability", b =>
+                {
+                    b.HasOne("ProjectManager.Core.Domain.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Resource");
+                });
+
             modelBuilder.Entity("ProjectManager.Core.Domain.TodoItem", b =>
                 {
                     b.HasOne("ProjectManager.Core.Domain.Resource", "AssigneeResource")
@@ -915,6 +1105,44 @@ namespace ProjectManager.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("AssigneeResource");
+                });
+
+            modelBuilder.Entity("ProjectManager.Core.Domain.WbsAssignment", b =>
+                {
+                    b.HasOne("ProjectManager.Core.Domain.Resource", "Resource")
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectManager.Core.Domain.WbsItem", "WbsItem")
+                        .WithMany("Assignments")
+                        .HasForeignKey("WbsItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Resource");
+
+                    b.Navigation("WbsItem");
+                });
+
+            modelBuilder.Entity("ProjectManager.Core.Domain.WbsDependency", b =>
+                {
+                    b.HasOne("ProjectManager.Core.Domain.WbsItem", "Predecessor")
+                        .WithMany()
+                        .HasForeignKey("PredecessorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ProjectManager.Core.Domain.WbsItem", "Successor")
+                        .WithMany()
+                        .HasForeignKey("SuccessorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Predecessor");
+
+                    b.Navigation("Successor");
                 });
 
             modelBuilder.Entity("ProjectManager.Core.Domain.WbsDevInfoLink", b =>
@@ -998,6 +1226,8 @@ namespace ProjectManager.Infrastructure.Migrations
 
             modelBuilder.Entity("ProjectManager.Core.Domain.WbsItem", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("Children");
                 });
 

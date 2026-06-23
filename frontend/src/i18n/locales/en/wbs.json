@@ -54,6 +54,8 @@
     "endDate": "Planned end",
     "completedDate": "Completed (actual)",
     "completedHint": "Set automatically when marked done. You can adjust it to the real completion date.",
+    "estimateHours": "Estimate (hours)",
+    "estimateHint": "Capacity-planning basis — enter on leaf tasks. Spread into weekly demand with assignee + schedule.",
     "importance": "Importance",
     "status": "Status",
     "milestone": "Milestone",
@@ -67,6 +69,40 @@
     "moved": "Moved '{{name}}' under '{{target}}'",
     "movedWithChildren": "Moved '{{name}}' under '{{target}}' (incl. {{count}} sub-items)",
     "created": "New task '{{name}}' added"
+  },
+  "deps": {
+    "title": "Predecessors · dependencies ({{count}})",
+    "add": "Add",
+    "none": "No predecessors",
+    "remove": "Remove dependency",
+    "selectPred": "Select predecessor…",
+    "lag": "Lag (workdays)",
+    "successors": "Successors: {{names}}",
+    "type": {
+      "FinishToStart": "FS finish→start",
+      "StartToStart": "SS start→start",
+      "FinishToFinish": "FF finish→finish",
+      "StartToFinish": "SF start→finish"
+    }
+  },
+  "reschedule": {
+    "title": "Auto-reschedule successors ({{count}})",
+    "desc": "These successor tasks shift to satisfy the dependency (push only).",
+    "apply": "Apply"
+  },
+  "views": {
+    "save": "Save view",
+    "saveHint": "Save current filters as a named view",
+    "namePrompt": "View name:",
+    "apply": "Apply this view",
+    "delete": "Delete view",
+    "deleteAria": "Delete view — {{name}}"
+  },
+  "baseline": {
+    "capture": "Capture baseline",
+    "captureTitle": "Capture baseline",
+    "captureMessage": "Saves the current planned schedule as a baseline. Toggle 'Baseline' on the Gantt to compare variance. Replaces any existing baseline.",
+    "captured": "Baseline captured ({{count}} tasks)"
   },
   "related": {
     "title": "Related issues ({{count}})",
@@ -110,6 +146,8 @@
     "scaleWeek": "Week",
     "scaleMonth": "Month",
     "exportPng": "Save PNG",
+    "baseline": "Baseline",
+    "baselineHint": "Show the captured plan as ghost bars (variance vs plan)",
     "help": "Hover a bar=show handles · center=move / ends=resize · double-click=date modal",
     "empty": "No tasks to display in the Gantt chart.",
     "today": "Today",

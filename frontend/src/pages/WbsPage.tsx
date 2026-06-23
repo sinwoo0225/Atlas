@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate, Code2 } from 'lucide-react';
+import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate, Code2, GitBranch, Bookmark, Flag } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
   closestCenter, useSensor, useSensors,
@@ -31,18 +31,21 @@ import { IssuePicker } from '../components/IssuePicker';
 import { issuesApi } from '../api/issues';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
 import { wbsDevInfoLinksApi, type WbsDevInfoLink } from '../api/wbsDevInfoLinks';
+import { wbsDependenciesApi } from '../api/wbsDependencies';
 import { devInfoApi } from '../api/devinfo';
 import { DevInfoPicker } from '../components/DevInfoPicker';
 import { GanttChart } from './wbs/GanttChart';
+import { ReschedulePreviewModal } from './wbs/ReschedulePreviewModal';
 import { SortableWbsRow } from './wbs/SortableWbsRow';
 import { WbsDragOverlayRow } from './wbs/WbsDragOverlayRow';
 import { computeSiblingReorder } from './wbs/wbsReorder';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
-import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem } from '../types';
+import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem, WbsDependency, WbsDependencyType, RescheduleResult } from '../types';
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
 import { loadSettings, patchSettings } from '../store/settings';
 import { loadWbsFilters, saveWbsFilters, clearWbsFilters, type StoredWbsFilters } from '../utils/wbsFilterStore';
+import { listSavedViews, saveView, deleteView, type SavedWbsView } from '../utils/wbsSavedViews';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
   return items.map((it) => {
@@ -55,7 +58,7 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
 type WbsFormData = {
   name: string; assignee: string; startDate: string; endDate: string;
   status: string; isMilestone: boolean; importance: string; notes: string;
-  parentId: number | null; completedDate: string;
+  parentId: number | null; completedDate: string; estimateHours: string;
 };
 
 function WbsItemForm({
@@ -81,6 +84,7 @@ function WbsItemForm({
     notes: initial?.notes ?? '',
     parentId: initial?.parentId ?? parentId ?? null,
     completedDate: initial?.completedDate?.slice(0, 10) ?? '',
+    estimateHours: initial?.estimateHours != null ? String(initial.estimateHours) : '',
   };
   const [form, setForm] = useState<WbsFormData>(initialForm);
   const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(initialForm));
@@ -109,6 +113,7 @@ function WbsItemForm({
       status: form.status as WbsStatus, isMilestone: form.isMilestone,
       importance: parseInt(form.importance) || 2, notes: form.notes,
       completedDate: form.completedDate || null,
+      estimateHours: form.estimateHours.trim() === '' ? null : Number(form.estimateHours),
       ...(initial ? { updatedAt: snapshotUpdatedAt, sortOrder: initial.sortOrder } : {}),
     };
     if (initial) {
@@ -138,6 +143,7 @@ function WbsItemForm({
                     notes: fresh.notes ?? '',
                     parentId: fresh.parentId ?? null,
                     completedDate: fresh.completedDate?.slice(0, 10) ?? '',
+                    estimateHours: fresh.estimateHours != null ? String(fresh.estimateHours) : '',
                   };
                   setForm(freshForm);
                   setInitialSnapshot(JSON.stringify(freshForm));
@@ -204,13 +210,24 @@ function WbsItemForm({
                 <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
               </FormField>
             </div>
-            <FormField label={t('wbs:form.importance')}>
-              <select value={form.importance} onChange={(e) => set('importance', e.target.value)} className={inputClass}>
-                <option value="3">{t('status:importance.High')}</option>
-                <option value="2">{t('status:importance.Medium')}</option>
-                <option value="1">{t('status:importance.Low')}</option>
-              </select>
-            </FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label={t('wbs:form.importance')}>
+                <select value={form.importance} onChange={(e) => set('importance', e.target.value)} className={inputClass}>
+                  <option value="3">{t('status:importance.High')}</option>
+                  <option value="2">{t('status:importance.Medium')}</option>
+                  <option value="1">{t('status:importance.Low')}</option>
+                </select>
+              </FormField>
+              <FormField label={t('wbs:form.estimateHours')} hint={t('wbs:form.estimateHint')}>
+                <input
+                  type="number" min={0} step={1}
+                  value={form.estimateHours}
+                  onChange={(e) => set('estimateHours', e.target.value)}
+                  className={inputClass}
+                  placeholder="0"
+                />
+              </FormField>
+            </div>
             <FormField label={t('wbs:form.status')}>
               <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
                 <option value="Planned">{t('status:wbs.Planned')}</option>
@@ -275,6 +292,11 @@ function WbsItemForm({
                   allDevInfo={allDevInfo}
                   onRefreshDevInfo={onRefreshDevInfo}
                 />
+                <DependenciesSection
+                  wbsItem={initial}
+                  allItems={allItems}
+                  onChanged={onLinksChanged}
+                />
               </>
             )}
             <FormField label={t('wbs:form.notes')} className="min-h-0 flex-1">
@@ -307,6 +329,94 @@ function WbsItemForm({
           </div>
         </div>
     </Modal>
+  );
+}
+
+// WBS 작업의 선행 의존성(predecessors) 목록 + 추가/제거. 일정 지능(CPM·자동 리스케줄)의 입력.
+// 후행(successors)은 읽기 표시. 사이클·중복·다른 프로젝트는 백엔드가 거부(토스트).
+function DependenciesSection({ wbsItem, allItems, onChanged }: {
+  wbsItem: WbsItem; allItems: WbsItem[]; onChanged: () => void;
+}) {
+  const { t } = useTranslation();
+  const [deps, setDeps] = useState<WbsDependency[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [predId, setPredId] = useState<number | ''>('');
+  const [type, setType] = useState<WbsDependencyType>('FinishToStart');
+  const [lag, setLag] = useState('0');
+
+  const load = () => wbsDependenciesApi.byWbs(wbsItem.id).then(setDeps).catch(() => setDeps([]));
+  useEffect(() => { load(); }, [wbsItem.id]);
+
+  const predecessors = useMemo(() => deps.filter((d) => d.successorId === wbsItem.id), [deps, wbsItem.id]);
+  const successors = useMemo(() => deps.filter((d) => d.predecessorId === wbsItem.id), [deps, wbsItem.id]);
+  const candidates = useMemo(() => {
+    const existing = new Set(predecessors.map((p) => p.predecessorId));
+    return allItems.filter((it) => it.id !== wbsItem.id && !existing.has(it.id));
+  }, [allItems, wbsItem.id, predecessors]);
+
+  const nameOf = (id: number) => allItems.find((it) => it.id === id)?.name ?? `#${id}`;
+  const depTypes: WbsDependencyType[] = ['FinishToStart', 'StartToStart', 'FinishToFinish', 'StartToFinish'];
+
+  const handleAdd = async () => {
+    if (predId === '') return;
+    try {
+      await wbsDependenciesApi.create(Number(predId), wbsItem.id, type, parseInt(lag) || 0);
+      setAdding(false); setPredId(''); setLag('0'); setType('FinishToStart');
+      load(); onChanged();
+    } catch { /* api/client.ts 가 사이클·중복 토스트 처리 */ }
+  };
+
+  const handleRemove = async (predecessorId: number) => {
+    await wbsDependenciesApi.delete(predecessorId, wbsItem.id);
+    load(); onChanged();
+  };
+
+  return (
+    <div className="shrink-0 flex flex-col gap-1">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted font-medium flex items-center gap-1">
+          <GitBranch size={12} /> {t('wbs:deps.title', { count: predecessors.length })}
+        </p>
+        <Button variant="ghost" size="sm" onClick={() => setAdding((v) => !v)} leadingIcon={<Plus size={12} />}>
+          {adding ? t('common:close') : t('wbs:deps.add')}
+        </Button>
+      </div>
+      {predecessors.length === 0 && !adding ? (
+        <p className="text-xs text-muted italic">{t('wbs:deps.none')}</p>
+      ) : (
+        <ul className="space-y-1">
+          {predecessors.map((d) => (
+            <li key={d.id} className="flex items-center gap-2 bg-surface-2 border border-default rounded px-2 py-1 text-sm">
+              <span className="text-[10px] px-1 py-0.5 rounded bg-surface-3 text-muted shrink-0">
+                {t(`wbs:deps.type.${d.type}`)}{d.lagDays !== 0 ? ` ${d.lagDays > 0 ? '+' : ''}${d.lagDays}d` : ''}
+              </span>
+              <span className="flex-1 text-primary truncate">{d.predecessorName ?? nameOf(d.predecessorId)}</span>
+              <button type="button" onClick={() => handleRemove(d.predecessorId)} className="p-0.5 text-on-danger hover:opacity-80 transition-opacity" title={t('wbs:deps.remove')}>
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {successors.length > 0 && (
+        <p className="text-[11px] text-muted mt-0.5">
+          {t('wbs:deps.successors', { names: successors.map((s) => s.successorName ?? nameOf(s.successorId)).join(', ') })}
+        </p>
+      )}
+      {adding && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+          <select value={predId} onChange={(e) => setPredId(e.target.value === '' ? '' : Number(e.target.value))} className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary flex-1 min-w-[120px]">
+            <option value="">{t('wbs:deps.selectPred')}</option>
+            {candidates.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={type} onChange={(e) => setType(e.target.value as WbsDependencyType)} className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary">
+            {depTypes.map((dt) => <option key={dt} value={dt}>{t(`wbs:deps.type.${dt}`)}</option>)}
+          </select>
+          <input type="number" value={lag} onChange={(e) => setLag(e.target.value)} className="w-14 bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary" title={t('wbs:deps.lag')} />
+          <Button variant="primary" size="sm" onClick={handleAdd}>{t('common:add')}</Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -600,6 +710,12 @@ export function WbsPage() {
   const [sourceCountByWbs, setSourceCountByWbs] = useState<Record<number, number>>({});
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
   const [view, setView] = useState<'table' | 'gantt'>('table');
+  // 임계경로(CPM) 작업 id 집합 — 간트 막대 적색 테두리 강조. 간트 뷰에서 지연 로드.
+  const [criticalIds, setCriticalIds] = useState<Set<number>>(new Set());
+  // 의존성 — 간트 화살표용. 간트 뷰에서 지연 로드.
+  const [dependencies, setDependencies] = useState<WbsDependency[]>([]);
+  // 드래그로 날짜 변경 후 후행 리스케줄 미리보기(이동할 후행이 있을 때만 모달).
+  const [reschedulePreview, setReschedulePreview] = useState<RescheduleResult | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<WbsItem | null>(null);
   const [dateEditing, setDateEditing] = useState<WbsItem | null>(null);
@@ -702,6 +818,30 @@ export function WbsPage() {
     else clearWbsFilters(pid);
   };
 
+  // 저장 뷰(명명 필터셋) — '필터 기억'(마지막 복원)과 별개로 명시 저장/적용.
+  const [savedViews, setSavedViews] = useState<SavedWbsView[]>(() => listSavedViews(pid));
+  useEffect(() => { setSavedViews(listSavedViews(pid)); }, [pid]);
+
+  const applyView = useCallback((v: SavedWbsView) => {
+    const f = v.filters;
+    setKeyword('');
+    setFilterStatuses(new Set(f.statuses));
+    setFilterAssignees(new Set(f.assignees));
+    setUnassignedOnly(f.unassignedOnly);
+    setLateOnly(f.lateOnly);
+    setMatchOnly(f.matchOnly);
+  }, []);
+
+  const handleSaveView = useCallback(() => {
+    const name = window.prompt(t('wbs:views.namePrompt'));
+    if (!name || !name.trim()) return;
+    setSavedViews(saveView(pid, name.trim(), currentStoredFilters()));
+  }, [pid, currentStoredFilters, t]);
+
+  const handleDeleteView = useCallback((id: string) => {
+    setSavedViews(deleteView(pid, id));
+  }, [pid]);
+
   const matchedIds = useMemo(
     () => hasAnyFilter(filterOpts) ? collectMatchedIds(items, filterOpts) : new Set<number>(),
     [items, filterOpts],
@@ -766,10 +906,48 @@ export function WbsPage() {
     changeLogsApi.getSourceCounts(pid).then((c) => setSourceCountByWbs(c.byWbsItemId)).catch(() => {});
   }, [pid, currentVersion]);
 
+  // 임계경로 + 의존성 로드 — 간트 강조·화살표용. 의존성·일정 변경 시 갱신.
+  const loadCritical = useCallback(() => {
+    wbsDependenciesApi.criticalPath(pid, currentVersion)
+      .then((cp) => setCriticalIds(new Set(cp.items.filter((i) => i.isCritical).map((i) => i.wbsItemId))))
+      .catch(() => setCriticalIds(new Set()));
+    wbsDependenciesApi.byProject(pid, currentVersion)
+      .then(setDependencies)
+      .catch(() => setDependencies([]));
+  }, [pid, currentVersion]);
+
   // RelatedIssuesSection 에서 link create/delete 후 카운트만 갱신 (모달 안에서 호출).
+  // 의존성 변경도 같은 콜백으로 들어오므로 임계경로도 함께 갱신.
   const refreshLinkCounts = useCallback(() => {
     issueWbsLinksApi.byProject(pid).then((lks) => setLinkCountByWbs(computeLinkCountsByWbs(lks))).catch(() => {});
+    loadCritical();
+  }, [pid, loadCritical]);
+
+  // 간트 뷰 진입·항목 변경 시 임계경로 갱신(표 뷰에선 불필요).
+  useEffect(() => {
+    if (view === 'gantt') loadCritical();
+  }, [view, items, loadCritical]);
+
+  // 드래그로 날짜 바뀐 작업의 후행 리스케줄 미리보기 — 이동 대상이 있으면 확인 모달.
+  const handleDateChanged = useCallback((itemId: number) => {
+    wbsDependenciesApi.reschedulePreview(pid, itemId)
+      .then((r) => { if (r.shifts.length > 0) setReschedulePreview(r); })
+      .catch(() => {});
   }, [pid]);
+
+  // 기준선 캡처 — 현재 계획 일정을 baseline 으로 박제. 이후 Gantt '기준선' 토글로 고스트 막대 비교.
+  const handleCaptureBaseline = useCallback(async () => {
+    if (!await confirmDialog({
+      title: t('wbs:baseline.captureTitle'),
+      message: t('wbs:baseline.captureMessage'),
+      confirmLabel: t('wbs:baseline.capture'),
+    })) return;
+    try {
+      const r = await wbsApi.captureBaseline(pid, currentVersion);
+      toast.success(t('wbs:baseline.captured', { count: r.captured }));
+      refresh();
+    } catch { /* api/client.ts 토스트 */ }
+  }, [pid, currentVersion, refresh, t]);
 
   // picker 열 때마다 issues silent refetch — 다른 탭에서 만든 새 Issue 즉시 반영.
   const refreshIssues = useCallback(() => {
@@ -934,6 +1112,14 @@ export function WbsPage() {
               >
                 {t('wbs:page.saveTemplate')}
               </Button>
+              <Button
+                variant="secondary"
+                onClick={handleCaptureBaseline}
+                leadingIcon={<Flag size={16} />}
+                title={t('wbs:baseline.captureMessage')}
+              >
+                {t('wbs:baseline.capture')}
+              </Button>
             </>
           )}
           <Button variant="primary" onClick={() => setShowForm(true)} leadingIcon={<Plus size={16} />}>
@@ -1002,6 +1188,20 @@ export function WbsPage() {
               {t('common:reset')}
             </Button>
           )}
+          {/* 저장 뷰(명명 필터셋) — 칩 클릭=적용, x=삭제. + 뷰 저장=현재 필터 저장. */}
+          {savedViews.length > 0 && (
+            <div className="flex items-center gap-1 flex-wrap">
+              {savedViews.map((v) => (
+                <span key={v.id} className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-surface-2 border border-default">
+                  <button type="button" onClick={() => applyView(v)} className="text-secondary hover:text-accent transition-colors" title={t('wbs:views.apply')}>{v.name}</button>
+                  <button type="button" onClick={() => handleDeleteView(v.id)} className="text-on-danger hover:opacity-80 transition-opacity" title={t('wbs:views.delete')} aria-label={t('wbs:views.deleteAria', { name: v.name })}><X size={10} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          <Button variant="ghost" size="sm" onClick={handleSaveView} leadingIcon={<Bookmark size={12} />} title={t('wbs:views.saveHint')}>
+            {t('wbs:views.save')}
+          </Button>
           <label
             className="text-xs text-muted flex items-center gap-1 cursor-pointer ml-auto"
             title={t('wbs:page.rememberFiltersHint')}
@@ -1108,6 +1308,9 @@ export function WbsPage() {
             filterAssignees={filterAssignees}
             unassignedOnly={unassignedOnly}
             lateOnly={lateOnly}
+            criticalIds={criticalIds}
+            dependencies={dependencies}
+            onDateChanged={handleDateChanged}
           />
         </Card>
       ) : items.length === 0 ? (
@@ -1221,6 +1424,14 @@ export function WbsPage() {
           projectId={pid}
           onSave={() => { setDateEditing(null); refresh(); }}
           onCancel={() => setDateEditing(null)}
+        />
+      )}
+      {reschedulePreview && (
+        <ReschedulePreviewModal
+          projectId={pid}
+          preview={reschedulePreview}
+          onApplied={() => { setReschedulePreview(null); refresh(); }}
+          onClose={() => setReschedulePreview(null)}
         />
       )}
 

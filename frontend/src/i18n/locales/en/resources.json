@@ -14,7 +14,14 @@
     "copyEmail": "Copy email",
     "phone": "Phone",
     "copyPhone": "Copy phone",
-    "notes": "Notes"
+    "notes": "Notes",
+    "weeklyCapacity": "Weekly capacity (h)",
+    "skills": "Skills",
+    "skillsPlaceholder": "Comma-separated (e.g. backend, QA)",
+    "costRate": "Cost rate (/h)",
+    "billRate": "Bill rate (/h)",
+    "active": "Active",
+    "activeHint": "Inactive excluded from capacity"
   },
   "card": { "viewAssignments": "Click to view assigned tasks" },
   "empty": {
