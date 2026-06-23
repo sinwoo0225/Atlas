@@ -23,6 +23,8 @@ It is local-first: all data lives in a SQLite database and per-project file fold
 
 Meetings are auto-exported as human-readable Markdown (compatible with Obsidian and other tools), and the project map visualizes the relationships between WBS items, issues, meetings, change logs, and notes as a graph. Dark/light plus a 12-color custom theme, and a Korean/English UI toggle, are included. You can also automate it: query and update your data from external tools and AI agents through atlas-cli, an MCP server, and a Claude Code skill.
 
+AI & automation setup — installing from the Store also installs the automation commands atlas-cli (shell) and atlas-mcp (MCP), exposed everywhere on your terminal PATH. To use it with Claude Code, run atlas-cli skill install once: the usage-guide skill is installed to ~/.claude/skills/atlas, so whichever project you open Claude Code in, a request like "use atlas-cli to …" automatically applies the gather-context / targeted-filter / update-status workflow (use --force to update). To let an AI agent call it directly as MCP tools, register it once with claude mcp add --scope user atlas atlas-mcp. All of this is optional — the app works out of the box with no setup.
+
 It suits anyone who wants a lightweight single-user tool, prefers to keep data off the cloud, and likes to see a whole portfolio of projects on one screen.
 
 ## Features (bullets)
@@ -39,7 +41,7 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Global search — Ctrl+K command palette to instantly find tasks, issues, meetings, and notes across projects
 - Worklog — weekly Done / Plan / Issues journal, Markdown export
 - Resources — people & equipment, autocomplete source for WBS assignees
-- External automation — query & update via atlas-cli / MCP, AI integration via a Claude Code skill
+- External automation & AI — query & update via atlas-cli / MCP, one-line Claude Code skill install (atlas-cli skill install)
 - Automatic backup — periodic zip of all data to a folder you choose, with retention
 - Korean / English UI toggle + dark/light + custom color theme
 - Local storage (SQLite + file folders), no account, no remote server
