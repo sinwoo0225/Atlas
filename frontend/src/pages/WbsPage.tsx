@@ -21,7 +21,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import {
-  collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName,
+  collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName, flattenWbsTree,
   applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
 import { wbsStatusBadge, devInfoTypeBadge } from '../utils/statusMaps';
@@ -178,7 +178,7 @@ function WbsItemForm({
       open
       onClose={onCancel}
       title={initial ? t('wbs:form.editTitle') : t('wbs:form.addTitle')}
-      size="xl"
+      size="xxl"
       fixedHeight
       dirty={dirty}
       footer={
@@ -218,7 +218,7 @@ function WbsItemForm({
                   <option value="1">{t('status:importance.Low')}</option>
                 </select>
               </FormField>
-              <FormField label={t('wbs:form.estimateHours')} hint={t('wbs:form.estimateHint')}>
+              <FormField label={t('wbs:form.estimateHours')} help={t('wbs:form.estimateHint')}>
                 <input
                   type="number" min={0} step={1}
                   value={form.estimateHours}
@@ -228,16 +228,18 @@ function WbsItemForm({
                 />
               </FormField>
             </div>
-            <FormField label={t('wbs:form.status')}>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
-                <option value="Planned">{t('status:wbs.Planned')}</option>
-                <option value="InProgress">{t('status:wbs.InProgress')}</option>
-                <option value="Done">{t('status:wbs.Done')}</option>
-              </select>
-            </FormField>
-            <FormField label={t('wbs:form.completedDate')} hint={t('wbs:form.completedHint')}>
-              <input type="date" value={form.completedDate} onChange={(e) => set('completedDate', e.target.value)} className={inputClass} />
-            </FormField>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField label={t('wbs:form.status')}>
+                <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
+                  <option value="Planned">{t('status:wbs.Planned')}</option>
+                  <option value="InProgress">{t('status:wbs.InProgress')}</option>
+                  <option value="Done">{t('status:wbs.Done')}</option>
+                </select>
+              </FormField>
+              <FormField label={t('wbs:form.completedDate')} help={t('wbs:form.completedHint')}>
+                <input type="date" value={form.completedDate} onChange={(e) => set('completedDate', e.target.value)} className={inputClass} />
+              </FormField>
+            </div>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.isMilestone} onChange={(e) => set('isMilestone', e.target.checked)} className="rounded" />
               <span className="text-sm text-secondary">{t('wbs:form.milestone')}</span>
@@ -349,12 +351,13 @@ function DependenciesSection({ wbsItem, allItems, onChanged }: {
 
   const predecessors = useMemo(() => deps.filter((d) => d.successorId === wbsItem.id), [deps, wbsItem.id]);
   const successors = useMemo(() => deps.filter((d) => d.predecessorId === wbsItem.id), [deps, wbsItem.id]);
+  // allItems 는 root 만 최상위인 중첩 트리 → 평탄화해야 leaf·하위 작업까지 후보로 노출.
   const candidates = useMemo(() => {
     const existing = new Set(predecessors.map((p) => p.predecessorId));
-    return allItems.filter((it) => it.id !== wbsItem.id && !existing.has(it.id));
+    return flattenWbsTree(allItems).filter(({ item }) => item.id !== wbsItem.id && !existing.has(item.id));
   }, [allItems, wbsItem.id, predecessors]);
 
-  const nameOf = (id: number) => allItems.find((it) => it.id === id)?.name ?? `#${id}`;
+  const nameOf = (id: number) => findItemName(id, allItems);
   const depTypes: WbsDependencyType[] = ['FinishToStart', 'StartToStart', 'FinishToFinish', 'StartToFinish'];
 
   const handleAdd = async () => {
@@ -407,7 +410,11 @@ function DependenciesSection({ wbsItem, allItems, onChanged }: {
         <div className="flex flex-wrap items-center gap-1.5 mt-1">
           <select value={predId} onChange={(e) => setPredId(e.target.value === '' ? '' : Number(e.target.value))} className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary flex-1 min-w-[120px]">
             <option value="">{t('wbs:deps.selectPred')}</option>
-            {candidates.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {candidates.map(({ item, depth }) => (
+              <option key={item.id} value={item.id}>
+                {depth === 0 ? item.name : `${'─'.repeat(depth)} ${item.name}`}
+              </option>
+            ))}
           </select>
           <select value={type} onChange={(e) => setType(e.target.value as WbsDependencyType)} className="bg-surface-2 border border-default rounded px-1.5 py-0.5 text-xs text-secondary">
             {depTypes.map((dt) => <option key={dt} value={dt}>{t(`wbs:deps.type.${dt}`)}</option>)}

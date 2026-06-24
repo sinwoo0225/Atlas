@@ -1,20 +1,24 @@
 import type { ReactNode } from 'react';
+import { InfoTip } from './InfoTip';
 
 interface Props {
   label: ReactNode;
   hint?: ReactNode;
+  /** 라벨 옆 '?' 아이콘 툴팁. hint(필드 아래 텍스트)와 달리 공간을 안 먹는다. */
+  help?: ReactNode;
   error?: ReactNode;
   required?: boolean;
   className?: string;
   children: ReactNode;
 }
 
-export function FormField({ label, hint, error, required, className = '', children }: Props) {
+export function FormField({ label, hint, help, error, required, className = '', children }: Props) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
-      <label className="text-xs text-muted font-medium">
+      <label className="text-xs text-muted font-medium flex items-center gap-1">
         {label}
         {required && <span className="text-on-danger ml-0.5">*</span>}
+        {help && <InfoTip content={help} />}
       </label>
       {children}
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}

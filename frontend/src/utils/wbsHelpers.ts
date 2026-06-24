@@ -34,6 +34,20 @@ export function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
   return true;
 }
 
+// 중첩 트리를 깊이(depth) 와 함께 평탄화. 선행 작업 후보 등 전체 노드를 한 줄 목록으로
+// 노출할 때 사용 (allItems 는 root 만 최상위라 단순 순회로는 자식이 안 보임).
+export function flattenWbsTree(items: WbsItem[]): { item: WbsItem; depth: number }[] {
+  const out: { item: WbsItem; depth: number }[] = [];
+  const walk = (nodes: WbsItem[], depth: number) => {
+    for (const n of nodes) {
+      out.push({ item: n, depth });
+      if (n.children?.length) walk(n.children, depth + 1);
+    }
+  };
+  walk(items, 0);
+  return out;
+}
+
 export function collectMatchedIds(items: WbsItem[], o: WbsFilterOpts, acc: Set<number> = new Set()): Set<number> {
   for (const item of items) {
     if (matchWbsItem(item, o)) acc.add(item.id);
