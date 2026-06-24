@@ -16,6 +16,17 @@
     "issue": "Issue",
     "todo": "TODO"
   },
+  "group": {
+    "overdue": "Overdue",
+    "today": "Today",
+    "upcoming": "Upcoming",
+    "noDue": "No due date"
+  },
+  "due": {
+    "overdueDays": "{{count}}d overdue",
+    "today": "Today",
+    "tomorrow": "Tomorrow"
+  },
   "recurrence": {
     "None": "No repeat",
     "Daily": "Daily",

@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { SquareCheck, Plus, X, Save, Check, Repeat, ListChecks, Bug, FolderKanban } from 'lucide-react';
+import { SquareCheck, Plus, X, Save, Circle, CheckCircle2, Repeat, ListChecks, Bug } from 'lucide-react';
 import { todosApi } from '../api/todos';
 import { Button, Card, Modal, Badge, EmptyState, FilterBar, FormField, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { loadSettings } from '../store/settings';
 import { useCreateForm } from '../hooks/useCreateForm';
-import type { MyWorkItem, TodoItem, TodoRecurrence } from '../types';
+import { wbsStatusBadge, issueStatusBadge, issuePriorityBadge, wbsImportanceBadge } from '../utils/statusMaps';
+import { groupMyWork, dueDisplay, type TodoBucket, type DueTone } from '../utils/todoView';
+import { formatDateShort } from '../i18n/format';
+import type { MyWorkItem, TodoItem, TodoRecurrence, WbsStatus, IssueStatus, IssuePriority } from '../types';
 
 const RECURRENCES: TodoRecurrence[] = ['None', 'Daily', 'Weekly', 'Monthly', 'Yearly'];
 
@@ -104,6 +107,19 @@ function sourceMeta(sourceType: MyWorkItem['sourceType']) {
     default: return { icon: <SquareCheck size={14} />, variant: 'neutral' as const, key: 'todo' };
   }
 }
+
+const groupTone: Record<TodoBucket, string> = {
+  overdue: 'text-on-danger',
+  today: 'text-accent',
+  upcoming: 'text-secondary',
+  noDue: 'text-muted',
+};
+
+const dueToneClass: Record<DueTone, string> = {
+  danger: 'text-on-danger',
+  warning: 'text-on-warning',
+  muted: 'text-muted',
+};
 
 export function TodosPage() {
   const { t } = useTranslation();
@@ -247,70 +263,100 @@ export function TodosPage() {
           description={t('todos:empty.desc')}
         />
       ) : (
-        <div className="space-y-2">
-          {items.map((item) => {
-            const meta = sourceMeta(item.sourceType);
-            const overdue = !!item.dueDate && item.dueDate.slice(0, 10) < todayStr;
-            const clickable = item.sourceType !== 'todo';
-            return (
-              <Card key={`${item.sourceType}-${item.id}`} padding="tight" variant="subtle">
-                <div className="flex items-center gap-3">
-                  <Badge variant={meta.variant} size="sm" className="shrink-0 inline-flex items-center gap-1">
-                    {meta.icon}{t(`todos:source.${meta.key}`)}
-                  </Badge>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`text-sm font-medium truncate ${clickable ? 'text-primary cursor-pointer hover:text-accent' : 'text-primary'}`}
-                        onClick={clickable ? () => goToSource(item) : undefined}
-                        title={item.title}
-                      >
-                        {item.title}
-                      </span>
-                      {item.recurrence && (
-                        <Badge variant="neutral" size="sm" className="shrink-0 inline-flex items-center gap-1">
-                          <Repeat size={10} />{t(`todos:recurrence.${item.recurrence}`)}
+        <div className="space-y-5">
+          {groupMyWork(items, todayStr).map((g) => (
+            <section key={g.key}>
+              <div className="flex items-center gap-2 px-1 mb-1.5">
+                <span className={`text-xs font-semibold ${groupTone[g.key]}`}>{t(`todos:group.${g.key}`)}</span>
+                <span className="text-xs text-muted">{g.items.length}</span>
+              </div>
+              <div className="space-y-2">
+                {g.items.map((item) => {
+                  const meta = sourceMeta(item.sourceType);
+                  const statusBadge = item.sourceType === 'wbs'
+                    ? wbsStatusBadge[item.status as WbsStatus]
+                    : item.sourceType === 'issue'
+                      ? issueStatusBadge[item.status as IssueStatus]
+                      : null;
+                  // 중요도/우선순위 — 이슈=우선순위, 작업=중요도(함수), TODO=없음.
+                  const rankBadge = item.sourceType === 'issue' && item.priority
+                    ? issuePriorityBadge[item.priority as IssuePriority]
+                    : item.sourceType === 'wbs' && item.importance != null
+                      ? wbsImportanceBadge(item.importance)
+                      : null;
+                  const due = dueDisplay(item.dueDate, todayStr);
+                  const dueLabel = due == null ? null
+                    : due.kind === 'overdue' ? t('todos:due.overdueDays', { count: -due.days })
+                    : due.kind === 'today' ? t('todos:due.today')
+                    : due.days === 1 ? t('todos:due.tomorrow')
+                    : formatDateShort(item.dueDate!);
+                  const projectLabel = item.projectName ?? t('todos:personal');
+                  return (
+                    <Card key={`${item.sourceType}-${item.id}`} padding="tight" variant="subtle" className="group hover:border-strong transition-colors">
+                      <div className="flex items-center gap-2">
+                        {/* 완료 체크박스 — 모든 소스 complete() (작업=Done · 이슈=Resolved · TODO=완료) */}
+                        <button
+                          onClick={() => complete(item)}
+                          aria-label={t('todos:completeBtn')}
+                          className="shrink-0 text-muted hover:text-success transition-colors"
+                        >
+                          <Circle size={18} className="group-hover:hidden" />
+                          <CheckCircle2 size={18} className="hidden group-hover:block" />
+                        </button>
+
+                        {/* 프로젝트 고정칸 (~5글자, 말줄임, 전체명 tooltip) — 소스배지 왼쪽 */}
+                        <span className="w-16 shrink-0 truncate text-xs text-muted" title={projectLabel}>{projectLabel}</span>
+
+                        {/* 소스 배지 */}
+                        <Badge variant={meta.variant} size="sm" className="shrink-0 inline-flex items-center gap-1">
+                          {meta.icon}{t(`todos:source.${meta.key}`)}
                         </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs text-muted">
-                      {item.projectName
-                        ? <span className="inline-flex items-center gap-1"><FolderKanban size={11} />{item.projectName}</span>
-                        : <span>{t('todos:personal')}</span>}
-                      {item.dueDate && (
-                        <span className={overdue ? 'text-on-danger font-medium' : ''}>
-                          · {t('todos:dueShort')} {item.dueDate.slice(0, 10)}
+
+                        {/* 상태 · 중요도/우선순위 — 소스배지 오른쪽 */}
+                        {statusBadge && <Badge variant={statusBadge.variant} size="sm" className="shrink-0">{t(statusBadge.labelKey)}</Badge>}
+                        {rankBadge && <Badge variant={rankBadge.variant} size="sm" className="shrink-0">{t(rankBadge.labelKey)}</Badge>}
+
+                        {/* 제목 (flex-1, 말줄임, 클릭=소스이동/ TODO 편집) */}
+                        <span
+                          className="flex-1 min-w-0 truncate text-sm font-medium text-primary cursor-pointer hover:text-accent"
+                          onClick={() => (item.sourceType === 'todo' ? openEditTodo(item.id) : goToSource(item))}
+                          title={item.title}
+                        >
+                          {item.title}
                         </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {item.sourceType === 'todo' && (
-                      <>
-                        <button
-                          onClick={() => openEditTodo(item.id)}
-                          className="p-1.5 text-muted hover:text-primary transition-colors"
-                          title={t('common:edit')}
-                        >
-                          <Save size={14} />
-                        </button>
-                        <button
-                          onClick={() => deleteTodo(item.id, item.title)}
-                          className="p-1.5 text-on-danger hover:opacity-80 transition-opacity"
-                          title={t('common:delete')}
-                        >
-                          <X size={14} />
-                        </button>
-                      </>
-                    )}
-                    <Button variant="secondary" size="sm" onClick={() => complete(item)} leadingIcon={<Check size={14} />}>
-                      {t('todos:completeBtn')}
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
+
+                        {/* 반복 (TODO) */}
+                        {item.recurrence && item.recurrence !== 'None' && (
+                          <Badge variant="neutral" size="sm" className="shrink-0 inline-flex items-center gap-1">
+                            <Repeat size={10} />{t(`todos:recurrence.${item.recurrence}`)}
+                          </Badge>
+                        )}
+
+                        {/* 기한 ⇄ 액션 — 고정폭 우측 칸. 평소 날짜, TODO 호버 시 같은 칸에서 편집/삭제로 교체 */}
+                        <div className="w-24 shrink-0 flex items-center justify-end">
+                          {item.sourceType === 'todo' ? (
+                            <>
+                              {due && <span className={`text-xs font-medium whitespace-nowrap group-hover:hidden ${dueToneClass[due.tone]}`}>{dueLabel}</span>}
+                              <div className="hidden group-hover:flex items-center gap-1">
+                                <button onClick={() => openEditTodo(item.id)} title={t('common:edit')} className="p-1 text-muted hover:text-primary transition-colors">
+                                  <Save size={14} />
+                                </button>
+                                <button onClick={() => deleteTodo(item.id, item.title)} title={t('common:delete')} className="p-1 text-on-danger hover:opacity-80 transition-opacity">
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            due && <span className={`text-xs font-medium whitespace-nowrap ${dueToneClass[due.tone]}`}>{dueLabel}</span>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 

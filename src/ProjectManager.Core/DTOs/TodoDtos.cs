@@ -24,10 +24,10 @@ public record UpdateTodoItemDto(
 
 // 통합 '내 업무(my-work)' 한 줄 — WBS/이슈/독립 TODO 를 한 리스트로 합친다.
 // SourceType: "wbs" | "issue" | "todo". ProjectId/ProjectName 은 독립 TODO 면 null.
-// Priority 는 이슈만, Recurrence 는 TODO 만 채워진다(나머지 null).
+// Priority 는 이슈만, Importance 는 WBS 만, Recurrence 는 TODO 만 채워진다(나머지 null).
 public record MyWorkItemDto(
     string SourceType, int Id, int? ProjectId, string? ProjectName,
-    string Title, string Status, string? Priority,
+    string Title, string Status, string? Priority, int? Importance,
     DateTime? DueDate, DateTime? CompletedDate, string? Recurrence);
 
 public record MyWorkDto(IReadOnlyList<MyWorkItemDto> Items);

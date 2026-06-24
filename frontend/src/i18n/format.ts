@@ -22,6 +22,11 @@ export function formatDate(v: string | number | Date): string {
   return new Intl.DateTimeFormat(locale(), { year: 'numeric', month: 'short', day: 'numeric' }).format(asDate(v));
 }
 
+/** 월·일만 (예: 6월 3일 / Jun 3) — 연도 생략한 짧은 표기. */
+export function formatDateShort(v: string | number | Date): string {
+  return new Intl.DateTimeFormat(locale(), { month: 'short', day: 'numeric' }).format(asDate(v));
+}
+
 /** 날짜+시각 (예: 2026. 6. 3. 오후 2:30 / Jun 3, 2026, 2:30 PM). */
 export function formatDateTime(v: string | number | Date): string {
   return new Intl.DateTimeFormat(locale(), { dateStyle: 'medium', timeStyle: 'short' }).format(asDate(v));

@@ -126,7 +126,7 @@ public class TodoService(
                     && string.Equals(t.CreatedBy, actor, StringComparison.OrdinalIgnoreCase));
             if (!mine) continue;
             items.Add(new MyWorkItemDto(
-                "todo", t.Id, null, null, t.Title, t.Status.ToString(), null,
+                "todo", t.Id, null, null, t.Title, t.Status.ToString(), null, null,
                 t.DueDate, t.CompletedDate,
                 t.Recurrence == TodoRecurrence.None ? null : t.Recurrence.ToString()));
         }
@@ -136,7 +136,7 @@ public class TodoService(
         {
             if (myName is not null && !AssigneeMatches(w.Assignee, myName)) continue;
             items.Add(new MyWorkItemDto(
-                "wbs", w.Id, w.ProjectId, w.Project?.Name, w.Name, w.Status.ToString(), null,
+                "wbs", w.Id, w.ProjectId, w.Project?.Name, w.Name, w.Status.ToString(), null, w.Importance,
                 w.EndDate, w.CompletedDate, null));
         }
 
@@ -146,7 +146,7 @@ public class TodoService(
             if (assigneeResourceId is int aid && i.AssigneeResourceId != aid) continue;
             items.Add(new MyWorkItemDto(
                 "issue", i.Id, i.ProjectId, i.Project?.Name, i.Title, i.Status.ToString(),
-                i.Priority.ToString(), i.DueDate, null, null));
+                i.Priority.ToString(), null, i.DueDate, null, null));
         }
 
         // 마감일 가까운 순(null 마지막).

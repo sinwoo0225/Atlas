@@ -16,6 +16,17 @@
     "issue": "이슈",
     "todo": "TODO"
   },
+  "group": {
+    "overdue": "지연",
+    "today": "오늘",
+    "upcoming": "예정",
+    "noDue": "기한 없음"
+  },
+  "due": {
+    "overdueDays": "{{count}}일 지남",
+    "today": "오늘",
+    "tomorrow": "내일"
+  },
   "recurrence": {
     "None": "반복 없음",
     "Daily": "매일",

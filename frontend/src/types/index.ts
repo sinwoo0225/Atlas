@@ -291,6 +291,7 @@ export interface MyWorkItem {
   title: string;
   status: string;
   priority?: string | null;
+  importance?: number | null;
   dueDate?: string | null;
   completedDate?: string | null;
   recurrence?: string | null;
