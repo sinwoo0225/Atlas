@@ -9,7 +9,7 @@
         WindowState="Maximized"
         WindowStyle="None"
         AllowsTransparency="False"
-        Background="#141414">
+        Background="{DynamicResource WindowBg}">
     <shell:WindowChrome.WindowChrome>
         <shell:WindowChrome CaptionHeight="40" ResizeBorderThickness="6"
                             UseAeroCaptionButtons="False" GlassFrameThickness="0"/>
@@ -21,7 +21,7 @@
         </Grid.RowDefinitions>
 
         <!-- Custom title bar -->
-        <Border Grid.Row="0" Background="#1a1a1a" BorderBrush="#3f3f46" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+        <Border Grid.Row="0" Background="{DynamicResource TitleBarBg}" BorderBrush="{DynamicResource TitleBarBorder}" BorderThickness="0,0,0,1" MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
             <Grid>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="14,0">
                     <TextBlock VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="16">
@@ -53,7 +53,7 @@
         <wv2:WebView2 x:Name="WebView" Grid.Row="1"/>
 
         <!-- Loading overlay -->
-        <Border x:Name="LoadingOverlay" Grid.Row="1" Background="#141414">
+        <Border x:Name="LoadingOverlay" Grid.Row="1" Background="{DynamicResource WindowBg}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="360">
                 <TextBlock HorizontalAlignment="Center" FontFamily="Segoe UI" FontSize="40">
                     <Run x:Name="LoadingPrimaryRun" Text="At" Foreground="#7c8db5" FontStyle="Italic" FontWeight="ExtraBold"/><Run x:Name="LoadingAccentRun" Text="las" Foreground="#c9a96b" FontStyle="Italic" FontWeight="ExtraBold"/>

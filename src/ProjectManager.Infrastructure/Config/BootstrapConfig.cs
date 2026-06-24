@@ -79,6 +79,23 @@ public sealed class BootstrapConfig
     [JsonPropertyName("brandIconDataUrl")]
     public string? BrandIconDataUrl { get; set; }
 
+    // ===== 테마(라이트/다크/커스텀) — 프론트가 setTheme 로 인앱 테마 색을 보내면 호스트가 여기 저장.
+    // 다음 실행 시 커스텀 WPF 제목 표시줄·창·로딩 오버레이를 프론트 로드 전에 미리 칠해 부팅 깜빡임 제거. =====
+    [JsonPropertyName("themeBg")]
+    public string? ThemeBg { get; set; }
+
+    [JsonPropertyName("themeFg")]
+    public string? ThemeFg { get; set; }
+
+    [JsonPropertyName("themeFgStrong")]
+    public string? ThemeFgStrong { get; set; }
+
+    [JsonPropertyName("themeHoverBg")]
+    public string? ThemeHoverBg { get; set; }
+
+    [JsonPropertyName("themeBorder")]
+    public string? ThemeBorder { get; set; }
+
     // ===== 위젯 모드 (데스크톱 보조 always-on-top 창) =====
     // 창 위치·크기·투명도·고정상태를 보존. 0 이면 미설정 → 화면 우측 상단 기본 배치.
     [JsonPropertyName("widgetX")]

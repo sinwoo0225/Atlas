@@ -5,7 +5,7 @@ import {
   deriveTokens,
   isCustomDark,
 } from '../utils/themeCustom';
-import { setHostBrand } from '../utils/hostBridge';
+import { setHostBrand, setHostTheme } from '../utils/hostBridge';
 
 export type ThemeMode = 'dark' | 'light' | 'custom';
 export type Language = 'ko' | 'en';
@@ -201,6 +201,18 @@ export function applyAppearance(s: AppSettings): void {
     title,
     iconDataUrl: s.brandIcon,
   });
+  // 데스크톱 앱: 커스텀 제목 표시줄·창·캡션 버튼을 인앱 테마 색에 동기화 (브라우저면 no-op).
+  // applyTheme() 직후라 getComputedStyle 이 새 테마(dark/light/custom)의 토큰을 반환한다.
+  if (typeof document !== 'undefined') {
+    const read = (name: string) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    setHostTheme({
+      bg: read('--bg-surface'),
+      fg: read('--text-muted'),
+      fgStrong: read('--text-primary'),
+      hoverBg: read('--bg-surface-3'),
+      border: read('--border-default'),
+    });
+  }
 }
 
 function applyFavicon(href: string): void {

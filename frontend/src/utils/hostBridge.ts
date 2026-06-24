@@ -224,6 +224,23 @@ export function setHostBrand(brand: HostBrand): void {
   bridge.postMessage({ type: 'setBrand', ...brand });
 }
 
+// 데스크톱 앱의 커스텀 제목 표시줄·창·캡션 버튼 색을 인앱 테마(라이트/다크/커스텀)에 맞춘다.
+// 제목 표시줄은 WebView2 바깥 네이티브 XAML 이라 웹 CSS 로는 안 바뀌므로 호스트에 위임.
+// 브라우저 dev 에서는 no-op.
+export interface HostTheme {
+  bg: string;        // 제목 표시줄·창 배경
+  fg: string;        // 캡션 글리프(평상시)
+  fgStrong: string;  // 캡션 글리프(호버)
+  hoverBg: string;   // 최소/최대 버튼 호버 배경
+  border: string;    // 제목 표시줄 하단 경계
+}
+
+export function setHostTheme(theme: HostTheme): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setTheme', ...theme });
+}
+
 // ===== 위젯 모드 (데스크톱 보조 always-on-top 창) =====
 // 모두 fire-and-forget — 응답이 필요 없는 네이티브 창 제어. 브릿지 없으면 no-op.
 

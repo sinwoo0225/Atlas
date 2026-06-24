@@ -3,9 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <!-- 커스텀 제목 표시줄·창 테마 색. 기본값=다크(첫 실행/폴백). 런타임에 프론트 setTheme →
+             MainWindow.ApplyTheme 가 이 리소스를 교체하면 DynamicResource 소비처가 라이브 갱신된다. -->
+        <SolidColorBrush x:Key="WindowBg"       Color="#141414"/>
+        <SolidColorBrush x:Key="TitleBarBg"     Color="#1a1a1a"/>
+        <SolidColorBrush x:Key="TitleBarBorder" Color="#3f3f46"/>
+        <SolidColorBrush x:Key="ChromeFg"       Color="#9ca3af"/>
+        <SolidColorBrush x:Key="ChromeHoverBg"  Color="#2a2a2a"/>
+        <SolidColorBrush x:Key="ChromeHoverFg"  Color="#f3f4f6"/>
+
         <Style x:Key="ChromeButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#9ca3af"/>
+            <Setter Property="Foreground" Value="{DynamicResource ChromeFg}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <!-- Windows 표준 캡션 글리프(Segoe MDL2 Assets) — 최소/최대/복원/닫기가 동일 메트릭·정사각 정렬. 권장 크기 10. -->
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
@@ -19,8 +28,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bg" Property="Background" Value="#2a2a2a"/>
-                                <Setter Property="Foreground" Value="#f3f4f6"/>
+                                <Setter TargetName="bg" Property="Background" Value="{DynamicResource ChromeHoverBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource ChromeHoverFg}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -29,7 +38,7 @@
         </Style>
         <Style x:Key="ChromeCloseButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#9ca3af"/>
+            <Setter Property="Foreground" Value="{DynamicResource ChromeFg}"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
             <Setter Property="FontSize" Value="10"/>
@@ -41,6 +50,7 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
+                            <!-- 닫기 호버는 라이트·다크 공용 빨강 유지 -->
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="bg" Property="Background" Value="#dc2626"/>
                                 <Setter Property="Foreground" Value="White"/>

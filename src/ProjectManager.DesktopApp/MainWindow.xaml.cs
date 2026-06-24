@@ -29,7 +29,8 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        // 로딩 오버레이가 보이기 전에 직전 실행의 브랜드(워드마크·제목)를 미리 적용.
+        // 로딩 오버레이가 보이기 전에 직전 실행의 테마색·브랜드(워드마크·제목)를 미리 적용.
+        ApplyPersistedTheme();
         ApplyPersistedBrand();
         Loaded += OnLoaded;
         Closing += OnClosing;
@@ -275,6 +276,18 @@ public partial class MainWindow : Window
                 ApplyIcon(iconDataUrl);
                 PersistBrand(primaryText, accentText, primaryColor, accentColor, brandTitle, iconDataUrl);
             }
+            else if (type == "setTheme")
+            {
+                // 프론트 인앱 테마(라이트/다크/커스텀) 색 → 커스텀 WPF 제목 표시줄·창·캡션 버튼.
+                // 웹 CSS 는 WebView2 콘텐츠만 칠하므로, 그 바깥 XAML 크롬은 호스트가 직접 따라 칠한다.
+                var bg = doc.RootElement.TryGetProperty("bg", out var bgEl) ? bgEl.GetString() : null;
+                var fg = doc.RootElement.TryGetProperty("fg", out var fgEl) ? fgEl.GetString() : null;
+                var fgStrong = doc.RootElement.TryGetProperty("fgStrong", out var fsEl) ? fsEl.GetString() : null;
+                var hoverBg = doc.RootElement.TryGetProperty("hoverBg", out var hbEl) ? hbEl.GetString() : null;
+                var border = doc.RootElement.TryGetProperty("border", out var bdEl) ? bdEl.GetString() : null;
+                ApplyTheme(bg, fg, fgStrong, hoverBg, border);
+                PersistTheme(bg, fg, fgStrong, hoverBg, border);
+            }
             else if (type == "toggleWidget")
             {
                 ToggleWidget();
@@ -398,6 +411,67 @@ public partial class MainWindow : Window
         catch (System.Exception ex)
         {
             TryLog($"[persist-brand-err] {ex.Message}");
+        }
+    }
+
+    // 인앱 테마 색 → 커스텀 제목 표시줄·창·캡션 버튼. App.xaml 의 네임드 브러시 리소스를 교체하면
+    // DynamicResource 소비처(타이틀바 Border·Window·LoadingOverlay·ChromeButton 스타일)가 라이브 갱신된다.
+    // WebMessageReceived(런타임)·생성자(시작) 양쪽에서 호출.
+    private void ApplyTheme(string? bg, string? fg, string? fgStrong, string? hoverBg, string? border)
+    {
+        SetBrushResource("WindowBg", bg);
+        SetBrushResource("TitleBarBg", bg);
+        SetBrushResource("TitleBarBorder", border);
+        SetBrushResource("ChromeFg", fg);
+        SetBrushResource("ChromeHoverFg", fgStrong);
+        SetBrushResource("ChromeHoverBg", hoverBg);
+    }
+
+    // 유효한 hex 만 교체 — 빈/잘못된 값은 현 색 유지(부분 메시지에도 안전).
+    private static void SetBrushResource(string key, string? hex)
+    {
+        if (TryBrush(hex) is System.Windows.Media.Brush b)
+        {
+            b.Freeze();
+            System.Windows.Application.Current.Resources[key] = b;
+        }
+    }
+
+    // 시작 시: 직전 실행에서 저장해 둔 테마색을 프론트 로드 전에 미리 적용
+    // (로딩 오버레이·제목 표시줄이 WebView2 전에 보이므로 config.json 값으로 칠해 부팅 깜빡임 제거).
+    private void ApplyPersistedTheme()
+    {
+        try
+        {
+            var c = BootstrapConfig.Load();
+            ApplyTheme(c.ThemeBg, c.ThemeFg, c.ThemeFgStrong, c.ThemeHoverBg, c.ThemeBorder);
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[persisted-theme-err] {ex.Message}");
+        }
+    }
+
+    // 프론트가 보낸 테마색을 config.json 에 저장 — 다음 실행 시 ApplyPersistedTheme 가 읽음.
+    // 값이 그대로면 디스크를 건드리지 않는다(setTheme 는 부팅·전환마다 발화하므로 churn 방지).
+    private void PersistTheme(string? bg, string? fg, string? fgStrong, string? hoverBg, string? border)
+    {
+        try
+        {
+            var c = BootstrapConfig.Load();
+            if (c.ThemeBg == bg && c.ThemeFg == fg && c.ThemeFgStrong == fgStrong
+                && c.ThemeHoverBg == hoverBg && c.ThemeBorder == border)
+                return;
+            c.ThemeBg = bg;
+            c.ThemeFg = fg;
+            c.ThemeFgStrong = fgStrong;
+            c.ThemeHoverBg = hoverBg;
+            c.ThemeBorder = border;
+            BootstrapConfig.Save(c);
+        }
+        catch (System.Exception ex)
+        {
+            TryLog($"[persist-theme-err] {ex.Message}");
         }
     }
 
