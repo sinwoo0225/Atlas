@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using ProjectManager.Application.Services;
@@ -34,6 +35,16 @@ public class ProjectsController(ProjectService svc) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id) =>
         await svc.DeleteAsync(id) ? NoContent() : NotFound();
+
+    // 이슈 리스트 커스텀 컬럼 정의 — raw JSON 배열 passthrough(프런트가 스키마 소유).
+    // GET 은 배열을 그대로 반환(문자열 래핑 방지), PUT 은 JsonElement 로 유효성 검증 후 정규화 저장.
+    [HttpGet("{id:int}/issue-columns")]
+    public async Task<IActionResult> GetIssueColumns(int id) =>
+        Content(await svc.GetIssueColumnsAsync(id), "application/json");
+
+    [HttpPut("{id:int}/issue-columns")]
+    public async Task<IActionResult> SetIssueColumns(int id, [FromBody] JsonElement body) =>
+        await svc.SetIssueColumnsAsync(id, body.GetRawText()) ? NoContent() : NotFound();
 
     [HttpPost("{id:int}/backup")]
     public async Task<IActionResult> Backup(int id)

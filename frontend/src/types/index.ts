@@ -261,8 +261,20 @@ export interface Issue {
   dueDate?: string;
   occurredOn?: string;
   resolvedDate?: string; // 실적 해결일 (Resolved/Closed 전환 시 자동, 수정 가능)
+  category?: string; // 분류 (단일 자유 입력값). 자동완성 후보는 로드된 issues 에서 파생.
+  // 사용자 정의 커스텀 컬럼 값 맵. 와이어(customFieldsJson 문자열)는 issuesApi 경계에서 파싱/직렬화.
+  customFields?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
+}
+
+// 이슈 리스트 사용자 정의 커스텀 컬럼 정의 (Project.IssueCustomColumnsJson 에 배열로 저장).
+export type IssueCustomColumnType = 'text' | 'date' | 'number';
+export interface IssueCustomColumn {
+  key: string; // 안정 slug — 표시명(name)과 무관. 이름 변경해도 값 유지.
+  name: string;
+  type: IssueCustomColumnType;
+  order: number;
 }
 
 // 독립 TODO — 어느 프로젝트에도 속하지 않는 개인 할 일. 반복 설정 시 완료하면 다음 회차 자동 생성.

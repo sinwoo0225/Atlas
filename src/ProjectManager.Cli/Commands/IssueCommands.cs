@@ -18,6 +18,7 @@ internal static class IssueCommands
         cmd.AddCommand(BuildUpdate(services));
         cmd.AddCommand(BuildDelete(services));
         cmd.AddCommand(BuildWbsLinks(services));
+        cmd.AddCommand(BuildCategories(services));
         return cmd;
     }
 
@@ -48,11 +49,12 @@ internal static class IssueCommands
         var occToOpt = new Option<DateTime?>("--occurred-to", "발생일 <= YYYY-MM-DD (해당일 포함)");
         var overdueOpt = new Option<bool>("--overdue", "기한 초과 미완료만 (DueDate < today & 미해결)");
         var keywordOpt = new Option<string?>("--keyword", "제목·설명 부분일치");
+        var categoryOpt = new Option<string?>("--category", "분류 정확 일치");
         var view = new ListViewOptions();
 
         var c = new Command("list", "프로젝트 이슈 조회 (필터 + 출력 셰이핑)")
         { projOpt, statusOpt, openOpt, prioOpt, assigneeIdOpt, assigneeOpt,
-          dueFromOpt, dueToOpt, occFromOpt, occToOpt, overdueOpt, keywordOpt };
+          dueFromOpt, dueToOpt, occFromOpt, occToOpt, overdueOpt, keywordOpt, categoryOpt };
         view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
@@ -73,7 +75,8 @@ internal static class IssueCommands
                 OccurredFrom: pr.GetValueForOption(occFromOpt),
                 OccurredTo: pr.GetValueForOption(occToOpt),
                 Overdue: pr.GetValueForOption(overdueOpt),
-                Keyword: pr.GetValueForOption(keywordOpt));
+                Keyword: pr.GetValueForOption(keywordOpt),
+                Category: pr.GetValueForOption(categoryOpt));
             var svc = services.GetRequiredService<IssueService>();
             var list = await svc.GetByProjectAsync(pid, filter);
             CliJson.WriteList(list, view.Read(pr, BriefPresets.Issue));
@@ -107,9 +110,11 @@ internal static class IssueCommands
         var dueOpt = new Option<DateTime?>("--due", "마감일 YYYY-MM-DD");
         var occurredOpt = new Option<DateTime?>("--occurred", "발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)");
         var resolvedOpt = new Option<DateTime?>("--resolved", "해결일(실적) YYYY-MM-DD — 생략 시 Resolved/Closed 면 오늘 자동");
+        var categoryOpt = new Option<string?>("--category", "분류 (자유 입력 단일값)");
+        var customJsonOpt = new Option<string?>("--custom-json", "커스텀 컬럼 값 맵 JSON (예: {\"env\":\"prod\"})");
 
         var c = new Command("create", "이슈 생성")
-        { projOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt, resolvedOpt };
+        { projOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt, resolvedOpt, categoryOpt, customJsonOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -122,7 +127,9 @@ internal static class IssueCommands
                 AssigneeResourceId: pr.GetValueForOption(assignOpt),
                 DueDate: pr.GetValueForOption(dueOpt),
                 OccurredOn: pr.GetValueForOption(occurredOpt),
-                ResolvedDate: pr.GetValueForOption(resolvedOpt));
+                ResolvedDate: pr.GetValueForOption(resolvedOpt),
+                Category: pr.GetValueForOption(categoryOpt),
+                CustomFieldsJson: pr.GetValueForOption(customJsonOpt));
             var svc = services.GetRequiredService<IssueService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -140,9 +147,11 @@ internal static class IssueCommands
         var dueOpt = new Option<DateTime?>("--due", "마감일 YYYY-MM-DD");
         var occurredOpt = new Option<DateTime?>("--occurred", "발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)");
         var resolvedOpt = new Option<DateTime?>("--resolved", "해결일(실적) YYYY-MM-DD — Resolved/Closed 전환 시 자동, 직접 보정 가능");
+        var categoryOpt = new Option<string?>("--category", "분류 (자유 입력 단일값)");
+        var customJsonOpt = new Option<string?>("--custom-json", "커스텀 컬럼 값 맵 JSON 전체 교체 (예: {\"env\":\"prod\"})");
 
         var c = new Command("update", "이슈 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt, resolvedOpt };
+        { idOpt, titleOpt, descOpt, statusOpt, prioOpt, assignOpt, dueOpt, occurredOpt, resolvedOpt, categoryOpt, customJsonOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -158,8 +167,25 @@ internal static class IssueCommands
                 AssigneeResourceId: pr.GetValueForOption(assignOpt) ?? existing.AssigneeResourceId,
                 DueDate: pr.GetValueForOption(dueOpt) ?? existing.DueDate,
                 OccurredOn: pr.GetValueForOption(occurredOpt) ?? existing.OccurredOn,
-                ResolvedDate: pr.GetValueForOption(resolvedOpt) ?? existing.ResolvedDate);
+                ResolvedDate: pr.GetValueForOption(resolvedOpt) ?? existing.ResolvedDate,
+                Category: pr.GetValueForOption(categoryOpt) ?? existing.Category,
+                CustomFieldsJson: pr.GetValueForOption(customJsonOpt) ?? existing.CustomFieldsJson);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
+        }));
+        return c;
+    }
+
+    private static Command BuildCategories(IServiceProvider services)
+    {
+        var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
+        var sortOpt = new Option<string?>("--sort", "alpha(기본)|freq");
+        var c = new Command("categories", "프로젝트 distinct 분류 목록 (자동완성 후보)") { projOpt, sortOpt };
+        c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pid = ctx.ParseResult.GetValueForOption(projOpt);
+            var sort = ctx.ParseResult.GetValueForOption(sortOpt);
+            var svc = services.GetRequiredService<IssueService>();
+            CliJson.WriteSuccess(await svc.GetDistinctCategoriesAsync(pid, sort));
         }));
         return c;
     }

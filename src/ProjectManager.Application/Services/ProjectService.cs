@@ -277,7 +277,25 @@ public class ProjectService(
         i.Id, i.ProjectId, i.Title, i.Description,
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
-        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate);
+        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate,
+        i.Category, i.CustomFieldsJson);
+
+    // 이슈 리스트 커스텀 컬럼 정의(Project.IssueCustomColumnsJson) — raw JSON 배열 passthrough.
+    // 정의 편집은 프로젝트 다른 필드와 분리해 별도 엔드포인트로 처리(전체 프로젝트 페이로드/동시성 충돌 회피).
+    public async Task<string> GetIssueColumnsAsync(int projectId)
+    {
+        var p = await projectRepo.GetByIdAsync(projectId);
+        return string.IsNullOrWhiteSpace(p?.IssueCustomColumnsJson) ? "[]" : p!.IssueCustomColumnsJson;
+    }
+
+    public async Task<bool> SetIssueColumnsAsync(int projectId, string json)
+    {
+        var p = await projectRepo.GetByIdAsync(projectId);
+        if (p is null) return false;
+        p.IssueCustomColumnsJson = json ?? string.Empty;
+        await projectRepo.UpdateAsync(p);
+        return true;
+    }
 
     // ============== Import (백업 zip → 단일 프로젝트 머지) ==============
     // 백업 zip 안 db/projectmanager.db 에서 import 가능한 프로젝트 목록 미리보기.
@@ -592,6 +610,7 @@ public class ProjectService(
             RelatedLinks = src.RelatedLinks ?? string.Empty,
             FolderPath = folder,
             CompletedDate = src.CompletedDate,
+            IssueCustomColumnsJson = src.IssueCustomColumnsJson ?? string.Empty,
         };
         db.Projects.Add(newProject);
         await db.SaveChangesAsync(ct);
@@ -701,6 +720,8 @@ public class ProjectService(
                 DueDate = i.DueDate,
                 OccurredOn = i.OccurredOn,
                 ResolvedDate = i.ResolvedDate,
+                Category = i.Category ?? string.Empty,
+                CustomFieldsJson = i.CustomFieldsJson ?? string.Empty,
             };
         }).ToList();
         db.Issues.AddRange(newIssues);

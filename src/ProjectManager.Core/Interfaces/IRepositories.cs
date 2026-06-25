@@ -108,6 +108,8 @@ public interface IIssueRepository
     Task DeleteAsync(int id);
     // 시작 화면 위젯(E-2) — 모든 프로젝트의 미해결(Open|InProgress) Issue, Project + AssigneeResource 포함.
     Task<IEnumerable<Issue>> GetOpenAcrossProjectsAsync();
+    // 분류 자동완성 후보 — 프로젝트 안 Issue.Category 의 비어있지 않은 원시 값들(중복 포함, distinct 는 서비스에서).
+    Task<IReadOnlyList<string>> GetCategoriesByProjectAsync(int projectId);
 }
 
 // 독립 TODO(프로젝트 무관). expectedUpdatedAt 동시성 토큰은 WbsRepository 와 동일 패턴.

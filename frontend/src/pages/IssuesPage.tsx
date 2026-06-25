@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronDown, ChevronRight, FileText, Link as LinkIcon, ListTree, Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, Columns3, FileText, Link as LinkIcon, ListTree, Plus, Search, X } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
@@ -13,13 +13,16 @@ import { Badge, Button, Card, Input, BadgeMenu, EmptyState, FilterBar, Skeleton,
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
+import { CategoryCombobox } from '../components/CategoryCombobox';
+import { IssueColumnsModal } from '../components/issues/IssueColumnsModal';
+import { useIssueColumns } from '../hooks/useIssueColumns';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { toIsoDate } from '../utils/wbsSpan';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { useCurrentProject } from '../hooks/useCurrentProject';
-import type { Issue, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
+import type { Issue, IssueCustomColumn, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
 
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
@@ -56,6 +59,17 @@ export function IssuesPage() {
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const { columns, addColumn, renameColumn, removeColumn, moveColumn } = useIssueColumns(pid);
+  const [columnsModalOpen, setColumnsModalOpen] = useState(false);
+
+  // 고정 10열(펼침·분류·제목·상태·우선순위·담당자·발생·기한·해결·액션) + 사용자 N열.
+  const totalCols = 10 + columns.length;
+  // 분류 자동완성 후보 — 로드된 issues 에서 distinct(비어있지 않은 값). 편집 즉시 재계산.
+  const categories = useMemo(
+    () => Array.from(new Set(issues.map((i) => i.category?.trim()).filter(Boolean) as string[]))
+      .sort((a, b) => a.localeCompare(b)),
+    [issues],
+  );
 
   useGlobalShortcut('mod+n', () => {
     const el = document.querySelector('[data-issue-quickadd]') as HTMLInputElement | null;
@@ -297,6 +311,7 @@ export function IssuesPage() {
           <thead>
             <tr className="text-xs text-muted border-b border-default">
               <th className="text-left py-3 px-4 font-medium w-10"></th>
+              <th className="text-left py-3 px-3 font-medium w-40">{t('issues:th.category')}</th>
               <th className="text-left py-3 px-3 font-medium">{t('issues:th.title')}</th>
               <th className="text-left py-3 px-3 font-medium w-28">{t('issues:th.status')}</th>
               <th className="text-left py-3 px-3 font-medium w-24">{t('issues:th.priority')}</th>
@@ -304,7 +319,20 @@ export function IssuesPage() {
               <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.occurred')}</th>
               <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.due')}</th>
               <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.resolved')}</th>
-              <th className="text-left py-3 px-3 font-medium w-16"></th>
+              {columns.map((col) => (
+                <th key={col.key} className="text-left py-3 px-3 font-medium w-36 truncate" title={col.name}>{col.name}</th>
+              ))}
+              <th className="text-right py-3 px-3 font-medium w-16">
+                <button
+                  type="button"
+                  onClick={() => setColumnsModalOpen(true)}
+                  className="p-1 text-muted hover:text-primary transition-colors"
+                  title={t('issues:columns.add')}
+                  aria-label={t('issues:columns.add')}
+                >
+                  <Columns3 size={14} />
+                </button>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -313,7 +341,7 @@ export function IssuesPage() {
               <td className="py-2 px-4 text-muted">
                 <Plus size={14} />
               </td>
-              <td className="py-2 px-3" colSpan={6}>
+              <td className="py-2 px-3" colSpan={totalCols - 2}>
                 <input
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
@@ -332,7 +360,7 @@ export function IssuesPage() {
 
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-0">
+                <td colSpan={totalCols} className="p-0">
                   <EmptyState
                     icon={<AlertTriangle size={36} />}
                     title={t('issues:empty.title')}
@@ -352,6 +380,9 @@ export function IssuesPage() {
                 resources={resources}
                 wbsItems={wbsItems}
                 projectId={pid}
+                categories={categories}
+                columns={columns}
+                totalCols={totalCols}
                 linkCount={linkCountByIssue.get(it.id) ?? 0}
                 sourceCount={sourceCountByIssue[it.id] ?? 0}
                 expanded={expanded === it.id}
@@ -364,17 +395,30 @@ export function IssuesPage() {
           </tbody>
         </table>
       </Card>
+
+      <IssueColumnsModal
+        open={columnsModalOpen}
+        columns={columns}
+        onClose={() => setColumnsModalOpen(false)}
+        addColumn={addColumn}
+        renameColumn={renameColumn}
+        removeColumn={removeColumn}
+        moveColumn={moveColumn}
+      />
     </div>
   );
 }
 
 function IssueRow({
-  issue, resources, wbsItems, projectId, linkCount, sourceCount, expanded, onToggleExpand, onUpdate, onDelete, onLinksChanged,
+  issue, resources, wbsItems, projectId, categories, columns, totalCols, linkCount, sourceCount, expanded, onToggleExpand, onUpdate, onDelete, onLinksChanged,
 }: {
   issue: Issue;
   resources: Resource[];
   wbsItems: WbsItem[];
   projectId: number;
+  categories: string[];
+  columns: IssueCustomColumn[];
+  totalCols: number;
   linkCount: number;
   sourceCount: number;
   expanded: boolean;
@@ -417,6 +461,16 @@ function IssueRow({
           >
             {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
+        </td>
+        <td className="py-2 px-3">
+          <CategoryCombobox
+            value={issue.category ?? ''}
+            suggestions={categories}
+            onCommit={(v) => onUpdate(issue.id, 'category', v || undefined)}
+            placeholder={t('issues:row.categoryPlaceholder')}
+            title={t('issues:th.category')}
+            className={`${ghostFieldClass} text-xs`}
+          />
         </td>
         <td className="py-2 px-3">
           <div className="flex items-center gap-2">
@@ -535,6 +589,19 @@ function IssueRow({
             />
           </div>
         </td>
+        {columns.map((col) => (
+          <td key={col.key} className="py-2 px-3">
+            <CustomFieldCell
+              col={col}
+              value={issue.customFields?.[col.key] ?? ''}
+              onCommit={(next) => {
+                const merged = { ...(issue.customFields ?? {}) };
+                if (next.trim()) merged[col.key] = next.trim(); else delete merged[col.key];
+                onUpdate(issue.id, 'customFields', merged);
+              }}
+            />
+          </td>
+        ))}
         <td className="py-2 px-3">
           <button
             onClick={(e) => onDelete(issue.id, e)}
@@ -548,7 +615,7 @@ function IssueRow({
       {expanded && (
         <tr className="border-b border-default bg-surface-2/30">
           <td />
-          <td colSpan={7} className="py-3 px-3 pr-4 space-y-3">
+          <td colSpan={totalCols - 1} className="py-3 px-3 pr-4 space-y-3">
             <div>
               <p className="text-xs text-muted font-medium mb-1">{t('issues:row.descriptionLabel')}</p>
               <DescriptionField
@@ -561,6 +628,54 @@ function IssueRow({
         </tr>
       )}
     </>
+  );
+}
+
+// 사용자 정의 커스텀 컬럼 셀 — 유형별 입력(text/date/number). 자체 draft + DirtyDot.
+// .map 안에서 hook 을 쓰려면 컴포넌트 경계가 필요해 별도 분리.
+function CustomFieldCell({ col, value, onCommit }: {
+  col: IssueCustomColumn;
+  value: string;
+  onCommit: (next: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => { setDraft(value); }, [value]);
+
+  const commit = () => {
+    const next = draft.trim();
+    // 숫자 컬럼은 비숫자 입력 거부 — draft 를 직전 값으로 되돌림.
+    if (col.type === 'number' && next && Number.isNaN(Number(next))) { setDraft(value); return; }
+    if (next !== value) onCommit(next);
+  };
+
+  const cls = `${ghostFieldClass} text-xs`;
+  if (col.type === 'date') {
+    return (
+      <div className="relative">
+        <input
+          type="date"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          className={`${cls} pr-6`}
+        />
+        <DirtyDot visible={draft !== value} className="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none" />
+      </div>
+    );
+  }
+  return (
+    <div className="relative">
+      <input
+        type={col.type === 'number' ? 'number' : 'text'}
+        inputMode={col.type === 'number' ? 'decimal' : undefined}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+        className={`${cls} pr-5 ${col.type === 'number' ? 'text-right' : ''}`}
+      />
+      <DirtyDot visible={draft !== value} className="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none" />
+    </div>
   );
 }
 

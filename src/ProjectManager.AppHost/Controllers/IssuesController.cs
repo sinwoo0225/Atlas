@@ -12,6 +12,11 @@ public class IssuesController(IssueService svc) : ControllerBase
     public async Task<IActionResult> GetAll(int projectId) =>
         Ok(await svc.GetByProjectAsync(projectId));
 
+    // 분류 자동완성 후보 — 프로젝트 안 distinct Category (DevInfo tags 와 동일 패턴).
+    [HttpGet("categories")]
+    public async Task<IActionResult> GetCategories(int projectId, [FromQuery] string? sort = null) =>
+        Ok(await svc.GetDistinctCategoriesAsync(projectId, sort));
+
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int projectId, int id) =>
         await svc.GetByIdAsync(id) is { } dto ? Ok(dto) : NotFound();

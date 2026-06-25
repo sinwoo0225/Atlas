@@ -12,12 +12,35 @@
   },
   "th": {
     "title": "Title",
+    "category": "Category",
     "status": "Status",
     "priority": "Priority",
     "assignee": "Assignee",
     "occurred": "Occurred",
     "due": "Due",
     "resolved": "Resolved (actual)"
+  },
+  "columns": {
+    "add": "Add column",
+    "manage": "Manage columns",
+    "addTab": "Add",
+    "manageTab": "Manage",
+    "nameLabel": "Name",
+    "namePlaceholder": "Column name",
+    "typeLabel": "Type",
+    "type": {
+      "text": "Text",
+      "date": "Date",
+      "number": "Number"
+    },
+    "addBtn": "Add",
+    "rename": "Rename",
+    "delete": "Delete column",
+    "deleteConfirm": "Delete column '{{name}}'? Values entered for it will be removed.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "empty": "No custom columns yet. Add one in the Add tab.",
+    "duplicateName": "A column with this name already exists."
   },
   "empty": {
     "title": "No issues.",
@@ -36,7 +59,8 @@
     "changePriority": "Change priority",
     "resolvedHint": "Set automatically when resolved/closed. You can adjust it to the real resolution date.",
     "unassigned": "-- Unassigned --",
-    "descriptionLabel": "Description (markdown, rendered on blur)"
+    "descriptionLabel": "Description (markdown, rendered on blur)",
+    "categoryPlaceholder": "Category…"
   },
   "links": {
     "title": "Linked WBS ({{count}})",

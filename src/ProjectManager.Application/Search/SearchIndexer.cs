@@ -72,7 +72,7 @@ internal static class SearchIndexer
         return new IndexRow(
             TypeIssue, i.Id, i.ProjectId,
             Title: i.Title,
-            Body: Combine(i.Description, assigneeName),
+            Body: Combine(i.Description, assigneeName, i.Category),
             UpdatedAt: i.UpdatedAt);
     }
 

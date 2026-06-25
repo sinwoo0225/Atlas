@@ -54,6 +54,12 @@ public class IssueRepository(AppDbContext db) : IIssueRepository
             var kw = f.Keyword;
             q = q.Where(x => x.Title.Contains(kw) || x.Description.Contains(kw));
         }
+        if (!string.IsNullOrWhiteSpace(f.Category))
+        {
+            // 드롭다운에서 고른 정규값 기준 정확 일치 (자동완성 후보는 기존 값에서만 나오므로).
+            var cat = f.Category.Trim();
+            q = q.Where(x => x.Category == cat);
+        }
 
         return await q
             .Include(x => x.AssigneeResource)
@@ -96,5 +102,12 @@ public class IssueRepository(AppDbContext db) : IIssueRepository
             .Where(x => x.Status == IssueStatus.Open || x.Status == IssueStatus.InProgress)
             .Include(x => x.AssigneeResource)
             .Include(x => x.Project)
+            .ToListAsync();
+
+    // 비어있지 않은 Category 원시 값만 — distinct·정렬은 서비스(DevInfo 태그와 동일 패턴).
+    public async Task<IReadOnlyList<string>> GetCategoriesByProjectAsync(int projectId) =>
+        await db.Issues
+            .Where(x => x.ProjectId == projectId && x.Category != "")
+            .Select(x => x.Category)
             .ToListAsync();
 }

@@ -36,6 +36,7 @@ public class AppDbContext(
             e.Property(x => x.Name).IsRequired().HasMaxLength(200);
             e.Property(x => x.Category).HasMaxLength(32).HasDefaultValue("");
             e.Property(x => x.GitRepoPath).HasMaxLength(500).HasDefaultValue("");
+            e.Property(x => x.IssueCustomColumnsJson).HasColumnType("TEXT").HasDefaultValue("");
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
@@ -171,6 +172,8 @@ public class AppDbContext(
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.Property(x => x.Category).HasMaxLength(64).HasDefaultValue("");
+            e.Property(x => x.CustomFieldsJson).HasColumnType("TEXT").HasDefaultValue("");
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);

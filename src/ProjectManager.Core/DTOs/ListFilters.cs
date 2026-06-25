@@ -16,7 +16,8 @@ public sealed record IssueListFilter(
     DateTime? OccurredFrom = null,
     DateTime? OccurredTo = null,
     bool Overdue = false,
-    string? Keyword = null)
+    string? Keyword = null,
+    string? Category = null)
 {
     public static readonly IssueListFilter None = new();
 
@@ -32,7 +33,8 @@ public sealed record IssueListFilter(
         DueFrom is null && DueTo is null &&
         OccurredFrom is null && OccurredTo is null &&
         !Overdue &&
-        string.IsNullOrWhiteSpace(Keyword);
+        string.IsNullOrWhiteSpace(Keyword) &&
+        string.IsNullOrWhiteSpace(Category);
 }
 
 public sealed record WbsListFilter(

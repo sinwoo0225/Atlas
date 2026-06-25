@@ -27,6 +27,7 @@ public static class IssueTools
         [Description("발생일 <= YYYY-MM-DD (해당일 포함)")] DateTime? occurredTo = null,
         [Description("기한 초과 미완료만")] bool overdue = false,
         [Description("제목·설명 부분일치")] string? keyword = null,
+        [Description("분류 정확 일치")] string? category = null,
         [Description("개수만 반환")] bool count = false,
         [Description("최대 N 건")] int? limit = null,
         [Description("축약 필드만")] bool brief = false,
@@ -42,10 +43,19 @@ public static class IssueTools
             DueFrom: dueFrom, DueTo: dueTo,
             OccurredFrom: occurredFrom, OccurredTo: occurredTo,
             Overdue: overdue,
-            Keyword: keyword);
+            Keyword: keyword,
+            Category: category);
         var list = await svc.GetByProjectAsync(projectId, filter);
         return McpJson.SerializeList(list, McpJson.View(count, limit, brief, fields, BriefPresets.Issue));
     }
+
+    [McpServerTool(Name = "atlas_issue_categories"),
+     Description("프로젝트의 distinct 분류 목록 (분류 자동완성 후보). sort=freq 면 빈도순, 기본 alpha")]
+    public static async Task<string> Categories(
+        IssueService svc,
+        [Description("프로젝트 ID")] int projectId,
+        [Description("alpha(기본)|freq")] string? sort = null) =>
+        McpJson.Serialize(await svc.GetDistinctCategoriesAsync(projectId, sort));
 
     [McpServerTool(Name = "atlas_issue_get"), Description("단일 이슈 상세 조회")]
     public static async Task<string> Get(IssueService svc, int id)
@@ -67,7 +77,9 @@ public static class IssueTools
         [Description("담당자 Resource ID")] int? assigneeResourceId = null,
         [Description("마감일 YYYY-MM-DD")] DateTime? dueDate = null,
         [Description("발생일자 YYYY-MM-DD (이슈가 실제 발생한 시점)")] DateTime? occurredOn = null,
-        [Description("해결일(실적) YYYY-MM-DD — 생략 시 Resolved/Closed 면 오늘 자동")] DateTime? resolvedDate = null) =>
+        [Description("해결일(실적) YYYY-MM-DD — 생략 시 Resolved/Closed 면 오늘 자동")] DateTime? resolvedDate = null,
+        [Description("분류 (자유 입력 단일값)")] string? category = null,
+        [Description("커스텀 컬럼 값 맵 JSON (예: {\"env\":\"prod\"})")] string? customFieldsJson = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateIssueDto(
             ProjectId: projectId,
             Title: title,
@@ -77,7 +89,9 @@ public static class IssueTools
             AssigneeResourceId: assigneeResourceId,
             DueDate: dueDate,
             OccurredOn: occurredOn,
-            ResolvedDate: resolvedDate)));
+            ResolvedDate: resolvedDate,
+            Category: category,
+            CustomFieldsJson: customFieldsJson)));
 
     [McpServerTool(Name = "atlas_issue_update"),
      Description("이슈 부분 갱신 — null 인 필드는 기존 값 유지")]
@@ -87,7 +101,9 @@ public static class IssueTools
         IssueStatus? status = null, IssuePriority? priority = null,
         int? assigneeResourceId = null, DateTime? dueDate = null,
         DateTime? occurredOn = null,
-        [Description("해결일(실적) YYYY-MM-DD — Resolved/Closed 전환 시 자동, 직접 보정 가능")] DateTime? resolvedDate = null)
+        [Description("해결일(실적) YYYY-MM-DD — Resolved/Closed 전환 시 자동, 직접 보정 가능")] DateTime? resolvedDate = null,
+        [Description("분류 (자유 입력 단일값)")] string? category = null,
+        [Description("커스텀 컬럼 값 맵 JSON 전체 교체 (예: {\"env\":\"prod\"})")] string? customFieldsJson = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"Issue {id} 없음");
@@ -99,7 +115,9 @@ public static class IssueTools
             AssigneeResourceId: assigneeResourceId ?? existing.AssigneeResourceId,
             DueDate: dueDate ?? existing.DueDate,
             OccurredOn: occurredOn ?? existing.OccurredOn,
-            ResolvedDate: resolvedDate ?? existing.ResolvedDate)));
+            ResolvedDate: resolvedDate ?? existing.ResolvedDate,
+            Category: category ?? existing.Category,
+            CustomFieldsJson: customFieldsJson ?? existing.CustomFieldsJson)));
     }
 
     [McpServerTool(Name = "atlas_issue_delete"),

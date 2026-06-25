@@ -12,12 +12,35 @@
   },
   "th": {
     "title": "제목",
+    "category": "분류",
     "status": "상태",
     "priority": "우선순위",
     "assignee": "담당자",
     "occurred": "발생일",
     "due": "마감일",
     "resolved": "해결일(실적)"
+  },
+  "columns": {
+    "add": "열 추가",
+    "manage": "열 관리",
+    "addTab": "추가",
+    "manageTab": "관리",
+    "nameLabel": "이름",
+    "namePlaceholder": "열 이름",
+    "typeLabel": "유형",
+    "type": {
+      "text": "텍스트",
+      "date": "날짜",
+      "number": "숫자"
+    },
+    "addBtn": "추가",
+    "rename": "이름 변경",
+    "delete": "열 삭제",
+    "deleteConfirm": "'{{name}}' 열을 삭제할까요? 입력된 값도 제거됩니다.",
+    "moveUp": "위로",
+    "moveDown": "아래로",
+    "empty": "사용자 열이 없습니다. '추가' 탭에서 만들 수 있어요.",
+    "duplicateName": "같은 이름의 열이 이미 있습니다."
   },
   "empty": {
     "title": "이슈가 없습니다.",
@@ -36,7 +59,8 @@
     "changePriority": "우선순위 변경",
     "resolvedHint": "해결/종료 처리 시 자동 기록됩니다. 실제 해결일에 맞게 직접 수정할 수 있습니다.",
     "unassigned": "-- 미지정 --",
-    "descriptionLabel": "설명 (마크다운, 포커스 아웃 시 렌더링)"
+    "descriptionLabel": "설명 (마크다운, 포커스 아웃 시 렌더링)",
+    "categoryPlaceholder": "분류…"
   },
   "links": {
     "title": "관련 WBS ({{count}})",

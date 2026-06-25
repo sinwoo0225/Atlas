@@ -29,7 +29,9 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
             AssigneeResourceId = dto.AssigneeResourceId,
             DueDate = dto.DueDate,
             OccurredOn = dto.OccurredOn,
-            ResolvedDate = dto.ResolvedDate ?? (IsCompleted(dto.Status) ? DateTime.Today : null)
+            ResolvedDate = dto.ResolvedDate ?? (IsCompleted(dto.Status) ? DateTime.Today : null),
+            Category = dto.Category ?? string.Empty,
+            CustomFieldsJson = dto.CustomFieldsJson ?? string.Empty
         };
         var created = await repo.CreateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(created.Id))!;
@@ -52,6 +54,9 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         issue.AssigneeResourceId = dto.AssigneeResourceId;
         issue.DueDate = dto.DueDate;
         issue.OccurredOn = dto.OccurredOn;
+        issue.Category = dto.Category ?? string.Empty;
+        // 커스텀 필드: 브라우저는 항상 전체 맵을 보내므로 wholesale 교체. null(미지정, CLI/MCP 부분 수정)은 기존값 보존.
+        issue.CustomFieldsJson = dto.CustomFieldsJson ?? issue.CustomFieldsJson;
         // 해결일(실적): 클라값 우선(수동 보정·명시적 클리어). 완료(Resolved/Closed) 진입 시 없으면 오늘, 벗어나면 클리어.
         issue.ResolvedDate = dto.ResolvedDate;
         if (!wasCompleted && IsCompleted(dto.Status) && issue.ResolvedDate is null)
@@ -76,9 +81,10 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         var issue = await repo.GetByIdAsync(id);
         if (issue is null) return false;
         if (issue.Status == status) return true;
+        // 현재 값 전부 전달 — Category·CustomFieldsJson 누락 시 칸반 드래그가 두 필드를 날림.
         var dto = new UpdateIssueDto(
             issue.Title, issue.Description, status, issue.Priority, issue.AssigneeResourceId,
-            issue.DueDate, issue.OccurredOn, issue.ResolvedDate);
+            issue.DueDate, issue.OccurredOn, issue.ResolvedDate, issue.Category, issue.CustomFieldsJson);
         await UpdateAsync(id, dto);
         return true;
     }
@@ -94,9 +100,27 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         return true;
     }
 
+    // 분류 자동완성 후보 — 프로젝트 안 distinct Category. DevInfoService.GetDistinctTagsAsync 와 동일 패턴(단일값이라 split 없음).
+    public async Task<IReadOnlyList<string>> GetDistinctCategoriesAsync(int projectId, string? sort = null)
+    {
+        var categories = await repo.GetCategoriesByProjectAsync(projectId);
+        if (string.Equals(sort, "freq", StringComparison.OrdinalIgnoreCase))
+            return categories
+                .GroupBy(c => c, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(g => g.Count())
+                .ThenBy(g => g.First(), StringComparer.CurrentCultureIgnoreCase)
+                .Select(g => g.First())
+                .ToList();
+        return categories
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(c => c, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
     private static IssueDto ToDto(Issue i) => new(
         i.Id, i.ProjectId, i.Title, i.Description,
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
-        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate);
+        i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate,
+        i.Category, i.CustomFieldsJson);
 }

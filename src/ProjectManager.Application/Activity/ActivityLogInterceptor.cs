@@ -28,10 +28,12 @@ public class ActivityLogInterceptor(IActorAccessor actorAccessor) : SaveChangesI
         DateTime Timestamp,
         string? ChangesJson);
 
-    // 필드 diff 에서 제외: 자동 audit 메타 + Project.FolderPath (생성 시 자동 세팅, 사용자 의도 변경 아님).
+    // 필드 diff 에서 제외: 자동 audit 메타 + Project.FolderPath (생성 시 자동 세팅, 사용자 의도 변경 아님)
+    // + 불투명 JSON blob(커스텀 필드 값/컬럼 정의) — raw JSON diff 는 읽을 수 없고 직렬화 순서 차이로 노이즈 유발.
     private static bool IsExcludedProperty(string name) => name switch
     {
-        "Id" or "CreatedAt" or "UpdatedAt" or "CreatedBy" or "UpdatedBy" or "FolderPath" => true,
+        "Id" or "CreatedAt" or "UpdatedAt" or "CreatedBy" or "UpdatedBy" or "FolderPath"
+            or "CustomFieldsJson" or "IssueCustomColumnsJson" => true,
         _ => false,
     };
 

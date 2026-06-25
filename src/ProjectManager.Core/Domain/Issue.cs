@@ -19,6 +19,12 @@ public class Issue : IAuditable
     // 해결 일자(실적). Status 가 Resolved/Closed 로 전환될 때 자동 스탬프(DateTime.Today), 직접 수정 가능.
     // 완료 상태에서 벗어나면 클리어. 마감(DueDate) 대비 지연·해결 소요기간 측정의 기준.
     public DateTime? ResolvedDate { get; set; }
+    // 분류 — 사용자가 자유 입력하는 단일 구분값(예: 버그·기능·문의). 빈 문자열 = 미분류.
+    // 한 번 입력한 값은 UI 에서 자동완성 후보로 제시(IssueRepository.GetCategoriesByProjectAsync).
+    public string Category { get; set; } = string.Empty;
+    // 사용자 정의 커스텀 컬럼의 값. JSON-in-TEXT 평탄 맵 { "컬럼key": "문자열값" }.
+    // 컬럼 정의(이름·유형·순서)는 Project.IssueCustomColumnsJson. 서버는 파싱하지 않고 passthrough.
+    public string CustomFieldsJson { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
