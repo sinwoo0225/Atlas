@@ -6,6 +6,9 @@ function getCurrentTheme(): ThemeMode {
   if (typeof document === 'undefined') return 'dark';
   const cl = document.documentElement.classList;
   if (cl.contains('custom')) return 'custom';
+  // 프리셋은 차트·하드코드 hex 로직을 위해 light/dark 베이스로 환원.
+  if (cl.contains('coolLight') || cl.contains('blueberryYogurt')) return 'light';
+  if (cl.contains('darkGray') || cl.contains('chocoBanana') || cl.contains('mugwort') || cl.contains('dracula')) return 'dark';
   return cl.contains('light') ? 'light' : 'dark';
 }
 

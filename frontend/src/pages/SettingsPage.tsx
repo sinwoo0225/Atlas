@@ -305,15 +305,25 @@ export function SettingsPage() {
       {activeTab === 'appearance' && (<>
       <Section title={t('settings:appearance.title')}>
         <FormField label={t('settings:appearance.theme')}>
-          <div className="flex gap-2">
-            {(['dark', 'light', 'custom'] as ThemeMode[]).map((m) => (
+          <div className="flex flex-wrap gap-2">
+            {([
+              ['dark', 'themeDark'],
+              ['darkGray', 'themeDarkGray'],
+              ['chocoBanana', 'themeChocoBanana'],
+              ['mugwort', 'themeMugwort'],
+              ['dracula', 'themeDracula'],
+              ['light', 'themeLight'],
+              ['coolLight', 'themeCoolLight'],
+              ['blueberryYogurt', 'themeBlueberryYogurt'],
+              ['custom', 'themeCustom'],
+            ] as [ThemeMode, string][]).map(([m, key]) => (
               <Button
                 key={m}
                 variant={settings.theme === m ? 'primary' : 'secondary'}
                 size="md"
                 onClick={() => update('theme', m)}
               >
-                {m === 'dark' ? t('settings:appearance.themeDark') : m === 'light' ? t('settings:appearance.themeLight') : t('settings:appearance.themeCustom')}
+                {t(`settings:appearance.${key}`)}
               </Button>
             ))}
           </div>

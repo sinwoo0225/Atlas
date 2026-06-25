@@ -7,7 +7,16 @@ import {
 } from '../utils/themeCustom';
 import { setHostBrand, setHostTheme } from '../utils/hostBridge';
 
-export type ThemeMode = 'dark' | 'light' | 'custom';
+// dark/light = 기본(blue 다크·warm 라이트), darkGray/coolLight = 중립 그레이 프리셋,
+// chocoBanana = 다크 초코+바나나, mugwort = 짙은 쑥+하양, dracula = 검정·묵색+선명빨강,
+// blueberryYogurt = 요거트 화이트+블루베리 라이트, custom = 사용자 색.
+export type ThemeMode = 'dark' | 'darkGray' | 'chocoBanana' | 'mugwort' | 'dracula' | 'light' | 'coolLight' | 'blueberryYogurt' | 'custom';
+
+// 테마 모드를 sonner Toaster·color-scheme 매핑용 light/dark 베이스로 환원.
+export function resolveToasterTheme(theme: ThemeMode, customColors: BaseColors): 'light' | 'dark' {
+  if (theme === 'custom') return isCustomDark(customColors) ? 'dark' : 'light';
+  return theme === 'light' || theme === 'coolLight' || theme === 'blueberryYogurt' ? 'light' : 'dark';
+}
 export type Language = 'ko' | 'en';
 
 export interface AppSettings {
@@ -136,6 +145,9 @@ export function seedDefaultAuthorIfEmpty(userName: string): void {
   patchSettings({ defaultAuthor: trimmed });
 }
 
+// <html> 에 붙는 테마 클래스 전체 — 전환 시 모두 제거 후 해당 모드 클래스 하나만 부여.
+const THEME_CLASSES = ['dark', 'darkGray', 'chocoBanana', 'mugwort', 'dracula', 'light', 'coolLight', 'blueberryYogurt', 'custom'];
+
 export function applyTheme(theme: ThemeMode, customColors?: BaseColors): void {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
@@ -143,7 +155,7 @@ export function applyTheme(theme: ThemeMode, customColors?: BaseColors): void {
 
   if (theme === 'custom') {
     const base = customColors ?? DARK_BASE;
-    root.classList.remove('light');
+    THEME_CLASSES.forEach((c) => root.classList.remove(c));
     root.classList.add('custom');
     const tokens = deriveTokens(base);
     Object.entries(tokens).forEach(([name, value]) => root.style.setProperty(name, value));
@@ -151,16 +163,12 @@ export function applyTheme(theme: ThemeMode, customColors?: BaseColors): void {
     return;
   }
 
-  root.classList.remove('custom');
   root.style.removeProperty('color-scheme');
   clearCustom();
-  if (theme === 'light') {
-    root.classList.add('light');
-    root.classList.remove('dark');
-  } else {
-    root.classList.add('dark');
-    root.classList.remove('light');
-  }
+  // 모드명을 그대로 클래스로 부여: dark(=:root 기본)·light·coolLight·darkGray.
+  // html.light/coolLight/darkGray 블록이 토큰을 override, dark 는 :root 기본 적용.
+  THEME_CLASSES.forEach((c) => root.classList.remove(c));
+  root.classList.add(theme);
 }
 
 // 워드마크 두 색은 테마와 무관하게 항상 인라인 적용 (다크/라이트/커스텀 공통 정체성).

@@ -14,8 +14,7 @@ import { changeLogsApi } from '../api/changelogs';
 import { resourcesApi } from '../api/resources';
 import { systemApi, type GeoResult, type WeatherNow } from '../api/system';
 import type { TodayWbs, IssuePriority, Project, WbsStatus, ImpactLevel, ResourceType } from '../types';
-import { applyAppearance, loadSettings, patchSettings } from '../store/settings';
-import { isCustomDark } from '../utils/themeCustom';
+import { applyAppearance, loadSettings, patchSettings, resolveToasterTheme } from '../store/settings';
 import {
   isHostBridgeAvailable, beginWidgetDrag, beginWidgetResize, setWidgetWidth, setWidgetOpacity, setWidgetPinned, closeWidget,
   onMediaUpdate, mediaControl, mediaSeek, requestMedia, type MediaState,
@@ -596,9 +595,7 @@ function ActiveWindows() {
 export function WidgetDashboard() {
   const { t } = useTranslation();
   const settings = loadSettings();
-  const toasterTheme = settings.theme === 'custom'
-    ? (isCustomDark(settings.customColors) ? 'dark' : 'light')
-    : settings.theme;
+  const toasterTheme = resolveToasterTheme(settings.theme, settings.customColors);
   const bridge = isHostBridgeAvailable();
 
   const [opacity, setOpacity] = useState(92);

@@ -24,9 +24,8 @@ import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
-import { applyAppearance, loadSettings, patchSettings, seedDefaultAuthorIfEmpty } from './store/settings';
+import { applyAppearance, loadSettings, patchSettings, seedDefaultAuthorIfEmpty, resolveToasterTheme } from './store/settings';
 import i18n from './i18n';
-import { isCustomDark } from './utils/themeCustom';
 import { getMachineAccount } from './utils/hostBridge';
 import { systemApi, EXPECTED_API_VERSION } from './api/system';
 import { resourcesApi } from './api/resources';
@@ -103,7 +102,7 @@ function MainShell() {
     <>
       <Toaster
         position="top-right"
-        theme={theme === 'custom' ? (isCustomDark(loadSettings().customColors) ? 'dark' : 'light') : theme}
+        theme={resolveToasterTheme(theme, loadSettings().customColors)}
         richColors
         closeButton
         duration={4000}
