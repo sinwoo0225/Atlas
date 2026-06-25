@@ -47,11 +47,9 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Resource capacity & utilization — weekly available hours and time off per resource, plus a utilization heatmap in monitoring (over-allocation highlighted)
-- Effort estimates, task dependencies & critical path — enter WBS effort (hours); link predecessors/successors for Gantt dependency arrows, critical-path highlighting, and auto-rescheduling of successors (preview → apply)
-- Baseline comparison & saved filter views — capture a schedule baseline to compare on the Gantt; name and re-apply WBS filter combinations
-- Portfolio rollup & Attention feed — per-category rollup plus an attention feed of overdue, over-allocated, due-soon, and unassigned items in the monitoring overview
-- Agentic (CLI/MCP) expansion — plan context bundle, meeting action-item promotion, and dependency/critical-path/reschedule tools
+- Issue category + custom columns — free-text Category (with autocomplete) left of the issue title, plus your own columns of type text / date / number
+- Simpler meeting attendee entry — type attendees per organization separated by comma or Enter, with autocomplete from your resources (department shown); organization grouping preserved
+- Autocomplete dropdown clipping fixed — category, attendee, and WBS assignee dropdowns now float above tables/cards instead of being clipped
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
