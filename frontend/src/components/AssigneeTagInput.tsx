@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import type { Resource } from '../types';
@@ -11,14 +12,18 @@ interface Props {
   placeholder?: string;
 }
 
+const VIEWPORT_MARGIN = 8;
+
 export function AssigneeTagInput({ value, onChange, resources, placeholder }: Props) {
   const { t } = useTranslation();
   const tokens = useMemo(() => parseAssigneeTokens(value), [value]);
   const [draft, setDraft] = useState('');
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
+  const [placement, setPlacement] = useState<{ top: number; left: number; width: number } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
 
   const suggestions = useMemo(() => {
     const q = draft.trim().toLowerCase();
@@ -32,20 +37,40 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
   // Clamp activeIdx into valid range on render (no effect needed).
   const safeActiveIdx = activeIdx >= suggestions.length ? suggestions.length - 1 : activeIdx;
 
+  // 표·카드의 overflow 컨테이너에 잘리거나 스크롤을 만들지 않도록 드롭다운은 portal+fixed 로 띄운다(BadgeMenu 패턴).
+  // 입력 박스 기준 아래 배치, 뷰포트 하단 충돌 시 위로 flip. 토큰/후보 수가 바뀌면 재측정.
+  useLayoutEffect(() => {
+    if (!open) { setPlacement(null); return; }
+    if (suggestions.length === 0 || !boxRef.current || !menuRef.current) return;
+    const box = boxRef.current.getBoundingClientRect();
+    const menuH = menuRef.current.offsetHeight;
+    const top = box.bottom + 4 + menuH + VIEWPORT_MARGIN > window.innerHeight
+      ? Math.max(VIEWPORT_MARGIN, box.top - menuH - 4)
+      : box.bottom + 4;
+    setPlacement({ top, left: box.left, width: box.width });
+  }, [open, suggestions.length, tokens.length]);
+
+  // 외부 클릭 시 draft 를 토큰으로 커밋(기존 동작) + 닫기. 스크롤/리사이즈 시 닫기(fixed 위치 stale 방지).
+  // 드롭다운이 portal 로 body 에 있으므로 박스·메뉴 둘 다 contains 검사.
   useEffect(() => {
     if (!open) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
-        const d = draft.trim();
-        if (d && !tokens.includes(d)) {
-          onChange(serializeAssigneeTokens([...tokens, d]));
-        }
-        setDraft('');
-        setOpen(false);
-      }
+    const onDown = (e: MouseEvent) => {
+      const node = e.target as Node;
+      if (boxRef.current?.contains(node) || menuRef.current?.contains(node)) return;
+      const d = draft.trim();
+      if (d && !tokens.includes(d)) onChange(serializeAssigneeTokens([...tokens, d]));
+      setDraft('');
+      setOpen(false);
     };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
+    const onScrollResize = () => setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('scroll', onScrollResize, true);
+    window.addEventListener('resize', onScrollResize);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('scroll', onScrollResize, true);
+      window.removeEventListener('resize', onScrollResize);
+    };
   }, [open, draft, tokens, onChange]);
 
   const commitToken = (name: string) => {
@@ -103,8 +128,9 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
   };
 
   return (
-    <div ref={wrapRef} className="relative">
+    <div>
       <div
+        ref={boxRef}
         className="w-full flex flex-wrap items-center gap-1.5 px-2 py-1.5 text-sm rounded-md bg-surface-2 border border-default focus-within:border-strong transition-colors min-h-[38px]"
         onClick={() => inputRef.current?.focus()}
       >
@@ -140,8 +166,20 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
           className="flex-1 min-w-[120px] bg-transparent outline-none text-sm py-0.5"
         />
       </div>
-      {open && suggestions.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full mt-1 z-20 max-h-56 overflow-y-auto rounded-md border border-default bg-surface shadow-lg">
+      {open && suggestions.length > 0 && createPortal(
+        <ul
+          ref={menuRef}
+          onMouseDown={(e) => e.preventDefault()}
+          style={{
+            position: 'fixed',
+            top: placement?.top ?? -9999,
+            left: placement?.left ?? 0,
+            width: placement?.width,
+            visibility: placement ? 'visible' : 'hidden',
+            zIndex: 60,
+          }}
+          className="max-h-56 overflow-y-auto rounded-md border border-default bg-surface shadow-lg"
+        >
           {suggestions.map((r, i) => (
             <li
               key={r.id}
@@ -151,7 +189,7 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
                 inputRef.current?.focus();
               }}
               onMouseEnter={() => setActiveIdx(i)}
-              className={`px-3 py-1.5 text-sm cursor-pointer flex items-center justify-between ${
+              className={`px-3 py-1.5 text-sm cursor-pointer flex items-center justify-between gap-3 ${
                 i === safeActiveIdx ? 'bg-surface-2 text-primary' : 'text-secondary hover:bg-surface-2'
               }`}
             >
@@ -159,7 +197,8 @@ export function AssigneeTagInput({ value, onChange, resources, placeholder }: Pr
               {r.department && <span className="text-xs text-muted">{r.department}</span>}
             </li>
           ))}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );

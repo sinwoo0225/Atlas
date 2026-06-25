@@ -3,8 +3,9 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, X, Save, FileText, Building2, UserPlus, Search, AlertTriangle, ListTree, Sparkles, Mic } from 'lucide-react';
+import { Plus, Pencil, X, Save, FileText, Building2, Search, AlertTriangle, ListTree, Sparkles, Mic } from 'lucide-react';
 import { meetingsApi } from '../api/meetings';
+import { resourcesApi } from '../api/resources';
 import { aiApi } from '../api/ai';
 import { loadSettings } from '../store/settings';
 import { isHostBridgeAvailable, launchDictation } from '../utils/hostBridge';
@@ -17,13 +18,15 @@ import {
   type ActionItem,
 } from '../utils/meetingHelpers';
 import { Button, Card, Modal, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { AssigneeTagInput } from '../components/AssigneeTagInput';
+import { parseAssigneeTokens, serializeAssigneeTokens } from '../utils/assigneeTokens';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
 import { useCurrentProject } from '../hooks/useCurrentProject';
-import type { Meeting, MeetingCategory } from '../types';
+import type { Meeting, MeetingCategory, Resource } from '../types';
 
 // 논의내용 상단에 삽입하는 'AI 요약' 블록. 재요약 시 기존 블록을 걷어내고 새로 prepend (중복 방지).
 const AI_SUMMARY_HEADER = '## 🤖 AI 요약';
@@ -114,6 +117,9 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
     const parsed = parseAttendees(initial?.attendees ?? '');
     return parsed.length === 0 ? (initial?.attendees ?? '') : '';
   });
+  // 참석자 이름 자동완성용 리소스. 폼 마운트(생성/편집 진입) 시 1회 로드.
+  const [resources, setResources] = useState<Resource[]>([]);
+  useEffect(() => { resourcesApi.getAll().then(setResources).catch(() => {}); }, []);
 
   const [decisions, setDecisions] = useState<string[]>(() => parseDecisions(initial?.decisions ?? ''));
   const [decisionInput, setDecisionInput] = useState('');
@@ -142,28 +148,17 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
     date, startTime, endTime, topic, category, discussion, attendees, decisions, actionItems,
   }) !== initialSnapshot;
 
-  const addOrg = () => setAttendees([...attendees, { org: '', members: [''] }]);
+  const addOrg = () => setAttendees([...attendees, { org: '', members: [] }]);
   const updateOrg = (i: number, k: 'org', v: string) => {
     const next = [...attendees];
     next[i] = { ...next[i], [k]: v };
     setAttendees(next);
   };
   const removeOrg = (i: number) => setAttendees(attendees.filter((_, idx) => idx !== i));
-  const addMember = (i: number) => {
+  // 소속 내 인원 — 태그 입력(콤마/엔터 구분)의 결과 배열로 통째 교체.
+  const updateOrgMembers = (i: number, members: string[]) => {
     const next = [...attendees];
-    next[i] = { ...next[i], members: [...next[i].members, ''] };
-    setAttendees(next);
-  };
-  const updateMember = (i: number, j: number, v: string) => {
-    const next = [...attendees];
-    const members = [...next[i].members];
-    members[j] = v;
     next[i] = { ...next[i], members };
-    setAttendees(next);
-  };
-  const removeMember = (i: number, j: number) => {
-    const next = [...attendees];
-    next[i] = { ...next[i], members: next[i].members.filter((_, idx) => idx !== j) };
     setAttendees(next);
   };
 
@@ -383,28 +378,14 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                         <X size={14} />
                       </button>
                     </div>
-                    {org.members.map((m, j) => (
-                      <div key={j} className="flex gap-2 pl-3">
-                        <input
-                          value={m}
-                          onChange={(e) => updateMember(i, j, e.target.value)}
-                          placeholder={t('meetings:form.memberName')}
-                          className={inputClass}
-                        />
-                        <button onClick={() => removeMember(i, j)} className="p-1 text-on-danger hover:opacity-80 transition-opacity" title={t('meetings:form.removeMember')} aria-label={t('meetings:form.removeMember')}>
-                          <X size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="ml-3"
-                      onClick={() => addMember(i)}
-                      leadingIcon={<UserPlus size={14} />}
-                    >
-                      {t('meetings:form.addMember')}
-                    </Button>
+                    <div className="pl-3">
+                      <AssigneeTagInput
+                        value={serializeAssigneeTokens(org.members)}
+                        onChange={(v) => updateOrgMembers(i, parseAssigneeTokens(v))}
+                        resources={resources}
+                        placeholder={t('meetings:form.membersPlaceholder')}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
