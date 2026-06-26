@@ -27,6 +27,7 @@ public static class WbsTools
         [Description("담당자 부분일치")] string? assignee = null,
         [Description("마일스톤만(true)/제외(false)")] bool? milestone = null,
         [Description("이름·메모 부분일치")] string? keyword = null,
+        [Description("시작 지연 — 계획 시작일이 지났는데 아직 Planned(미착수)")] bool overdueStart = false,
         [Description("개수만 반환")] bool count = false,
         [Description("최대 N 건")] int? limit = null,
         [Description("축약 필드만")] bool brief = false,
@@ -41,7 +42,8 @@ public static class WbsTools
             EndFrom: endFrom, EndTo: endTo,
             Assignee: assignee,
             Milestone: milestone,
-            Keyword: keyword);
+            Keyword: keyword,
+            OverdueStart: overdueStart);
         var view = McpJson.View(count, limit, brief, fields, BriefPresets.Wbs);
         var shaped = view.Count || view.Limit is not null || view.Fields is { Count: > 0 };
 
@@ -90,7 +92,8 @@ public static class WbsTools
         [Description("중요도 1=낮음 / 2=중간 (기본) / 3=높음")] int? importance = null,
         string? notes = null,
         [Description("완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동")] DateTime? completedDate = null,
-        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null) =>
+        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null,
+        [Description("착수일(실적) YYYY-MM-DD — 생략 시 진행/완료면 오늘 자동")] DateTime? actualStartDate = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateWbsItemDto(
             ProjectId: projectId,
             VersionId: versionId,
@@ -104,7 +107,8 @@ public static class WbsTools
             Importance: importance ?? 2,
             Notes: notes ?? string.Empty,
             CompletedDate: completedDate,
-            EstimateHours: estimateHours)));
+            EstimateHours: estimateHours,
+            ActualStartDate: actualStartDate)));
 
     [McpServerTool(Name = "atlas_wbs_update"),
      Description("WBS 항목 부분 갱신 — null 인 필드는 기존 값 유지. root 로 옮기려면 atlas_wbs_move 사용")]
@@ -119,7 +123,8 @@ public static class WbsTools
         [Description("정렬 위치 — 보통 생략 (신규 시 자동 끝에 추가, reorder 는 GUI dnd 사용)")] int? sortOrder = null,
         string? notes = null,
         [Description("완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능")] DateTime? completedDate = null,
-        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null)
+        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null,
+        [Description("착수일(실적) YYYY-MM-DD — 진행/완료 전환 시 자동, 직접 보정 가능")] DateTime? actualStartDate = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"WbsItem {id} 없음");
@@ -136,7 +141,8 @@ public static class WbsTools
             SortOrder: sortOrder ?? existing.SortOrder,
             CompletedDate: completedDate ?? existing.CompletedDate,
             UpdatedAt: existing.UpdatedAt,
-            EstimateHours: estimateHours ?? existing.EstimateHours)));
+            EstimateHours: estimateHours ?? existing.EstimateHours,
+            ActualStartDate: actualStartDate ?? existing.ActualStartDate)));
     }
 
     [McpServerTool(Name = "atlas_wbs_move"),
@@ -160,7 +166,8 @@ public static class WbsTools
             SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
             CompletedDate: existing.CompletedDate,
             UpdatedAt: existing.UpdatedAt,
-            EstimateHours: existing.EstimateHours)));
+            EstimateHours: existing.EstimateHours,
+            ActualStartDate: existing.ActualStartDate)));
     }
 
     [McpServerTool(Name = "atlas_wbs_delete"),
@@ -169,6 +176,42 @@ public static class WbsTools
     {
         if (!await svc.DeleteAsync(id))
             throw new InvalidOperationException($"WbsItem {id} 없음");
+        return McpJson.Serialize(new { deleted = true, id });
+    }
+
+    [McpServerTool(Name = "atlas_wbs_subtask_list"),
+     Description("WBS 작업의 서브태스크(경량 체크리스트) 목록")]
+    public static async Task<string> SubtaskList(
+        WbsSubtaskService svc, [Description("WBS 작업 ID")] int wbsItemId) =>
+        McpJson.Serialize(await svc.ListAsync(wbsItemId));
+
+    [McpServerTool(Name = "atlas_wbs_subtask_add"),
+     Description("WBS 작업에 서브태스크 추가 (TODO 식 세부 단계)")]
+    public static async Task<string> SubtaskAdd(
+        WbsSubtaskService svc,
+        [Description("WBS 작업 ID")] int wbsItemId,
+        [Description("서브태스크 제목")] string title) =>
+        McpJson.Serialize(await svc.AddAsync(wbsItemId, new CreateWbsSubtaskDto(title)));
+
+    [McpServerTool(Name = "atlas_wbs_subtask_update"),
+     Description("서브태스크 부분 갱신 — 완료 토글(isDone)·제목(title). null 인 필드는 미변경")]
+    public static async Task<string> SubtaskUpdate(
+        WbsSubtaskService svc,
+        [Description("서브태스크 ID")] int id,
+        string? title = null, bool? isDone = null)
+    {
+        var updated = await svc.UpdateAsync(id, new UpdateWbsSubtaskDto(title, isDone))
+            ?? throw new InvalidOperationException($"WbsSubtask {id} 없음");
+        return McpJson.Serialize(updated);
+    }
+
+    [McpServerTool(Name = "atlas_wbs_subtask_delete"),
+     Description("서브태스크 삭제")]
+    public static async Task<string> SubtaskDelete(
+        WbsSubtaskService svc, [Description("서브태스크 ID")] int id)
+    {
+        if (!await svc.DeleteAsync(id))
+            throw new InvalidOperationException($"WbsSubtask {id} 없음");
         return McpJson.Serialize(new { deleted = true, id });
     }
 }

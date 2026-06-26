@@ -19,6 +19,20 @@ export function spanOf(item: WbsItem): { start?: number; end?: number } {
   return { start, end };
 }
 
+/**
+ * '착수 지연' — 계획 시작일이 지났는데도 아직 Planned(미착수)인 작업.
+ * 목록 흐림 로직에서 사용: 이런 작업은 흐리게 두지 않고 진하게(+경고 톤) 표시해 착수를 환기.
+ * 날짜만 비교(시각 무시). startDate 없으면 '지연' 판정 불가 → false.
+ */
+export function isOverdueToStart(item: { status: WbsItem['status']; startDate?: string }): boolean {
+  if (item.status !== 'Planned' || !item.startDate) return false;
+  const start = new Date(item.startDate);
+  start.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return start.getTime() <= today.getTime();
+}
+
 /** epoch ms → YYYY-MM-DD (로컬 타임존). */
 export function toIsoDate(ms: number): string {
   const d = new Date(ms);

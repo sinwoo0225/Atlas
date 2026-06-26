@@ -16,7 +16,7 @@ import { wbsTemplatesApi } from '../api/wbsTemplates';
 import { WbsTemplatePicker, type TemplateApplySelection } from '../components/WbsTemplatePicker';
 import { resourcesApi } from '../api/resources';
 import { changeLogsApi } from '../api/changelogs';
-import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass } from '../components/ui';
+import { Button, Card, Modal, Badge, BadgeMenu, EmptyState, Skeleton, DirtyDot, FormField, inputClass, inputClassSm } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -41,7 +41,7 @@ import { WbsDragOverlayRow } from './wbs/WbsDragOverlayRow';
 import { computeSiblingReorder } from './wbs/wbsReorder';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
-import type { WbsItem, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem, WbsDependency, WbsDependencyType, RescheduleResult } from '../types';
+import type { WbsItem, WbsSubtask, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem, WbsDependency, WbsDependencyType, RescheduleResult } from '../types';
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
 import { loadSettings, patchSettings } from '../store/settings';
 import { loadWbsFilters, saveWbsFilters, clearWbsFilters, type StoredWbsFilters } from '../utils/wbsFilterStore';
@@ -58,7 +58,7 @@ function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[]
 type WbsFormData = {
   name: string; assignee: string; startDate: string; endDate: string;
   status: string; isMilestone: boolean; importance: string; notes: string;
-  parentId: number | null; completedDate: string; estimateHours: string;
+  parentId: number | null; actualStartDate: string; completedDate: string; estimateHours: string;
 };
 
 function WbsItemForm({
@@ -70,7 +70,7 @@ function WbsItemForm({
   onRefreshIssues: () => void;
   onRefreshDevInfo: () => void;
   onLinksChanged: () => void;
-  onSave: () => void; onCancel: () => void;
+  onSave: (createdId?: number) => void; onCancel: () => void;
 }) {
   const { t } = useTranslation();
   const initialForm: WbsFormData = {
@@ -83,6 +83,7 @@ function WbsItemForm({
     importance: (initial?.importance ?? 2).toString(),
     notes: initial?.notes ?? '',
     parentId: initial?.parentId ?? parentId ?? null,
+    actualStartDate: initial?.actualStartDate?.slice(0, 10) ?? '',
     completedDate: initial?.completedDate?.slice(0, 10) ?? '',
     estimateHours: initial?.estimateHours != null ? String(initial.estimateHours) : '',
   };
@@ -112,6 +113,7 @@ function WbsItemForm({
       startDate: form.startDate || null, endDate: form.endDate || null,
       status: form.status as WbsStatus, isMilestone: form.isMilestone,
       importance: parseInt(form.importance) || 2, notes: form.notes,
+      actualStartDate: form.actualStartDate || null,
       completedDate: form.completedDate || null,
       estimateHours: form.estimateHours.trim() === '' ? null : Number(form.estimateHours),
       ...(initial ? { updatedAt: snapshotUpdatedAt, sortOrder: initial.sortOrder } : {}),
@@ -142,6 +144,7 @@ function WbsItemForm({
                     importance: (fresh.importance ?? 2).toString(),
                     notes: fresh.notes ?? '',
                     parentId: fresh.parentId ?? null,
+                    actualStartDate: fresh.actualStartDate?.slice(0, 10) ?? '',
                     completedDate: fresh.completedDate?.slice(0, 10) ?? '',
                     estimateHours: fresh.estimateHours != null ? String(fresh.estimateHours) : '',
                   };
@@ -167,8 +170,10 @@ function WbsItemForm({
       }
     } else {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload 객체 리터럴↔CreateWbsItemDto 구조 일치, 캐스트만 필요
-      await wbsApi.create(payload as any);
+      const created = await wbsApi.create(payload as any);
       toast.success(t('wbs:form.created', { name: form.name }));
+      onSave(created.id); // 신규 행 위치로 스크롤하도록 생성 id 전달
+      return;
     }
     onSave();
   };
@@ -228,16 +233,32 @@ function WbsItemForm({
                 />
               </FormField>
             </div>
+            <FormField label={t('wbs:form.status')}>
+              <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
+                <option value="Planned">{t('status:wbs.Planned')}</option>
+                <option value="InProgress">{t('status:wbs.InProgress')}</option>
+                <option value="Done">{t('status:wbs.Done')}</option>
+              </select>
+            </FormField>
+            {/* 실적 일자 — 상태에 따라 활성화. 착수일=진행/완료, 완료일=완료. 그 전엔 비활성(읽기 전용). */}
             <div className="grid grid-cols-2 gap-3">
-              <FormField label={t('wbs:form.status')}>
-                <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
-                  <option value="Planned">{t('status:wbs.Planned')}</option>
-                  <option value="InProgress">{t('status:wbs.InProgress')}</option>
-                  <option value="Done">{t('status:wbs.Done')}</option>
-                </select>
+              <FormField label={t('wbs:form.actualStartDate')} help={t('wbs:form.actualStartHint')}>
+                <input
+                  type="date"
+                  value={form.actualStartDate}
+                  disabled={form.status === 'Planned'}
+                  onChange={(e) => set('actualStartDate', e.target.value)}
+                  className={`${inputClass} ${form.status === 'Planned' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                />
               </FormField>
               <FormField label={t('wbs:form.completedDate')} help={t('wbs:form.completedHint')}>
-                <input type="date" value={form.completedDate} onChange={(e) => set('completedDate', e.target.value)} className={inputClass} />
+                <input
+                  type="date"
+                  value={form.completedDate}
+                  disabled={form.status !== 'Done'}
+                  onChange={(e) => set('completedDate', e.target.value)}
+                  className={`${inputClass} ${form.status !== 'Done' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                />
               </FormField>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
@@ -299,6 +320,7 @@ function WbsItemForm({
                   allItems={allItems}
                   onChanged={onLinksChanged}
                 />
+                <SubtaskSection projectId={projectId} wbsItem={initial} />
               </>
             )}
             <FormField label={t('wbs:form.notes')} className="min-h-0 flex-1">
@@ -648,6 +670,84 @@ function RelatedWorkInfoSection({ wbsItemId, projectId, allDevInfo, onRefreshDev
   );
 }
 
+// 경량 체크리스트(서브태스크) — 작업 양식 안에서 TODO 식 추가/완료/삭제. 토글은 즉시 영속(낙관적 갱신).
+function SubtaskSection({ projectId, wbsItem }: { projectId: number; wbsItem: WbsItem }) {
+  const { t } = useTranslation();
+  const [subtasks, setSubtasks] = useState<WbsSubtask[]>(wbsItem.subtasks ?? []);
+  const [newTitle, setNewTitle] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const reload = useCallback(async () => {
+    try { setSubtasks(await wbsApi.listSubtasks(projectId, wbsItem.id)); } catch { /* keep current */ }
+  }, [projectId, wbsItem.id]);
+
+  // 트리 GET 에 subtasks 가 실려오지만, 마운트 시 1회 최신화(상세 폼 직접 진입 등).
+  useEffect(() => { reload(); }, [reload]);
+
+  const add = async () => {
+    const title = newTitle.trim();
+    if (!title || busy) return;
+    setBusy(true);
+    try {
+      const created = await wbsApi.addSubtask(projectId, wbsItem.id, title);
+      setSubtasks((s) => [...s, created]);
+      setNewTitle('');
+    } finally { setBusy(false); }
+  };
+
+  const toggle = async (st: WbsSubtask) => {
+    const next = !st.isDone;
+    setSubtasks((s) => s.map((x) => (x.id === st.id ? { ...x, isDone: next } : x)));
+    try { await wbsApi.updateSubtask(projectId, wbsItem.id, st.id, { isDone: next }); }
+    catch { setSubtasks((s) => s.map((x) => (x.id === st.id ? { ...x, isDone: st.isDone } : x))); }
+  };
+
+  const remove = async (st: WbsSubtask) => {
+    setSubtasks((s) => s.filter((x) => x.id !== st.id));
+    try { await wbsApi.deleteSubtask(projectId, wbsItem.id, st.id); }
+    catch { reload(); }
+  };
+
+  const doneCount = subtasks.filter((s) => s.isDone).length;
+
+  return (
+    <FormField label={`${t('wbs:subtasks.label')}${subtasks.length > 0 ? ` (${doneCount}/${subtasks.length})` : ''}`}>
+      <div className="space-y-1 bg-surface-2 border border-default rounded-md px-3 py-2">
+        {subtasks.map((st) => (
+          <div key={st.id} className="flex items-center gap-2 group">
+            <input
+              type="checkbox"
+              checked={st.isDone}
+              onChange={() => toggle(st)}
+              className="rounded shrink-0"
+              aria-label={t('wbs:subtasks.toggleAria', { title: st.title })}
+            />
+            <span className={`text-sm flex-1 break-words ${st.isDone ? 'line-through text-muted' : 'text-primary'}`}>{st.title}</span>
+            <button
+              type="button"
+              onClick={() => remove(st)}
+              className="p-0.5 text-muted hover:text-on-danger opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+              aria-label={t('wbs:subtasks.deleteAria', { title: st.title })}
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <Plus size={14} className="text-muted shrink-0" />
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }}
+            placeholder={t('wbs:subtasks.addPlaceholder')}
+            className="flex-1 bg-transparent text-sm text-primary placeholder:text-muted/70 focus:outline-none border-none px-0 py-1"
+          />
+        </div>
+      </div>
+    </FormField>
+  );
+}
+
 function DateEditModal({
   item,
   projectId,
@@ -662,13 +762,18 @@ function DateEditModal({
   const { t } = useTranslation();
   const [start, setStart] = useState(item.startDate?.slice(0, 10) ?? '');
   const [end, setEnd] = useState(item.endDate?.slice(0, 10) ?? '');
+  const [actualStart, setActualStart] = useState(item.actualStartDate?.slice(0, 10) ?? '');
   const [completed, setCompleted] = useState(item.completedDate?.slice(0, 10) ?? '');
+  // 실적 일자 활성 조건 — 착수일=진행/완료, 완료일=완료. 상태는 이 모달에서 바꾸지 않음(작업 폼에서).
+  const actualStartDisabled = item.status === 'Planned';
+  const completedDisabled = item.status !== 'Done';
 
   const handleSave = async () => {
     await wbsApi.update(projectId, item.id, {
       ...item,
       startDate: start || undefined,
       endDate: end || undefined,
+      actualStartDate: actualStart || undefined,
       completedDate: completed || undefined,
     });
     onSave();
@@ -694,8 +799,23 @@ function DateEditModal({
         <FormField label={t('wbs:form.endDate')}>
           <input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className={inputClass} />
         </FormField>
+        <FormField label={t('wbs:form.actualStartDate')} hint={t('wbs:form.actualStartHint')}>
+          <input
+            type="date"
+            value={actualStart}
+            disabled={actualStartDisabled}
+            onChange={(e) => setActualStart(e.target.value)}
+            className={`${inputClass} ${actualStartDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
+        </FormField>
         <FormField label={t('wbs:form.completedDate')} hint={t('wbs:form.completedHint')}>
-          <input type="date" value={completed} onChange={(e) => setCompleted(e.target.value)} className={inputClass} />
+          <input
+            type="date"
+            value={completed}
+            disabled={completedDisabled}
+            onChange={(e) => setCompleted(e.target.value)}
+            className={`${inputClass} ${completedDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          />
         </FormField>
       </div>
     </Modal>
@@ -727,11 +847,14 @@ export function WbsPage() {
   const [editing, setEditing] = useState<WbsItem | null>(null);
   const [dateEditing, setDateEditing] = useState<WbsItem | null>(null);
   const [addingChildOf, setAddingChildOf] = useState<number | undefined>();
+  // 신규 작업 생성 후 해당 행으로 스크롤 — refresh 로 items 가 갱신되면 effect 가 행을 찾아 스크롤+하이라이트.
+  const [scrollToId, setScrollToId] = useState<number | null>(null);
   const [showVersionForm, setShowVersionForm] = useState(false);
   const [newVersionName, setNewVersionName] = useState('');
   const [keyword, setKeyword] = useState('');
   const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [lateOnly, setLateOnly] = useState(false);
+  const [overdueStartOnly, setOverdueStartOnly] = useState(false);
   const [filterStatuses, setFilterStatuses] = useState<Set<WbsStatus>>(new Set());
   const [filterAssignees, setFilterAssignees] = useState<Set<string>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
@@ -753,16 +876,17 @@ export function WbsPage() {
       kw: keyword.trim().toLowerCase(),
       unassigned: unassignedOnly,
       late: lateOnly,
+      overdueStart: overdueStartOnly,
       statuses: filterStatuses,
       assignees: filterAssignees,
       todayMs: t.getTime(),
     };
-  }, [keyword, unassignedOnly, lateOnly, filterStatuses, filterAssignees]);
+  }, [keyword, unassignedOnly, lateOnly, overdueStartOnly, filterStatuses, filterAssignees]);
 
   const assigneeOptions = useMemo(() => uniqueAssigneesSplit(items), [items]);
 
   // 패널 칩 필터 활성 개수 (상태·담당자·미할당·지연). 키워드는 별도(바).
-  const chipFilterCount = filterStatuses.size + filterAssignees.size + (unassignedOnly ? 1 : 0) + (lateOnly ? 1 : 0);
+  const chipFilterCount = filterStatuses.size + filterAssignees.size + (unassignedOnly ? 1 : 0) + (lateOnly ? 1 : 0) + (overdueStartOnly ? 1 : 0);
 
   const toggleStatus = (s: WbsStatus) => setFilterStatuses((prev) => {
     const next = new Set(prev);
@@ -778,6 +902,7 @@ export function WbsPage() {
     setKeyword('');
     setUnassignedOnly(false);
     setLateOnly(false);
+    setOverdueStartOnly(false);
     setFilterStatuses(new Set());
     setFilterAssignees(new Set());
     setMatchOnly(false);
@@ -791,8 +916,9 @@ export function WbsPage() {
     assignees: [...filterAssignees],
     unassignedOnly,
     lateOnly,
+    overdueStartOnly,
     matchOnly,
-  }), [filterStatuses, filterAssignees, unassignedOnly, lateOnly, matchOnly]);
+  }), [filterStatuses, filterAssignees, unassignedOnly, lateOnly, overdueStartOnly, matchOnly]);
 
   // 하이드레이션 직후 1회의 저장(아직 반영 안 된 이전 렌더 값) 을 건너뛰기 위한 플래그.
   const skipNextSaveRef = useRef(false);
@@ -807,6 +933,7 @@ export function WbsPage() {
     setFilterAssignees(new Set(saved.assignees));
     setUnassignedOnly(saved.unassignedOnly);
     setLateOnly(saved.lateOnly);
+    setOverdueStartOnly(saved.overdueStartOnly ?? false);
     setMatchOnly(saved.matchOnly);
   }, [pid]);
 
@@ -836,6 +963,7 @@ export function WbsPage() {
     setFilterAssignees(new Set(f.assignees));
     setUnassignedOnly(f.unassignedOnly);
     setLateOnly(f.lateOnly);
+    setOverdueStartOnly(f.overdueStartOnly ?? false);
     setMatchOnly(f.matchOnly);
   }, []);
 
@@ -969,6 +1097,22 @@ export function WbsPage() {
   useEffect(() => { load(); }, [load]);
 
   useHighlightFromQuery([items.length]);
+
+  // 신규 작업 스크롤 — scrollToId 가 설정되면 items 갱신 후 해당 행을 찾아 스크롤·하이라이트.
+  // 행이 아직 없으면(refresh 미완·필터로 숨김) 다음 items 변경에서 재시도. 찾으면 1회 후 해제.
+  useEffect(() => {
+    if (scrollToId == null) return;
+    const handle = window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-highlight-id="${scrollToId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('search-highlight');
+        window.setTimeout(() => el.classList.remove('search-highlight'), 1600);
+        setScrollToId(null);
+      }
+    }, 80);
+    return () => window.clearTimeout(handle);
+  }, [scrollToId, items]);
 
   const handleDelete = async (id: number) => {
     if (!await confirmDialog({
@@ -1140,7 +1284,7 @@ export function WbsPage() {
         <select
           value={currentVersion ?? ''}
           onChange={(e) => setCurrentVersion(e.target.value ? parseInt(e.target.value) : undefined)}
-          className="px-3 py-1.5 text-sm rounded-md"
+          className={inputClassSm}
         >
           <option value="">{t('wbs:page.allVersions')}</option>
           {versions.map((v) => <option key={v.id} value={v.id}>{v.versionName}{v.isCurrent ? t('wbs:page.currentSuffix') : ''}</option>)}
@@ -1154,7 +1298,7 @@ export function WbsPage() {
               value={newVersionName}
               onChange={(e) => setNewVersionName(e.target.value)}
               placeholder="v1.0"
-              className="px-2 py-1 text-sm rounded-md w-24"
+              className={`${inputClassSm} w-24`}
             />
             <Button variant="primary" size="sm" onClick={handleCreateVersion}>{t('common:confirm')}</Button>
           </div>
@@ -1170,7 +1314,7 @@ export function WbsPage() {
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
                 placeholder={t('wbs:page.searchPlaceholder')}
-                className={`${inputClass} pl-7 py-1.5 text-sm w-48`}
+                className={`${inputClassSm} pl-7 w-48`}
               />
             </div>
           )}
@@ -1250,6 +1394,15 @@ export function WbsPage() {
               title={t('wbs:page.lateTitle')}
             >
               {t('wbs:page.late')}
+            </button>
+            <button
+              onClick={() => setOverdueStartOnly((v) => !v)}
+              className={`px-2 py-0.5 rounded border transition-colors ${
+                overdueStartOnly ? 'bg-accent-soft border-accent text-accent' : 'border-default text-secondary hover:border-strong'
+              }`}
+              title={t('wbs:page.overdueStartTitle')}
+            >
+              {t('wbs:page.overdueStart')}
             </button>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -1406,7 +1559,7 @@ export function WbsPage() {
           onRefreshIssues={refreshIssues}
           onRefreshDevInfo={refreshDevInfo}
           onLinksChanged={refreshLinkCounts}
-          onSave={() => { setShowForm(false); setAddingChildOf(undefined); refresh(); }}
+          onSave={(createdId) => { setShowForm(false); setAddingChildOf(undefined); refresh(); if (createdId) setScrollToId(createdId); }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
         />
       )}
@@ -1422,7 +1575,7 @@ export function WbsPage() {
           onRefreshDevInfo={refreshDevInfo}
           onLinksChanged={refreshLinkCounts}
           onSave={() => { setEditing(null); refresh(); }}
-          onCancel={() => setEditing(null)}
+          onCancel={() => { setEditing(null); refresh(); }}
         />
       )}
       {dateEditing && (

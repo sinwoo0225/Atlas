@@ -107,6 +107,7 @@ export interface WbsItem {
   createdAt: string;
   updatedAt: string;
   sortOrder: number;
+  actualStartDate?: string; // 실적 착수일 (StartDate 는 계획). 진행/완료 전환 시 자동, 수정 가능.
   completedDate?: string; // 실적 완료일 (StartDate/EndDate 는 계획). Done 전환 시 자동, 수정 가능.
   // 공수 추정(시간) — 용량 계획 기준. rolledUpEstimateHours 는 부모 표시용 자손 leaf 합(읽기 전용).
   estimateHours?: number | null;
@@ -114,7 +115,20 @@ export interface WbsItem {
   // 기준선 일정(캡처된 계획) — Gantt 고스트 막대·variance 기준.
   baselineStart?: string | null;
   baselineEnd?: string | null;
+  // 경량 체크리스트(서브태스크) 진행률 — 목록 배지·간트 %. subtaskTotal>0 일 때만 표시. subtasks 는 상세(GetById)에서만.
+  subtaskTotal?: number;
+  subtaskDone?: number;
+  subtasks?: WbsSubtask[];
   children?: WbsItem[];
+}
+
+// WbsItem 의 경량 체크리스트 항목. 중첩 WBS 작업(children)과 별개로 한 작업 안의 세부 단계.
+export interface WbsSubtask {
+  id: number;
+  wbsItemId: number;
+  title: string;
+  isDone: boolean;
+  sortOrder: number;
 }
 
 export interface WbsVersion {
@@ -179,6 +193,7 @@ export interface ChangeLog {
   updatedBy: string;
   createdAt: string;
   updatedAt: string;
+  isFavorite?: boolean;
 }
 
 export type MeetingCategory = 'Internal' | 'External';
@@ -198,6 +213,7 @@ export interface Meeting {
   markdownPath?: string | null;
   createdAt: string;
   updatedAt: string;
+  isFavorite?: boolean;
 }
 
 export type DevInfoStorageMode = 'Copy' | 'Reference';
@@ -214,6 +230,7 @@ export interface DevInfoItem {
   tags: string;
   createdAt: string;
   updatedAt: string;
+  isFavorite?: boolean;
 }
 
 export type ResourceType = 'Person' | 'Equipment';
@@ -266,6 +283,7 @@ export interface Issue {
   customFields?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
+  isFavorite?: boolean;
 }
 
 // 이슈 리스트 사용자 정의 커스텀 컬럼 정의 (Project.IssueCustomColumnsJson 에 배열로 저장).
@@ -328,6 +346,10 @@ export interface ProjectRetrospective {
   wbsDone: number;
   wbsLatePastPlannedEnd: number;
   wbsLateRatio: number;
+  avgStartVarianceDays?: number | null;
+  onTimeStartRatio?: number | null;
+  avgCycleTimeDays?: number | null;
+  startedCount: number;
   issuesTotal: number;
   issuesHigh: number;
   issuesMedium: number;
@@ -561,7 +583,7 @@ export interface PortfolioRollup {
 
 // 주의(Attention) 피드 — 마감/과배분/미배정/마일스톤/정체 합성 알림.
 export interface AttentionItem {
-  kind: 'overdue' | 'overallocated' | 'dueSoon' | 'unassigned' | 'milestone' | 'stale';
+  kind: 'overdue' | 'overallocated' | 'lateStart' | 'dueSoon' | 'unassigned' | 'milestone' | 'stale';
   severity: 'high' | 'medium' | 'low';
   count: number;
   link: string;

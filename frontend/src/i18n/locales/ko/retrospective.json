@@ -13,6 +13,9 @@
     "project": "프로젝트",
     "delay": "일정 지연",
     "wbsLate": "지연 작업",
+    "startVar": "시작 편차",
+    "onTimeStart": "정시 착수율",
+    "cycleTime": "사이클타임",
     "issues": "이슈",
     "density": "이슈 밀도",
     "resolution": "평균 해결"

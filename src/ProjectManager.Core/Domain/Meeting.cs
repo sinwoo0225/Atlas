@@ -18,6 +18,8 @@ public class Meeting : IAuditable
     public string ActionItems { get; set; } = string.Empty;
     // 저장 시 자동 export 된 md 파일의 절대경로 (없으면 null).
     public string? MarkdownPath { get; set; }
+    // 즐겨찾기(별표) — 목록 최상단 고정·'별표만 보기' 필터용.
+    public bool IsFavorite { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;

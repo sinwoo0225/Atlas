@@ -14,6 +14,8 @@ public class ChangeLog : IAuditable
     // OnDelete.SetNull → 원본 삭제되어도 ChangeLog 본체는 감사 자료로 보존, 출처만 비워짐.
     public int? SourceIssueId { get; set; }
     public int? SourceWbsItemId { get; set; }
+    // 즐겨찾기(별표) — 목록 최상단 고정·'별표만 보기' 필터용.
+    public bool IsFavorite { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;

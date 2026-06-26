@@ -5,7 +5,7 @@ export { Badge } from './Badge';
 export type { BadgeVariant } from './Badge';
 export { BadgeMenu } from './BadgeMenu';
 export type { BadgeMenuOption } from './BadgeMenu';
-export { FormField, inputClass, inputClassNoW } from './FormField';
+export { FormField, inputClass, inputClassNoW, inputClassSm } from './FormField';
 export { Input } from './Input';
 export { Select } from './Select';
 export { Textarea } from './Textarea';

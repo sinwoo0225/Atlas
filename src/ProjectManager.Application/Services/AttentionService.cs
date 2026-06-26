@@ -28,6 +28,10 @@ public class AttentionService(AppDbContext db, CapacityService capacity, Monitor
         var dueSoon = await leafOpen.CountAsync(w => !w.IsMilestone && w.EndDate != null && w.EndDate.Value >= today && w.EndDate.Value <= soon)
             + await openIssues.CountAsync(i => i.DueDate != null && i.DueDate.Value >= today && i.DueDate.Value <= soon);
 
+        // 시작 지연 — 계획 시작일이 도래/지났는데 아직 Planned(미착수)인 leaf 작업.
+        var lateStart = await leafOpen.CountAsync(w => !w.IsMilestone && w.Status == WbsStatus.Planned
+            && w.StartDate != null && w.StartDate.Value <= today);
+
         var milestones = await leafOpen.CountAsync(w => w.IsMilestone && w.EndDate != null
             && w.EndDate.Value >= today && w.EndDate.Value <= milestoneHorizon);
 
@@ -47,6 +51,7 @@ public class AttentionService(AppDbContext db, CapacityService capacity, Monitor
         }
         Add("overdue", "high", overdue, "/monitoring");
         Add("overallocated", "high", overallocated, "people");
+        Add("lateStart", "medium", lateStart, "/monitoring");
         Add("dueSoon", "medium", dueSoon, "/monitoring");
         Add("unassigned", "medium", unassigned, "people");
         Add("milestone", "low", milestones, "/monitoring");

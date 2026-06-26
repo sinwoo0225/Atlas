@@ -5,11 +5,11 @@ import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Pencil, X, Diamond, ChevronDown, ChevronRight,
-  Link as LinkIcon, FileText, GripVertical,
+  Link as LinkIcon, FileText, GripVertical, ListChecks,
 } from 'lucide-react';
 import { Badge, BadgeMenu } from '../../components/ui';
 import { wbsImportanceBadge } from '../../utils/statusMaps';
-import { spanOf, toIsoDate } from '../../utils/wbsSpan';
+import { spanOf, toIsoDate, isOverdueToStart } from '../../utils/wbsSpan';
 import type { WbsItem, WbsStatus } from '../../types';
 
 interface Props {
@@ -52,16 +52,17 @@ export function SortableWbsRow({
   const endIsComputed   = !item.endDate   && !!computedSpan?.end;
 
   // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태.
-  // 완료(Done): item-done(흐림+또렷한 취소선) 공통 스타일. 예정(Planned): 흐림만. 그 외: 레벨색.
+  // 완료(Done): item-done(흐림+또렷한 취소선) 공통 스타일.
+  // 예정(Planned): 계획 시작일 전이면 흐림(text-muted), 계획 시작일이 지났는데 미착수면 진하게(착수 환기). 그 외: 레벨색.
+  const overdueStart = isOverdueToStart(item);
+  const levelColor = depth === 0 ? 'text-accent' : 'text-primary';
   const nameWeight = depth === 0 ? 'font-semibold' : '';
   const nameColor =
     item.status === 'Done'
       ? 'item-done'
       : item.status === 'Planned'
-        ? 'text-muted'
-        : depth === 0
-          ? 'text-accent'
-          : 'text-primary';
+        ? (overdueStart ? levelColor : 'text-muted')
+        : levelColor;
 
   const {
     attributes, listeners,
@@ -152,12 +153,22 @@ export function SortableWbsRow({
                 </Badge>
               </button>
             )}
+            {(item.subtaskTotal ?? 0) > 0 && (
+              <span
+                className="ml-1 shrink-0"
+                title={t('wbs:row.subtaskProgressTitle', { done: item.subtaskDone ?? 0, total: item.subtaskTotal })}
+              >
+                <Badge variant={(item.subtaskDone ?? 0) === item.subtaskTotal ? 'success' : 'neutral'} size="sm">
+                  <ListChecks size={10} className="mr-0.5" /> {item.subtaskDone ?? 0}/{item.subtaskTotal}
+                </Badge>
+              </span>
+            )}
           </div>
         </td>
         <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={hasChildren ? undefined : (item.assignee || undefined)}>{hasChildren ? '' : item.assignee}</td>
         <td
-          className={`py-2 px-3 text-xs whitespace-nowrap ${startIsComputed ? 'text-muted opacity-60 italic' : 'text-muted'}`}
-          title={startIsComputed ? t('wbs:row.computedStartTitle') : undefined}
+          className={`py-2 px-3 text-xs whitespace-nowrap ${startIsComputed ? 'text-muted opacity-60 italic' : overdueStart ? 'text-on-warning font-medium' : 'text-muted'}`}
+          title={overdueStart ? t('wbs:row.overdueStartTitle') : startIsComputed ? t('wbs:row.computedStartTitle') : undefined}
         >
           {showStart?.slice(0, 10)}
         </td>

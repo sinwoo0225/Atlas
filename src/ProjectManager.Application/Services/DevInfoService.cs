@@ -50,6 +50,16 @@ public class DevInfoService(
         return item is null ? null : ToDto(item);
     }
 
+    // 즐겨찾기 토글 — IsFavorite 만 갱신(목록 최상단 고정용).
+    public async Task<bool> SetFavoriteAsync(int id, bool favorite)
+    {
+        var item = await repo.GetByIdAsync(id);
+        if (item is null) return false;
+        item.IsFavorite = favorite;
+        await repo.UpdateAsync(item);
+        return true;
+    }
+
     public async Task<DevInfoItemDto> CreateAsync(CreateDevInfoItemDto dto)
     {
         var item = new DevInfoItem
@@ -188,5 +198,5 @@ public class DevInfoService(
 
     private static DevInfoItemDto ToDto(DevInfoItem d) => new(
         d.Id, d.ProjectId, d.Title, d.Type, d.StorageMode, d.Content,
-        d.FilePath, d.Url, d.Tags, d.CreatedAt, d.UpdatedAt);
+        d.FilePath, d.Url, d.Tags, d.CreatedAt, d.UpdatedAt, d.IsFavorite);
 }

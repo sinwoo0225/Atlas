@@ -1,5 +1,5 @@
 import { api, type RequestOptions } from './client';
-import type { WbsItem, WbsVersion } from '../types';
+import type { WbsItem, WbsVersion, WbsSubtask } from '../types';
 
 export const wbsApi = {
   getByProject: (projectId: number, versionId?: number) =>
@@ -24,4 +24,13 @@ export const wbsApi = {
     api.post<{ captured: number }>(`/projects/${projectId}/wbs/baseline/capture${versionId ? `?versionId=${versionId}` : ''}`, {}),
   clearBaseline: (projectId: number, versionId?: number) =>
     api.post<{ cleared: number }>(`/projects/${projectId}/wbs/baseline/clear${versionId ? `?versionId=${versionId}` : ''}`, {}),
+  // 서브태스크(경량 체크리스트) — 작업 양식 안에서 TODO 식 추가/완료.
+  listSubtasks: (projectId: number, wbsItemId: number) =>
+    api.get<WbsSubtask[]>(`/projects/${projectId}/wbs/${wbsItemId}/subtasks`),
+  addSubtask: (projectId: number, wbsItemId: number, title: string) =>
+    api.post<WbsSubtask>(`/projects/${projectId}/wbs/${wbsItemId}/subtasks`, { title }),
+  updateSubtask: (projectId: number, wbsItemId: number, id: number, data: { title?: string; isDone?: boolean }) =>
+    api.patch<WbsSubtask>(`/projects/${projectId}/wbs/${wbsItemId}/subtasks/${id}`, data),
+  deleteSubtask: (projectId: number, wbsItemId: number, id: number) =>
+    api.delete(`/projects/${projectId}/wbs/${wbsItemId}/subtasks/${id}`),
 };

@@ -57,12 +57,14 @@ public static class AppServicesRegistration
         services.AddScoped<IWbsDevInfoLinkRepository, WbsDevInfoLinkRepository>();
         services.AddScoped<ITodoRepository, TodoRepository>();
         services.AddScoped<IWbsAssignmentRepository, WbsAssignmentRepository>();
+        services.AddScoped<IWbsSubtaskRepository, WbsSubtaskRepository>();
         services.AddScoped<IResourceAvailabilityRepository, ResourceAvailabilityRepository>();
         services.AddScoped<IWbsDependencyRepository, WbsDependencyRepository>();
 
         services.AddSingleton<BuiltInTemplateProvider>();
         services.AddScoped<ProjectService>();
         services.AddScoped<WbsAssignmentService>();
+        services.AddScoped<WbsSubtaskService>();
         services.AddScoped<WbsService>();
         services.AddScoped<WbsTemplateService>();
         services.AddScoped<ChangeLogService>();

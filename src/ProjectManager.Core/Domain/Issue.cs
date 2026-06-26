@@ -25,6 +25,8 @@ public class Issue : IAuditable
     // 사용자 정의 커스텀 컬럼의 값. JSON-in-TEXT 평탄 맵 { "컬럼key": "문자열값" }.
     // 컬럼 정의(이름·유형·순서)는 Project.IssueCustomColumnsJson. 서버는 파싱하지 않고 passthrough.
     public string CustomFieldsJson { get; set; } = string.Empty;
+    // 즐겨찾기(별표) — 목록 최상단 고정·'별표만 보기' 필터용. 프로젝트 단위 사용자 표식.
+    public bool IsFavorite { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;

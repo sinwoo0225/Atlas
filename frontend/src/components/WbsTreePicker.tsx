@@ -24,6 +24,7 @@ export function WbsTreePicker({ items, selectedId, excludeIds, onSelect, showRoo
     kw: keyword.trim().toLowerCase(),
     unassigned: false,
     late: false,
+    overdueStart: false,
     statuses: new Set(),
     assignees: new Set(),
     todayMs: 0,

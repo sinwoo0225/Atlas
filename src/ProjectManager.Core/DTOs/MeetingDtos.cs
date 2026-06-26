@@ -9,7 +9,8 @@ public record MeetingDto(
     string Attendees, string Topic, string Decisions,
     string Discussion, string ActionItems,
     string? MarkdownPath,
-    DateTime CreatedAt, DateTime UpdatedAt);
+    DateTime CreatedAt, DateTime UpdatedAt,
+    bool IsFavorite = false);
 
 public record CreateMeetingDto(
     int ProjectId, DateTime Date,

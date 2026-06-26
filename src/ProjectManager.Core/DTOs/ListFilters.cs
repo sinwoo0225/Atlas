@@ -46,7 +46,9 @@ public sealed record WbsListFilter(
     DateTime? EndTo = null,
     string? Assignee = null,
     bool? Milestone = null,
-    string? Keyword = null)
+    string? Keyword = null,
+    // 시작 지연 — 계획 시작일이 오늘(자정) 이전인데 아직 Planned(미착수). 착수 환기·인사이트용.
+    bool OverdueStart = false)
 {
     public static readonly WbsListFilter None = new();
 
@@ -61,7 +63,8 @@ public sealed record WbsListFilter(
         EndFrom is null && EndTo is null &&
         string.IsNullOrWhiteSpace(Assignee) &&
         Milestone is null &&
-        string.IsNullOrWhiteSpace(Keyword);
+        string.IsNullOrWhiteSpace(Keyword) &&
+        !OverdueStart;
 }
 
 public sealed record ProjectListFilter(

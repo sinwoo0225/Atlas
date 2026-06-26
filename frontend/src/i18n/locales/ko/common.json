@@ -7,6 +7,11 @@
   "save": "저장",
   "reset": "초기화",
   "add": "추가",
+  "favorite": {
+    "add": "즐겨찾기 추가",
+    "remove": "즐겨찾기 해제",
+    "onlyFavorites": "별표만 보기"
+  },
   "help": "도움말",
   "enable": "활성화",
   "saveFailed": "저장 실패",

@@ -13,6 +13,9 @@
     "project": "Project",
     "delay": "Delay",
     "wbsLate": "Late tasks",
+    "startVar": "Start variance",
+    "onTimeStart": "On-time start",
+    "cycleTime": "Cycle time",
     "issues": "Issues",
     "density": "Issue density",
     "resolution": "Avg resolution"

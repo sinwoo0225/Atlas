@@ -10,9 +10,12 @@ public class WbsItem : IAuditable
     public int? ParentId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Assignee { get; set; } = string.Empty;
-    // StartDate/EndDate 는 '계획' 일자. 실적(실제 완료)은 CompletedDate 로 별도 기록.
+    // StartDate/EndDate 는 '계획' 일자. 실적(실제 착수/완료)은 ActualStartDate/CompletedDate 로 별도 기록.
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
+    // 착수 일자(실적). Status 가 InProgress/Done 으로 처음 전환될 때 자동 스탬프(DateTime.Today), 사용자가 직접 수정 가능
+    // (착수가 늦게 기록된 경우 실제 착수일로 보정). Planned 로 되돌리면 클리어. 계획 시작(StartDate) 대비 착수 지연 측정의 기준.
+    public DateTime? ActualStartDate { get; set; }
     // 완료 일자(실적). Status 가 Done 으로 전환될 때 자동 스탬프(DateTime.Today), 사용자가 직접 수정 가능
     // (완료 처리가 늦어진 경우 실제 완료일로 보정). Done 에서 벗어나면 클리어. 계획 종료(EndDate) 대비 지연 측정의 기준.
     public DateTime? CompletedDate { get; set; }
@@ -40,6 +43,8 @@ public class WbsItem : IAuditable
     public WbsItem? Parent { get; set; }
     public ICollection<WbsItem> Children { get; set; } = new List<WbsItem>();
     public ICollection<WbsAssignment> Assignments { get; set; } = new List<WbsAssignment>();
+    // 경량 체크리스트(서브태스크). 중첩 WBS 작업(Children)과 별개로 한 작업 안의 세부 단계 진행을 추적.
+    public ICollection<WbsSubtask> Subtasks { get; set; } = new List<WbsSubtask>();
 }
 
 public class WbsVersion

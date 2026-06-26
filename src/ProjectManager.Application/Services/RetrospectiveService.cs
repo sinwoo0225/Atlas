@@ -49,6 +49,19 @@ public class RetrospectiveService(AppDbContext db)
             var late = leafWbs.Count(w => w.CompletedDate is DateTime cd && w.EndDate is DateTime ed && cd.Date > ed.Date);
             var lateRatio = wbsDone > 0 ? Math.Round((double)late / wbsDone, 3) : 0.0;
 
+            // 착수 실적 — 계획시작 대비 실제착수 편차·정시 착수율, 사이클타임(실제착수→실제완료).
+            var started = leafWbs.Where(w => w.ActualStartDate is DateTime).ToList();
+            double? avgStartVar = null, onTimeStart = null, avgCycle = null;
+            var startVarSample = started.Where(w => w.StartDate is DateTime).ToList();
+            if (startVarSample.Count > 0)
+            {
+                avgStartVar = Math.Round(startVarSample.Average(w => (w.ActualStartDate!.Value.Date - w.StartDate!.Value.Date).TotalDays), 1);
+                onTimeStart = Math.Round((double)startVarSample.Count(w => w.ActualStartDate!.Value.Date <= w.StartDate!.Value.Date) / startVarSample.Count, 3);
+            }
+            var cycleSample = started.Where(w => w.CompletedDate is DateTime).ToList();
+            if (cycleSample.Count > 0)
+                avgCycle = Math.Round(cycleSample.Average(w => (w.CompletedDate!.Value.Date - w.ActualStartDate!.Value.Date).TotalDays), 1);
+
             // 이슈 발생.
             var issuesTotal = issues.Count;
             var high = issues.Count(i => i.Priority == IssuePriority.High);
@@ -74,6 +87,7 @@ public class RetrospectiveService(AppDbContext db)
                 plannedStart, plannedEnd, actual,
                 delayDays, delayRatio,
                 wbsTotal, wbsDone, late, lateRatio,
+                avgStartVar, onTimeStart, avgCycle, started.Count,
                 issuesTotal, high, med, low,
                 issueDensity, avgResolution, resolved.Count,
                 burnUp));

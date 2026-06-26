@@ -3,8 +3,10 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, X, Save, FileText, Building2, Search, AlertTriangle, ListTree, Sparkles, Mic } from 'lucide-react';
+import { Plus, Pencil, X, Save, FileText, Building2, Search, AlertTriangle, ListTree, Sparkles, Mic, Star } from 'lucide-react';
 import { meetingsApi } from '../api/meetings';
+import { FavoriteStar } from '../components/FavoriteStar';
+import { favoritesFirst } from '../utils/favorites';
 import { resourcesApi } from '../api/resources';
 import { aiApi } from '../api/ai';
 import { loadSettings } from '../store/settings';
@@ -17,7 +19,7 @@ import {
   type AttendeeOrg,
   type ActionItem,
 } from '../utils/meetingHelpers';
-import { Button, Card, Modal, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassNoW, inputClassSm } from '../components/ui';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { parseAssigneeTokens, serializeAssigneeTokens } from '../utils/assigneeTokens';
 import { PageHeader } from '../components/PageHeader';
@@ -691,6 +693,7 @@ export function MeetingsPage() {
   const project = useCurrentProject();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [keyword, setKeyword] = useState('');
+  const [favOnly, setFavOnly] = useState(false);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -733,7 +736,8 @@ export function MeetingsPage() {
 
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
-    return meetings.filter((m) => {
+    return favoritesFirst(meetings.filter((m) => {
+      if (favOnly && !m.isFavorite) return false;
       if (kw) {
         const hay = `${m.topic} ${m.discussion ?? ''} ${m.decisions ?? ''} ${m.actionItems ?? ''} ${m.attendees ?? ''}`.toLowerCase();
         if (!hay.includes(kw)) return false;
@@ -742,8 +746,17 @@ export function MeetingsPage() {
       if (dateFrom && d < dateFrom) return false;
       if (dateTo && d > dateTo) return false;
       return true;
+    }));
+  }, [meetings, keyword, favOnly, dateFrom, dateTo]);
+
+  // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
+  const toggleFavorite = useCallback((m: Meeting) => {
+    const next = !m.isFavorite;
+    setMeetings((prev) => prev.map((x) => (x.id === m.id ? { ...x, isFavorite: next } : x)));
+    meetingsApi.toggleFavorite(pid, m.id, next).catch(() => {
+      setMeetings((prev) => prev.map((x) => (x.id === m.id ? { ...x, isFavorite: !next } : x)));
     });
-  }, [meetings, keyword, dateFrom, dateTo]);
+  }, [pid]);
 
   // 탭(전체/내부/외부) 적용 + 탭별 건수 배지.
   const tabbed = useMemo(
@@ -815,17 +828,25 @@ export function MeetingsPage() {
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={t('meetings:searchPlaceholder')}
-            className={`${inputClass} pl-7 py-1.5 text-sm`}
+            className={`w-full ${inputClassSm} pl-7`}
           />
         </div>
         <div className="flex items-center gap-1 text-sm">
           <span className="text-muted text-xs">{t('meetings:dateLabel')}</span>
-          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={`${inputClassNoW} py-1.5 text-sm w-36`} />
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={`${inputClassSm} w-36`} />
           <span className="text-muted">~</span>
-          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={`${inputClassNoW} py-1.5 text-sm w-36`} />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={`${inputClassSm} w-36`} />
         </div>
-        {(keyword || dateFrom || dateTo) && (
-          <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setDateFrom(''); setDateTo(''); }}>
+        <Button
+          variant={favOnly ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={() => setFavOnly((v) => !v)}
+          leadingIcon={<Star size={14} className={favOnly ? 'fill-current' : ''} />}
+        >
+          {t('common:favorite.onlyFavorites')}
+        </Button>
+        {(keyword || dateFrom || dateTo || favOnly) && (
+          <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setDateFrom(''); setDateTo(''); setFavOnly(false); }}>
             {t('common:reset')}
           </Button>
         )}
@@ -887,28 +908,32 @@ export function MeetingsPage() {
               {tabbed.length === 0 ? (
                 <p className="text-sm text-muted text-center py-8">{t('meetings:empty.titleFiltered')}</p>
               ) : tabbed.map((m) => (
-                <button
-                  key={m.id}
-                  type="button"
-                  data-highlight-id={m.id}
-                  onClick={() => setSelectedId(m.id)}
-                  aria-current={selectedId === m.id}
-                  className={`w-full text-left rounded-md border px-3 py-2 transition-colors ${
-                    selectedId === m.id ? 'border-accent bg-accent-soft' : 'border-default bg-surface hover:border-strong'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs text-secondary font-medium">{m.date.slice(0, 10)}</span>
-                    {(m.startTime || m.endTime) && (
-                      <span className="text-xs text-muted">
-                        {m.startTime ?? ''}{m.startTime && m.endTime ? '–' : ''}{m.endTime ?? ''}
-                      </span>
-                    )}
-                    <CategoryChip category={m.category} className="ml-auto shrink-0" />
+                <div key={m.id} className="relative">
+                  <button
+                    type="button"
+                    data-highlight-id={m.id}
+                    onClick={() => setSelectedId(m.id)}
+                    aria-current={selectedId === m.id}
+                    className={`w-full text-left rounded-md border px-3 py-2 pr-9 transition-colors ${
+                      selectedId === m.id ? 'border-accent bg-accent-soft' : 'border-default bg-surface hover:border-strong'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-secondary font-medium">{m.date.slice(0, 10)}</span>
+                      {(m.startTime || m.endTime) && (
+                        <span className="text-xs text-muted">
+                          {m.startTime ?? ''}{m.startTime && m.endTime ? '–' : ''}{m.endTime ?? ''}
+                        </span>
+                      )}
+                      <CategoryChip category={m.category} className="ml-auto shrink-0" />
+                    </div>
+                    <h3 className="text-sm font-medium text-primary truncate">{m.topic}</h3>
+                    <p className="text-xs text-muted truncate mt-0.5">{attendeesToDisplay(m.attendees)}</p>
+                  </button>
+                  <div className="absolute top-1.5 right-1">
+                    <FavoriteStar active={!!m.isFavorite} onToggle={() => toggleFavorite(m)} size={15} />
                   </div>
-                  <h3 className="text-sm font-medium text-primary truncate">{m.topic}</h3>
-                  <p className="text-xs text-muted truncate mt-0.5">{attendeesToDisplay(m.attendees)}</p>
-                </button>
+                </div>
               ))}
             </div>
           </div>

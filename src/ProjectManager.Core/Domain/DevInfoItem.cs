@@ -21,6 +21,8 @@ public class DevInfoItem : IAuditable
     public string FilePath { get; set; } = string.Empty;
     public string Url { get; set; } = string.Empty;
     public string Tags { get; set; } = string.Empty;
+    // 즐겨찾기(별표) — 목록 최상단 고정·'별표만 보기' 필터용.
+    public bool IsFavorite { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;

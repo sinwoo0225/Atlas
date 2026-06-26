@@ -25,6 +25,7 @@ public class AppDbContext(
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<TodoItem> TodoItems => Set<TodoItem>();
     public DbSet<WbsAssignment> WbsAssignments => Set<WbsAssignment>();
+    public DbSet<WbsSubtask> WbsSubtasks => Set<WbsSubtask>();
     public DbSet<ResourceAvailability> ResourceAvailabilities => Set<ResourceAvailability>();
     public DbSet<WbsDependency> WbsDependencies => Set<WbsDependency>();
 
@@ -63,6 +64,8 @@ public class AppDbContext(
             e.HasIndex(x => x.IsMilestone);
             // 회고 번업·지연 집계가 CompletedDate 로 across-project 스캔 → 인덱스.
             e.HasIndex(x => x.CompletedDate);
+            // 회고 시작-편차·사이클타임 집계가 ActualStartDate 로 스캔 → 인덱스.
+            e.HasIndex(x => x.ActualStartDate);
         });
 
         modelBuilder.Entity<WbsTemplate>(e =>
@@ -149,6 +152,18 @@ public class AppDbContext(
             // 중복 배정 방지 + by-wbs(선두 컬럼) 조회 커버. by-resource 는 별도 인덱스(후행 컬럼이라 미커버).
             e.HasIndex(x => new { x.WbsItemId, x.ResourceId }).IsUnique();
             e.HasIndex(x => x.ResourceId);
+        });
+
+        modelBuilder.Entity<WbsSubtask>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Title).IsRequired().HasMaxLength(500);
+            e.Property(x => x.UpdatedAt).IsConcurrencyToken();
+            e.Property(x => x.CreatedBy).HasMaxLength(200);
+            e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 부모 WBS 삭제 시 서브태스크 cascade. by-wbs 조회(체크리스트 로드·진행률 카운트) 인덱스.
+            e.HasOne(x => x.WbsItem).WithMany(w => w.Subtasks).HasForeignKey(x => x.WbsItemId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.WbsItemId);
         });
 
         modelBuilder.Entity<WbsDependency>(e =>

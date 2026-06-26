@@ -38,3 +38,8 @@ export const inputClass =
  *  뒤에 붙인 너비 유틸이 묻히지 않게 한다 (둘 다 utility 라 specificity 가 같아 CSS 출력 순서가 결정 — w-full 이 보통 이긴다). */
 export const inputClassNoW =
   'px-3 py-2 text-sm rounded-md transition-colors';
+
+/** 필터바 인라인 입력(검색·날짜·셀렉트)을 토글 버튼(Button size="sm")과 같은 높이로 맞출 때.
+ *  Button sm 의 px-2.5 py-1 text-xs 와 동일 패딩. inputClassNoW 와 섞지 말 것(py-2 충돌). */
+export const inputClassSm =
+  'px-2.5 py-1 text-xs rounded-md transition-colors';

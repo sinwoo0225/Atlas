@@ -7,6 +7,11 @@
   "save": "Save",
   "reset": "Reset",
   "add": "Add",
+  "favorite": {
+    "add": "Add to favorites",
+    "remove": "Remove from favorites",
+    "onlyFavorites": "Favorites only"
+  },
   "help": "Help",
   "enable": "Enabled",
   "saveFailed": "Save failed",

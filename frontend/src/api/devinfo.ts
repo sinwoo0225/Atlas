@@ -10,6 +10,8 @@ export const devInfoApi = {
     api.put<DevInfoItem>(`/projects/${projectId}/devinfo/${id}`, data),
   delete: (projectId: number, id: number) =>
     api.delete(`/projects/${projectId}/devinfo/${id}`),
+  toggleFavorite: (projectId: number, id: number, favorite: boolean) =>
+    api.patch<void>(`/projects/${projectId}/devinfo/${id}/favorite`, { favorite }),
   openFile: (projectId: number, id: number) =>
     api.post<void>(`/projects/${projectId}/devinfo/${id}/open`, {}),
   getDistinctTags: (projectId: number, sort?: 'alpha' | 'freq') =>

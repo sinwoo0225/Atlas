@@ -7,7 +7,8 @@ public record DevInfoItemDto(
     DevInfoType Type, DevInfoStorageMode StorageMode,
     string Content,
     string FilePath, string Url, string Tags,
-    DateTime CreatedAt, DateTime UpdatedAt);
+    DateTime CreatedAt, DateTime UpdatedAt,
+    bool IsFavorite = false);
 
 public record CreateDevInfoItemDto(
     int ProjectId, string Title,

@@ -35,4 +35,9 @@ public class ChangeLogsController(ChangeLogService svc) : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int projectId, int id) =>
         await svc.DeleteAsync(id) ? NoContent() : NotFound();
+
+    // 즐겨찾기(별표) 토글 — 목록 최상단 고정.
+    [HttpPatch("{id:int}/favorite")]
+    public async Task<IActionResult> SetFavorite(int projectId, int id, [FromBody] SetFavoriteDto dto) =>
+        await svc.SetFavoriteAsync(id, dto.Favorite) ? NoContent() : NotFound();
 }

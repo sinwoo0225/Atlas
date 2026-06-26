@@ -49,6 +49,8 @@ public class WbsService(
             Importance = dto.Importance, Notes = dto.Notes,
             SortOrder = nextSortOrder,
             EstimateHours = dto.EstimateHours,
+            // 진행/완료 상태로 생성되면 착수일도 함께(명시값 우선, 없으면 오늘).
+            ActualStartDate = dto.ActualStartDate ?? (dto.Status != WbsStatus.Planned ? DateTime.Today : null),
             // 완료 상태로 생성되면 완료일도 함께(명시값 우선, 없으면 오늘).
             CompletedDate = dto.CompletedDate ?? (dto.Status == WbsStatus.Done ? DateTime.Today : null),
         };
@@ -96,6 +98,7 @@ public class WbsService(
         }
 
         var wasDone = item.Status == WbsStatus.Done;
+        var wasPlanned = item.Status == WbsStatus.Planned;
         var nameChanged = item.Name != dto.Name;
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
@@ -104,6 +107,13 @@ public class WbsService(
         if (!parentChanged) item.SortOrder = dto.SortOrder;
         item.Notes = dto.Notes;
         item.EstimateHours = dto.EstimateHours;
+        // 착수일(실적): 클라가 보낸 값을 우선 반영(수동 보정·명시적 클리어).
+        // Planned→진행/완료 첫 전환 시 값이 없으면 오늘로 자동 스탬프. Planned 로 되돌리면 클리어.
+        item.ActualStartDate = dto.ActualStartDate;
+        if (wasPlanned && dto.Status != WbsStatus.Planned && item.ActualStartDate is null)
+            item.ActualStartDate = DateTime.Today;
+        else if (dto.Status == WbsStatus.Planned)
+            item.ActualStartDate = null;
         // 완료일(실적): 클라가 보낸 값을 우선 반영(수동 보정·명시적 클리어 라운드트립).
         // Done 진입 시 값이 없으면 오늘로 자동 스탬프. Done 에서 벗어나면 클리어.
         item.CompletedDate = dto.CompletedDate;
@@ -135,7 +145,7 @@ public class WbsService(
         var dto = new UpdateWbsItemDto(
             item.ParentId, item.Name, item.Assignee, item.StartDate, item.EndDate,
             status, item.IsMilestone, item.Importance, item.Notes, item.SortOrder,
-            item.CompletedDate, item.UpdatedAt, item.EstimateHours);
+            item.CompletedDate, item.UpdatedAt, item.EstimateHours, item.ActualStartDate);
         await UpdateAsync(id, dto);
         return true;
     }
@@ -185,17 +195,25 @@ public class WbsService(
             rolled = any ? sum : null;
         }
         else rolled = item.EstimateHours;
+        var subs = item.Subtasks?.OrderBy(s => s.SortOrder).ThenBy(s => s.Id).ToList();
         return new(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
             item.Status, item.IsMilestone, item.Importance, item.Notes,
             item.CreatedAt, item.UpdatedAt,
             item.SortOrder,
+            item.ActualStartDate,
             item.CompletedDate,
             item.EstimateHours, rolled,
             item.BaselineStart, item.BaselineEnd,
+            subs?.Count ?? 0,
+            subs?.Count(s => s.IsDone) ?? 0,
+            subs?.Select(ToSubtaskDto).ToList(),
             children);
     }
+
+    private static WbsSubtaskDto ToSubtaskDto(WbsSubtask s) =>
+        new(s.Id, s.WbsItemId, s.Title, s.IsDone, s.SortOrder);
 
     // 평면 결과용 — Children 을 null 로 둬 출력에서 생략(WhenWritingNull). 계층은 ParentId 로 표현.
     // 평면 컨텍스트라 rollup 불가 → RolledUp 은 자기 추정으로.
@@ -205,9 +223,13 @@ public class WbsService(
         item.Status, item.IsMilestone, item.Importance, item.Notes,
         item.CreatedAt, item.UpdatedAt,
         item.SortOrder,
+        item.ActualStartDate,
         item.CompletedDate,
         item.EstimateHours, item.EstimateHours,
         item.BaselineStart, item.BaselineEnd,
+        item.Subtasks?.Count ?? 0,
+        item.Subtasks?.Count(s => s.IsDone) ?? 0,
+        null,
         null);
 
     private static WbsVersionDto ToVersionDto(WbsVersion v) => new(

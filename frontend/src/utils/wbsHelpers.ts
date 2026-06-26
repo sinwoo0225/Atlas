@@ -10,6 +10,7 @@ export interface WbsFilterOpts {
   kw: string;                  // lowercase, trimmed
   unassigned: boolean;
   late: boolean;
+  overdueStart: boolean;       // 계획 시작일이 지났는데 아직 Planned(미착수)
   statuses: Set<WbsStatus>;    // 비어있으면 전체 통과
   assignees: Set<string>;      // 개인 단위. 비어있으면 전체 통과
   todayMs: number;             // Date.now() 기준 자정 ms (지연 비교용)
@@ -30,6 +31,11 @@ export function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
     if (!item.endDate) return false;
     if (item.status === 'Done') return false;
     if (new Date(item.endDate).getTime() >= o.todayMs) return false;
+  }
+  if (o.overdueStart) {
+    if (item.status !== 'Planned') return false;
+    if (!item.startDate) return false;
+    if (new Date(item.startDate).getTime() > o.todayMs) return false;
   }
   return true;
 }
@@ -70,7 +76,7 @@ export function filterWbsTree(items: WbsItem[], o: WbsFilterOpts): WbsItem[] {
 }
 
 export function hasAnyFilter(o: WbsFilterOpts): boolean {
-  return !!o.kw || o.unassigned || o.late || o.statuses.size > 0 || o.assignees.size > 0;
+  return !!o.kw || o.unassigned || o.late || o.overdueStart || o.statuses.size > 0 || o.assignees.size > 0;
 }
 
 // 트리 전체를 순회하며 담당자를 개인 단위로 쪼개 unique 정렬 반환 (표 필터 칩용).

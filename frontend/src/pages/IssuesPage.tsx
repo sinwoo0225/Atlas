@@ -3,13 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronDown, ChevronRight, Columns3, FileText, Link as LinkIcon, ListTree, Plus, Search, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, CornerDownLeft, FileText, Link as LinkIcon, ListTree, Plus, Search, Star, X } from 'lucide-react';
+import { FavoriteStar } from '../components/FavoriteStar';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
 import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
 import { issueWbsLinksApi, type IssueWbsLink } from '../api/issueWbsLinks';
-import { Badge, Button, Card, Input, BadgeMenu, EmptyState, FilterBar, Skeleton, DirtyDot, inputClass, inputClassNoW, type BadgeMenuOption } from '../components/ui';
+import { Badge, Button, Card, Input, BadgeMenu, EmptyState, FilterBar, Skeleton, DirtyDot, inputClass, inputClassSm, type BadgeMenuOption } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { WbsTreePicker } from '../components/WbsTreePicker';
@@ -54,6 +55,7 @@ export function IssuesPage() {
   const [filter, setFilter] = useState<IssueStatus | 'All'>('All');
   const [priorityFilter, setPriorityFilter] = useState<IssuePriority | 'All'>('All');
   const [assigneeFilter, setAssigneeFilter] = useState<number | 'All' | 'Unassigned'>('All');
+  const [favOnly, setFavOnly] = useState(false);
   const [keyword, setKeyword] = useState('');
   const [expanded, setExpanded] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
@@ -194,15 +196,26 @@ export function IssuesPage() {
       if (priorityFilter !== 'All' && i.priority !== priorityFilter) return false;
       if (assigneeFilter === 'Unassigned' && i.assigneeResourceId != null) return false;
       if (typeof assigneeFilter === 'number' && i.assigneeResourceId !== assigneeFilter) return false;
+      if (favOnly && !i.isFavorite) return false;
       if (kw) {
         const hay = `${i.title} ${i.description ?? ''}`.toLowerCase();
         if (!hay.includes(kw)) return false;
       }
       return true;
     })
-      // 상태순(진행→열림→해결됨→닫힘) 정렬. 동일 상태 내 순서는 안정 정렬로 기존(반환) 순서 유지.
-      .sort((a, b) => STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status]);
-  }, [issues, filter, priorityFilter, assigneeFilter, keyword]);
+      // 즐겨찾기 우선 → 상태순(진행→열림→해결됨→닫힘). 동일 그룹 내 순서는 안정 정렬로 기존 순서 유지.
+      .sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)
+        || STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status]);
+  }, [issues, filter, priorityFilter, assigneeFilter, favOnly, keyword]);
+
+  // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
+  const toggleFavorite = useCallback((issue: Issue) => {
+    const next = !issue.isFavorite;
+    setIssues((prev) => prev.map((i) => (i.id === issue.id ? { ...i, isFavorite: next } : i)));
+    issuesApi.toggleFavorite(pid, issue.id, next).catch(() => {
+      setIssues((prev) => prev.map((i) => (i.id === issue.id ? { ...i, isFavorite: !next } : i)));
+    });
+  }, [pid]);
 
   if (loading) {
     return (
@@ -260,14 +273,14 @@ export function IssuesPage() {
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={t('issues:searchPlaceholder')}
             leadingIcon={<Search size={14} />}
+            inputSize="sm"
             fullWidth={false}
             wrapperClassName="w-56"
-            className="py-1.5 text-sm"
           />
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as IssuePriority | 'All')}
-            className={`${inputClassNoW} py-1.5 text-sm w-32`}
+            className={`${inputClassSm} w-32`}
           >
             <option value="All">{t('issues:filter.allPriority')}</option>
             {PRIORITY_VALUES.map((p) => (
@@ -281,7 +294,7 @@ export function IssuesPage() {
               if (v === 'All' || v === 'Unassigned') setAssigneeFilter(v);
               else setAssigneeFilter(Number(v));
             }}
-            className={`${inputClassNoW} py-1.5 text-sm w-40`}
+            className={`${inputClassSm} w-40`}
           >
             <option value="All">{t('issues:filter.allAssignee')}</option>
             <option value="Unassigned">{t('issues:filter.unassignedOnly')}</option>
@@ -289,7 +302,15 @@ export function IssuesPage() {
               <option key={r.id} value={r.id}>{r.name}</option>
             ))}
           </select>
-          {(keyword || priorityFilter !== 'All' || assigneeFilter !== 'All' || filter !== 'All') && (
+          <Button
+            variant={favOnly ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setFavOnly((v) => !v)}
+            leadingIcon={<Star size={14} className={favOnly ? 'fill-current' : ''} />}
+          >
+            {t('common:favorite.onlyFavorites')}
+          </Button>
+          {(keyword || priorityFilter !== 'All' || assigneeFilter !== 'All' || filter !== 'All' || favOnly) && (
             <Button
               variant="ghost"
               size="sm"
@@ -298,6 +319,7 @@ export function IssuesPage() {
                 setPriorityFilter('All');
                 setAssigneeFilter('All');
                 setFilter('All');
+                setFavOnly(false);
               }}
             >
               {t('issues:filter.reset')}
@@ -310,7 +332,7 @@ export function IssuesPage() {
         <table className="w-full min-w-[720px]">
           <thead>
             <tr className="text-xs text-muted border-b border-default">
-              <th className="text-left py-3 px-4 font-medium w-10"></th>
+              <th className="text-left py-3 px-3 font-medium w-16"></th>
               <th className="text-left py-3 px-3 font-medium w-40">{t('issues:th.category')}</th>
               <th className="text-left py-3 px-3 font-medium">{t('issues:th.title')}</th>
               <th className="text-left py-3 px-3 font-medium w-28">{t('issues:th.status')}</th>
@@ -330,7 +352,7 @@ export function IssuesPage() {
                   title={t('issues:columns.add')}
                   aria-label={t('issues:columns.add')}
                 >
-                  <Columns3 size={14} />
+                  <Plus size={14} />
                 </button>
               </th>
             </tr>
@@ -352,9 +374,15 @@ export function IssuesPage() {
                 />
               </td>
               <td className="py-2 px-3">
-                <Button variant="ghost" size="sm" onClick={handleQuickCreate}>
-                  {t('issues:add')}
-                </Button>
+                <button
+                  type="button"
+                  onClick={handleQuickCreate}
+                  className="p-1 text-muted hover:text-primary transition-colors"
+                  title={t('issues:add')}
+                  aria-label={t('issues:add')}
+                >
+                  <CornerDownLeft size={16} />
+                </button>
               </td>
             </tr>
 
@@ -365,7 +393,7 @@ export function IssuesPage() {
                     icon={<AlertTriangle size={36} />}
                     title={t('issues:empty.title')}
                     description={
-                      filter === 'All' && priorityFilter === 'All' && assigneeFilter === 'All' && !keyword
+                      filter === 'All' && priorityFilter === 'All' && assigneeFilter === 'All' && !favOnly && !keyword
                         ? t('issues:empty.descNone')
                         : t('issues:empty.descFiltered')
                     }
@@ -389,6 +417,7 @@ export function IssuesPage() {
                 onToggleExpand={() => setExpanded((prev) => (prev === it.id ? null : it.id))}
                 onUpdate={updateField}
                 onDelete={handleDelete}
+                onToggleFavorite={() => toggleFavorite(it)}
                 onLinksChanged={refreshLinkCounts}
               />
             ))}
@@ -410,7 +439,7 @@ export function IssuesPage() {
 }
 
 function IssueRow({
-  issue, resources, wbsItems, projectId, categories, columns, totalCols, linkCount, sourceCount, expanded, onToggleExpand, onUpdate, onDelete, onLinksChanged,
+  issue, resources, wbsItems, projectId, categories, columns, totalCols, linkCount, sourceCount, expanded, onToggleExpand, onUpdate, onDelete, onToggleFavorite, onLinksChanged,
 }: {
   issue: Issue;
   resources: Resource[];
@@ -425,6 +454,7 @@ function IssueRow({
   onToggleExpand: () => void;
   onUpdate: <K extends keyof Issue>(id: number, key: K, value: Issue[K]) => void;
   onDelete: (id: number, e: React.MouseEvent) => void;
+  onToggleFavorite: () => void;
   onLinksChanged: () => void;
 }) {
   const { t } = useTranslation();
@@ -452,15 +482,18 @@ function IssueRow({
   return (
     <>
       <tr data-highlight-id={issue.id} className="border-b border-default last:border-0 hover:bg-surface-2 transition-colors">
-        <td className="py-2 px-4">
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="text-muted hover:text-primary transition-colors"
-            title={expanded ? t('issues:row.collapse') : t('issues:row.expand')}
-          >
-            {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
+        <td className="py-2 px-3">
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={onToggleExpand}
+              className="text-muted hover:text-primary transition-colors"
+              title={expanded ? t('issues:row.collapse') : t('issues:row.expand')}
+            >
+              {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </button>
+            <FavoriteStar active={!!issue.isFavorite} onToggle={onToggleFavorite} size={14} />
+          </div>
         </td>
         <td className="py-2 px-3">
           <CategoryCombobox

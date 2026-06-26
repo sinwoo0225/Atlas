@@ -175,6 +175,16 @@ public interface IWbsAssignmentRepository
     Task<IEnumerable<WbsAssignment>> GetByProjectAsync(int projectId, int? versionId = null);
 }
 
+// WbsItem 의 경량 체크리스트(서브태스크). 한 작업 안의 세부 단계 진행 추적.
+public interface IWbsSubtaskRepository
+{
+    Task<IEnumerable<WbsSubtask>> GetByWbsItemAsync(int wbsItemId);
+    Task<WbsSubtask?> GetByIdAsync(int id);
+    Task<WbsSubtask> CreateAsync(WbsSubtask subtask);
+    Task<WbsSubtask> UpdateAsync(WbsSubtask subtask);
+    Task<bool> DeleteAsync(int id);
+}
+
 // 자원 비가용 구간(휴가·공휴일). CapacityService 가 주별 용량 차감에 사용.
 public interface IResourceAvailabilityRepository
 {

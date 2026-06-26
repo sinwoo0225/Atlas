@@ -20,6 +20,8 @@ internal static class WbsCommands
         cmd.AddCommand(BuildMove(services));
         cmd.AddCommand(BuildDelete(services));
         cmd.AddCommand(BuildContext(services));
+        // 경량 체크리스트(서브태스크)
+        cmd.AddCommand(BuildSubtask(services));
         // 자원 배정/배분 (자유텍스트 Assignee 와 동기화되는 구조화 배정)
         cmd.AddCommand(BuildAssign(services));
         cmd.AddCommand(BuildUnassign(services));
@@ -56,12 +58,13 @@ internal static class WbsCommands
         var assigneeOpt = new Option<string?>("--assignee", "담당자 부분일치 (자유 문자열)");
         var milestoneOpt = new Option<bool?>("--milestone", "마일스톤만(true)/마일스톤 제외(false)");
         var keywordOpt = new Option<string?>("--keyword", "이름·메모 부분일치");
+        var overdueStartOpt = new Option<bool>("--overdue-start", "시작 지연 — 계획 시작일이 지났는데 아직 Planned(미착수)");
         var view = new ListViewOptions();
 
         var c = new Command("list",
             "프로젝트 WBS 조회. 필터/셰이핑 없으면 트리(root+children), 있으면 평면 리스트(ParentId 포함)")
         { projOpt, verOpt, statusOpt, openOpt, activeOnOpt, startFromOpt, startToOpt,
-          endFromOpt, endToOpt, assigneeOpt, milestoneOpt, keywordOpt };
+          endFromOpt, endToOpt, assigneeOpt, milestoneOpt, keywordOpt, overdueStartOpt };
         view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
@@ -81,7 +84,8 @@ internal static class WbsCommands
                 EndTo: pr.GetValueForOption(endToOpt),
                 Assignee: pr.GetValueForOption(assigneeOpt),
                 Milestone: pr.GetValueForOption(milestoneOpt),
-                Keyword: pr.GetValueForOption(keywordOpt));
+                Keyword: pr.GetValueForOption(keywordOpt),
+                OverdueStart: pr.GetValueForOption(overdueStartOpt));
             var listView = view.Read(pr, BriefPresets.Wbs);
             var shaped = listView.Count || listView.Limit is not null || listView.Fields is { Count: > 0 };
 
@@ -126,9 +130,10 @@ internal static class WbsCommands
         var notesOpt = new Option<string?>("--notes", "메모");
         var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동");
         var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, leaf 에 입력");
+        var actualStartOpt = new Option<DateTime?>("--actual-start", "착수일(실적) YYYY-MM-DD — 생략 시 진행/완료면 오늘 자동");
 
         var c = new Command("create", "WBS 항목 생성 (SortOrder 는 시작일 그룹 끝에 자동 추가)")
-        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt, estimateOpt };
+        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt, estimateOpt, actualStartOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -145,7 +150,8 @@ internal static class WbsCommands
                 Importance: pr.GetValueForOption(importanceOpt) ?? 2,
                 Notes: pr.GetValueForOption(notesOpt) ?? string.Empty,
                 CompletedDate: pr.GetValueForOption(completedOpt),
-                EstimateHours: pr.GetValueForOption(estimateOpt));
+                EstimateHours: pr.GetValueForOption(estimateOpt),
+                ActualStartDate: pr.GetValueForOption(actualStartOpt));
             var svc = services.GetRequiredService<WbsService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -168,9 +174,10 @@ internal static class WbsCommands
         var notesOpt = new Option<string?>("--notes", "메모");
         var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능");
         var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, leaf 에 입력");
+        var actualStartOpt = new Option<DateTime?>("--actual-start", "착수일(실적) YYYY-MM-DD — 진행/완료 전환 시 자동, 직접 보정 가능");
 
         var c = new Command("update", "WBS 항목 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt, estimateOpt };
+        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt, estimateOpt, actualStartOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -191,7 +198,8 @@ internal static class WbsCommands
                 SortOrder: pr.GetValueForOption(sortOrderOpt) ?? existing.SortOrder,
                 CompletedDate: pr.GetValueForOption(completedOpt) ?? existing.CompletedDate,
                 UpdatedAt: existing.UpdatedAt,
-                EstimateHours: pr.GetValueForOption(estimateOpt) ?? existing.EstimateHours);
+                EstimateHours: pr.GetValueForOption(estimateOpt) ?? existing.EstimateHours,
+                ActualStartDate: pr.GetValueForOption(actualStartOpt) ?? existing.ActualStartDate);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;
@@ -227,7 +235,8 @@ internal static class WbsCommands
                 SortOrder: existing.SortOrder, // parentChanged 분기라 백엔드가 덮어씀
                 CompletedDate: existing.CompletedDate,
                 UpdatedAt: existing.UpdatedAt,
-                EstimateHours: existing.EstimateHours);
+                EstimateHours: existing.EstimateHours,
+                ActualStartDate: existing.ActualStartDate);
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;
@@ -451,6 +460,66 @@ internal static class WbsCommands
         }));
 
         c.AddCommand(cap); c.AddCommand(clr);
+        return c;
+    }
+
+    private static Command BuildSubtask(IServiceProvider services)
+    {
+        var c = new Command("subtask", "WBS 서브태스크(경량 체크리스트) — list/add/done/rename/rm");
+
+        var listWbsOpt = new Option<int>("--wbs", "WBS 작업 ID") { IsRequired = true };
+        var list = new Command("list", "작업의 서브태스크 목록") { listWbsOpt };
+        list.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var wid = ctx.ParseResult.GetValueForOption(listWbsOpt);
+            CliJson.WriteSuccess(await services.GetRequiredService<WbsSubtaskService>().ListAsync(wid));
+        }));
+
+        var addWbsOpt = new Option<int>("--wbs", "WBS 작업 ID") { IsRequired = true };
+        var addTitleOpt = new Option<string>("--title", "서브태스크 제목") { IsRequired = true };
+        var add = new Command("add", "서브태스크 추가") { addWbsOpt, addTitleOpt };
+        add.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            CliJson.WriteSuccess(await services.GetRequiredService<WbsSubtaskService>()
+                .AddAsync(pr.GetValueForOption(addWbsOpt), new CreateWbsSubtaskDto(pr.GetValueForOption(addTitleOpt)!)));
+        }));
+
+        var doneIdOpt = new Option<int>("--id", "서브태스크 ID") { IsRequired = true };
+        var undoneOpt = new Option<bool>("--undone", "완료 해제(미완으로)");
+        var done = new Command("done", "서브태스크 완료 토글 (--undone 으로 미완)") { doneIdOpt, undoneOpt };
+        done.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var updated = await services.GetRequiredService<WbsSubtaskService>()
+                .UpdateAsync(pr.GetValueForOption(doneIdOpt), new UpdateWbsSubtaskDto(IsDone: !pr.GetValueForOption(undoneOpt)));
+            if (updated is null) { ctx.ExitCode = CliJson.WriteError("not_found", "서브태스크 없음"); return; }
+            CliJson.WriteSuccess(updated);
+        }));
+
+        var renameIdOpt = new Option<int>("--id", "서브태스크 ID") { IsRequired = true };
+        var renameTitleOpt = new Option<string>("--title", "새 제목") { IsRequired = true };
+        var rename = new Command("rename", "서브태스크 제목 변경") { renameIdOpt, renameTitleOpt };
+        rename.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var pr = ctx.ParseResult;
+            var updated = await services.GetRequiredService<WbsSubtaskService>()
+                .UpdateAsync(pr.GetValueForOption(renameIdOpt), new UpdateWbsSubtaskDto(Title: pr.GetValueForOption(renameTitleOpt)));
+            if (updated is null) { ctx.ExitCode = CliJson.WriteError("not_found", "서브태스크 없음"); return; }
+            CliJson.WriteSuccess(updated);
+        }));
+
+        var rmIdOpt = new Option<int>("--id", "서브태스크 ID") { IsRequired = true };
+        var rm = new Command("rm", "서브태스크 삭제") { rmIdOpt };
+        rm.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
+        {
+            var id = ctx.ParseResult.GetValueForOption(rmIdOpt);
+            if (!await services.GetRequiredService<WbsSubtaskService>().DeleteAsync(id))
+            { ctx.ExitCode = CliJson.WriteError("not_found", "서브태스크 없음"); return; }
+            CliJson.WriteSuccess(new { deleted = true, id });
+        }));
+
+        c.AddCommand(list); c.AddCommand(add); c.AddCommand(done); c.AddCommand(rename); c.AddCommand(rm);
         return c;
     }
 

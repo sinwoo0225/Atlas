@@ -12,6 +12,8 @@ public record ProjectRetrospectiveDto(
     double? ScheduleDelayDays, double? ScheduleDelayRatio,
     // WBS(리프·비마일스톤) 완료/지연.
     int WbsTotal, int WbsDone, int WbsLatePastPlannedEnd, double WbsLateRatio,
+    // 착수 실적 — 시작 편차(실제착수-계획시작, 일), 정시 착수율(계획시작 이내 착수 비율), 사이클타임(착수→완료, 일), 착수 표본 수.
+    double? AvgStartVarianceDays, double? OnTimeStartRatio, double? AvgCycleTimeDays, int StartedCount,
     // 이슈 발생.
     int IssuesTotal, int IssuesHigh, int IssuesMedium, int IssuesLow,
     double? IssueDensity, double? AvgResolutionDays, int ResolutionSampleCount,

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Bell, AlertTriangle, Gauge, Clock, UserPlus, Flag, PauseCircle, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Bell, AlertTriangle, Gauge, Clock, CalendarClock, UserPlus, Flag, PauseCircle, CheckCircle2, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Card, Skeleton } from '../../components/ui';
 import type { AttentionFeed, AttentionItem } from '../../types';
@@ -14,6 +14,7 @@ interface Props {
 const KIND_ICON: Record<AttentionItem['kind'], typeof Bell> = {
   overdue: AlertTriangle,
   overallocated: Gauge,
+  lateStart: CalendarClock,
   dueSoon: Clock,
   unassigned: UserPlus,
   milestone: Flag,

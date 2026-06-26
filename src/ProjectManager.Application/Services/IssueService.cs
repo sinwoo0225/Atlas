@@ -17,6 +17,16 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         return i is null ? null : ToDto(i);
     }
 
+    // 즐겨찾기 토글 — IsFavorite 만 갱신(목록 최상단 고정용).
+    public async Task<bool> SetFavoriteAsync(int id, bool favorite)
+    {
+        var i = await repo.GetByIdAsync(id);
+        if (i is null) return false;
+        i.IsFavorite = favorite;
+        await repo.UpdateAsync(i);
+        return true;
+    }
+
     public async Task<IssueDto> CreateAsync(CreateIssueDto dto)
     {
         var issue = new Issue
@@ -122,5 +132,5 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
         i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate,
-        i.Category, i.CustomFieldsJson);
+        i.Category, i.CustomFieldsJson, i.IsFavorite);
 }

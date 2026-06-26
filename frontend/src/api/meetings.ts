@@ -12,6 +12,8 @@ export const meetingsApi = {
     api.put<Meeting>(`/projects/${projectId}/meetings/${id}`, data, opts),
   delete: (projectId: number, id: number) =>
     api.delete(`/projects/${projectId}/meetings/${id}`),
+  toggleFavorite: (projectId: number, id: number, favorite: boolean) =>
+    api.patch<void>(`/projects/${projectId}/meetings/${id}/favorite`, { favorite }),
   promoteToIssue: (projectId: number, meetingId: number, actionItemId: string) =>
     api.post<Issue>(`/projects/${projectId}/meetings/${meetingId}/action-items/${encodeURIComponent(actionItemId)}/promote-to-issue`, {}),
   promoteToWbs: (projectId: number, meetingId: number, actionItemId: string) =>

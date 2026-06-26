@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsInstance } from 'echarts-for-react';
 import * as htmlToImage from 'html-to-image';
-import { ChevronDown, ChevronRight, Diamond, Download, Flag } from 'lucide-react';
+import { ChevronDown, ChevronRight, Diamond, Download, Flag, CalendarClock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { WbsItem, WbsStatus, WbsDependency } from '../../types';
 import { wbsApi } from '../../api/wbs';
@@ -112,6 +112,43 @@ function statusColor(status: WbsStatus, colors: ChartColors): string {
   if (status === 'Done') return colors.ganttBarDone;
   if (status === 'InProgress') return colors.ganttBarInProgress;
   return colors.ganttBarPlanned;
+}
+
+// 막대 진행률(0~1) — 서브태스크가 있으면 완료/전체, 없는 부모면 자손 leaf 의 Done 비율(롤업), 그 외 null(미표시).
+function progressOf(item: WbsItem): number | null {
+  const stTotal = item.subtaskTotal ?? 0;
+  if (stTotal > 0) return Math.min(1, (item.subtaskDone ?? 0) / stTotal);
+  if ((item.children?.length ?? 0) > 0) {
+    let total = 0, done = 0;
+    const visit = (n: WbsItem) => {
+      const kids = n.children ?? [];
+      if (kids.length === 0) {
+        if (!n.isMilestone) { total++; if (n.status === 'Done') done++; }
+      } else kids.forEach(visit);
+    };
+    visit(item);
+    return total > 0 ? done / total : null;
+  }
+  return null;
+}
+
+// 진행률 막대 — 연한 트랙(전체) 위에 진한 채움(진행분), 막대 우측에 % 라벨. 상태 색은 유지.
+function progressBarGroup(
+  x0: number, y: number, barW: number, h: number, progress: number,
+  color: string, baseOpacity: number, critStroke: any, z: number, labelColor: string,
+): any {
+  const fillW = Math.max(0, Math.min(barW, barW * progress));
+  const pct = Math.round(progress * 100);
+  const r = h >= 10 ? 3 : 2;
+  return {
+    type: 'group',
+    z,
+    children: [
+      { type: 'rect', shape: { x: x0, y: y - h / 2, width: barW, height: h, r }, style: { fill: color, opacity: baseOpacity * 0.3, ...critStroke }, silent: true },
+      { type: 'rect', shape: { x: x0, y: y - h / 2, width: fillW, height: h, r }, style: { fill: color, opacity: baseOpacity * 0.95 }, silent: true },
+      { type: 'text', style: { text: `${pct}%`, x: x0 + barW + 4, y, fill: labelColor, fontSize: 10, align: 'left', verticalAlign: 'middle' }, silent: true },
+    ],
+  };
 }
 
 /* ============================================================================
@@ -266,6 +303,10 @@ export function GanttChart({
   const [showBaseline, setShowBaseline] = useState(false);
   const hasBaseline = items.some(function hb(i): boolean {
     return !!i.baselineStart || (i.children?.some(hb) ?? false);
+  });
+  const [showActual, setShowActual] = useState(false);
+  const hasActual = items.some(function ha(i): boolean {
+    return !!i.actualStartDate || !!i.completedDate || (i.children?.some(ha) ?? false);
   });
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   // 사용자가 줌·팬으로 설정한 dataZoom 백분율. notMerge=true 라도 옵션에 매번 명시해 유지.
@@ -630,11 +671,12 @@ export function GanttChart({
         color = colors.ganttBarParent;
       }
       const crit = criticalIds?.has(row.item.id) ? 1 : 0;
+      const progress = progressOf(row.item);
       return {
         name: row.item.name,
         itemId: row.item.id,
         kind,
-        value: [idx, row.effStart, row.effEnd, color, kind, dim ? 1 : 0, crit],
+        value: [idx, row.effStart, row.effEnd, color, kind, dim ? 1 : 0, crit, progress ?? -1],
       };
     })
     .filter((d): d is NonNullable<typeof d> => d !== null);
@@ -662,6 +704,18 @@ export function GanttChart({
       const be = row.item.baselineEnd ? new Date(row.item.baselineEnd).getTime() : undefined;
       if (bs == null || be == null) return null;
       return { value: [idx, bs, be] };
+    })
+    .filter((d): d is { value: number[] } => d !== null);
+
+  // 실적 막대 데이터 — 토글 ON 일 때만. 실제 착수 → 실제 완료(미완·진행 중이면 오늘까지). value=[idx, actualStartMs, actualEndMs].
+  const actualData = (showActual ? rows : [])
+    .map((row, idx) => {
+      const as = row.item.actualStartDate ? new Date(row.item.actualStartDate).getTime() : undefined;
+      const cd = row.item.completedDate ? new Date(row.item.completedDate).getTime() : undefined;
+      if (as == null && cd == null) return null;
+      const start = as ?? cd!;
+      const end = cd ?? (row.item.status === 'InProgress' ? nowMs : start);
+      return { value: [idx, start, Math.max(end, start)] };
     })
     .filter((d): d is { value: number[] } => d !== null);
 
@@ -698,10 +752,17 @@ export function GanttChart({
           const varStr = dvar === 0 ? '' : ` (${dvar > 0 ? '+' : ''}${dvar}d)`;
           baselineLine = `<div style="font-size:11px;opacity:.6">${t('wbs:gantt.baseline')}: ${bStart} ~ ${bEnd}${varStr}</div>`;
         }
+        let actualLine = '';
+        if (showActual && (item?.actualStartDate || item?.completedDate)) {
+          const aStart = item.actualStartDate ? item.actualStartDate.slice(0, 10) : '—';
+          const aEnd = item.completedDate ? item.completedDate.slice(0, 10) : t('wbs:gantt.actualOngoing');
+          actualLine = `<div style="font-size:11px;opacity:.7">${t('wbs:gantt.actual')}: ${aStart} ~ ${aEnd}</div>`;
+        }
         return `<div style="font-weight:600">${p.name}</div>` +
                `<div style="font-size:11px;opacity:.85">${start} ~ ${end}</div>` +
                `<div style="font-size:11px;opacity:.7">${status}${assignee}</div>` +
-               baselineLine;
+               baselineLine +
+               actualLine;
       },
     },
     grid: { left: 4, right: 16, top: TOP_PAD, bottom: BOTTOM_PAD, containLabel: false },
@@ -764,6 +825,25 @@ export function GanttChart({
         },
         data: baselineData,
       },
+      // 실적 막대 — 현재(계획) 막대 위에 얇은 강조 바로 실제 착수→완료 구간을 표시(계획 대비 실적 비교).
+      {
+        type: 'custom',
+        silent: true,
+        encode: { x: [1, 2], y: 0 },
+        renderItem: (_: any, api: any) => {
+          const yC = api.coord([0, api.value(0)])[1];
+          const x0 = api.coord([api.value(1), 0])[0];
+          const x1 = api.coord([api.value(2), 0])[0];
+          return {
+            type: 'rect',
+            z: 2,
+            shape: { x: x0, y: yC - 11, width: Math.max(x1 - x0, 2), height: 3, r: 1 },
+            style: { fill: colors.accent, opacity: 0.85 },
+            silent: true,
+          };
+        },
+        data: actualData,
+      },
       // 의존성 화살표 — 선행 막대 끝 → 후행 막대 시작(엘보 + 화살촉). graphic 채널과 분리(별도 series)라 hover/drag 와 충돌 없음.
       {
         type: 'custom',
@@ -803,6 +883,7 @@ export function GanttChart({
           const kind = api.value(4);
           const dimFlag = api.value(5);
           const critFlag = api.value(6);
+          const progress = api.value(7); // -1 = 진행률 미표시
           const baseOpacity = dimFlag ? 0.25 : 1;
           // 임계경로 강조 — 적색 테두리(상태 색 유지). dim 이면 강조 약화.
           const critStroke = critFlag && !dimFlag
@@ -828,23 +909,29 @@ export function GanttChart({
           }
           if (kind === 'parent') {
             const h = 5;
+            const barW = Math.max(x1 - x0, 2);
+            if (progress >= 0)
+              return progressBarGroup(x0, y, barW, h, progress, color, baseOpacity, critStroke, 1, colors.axisText);
             return {
               type: 'rect',
-              shape: { x: x0, y: y - h / 2, width: Math.max(x1 - x0, 2), height: h, r: 2 },
+              shape: { x: x0, y: y - h / 2, width: barW, height: h, r: 2 },
               style: { fill: color, opacity: baseOpacity, ...critStroke },
               z: 1,
             };
           }
           // 일반 막대 — 호버 핸들은 graphic API 가 별도로 그린다 (showHandles).
           const h = 16;
+          const barW = Math.max(x1 - x0, 2);
+          if (progress >= 0)
+            return progressBarGroup(x0, y, barW, h, progress, color, baseOpacity, critStroke, 4, colors.axisText);
           return {
             type: 'rect',
-            shape: { x: x0, y: y - h / 2, width: Math.max(x1 - x0, 2), height: h, r: 3 },
+            shape: { x: x0, y: y - h / 2, width: barW, height: h, r: 3 },
             style: { fill: color, opacity: baseOpacity * 0.95, ...critStroke },
             z: 4,
           };
         },
-        dimensions: ['y', 'start', 'end', 'color', 'kind', 'dim', 'crit'],
+        dimensions: ['y', 'start', 'end', 'color', 'kind', 'dim', 'crit', 'progress'],
         data: seriesData,
         markLine: {
           silent: true,
@@ -892,6 +979,17 @@ export function GanttChart({
             title={t('wbs:gantt.baselineHint')}
           >
             {t('wbs:gantt.baseline')}
+          </Button>
+        )}
+        {hasActual && (
+          <Button
+            variant={showActual ? 'primary' : 'ghost'}
+            size="sm"
+            onClick={() => setShowActual((v) => !v)}
+            leadingIcon={<CalendarClock size={14} />}
+            title={t('wbs:gantt.actualHint')}
+          >
+            {t('wbs:gantt.actual')}
           </Button>
         )}
         <span className="ml-auto text-xs text-muted">

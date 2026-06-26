@@ -44,6 +44,28 @@ public class WbsController(WbsService svc) : ControllerBase
         Ok(new { cleared = await svc.ClearBaselineAsync(projectId, versionId) });
 }
 
+// 경량 체크리스트(서브태스크) — 한 WBS 작업 안의 세부 단계. TODO 식 추가/완료.
+[ApiController]
+[Route("api/projects/{projectId:int}/wbs/{wbsItemId:int}/subtasks")]
+public class WbsSubtasksController(WbsSubtaskService svc) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetAll(int projectId, int wbsItemId) =>
+        Ok(await svc.ListAsync(wbsItemId));
+
+    [HttpPost]
+    public async Task<IActionResult> Create(int projectId, int wbsItemId, [FromBody] CreateWbsSubtaskDto dto) =>
+        Ok(await svc.AddAsync(wbsItemId, dto));
+
+    [HttpPatch("{id:int}")]
+    public async Task<IActionResult> Update(int projectId, int wbsItemId, int id, [FromBody] UpdateWbsSubtaskDto dto) =>
+        await svc.UpdateAsync(id, dto) is { } updated ? Ok(updated) : NotFound();
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int projectId, int wbsItemId, int id) =>
+        await svc.DeleteAsync(id) ? NoContent() : NotFound();
+}
+
 [ApiController]
 [Route("api/projects/{projectId:int}/wbs-versions")]
 public class WbsVersionsController(WbsService svc) : ControllerBase

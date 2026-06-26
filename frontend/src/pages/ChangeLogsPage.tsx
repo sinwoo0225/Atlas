@@ -4,12 +4,14 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight, Star } from 'lucide-react';
 import { changeLogsApi } from '../api/changelogs';
+import { FavoriteStar } from '../components/FavoriteStar';
+import { favoritesFirst } from '../utils/favorites';
 import { meetingsApi } from '../api/meetings';
 import { issuesApi } from '../api/issues';
 import { wbsApi } from '../api/wbs';
-import { Button, Card, Modal, Input, Badge, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassNoW } from '../components/ui';
+import { Button, Card, Modal, Input, Badge, EmptyState, FilterBar, Skeleton, FormField, inputClass, inputClassSm } from '../components/ui';
 import { PageHeader } from '../components/PageHeader';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { IssuePicker } from '../components/IssuePicker';
@@ -466,6 +468,7 @@ export function ChangeLogsPage() {
   const [keyword, setKeyword] = useState('');
   const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'withSource' | 'noSource'>('all');
+  const [favOnly, setFavOnly] = useState(false);
   // URL ?sourceIssue=N / ?sourceWbs=N — Issue/WBS 행 배지 클릭으로 도달했을 때 자동 필터.
   const filterSourceIssue = searchParams.get('sourceIssue');
   const filterSourceWbs = searchParams.get('sourceWbs');
@@ -521,8 +524,9 @@ export function ChangeLogsPage() {
     const kw = keyword.trim().toLowerCase();
     const filterIssueIdNum = filterSourceIssue != null ? Number(filterSourceIssue) : null;
     const filterWbsIdNum = filterSourceWbs != null ? Number(filterSourceWbs) : null;
-    return logs.filter((l) => {
+    return favoritesFirst(logs.filter((l) => {
       if (impactFilter !== 'All' && l.impact !== impactFilter) return false;
+      if (favOnly && !l.isFavorite) return false;
       const hasSource = l.sourceIssueId != null || l.sourceWbsItemId != null;
       if (sourceFilter === 'withSource' && !hasSource) return false;
       if (sourceFilter === 'noSource' && hasSource) return false;
@@ -534,8 +538,17 @@ export function ChangeLogsPage() {
         if (!hay.includes(kw)) return false;
       }
       return true;
+    }));
+  }, [logs, keyword, impactFilter, sourceFilter, favOnly, filterSourceIssue, filterSourceWbs]);
+
+  // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
+  const toggleFavorite = useCallback((log: ChangeLog) => {
+    const next = !log.isFavorite;
+    setLogs((prev) => prev.map((l) => (l.id === log.id ? { ...l, isFavorite: next } : l)));
+    changeLogsApi.toggleFavorite(pid, log.id, next).catch(() => {
+      setLogs((prev) => prev.map((l) => (l.id === log.id ? { ...l, isFavorite: !next } : l)));
     });
-  }, [logs, keyword, impactFilter, sourceFilter, filterSourceIssue, filterSourceWbs]);
+  }, [pid]);
 
   const clearSourceQuery = () => {
     if (searchParams.has('sourceIssue') || searchParams.has('sourceWbs')) {
@@ -600,14 +613,14 @@ export function ChangeLogsPage() {
             onChange={(e) => setKeyword(e.target.value)}
             placeholder={t('changelog:searchPlaceholder')}
             leadingIcon={<Search size={14} />}
+            inputSize="sm"
             fullWidth={false}
             wrapperClassName="w-64"
-            className="py-1.5 text-sm"
           />
           <select
             value={impactFilter}
             onChange={(e) => setImpactFilter(e.target.value as ImpactLevel | 'All')}
-            className={`${inputClassNoW} py-1.5 text-sm w-36`}
+            className={`${inputClassSm} w-36`}
           >
             <option value="All">{t('changelog:filter.allImpact')}</option>
             {(['Low', 'Medium', 'High', 'Critical'] as ImpactLevel[]).map((v) => (
@@ -617,7 +630,7 @@ export function ChangeLogsPage() {
           <select
             value={sourceFilter}
             onChange={(e) => setSourceFilter(e.target.value as 'all' | 'withSource' | 'noSource')}
-            className={`${inputClassNoW} py-1.5 text-sm w-32`}
+            className={`${inputClassSm} w-32`}
           >
             <option value="all">{t('changelog:filter.allSource')}</option>
             <option value="withSource">{t('changelog:filter.withSource')}</option>
@@ -637,8 +650,16 @@ export function ChangeLogsPage() {
               </button>
             </Badge>
           )}
-          {(keyword || impactFilter !== 'All' || sourceFilter !== 'all' || filterSourceIssue || filterSourceWbs) && (
-            <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setImpactFilter('All'); setSourceFilter('all'); clearSourceQuery(); }}>
+          <Button
+            variant={favOnly ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setFavOnly((v) => !v)}
+            leadingIcon={<Star size={14} className={favOnly ? 'fill-current' : ''} />}
+          >
+            {t('common:favorite.onlyFavorites')}
+          </Button>
+          {(keyword || impactFilter !== 'All' || sourceFilter !== 'all' || favOnly || filterSourceIssue || filterSourceWbs) && (
+            <Button variant="ghost" size="sm" onClick={() => { setKeyword(''); setImpactFilter('All'); setSourceFilter('all'); setFavOnly(false); clearSourceQuery(); }}>
               {t('common:reset')}
             </Button>
           )}
@@ -703,6 +724,7 @@ export function ChangeLogsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <FavoriteStar active={!!log.isFavorite} onToggle={() => toggleFavorite(log)} size={15} />
                   <button
                     onClick={() => setExpanded(expanded === log.id ? null : log.id)}
                     className="px-2 text-xs text-muted hover:text-primary transition-colors"

@@ -7,6 +7,7 @@ export interface StoredWbsFilters {
   assignees: string[];
   unassignedOnly: boolean;
   lateOnly: boolean;
+  overdueStartOnly: boolean;
   matchOnly: boolean;
 }
 
@@ -22,6 +23,7 @@ export function loadWbsFilters(projectId: number): StoredWbsFilters | null {
       assignees: Array.isArray(p.assignees) ? p.assignees : [],
       unassignedOnly: !!p.unassignedOnly,
       lateOnly: !!p.lateOnly,
+      overdueStartOnly: !!p.overdueStartOnly,
       matchOnly: !!p.matchOnly,
     };
   } catch {

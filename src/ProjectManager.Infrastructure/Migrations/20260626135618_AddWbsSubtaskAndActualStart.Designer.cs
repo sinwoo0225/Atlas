@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectManager.Infrastructure.Persistence;
 
@@ -10,9 +11,11 @@ using ProjectManager.Infrastructure.Persistence;
 namespace ProjectManager.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260626135618_AddWbsSubtaskAndActualStart")]
+    partial class AddWbsSubtaskAndActualStart
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.16");
@@ -86,9 +89,6 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.Property<int>("Impact")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("ProjectId")
                         .HasColumnType("INTEGER");
 
@@ -143,9 +143,6 @@ namespace ProjectManager.Infrastructure.Migrations
                     b.Property<string>("FilePath")
                         .IsRequired()
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("INTEGER");
 
                     b.Property<int>("ProjectId")
                         .HasColumnType("INTEGER");
@@ -221,9 +218,6 @@ namespace ProjectManager.Infrastructure.Migrations
 
                     b.Property<DateTime?>("DueDate")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("INTEGER");
 
                     b.Property<DateTime?>("OccurredOn")
                         .HasColumnType("TEXT");
@@ -355,9 +349,6 @@ namespace ProjectManager.Infrastructure.Migrations
 
                     b.Property<string>("EndTime")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsFavorite")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("MarkdownPath")
                         .HasColumnType("TEXT");

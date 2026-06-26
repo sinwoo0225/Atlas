@@ -240,7 +240,7 @@ public class SchedulingService(IWbsRepository wbsRepo, IWbsDependencyRepository 
             var dto = new UpdateWbsItemDto(
                 w.ParentId, w.Name, w.Assignee, s.NewStart, s.NewEnd,
                 w.Status, w.IsMilestone, w.Importance, w.Notes, w.SortOrder,
-                w.CompletedDate, w.UpdatedAt, w.EstimateHours);
+                w.CompletedDate, w.UpdatedAt, w.EstimateHours, w.ActualStartDate);
             await wbsService.UpdateAsync(s.WbsItemId, dto);
         }
         return new RescheduleResultDto(0, skipWeekends, shifts);

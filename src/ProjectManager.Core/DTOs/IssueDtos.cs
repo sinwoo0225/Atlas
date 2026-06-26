@@ -9,7 +9,8 @@ public record IssueDto(
     IssueStatus Status, IssuePriority Priority,
     int? AssigneeResourceId, string? AssigneeName,
     DateTime? DueDate, DateTime? OccurredOn, DateTime CreatedAt, DateTime UpdatedAt,
-    DateTime? ResolvedDate = null, string Category = "", string CustomFieldsJson = "");
+    DateTime? ResolvedDate = null, string Category = "", string CustomFieldsJson = "",
+    bool IsFavorite = false);
 
 public record CreateIssueDto(
     int ProjectId, string Title, string Description,

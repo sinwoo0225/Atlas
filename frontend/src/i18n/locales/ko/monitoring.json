@@ -204,6 +204,7 @@
     "kind": {
       "overdue": "마감 초과",
       "overallocated": "과배분 자원 (이번 주)",
+      "lateStart": "시작 지연 (계획 시작일 도래·미착수)",
       "dueSoon": "마감 임박 (3일 내)",
       "unassigned": "미배정 작업·이슈",
       "milestone": "임박 마일스톤 (30일 내)",

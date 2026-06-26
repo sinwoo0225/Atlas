@@ -119,9 +119,12 @@ public class ActionItemPromotionService(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
             item.Status, item.IsMilestone, item.Importance, item.Notes,
-            item.CreatedAt, item.UpdatedAt, item.SortOrder, item.CompletedDate,
+            item.CreatedAt, item.UpdatedAt, item.SortOrder,
+            item.ActualStartDate, item.CompletedDate,
             item.EstimateHours, item.EstimateHours,
-            item.BaselineStart, item.BaselineEnd, null);
+            item.BaselineStart, item.BaselineEnd,
+            item.Subtasks?.Count ?? 0, item.Subtasks?.Count(s => s.IsDone) ?? 0, null,
+            null);
     }
 
     private static (JsonArray Items, JsonObject Target) FindActionItem(string raw, string actionItemId)

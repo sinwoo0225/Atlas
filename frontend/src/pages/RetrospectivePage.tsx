@@ -172,6 +172,9 @@ function SummaryTable({ projects, colorOf, t }: { projects: ProjectRetrospective
               <th className="text-left py-2 px-2 font-medium">{t('retrospective:table.project')}</th>
               <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.delay')}</th>
               <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.wbsLate')}</th>
+              <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.startVar')}</th>
+              <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.onTimeStart')}</th>
+              <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.cycleTime')}</th>
               <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.issues')}</th>
               <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.density')}</th>
               <th className="text-right py-2 px-2 font-medium">{t('retrospective:table.resolution')}</th>
@@ -197,6 +200,15 @@ function SummaryTable({ projects, colorOf, t }: { projects: ProjectRetrospective
                 <td className="text-right py-2 px-2 text-secondary">
                   {p.wbsLatePastPlannedEnd}/{p.wbsDone} ({Math.round(p.wbsLateRatio * 100)}%)
                 </td>
+                <td className="text-right py-2 px-2">
+                  {p.avgStartVarianceDays == null ? '-' : (
+                    <span className={p.avgStartVarianceDays > 0 ? 'text-on-warning' : 'text-on-success'}>
+                      {p.avgStartVarianceDays > 0 ? '+' : ''}{p.avgStartVarianceDays}{t('retrospective:unit.day')}
+                    </span>
+                  )}
+                </td>
+                <td className="text-right py-2 px-2 text-secondary">{p.onTimeStartRatio == null ? '-' : `${Math.round(p.onTimeStartRatio * 100)}%`}</td>
+                <td className="text-right py-2 px-2 text-secondary">{p.avgCycleTimeDays == null ? '-' : `${p.avgCycleTimeDays}${t('retrospective:unit.day')}`}</td>
                 <td className="text-right py-2 px-2">
                   <span className="inline-flex items-center gap-1 justify-end">
                     {p.issuesTotal}

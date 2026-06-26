@@ -20,4 +20,6 @@ export const changeLogsApi = {
     api.put<ChangeLog>(`/projects/${projectId}/changelogs/${id}`, data, opts),
   delete: (projectId: number, id: number) =>
     api.delete(`/projects/${projectId}/changelogs/${id}`),
+  toggleFavorite: (projectId: number, id: number, favorite: boolean) =>
+    api.patch<void>(`/projects/${projectId}/changelogs/${id}/favorite`, { favorite }),
 };

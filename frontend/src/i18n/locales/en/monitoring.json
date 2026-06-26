@@ -204,6 +204,7 @@
     "kind": {
       "overdue": "Overdue",
       "overallocated": "Over-allocated (this week)",
+      "lateStart": "Late start (planned start passed)",
       "dueSoon": "Due soon (within 3d)",
       "unassigned": "Unassigned tasks & issues",
       "milestone": "Upcoming milestones (30d)",

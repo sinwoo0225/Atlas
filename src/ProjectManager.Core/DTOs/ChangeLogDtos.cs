@@ -9,7 +9,8 @@ public record ChangeLogDto(
     int? SourceIssueId, string? SourceIssueTitle,
     int? SourceWbsItemId, string? SourceWbsItemName,
     string CreatedBy, string UpdatedBy,
-    DateTime CreatedAt, DateTime UpdatedAt);
+    DateTime CreatedAt, DateTime UpdatedAt,
+    bool IsFavorite = false);
 
 public record CreateChangeLogDto(
     int ProjectId, DateTime Date, string Content,

@@ -4,8 +4,10 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from 'react-i18next';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
-import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight, FolderGit2, Check, AlertCircle } from 'lucide-react';
+import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight, FolderGit2, Check, AlertCircle, Star } from 'lucide-react';
 import { devInfoApi } from '../api/devinfo';
+import { FavoriteStar } from '../components/FavoriteStar';
+import { favoritesFirst } from '../utils/favorites';
 import { gitApi } from '../api/git';
 import { GitHistoryView } from '../components/GitHistoryView';
 import type { DevInfoItem, DevInfoType, DevInfoStorageMode, Project } from '../types';
@@ -403,6 +405,7 @@ export function DevInfoPage() {
   useCreateForm(() => { setEditing(null); setShowForm(true); });
   const [filterType, setFilterType] = useState<DevInfoType | ''>('');
   const [keyword, setKeyword] = useState('');
+  const [favOnly, setFavOnly] = useState(false);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -479,8 +482,9 @@ export function DevInfoPage() {
   const filtered = useMemo(() => {
     const kw = keyword.trim().toLowerCase();
     const selectedSet = new Set(selectedTags.map((t) => t.toLowerCase()));
-    return items.filter((i) => {
+    return favoritesFirst(items.filter((i) => {
       if (filterType && i.type !== filterType) return false;
+      if (favOnly && !i.isFavorite) return false;
       if (selectedSet.size > 0) {
         const itemTags = parseTagTokens(i.tags).map((t) => t.toLowerCase());
         if (!itemTags.some((t) => selectedSet.has(t))) return false;
@@ -490,8 +494,17 @@ export function DevInfoPage() {
         if (!hay.includes(kw)) return false;
       }
       return true;
+    }));
+  }, [items, filterType, selectedTags, favOnly, keyword]);
+
+  // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
+  const toggleFavorite = useCallback((item: DevInfoItem) => {
+    const next = !item.isFavorite;
+    setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, isFavorite: next } : x)));
+    devInfoApi.toggleFavorite(pid, item.id, next).catch(() => {
+      setItems((prev) => prev.map((x) => (x.id === item.id ? { ...x, isFavorite: !next } : x)));
     });
-  }, [items, filterType, selectedTags, keyword]);
+  }, [pid]);
 
   return (
     <div className="p-6 h-full flex flex-col gap-4">
@@ -555,15 +568,23 @@ export function DevInfoPage() {
             </Button>
           );
         })}
+        <Button
+          variant={favOnly ? 'primary' : 'secondary'}
+          size="sm"
+          onClick={() => setFavOnly((v) => !v)}
+          leadingIcon={<Star size={14} className={favOnly ? 'fill-current' : ''} />}
+        >
+          {t('common:favorite.onlyFavorites')}
+        </Button>
         <Input
           type="search"
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
           placeholder={t('devinfo:searchPlaceholder')}
           leadingIcon={<Search size={14} />}
+          inputSize="sm"
           fullWidth={false}
           wrapperClassName="ml-auto w-72"
-          className="py-1.5 text-sm"
         />
       </div>
 
@@ -666,6 +687,7 @@ export function DevInfoPage() {
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <FavoriteStar active={!!item.isFavorite} onToggle={() => toggleFavorite(item)} size={15} />
                     <button onClick={() => setEditing(item)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('devinfo:card.editAria', { title: item.title })}>
                       <Pencil size={14} />
                     </button>

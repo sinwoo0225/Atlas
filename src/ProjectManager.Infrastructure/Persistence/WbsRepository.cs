@@ -12,7 +12,8 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         var query = db.WbsItems.Where(x => x.ProjectId == projectId);
         if (versionId.HasValue)
             query = query.Where(x => x.VersionId == versionId);
-        return await query.Include(x => x.Children).OrderBy(x => x.SortOrder).ToListAsync();
+        // 프로젝트 전체를 한 번에 로드 — Subtasks Include 로 모든 노드(자식 포함)의 진행률 카운트가 채워진다.
+        return await query.Include(x => x.Children).Include(x => x.Subtasks).OrderBy(x => x.SortOrder).ToListAsync();
     }
 
     // 기준선 캡처 — 프로젝트(선택 시 버전)의 모든 작업 BaselineStart/End 를 현재 계획 일정으로 복사. 영향 행 수 반환.
@@ -82,12 +83,18 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
             var kw = f.Keyword;
             q = q.Where(x => x.Name.Contains(kw) || x.Notes.Contains(kw));
         }
+        if (f.OverdueStart)
+        {
+            // 시작 지연 — 계획 시작일이 오늘(자정) 이전인데 아직 Planned(미착수).
+            var today = DateTime.Today;
+            q = q.Where(x => x.Status == WbsStatus.Planned && x.StartDate != null && x.StartDate <= today);
+        }
 
-        return await q.OrderBy(x => x.SortOrder).ToListAsync();
+        return await q.Include(x => x.Subtasks).OrderBy(x => x.SortOrder).ToListAsync();
     }
 
     public async Task<WbsItem?> GetByIdAsync(int id) =>
-        await db.WbsItems.Include(x => x.Children).FirstOrDefaultAsync(x => x.Id == id);
+        await db.WbsItems.Include(x => x.Children).Include(x => x.Subtasks).FirstOrDefaultAsync(x => x.Id == id);
 
     public async Task<WbsItem> CreateAsync(WbsItem item)
     {

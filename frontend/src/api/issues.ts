@@ -47,6 +47,8 @@ export const issuesApi = {
     api.put<IssueWire>(`/projects/${projectId}/issues/${id}`, dehydrate(data)).then(hydrate),
   delete: (projectId: number, id: number) =>
     api.delete(`/projects/${projectId}/issues/${id}`),
+  toggleFavorite: (projectId: number, id: number, favorite: boolean) =>
+    api.patch<void>(`/projects/${projectId}/issues/${id}/favorite`, { favorite }),
 
   // 사용자 정의 커스텀 컬럼 정의 (프로젝트 단위). GET 은 배열, PUT 은 전체 교체.
   getColumns: (projectId: number) =>
