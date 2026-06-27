@@ -76,6 +76,29 @@ public static class AppHostFactory
                 Console.WriteLine($"[wbs-sortorder] backfilled {allSortOrder.Count} rows.");
             }
 
+            // Issue.SequenceNumber 1회 backfill — 프로젝트별 1-기반, 생성 시점(CreatedAt) 순.
+            // 멱등 가드: SequenceNumber=0(미부여) 행이 있을 때만. 신규 이슈는 repo 에서 max+1 부여되어 항상 >0.
+            // raw SQL — UpdatedAt/UpdatedBy·ActivityLog 안 건드림. 이미 번호가 있는 행이 있으면 그 max 뒤로 이어붙임.
+            var zeroSeqCount = db.Issues.AsNoTracking().Count(x => x.SequenceNumber == 0);
+            if (zeroSeqCount > 0)
+            {
+                db.Database.ExecuteSqlRaw(@"
+                    WITH ranked AS (
+                      SELECT Id, ProjectId, ROW_NUMBER() OVER (
+                        PARTITION BY ProjectId ORDER BY CreatedAt, Id
+                      ) AS rn
+                      FROM Issues WHERE SequenceNumber = 0
+                    )
+                    UPDATE Issues SET SequenceNumber = (
+                      SELECT r.rn + COALESCE(
+                        (SELECT MAX(i2.SequenceNumber) FROM Issues i2
+                         WHERE i2.ProjectId = Issues.ProjectId AND i2.SequenceNumber > 0), 0)
+                      FROM ranked r WHERE r.Id = Issues.Id)
+                    WHERE SequenceNumber = 0;
+                ");
+                Console.WriteLine($"[issue-seq] backfilled {zeroSeqCount} rows.");
+            }
+
             // 기존 Project.GitRepoPath(프로젝트당 1개) → GitRepo 타입 업무 정보로 1회 이관.
             // git 이력이 업무 정보(DevInfo)로 이전됨에 따라, 이미 경로를 설정해 둔 프로젝트의 저장소를
             // 업무 정보 항목 1건으로 자동 등록한다. Project.GitRepoPath 컬럼은 보존(롤백 안전·시드 소스), UI 만 비노출.

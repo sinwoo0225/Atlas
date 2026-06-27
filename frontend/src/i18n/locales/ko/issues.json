@@ -48,6 +48,7 @@
     "descFiltered": "조건에 맞는 이슈가 없습니다. 필터를 초기화해 보세요."
   },
   "row": {
+    "seqTitle": "프로젝트 내 이슈 번호",
     "expand": "펼치기",
     "collapse": "접기",
     "editTitle": "클릭하여 제목 편집",

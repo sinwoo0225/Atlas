@@ -56,6 +56,7 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         var issue = await repo.GetByIdAsync(id);
         if (issue is null) return null;
         var wasCompleted = IsCompleted(issue.Status);
+        var wasInProgress = issue.Status == IssueStatus.InProgress;
         var titleChanged = issue.Title != dto.Title;
         issue.Title = dto.Title;
         issue.Description = dto.Description;
@@ -75,9 +76,14 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
             issue.ResolvedDate = null;
         var updated = await repo.UpdateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(updated.Id))!;
-        if (!wasCompleted && IsCompleted(updated.Status))
-            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today,
-                WorkLogService.FormatDoneLine("이슈", reloaded.Title, reloaded.AssigneeResource?.Name, DateTime.Today));
+        // 시작(InProgress)·완료(Resolved/Closed) 전환 시 당일 '한 일'에 upsert(이슈는 평면).
+        // 같은 날 시작→완료면 [시작] 줄이 [완료]로 교체됨(WorkLogMerge).
+        if (!wasInProgress && updated.Status == IssueStatus.InProgress)
+            await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
+                [], "이슈", reloaded.Title, reloaded.AssigneeResource?.Name, WorkLogMerge.DoneMarker.Started);
+        else if (!wasCompleted && IsCompleted(updated.Status))
+            await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
+                [], "이슈", reloaded.Title, reloaded.AssigneeResource?.Name, WorkLogMerge.DoneMarker.Completed);
         // C-1 양방향 sync (B 방향) — Title 변경 시 회의록 ActionItem.content 도 갱신.
         if (titleChanged)
             await meetingRepo.SyncPromotedIssueContentAsync(updated.ProjectId, updated.Id, updated.Title);
@@ -132,5 +138,5 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
         i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate,
-        i.Category, i.CustomFieldsJson, i.IsFavorite);
+        i.Category, i.CustomFieldsJson, i.IsFavorite, i.SequenceNumber);
 }

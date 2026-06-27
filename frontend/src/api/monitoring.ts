@@ -1,7 +1,7 @@
 import { api } from './client';
 import type {
   ActivityByProject, AgingWipItem, AttentionFeed, CalendarEvent, CapacityHeatmap, CategoryCount, ForecastBundle, KanbanColumn, KanbanItem,
-  MonitoringCharts, MonitoringData, MonitoringRisk, MonitoringTrends, OpenIssuesByProject, PortfolioRollup,
+  MonitoringCharts, MonitoringData, MonitoringRisk, MonitoringTrends, NextWeekPlanByProject, OpenIssuesByProject, PortfolioRollup,
   ResourceHeatmap, StaleProject, WeeklyReview, WorkloadOverview,
 } from '../types';
 
@@ -34,6 +34,9 @@ export const monitoringApi = {
   // 주간 회고 다이제스트 — 완료한 항목 / 놓친 마감 / 다음 주 예정. 누락 시 이번 주(월요일).
   getWeeklyReview: (weekStart?: string) =>
     api.get<WeeklyReview>(`/monitoring/weekly-review${weekStart ? `?weekStart=${weekStart}` : ''}`),
+  // 주간 통합 '다음 주 계획' — 프로젝트별 다음 주 시작/마감 예정. 누락 시 이번 주(월요일) 기준.
+  nextWeekPlan: (weekStart?: string) =>
+    api.get<NextWeekPlanByProject[]>(`/monitoring/worklogs/next-week-plan${weekStart ? `?weekStart=${weekStart}` : ''}`),
   // 마감 캘린더 — from/to (yyyy-MM-dd, 양끝 포함) 범위의 WBS·이슈 마감 이벤트.
   getCalendar: (from: string, to: string) =>
     api.get<CalendarEvent[]>(`/monitoring/calendar?from=${from}&to=${to}`),

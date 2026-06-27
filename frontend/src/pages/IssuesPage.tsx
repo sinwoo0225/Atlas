@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
@@ -21,6 +21,8 @@ import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { toIsoDate } from '../utils/wbsSpan';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useIntersectionLoader } from '../hooks/useIntersectionLoader';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import type { Issue, IssueCustomColumn, IssueStatus, IssuePriority, IssueWbsLinkType, Resource, WbsItem } from '../types';
@@ -57,6 +59,7 @@ export function IssuesPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<number | 'All' | 'Unassigned'>('All');
   const [favOnly, setFavOnly] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 200);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [loading, setLoading] = useState(true);
@@ -190,7 +193,7 @@ export function IssuesPage() {
   };
 
   const filtered = useMemo(() => {
-    const kw = keyword.trim().toLowerCase();
+    const kw = debouncedKeyword.trim().toLowerCase();
     return issues.filter((i) => {
       if (filter !== 'All' && i.status !== filter) return false;
       if (priorityFilter !== 'All' && i.priority !== priorityFilter) return false;
@@ -206,7 +209,15 @@ export function IssuesPage() {
       // 즐겨찾기 우선 → 상태순(진행→열림→해결됨→닫힘). 동일 그룹 내 순서는 안정 정렬로 기존 순서 유지.
       .sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)
         || STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status]);
-  }, [issues, filter, priorityFilter, assigneeFilter, favOnly, keyword]);
+  }, [issues, filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword]);
+
+  // 점진 렌더링 — 초기 PAGE 건만 렌더, 하단 sentinel 교차 시 확장. 필터 변경 시 리셋.
+  const PAGE = 40;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  useEffect(() => { setVisibleCount(PAGE); }, [filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword]);
+  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const sentinelRef = useRef<HTMLTableRowElement | null>(null);
+  useIntersectionLoader(sentinelRef, visible.length < filtered.length, () => setVisibleCount((c) => c + PAGE));
 
   // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
   const toggleFavorite = useCallback((issue: Issue) => {
@@ -401,7 +412,7 @@ export function IssuesPage() {
                 </td>
               </tr>
             )}
-            {filtered.map((it) => (
+            {visible.map((it) => (
               <IssueRow
                 key={it.id}
                 issue={it}
@@ -421,6 +432,11 @@ export function IssuesPage() {
                 onLinksChanged={refreshLinkCounts}
               />
             ))}
+            {visible.length < filtered.length && (
+              <tr ref={sentinelRef} aria-hidden>
+                <td colSpan={totalCols} className="h-1 p-0" />
+              </tr>
+            )}
           </tbody>
         </table>
       </Card>
@@ -507,6 +523,9 @@ function IssueRow({
         </td>
         <td className="py-2 px-3">
           <div className="flex items-center gap-2">
+            {issue.sequenceNumber ? (
+              <span className="text-xs text-muted shrink-0 tabular-nums" title={t('issues:row.seqTitle')}>#{issue.sequenceNumber}</span>
+            ) : null}
             <div className="relative flex-1 min-w-0">
               <input
                 value={title}

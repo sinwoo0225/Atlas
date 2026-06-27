@@ -980,6 +980,54 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             .ToList();
     }
 
+    // 주간 통합에 붙일 '다음 주 계획' — 프로젝트별:
+    //   다음 주 시작(StartDate) 예정 미완료 WBS + 다음 주 마감(EndDate/DueDate) 미해결 WBS·이슈.
+    // 마감분은 회고 'upcoming' 과 동일 로직(GetDeadlineItemsAsync) 재사용. (kind,id) 중복은 시작 예정 우선.
+    public async Task<IReadOnlyList<NextWeekPlanByProjectDto>> GetNextWeekPlanByProjectAsync(DateTime weekStart)
+    {
+        var start = WorkLogService.StartOfWeek(weekStart);
+        var nextStart = start.AddDays(7);
+        var nextEnd = start.AddDays(14);
+        var parentWbsIds = await GetParentWbsIdsAsync();
+
+        var due = await GetDeadlineItemsAsync(nextStart, nextEnd, onlyPast: false, parentWbsIds);
+
+        var startingWbs = await db.WbsItems
+            .Where(w => !parentWbsIds.Contains(w.Id) && w.Status != WbsStatus.Done
+                && w.StartDate.HasValue
+                && w.StartDate.Value.Date >= nextStart && w.StartDate.Value.Date < nextEnd)
+            .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
+            .ToListAsync();
+
+        var byKey = new Dictionary<(string, int), (int ProjectId, string ProjectName, NextWeekPlanItemDto Item)>();
+        foreach (var x in startingWbs)
+        {
+            byKey[("wbs", x.w.Id)] = (x.w.ProjectId, x.p.Name, new NextWeekPlanItemDto(
+                "wbs", x.w.Id, x.w.Name,
+                string.IsNullOrWhiteSpace(x.w.Assignee) ? null : x.w.Assignee,
+                IsoDate(x.w.StartDate!.Value.Date), "start"));
+        }
+        foreach (var d in due)
+        {
+            var key = (d.Kind, d.Id);
+            if (byKey.ContainsKey(key)) continue; // 시작 예정으로 이미 잡힘
+            byKey[key] = (d.ProjectId, d.ProjectName, new NextWeekPlanItemDto(
+                d.Kind, d.Id, d.Title, d.Assignee, d.DueDate, "due"));
+        }
+
+        return byKey.Values
+            .GroupBy(v => new { v.ProjectId, v.ProjectName })
+            .Select(g => new NextWeekPlanByProjectDto(
+                g.Key.ProjectId, g.Key.ProjectName,
+                g.Select(v => v.Item)
+                 .OrderBy(i => i.Date, StringComparer.Ordinal)
+                 .ThenBy(i => i.Kind, StringComparer.Ordinal)
+                 .ThenBy(i => i.Id)
+                 .ToList()))
+            .OrderBy(p => p.ProjectName)
+            .ToList();
+    }
+
     // ===== 주간 회고 다이제스트 ('일지' 탭 상단) =====
     // 한 주[weekStart(월요일), +7일) 기준으로 3개 버킷을 조립:
     //   완료한 항목 = 완료 전이(또는 근사) 시각이 이번 주에 드는 것 (Phase 2 GetCompletionEventsAsync 재사용)

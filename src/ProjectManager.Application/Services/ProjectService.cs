@@ -281,7 +281,7 @@ public class ProjectService(
         i.Status, i.Priority,
         i.AssigneeResourceId, i.AssigneeResource?.Name,
         i.DueDate, i.OccurredOn, i.CreatedAt, i.UpdatedAt, i.ResolvedDate,
-        i.Category, i.CustomFieldsJson);
+        i.Category, i.CustomFieldsJson, i.IsFavorite, i.SequenceNumber);
 
     // 이슈 리스트 커스텀 컬럼 정의(Project.IssueCustomColumnsJson) — raw JSON 배열 passthrough.
     // 정의 편집은 프로젝트 다른 필드와 분리해 별도 엔드포인트로 처리(전체 프로젝트 페이로드/동시성 충돌 회피).

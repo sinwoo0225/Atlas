@@ -30,6 +30,7 @@ import type {
   MonitoringCharts as MonitoringChartsData,
   MonitoringRisk,
   MonitoringTrends,
+  NextWeekPlanByProject,
   OpenIssuesByProject,
   ResourceHeatmap,
   CapacityHeatmap,
@@ -122,6 +123,7 @@ export function MonitoringPage() {
   const [capacityLoading, setCapacityLoading] = useState(false);
   const [activityByProject, setActivityByProject] = useState<ActivityByProject[]>([]);
   const [openIssues, setOpenIssues] = useState<OpenIssuesByProject[]>([]);
+  const [nextWeekPlan, setNextWeekPlan] = useState<NextWeekPlanByProject[]>([]);
   const [risk, setRisk] = useState<MonitoringRisk | null>(null);
   const [attention, setAttention] = useState<AttentionFeed | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioRollup | null>(null);
@@ -159,6 +161,7 @@ export function MonitoringPage() {
       monitoringApi.getResourceHeatmap(),
       monitoringApi.getActivityByProject(30),
       monitoringApi.openIssues(),
+      monitoringApi.nextWeekPlan(isoDate(thisMon)),
       monitoringApi.getRisk(),
       monitoringApi.getStale(),
       monitoringApi.getAgingWip(),
@@ -167,7 +170,7 @@ export function MonitoringPage() {
       monitoringApi.getAttention(),
       monitoringApi.getPortfolio(),
     ])
-      .then(([today, thisW, lastW, ch, hm, abp, oi, rk, st, aw, wl, cat, att, pf]) => {
+      .then(([today, thisW, lastW, ch, hm, abp, oi, nwp, rk, st, aw, wl, cat, att, pf]) => {
         setItems(today.items);
         setThisWeek(thisW);
         setLastWeek(lastW);
@@ -175,6 +178,7 @@ export function MonitoringPage() {
         setHeatmap(hm);
         setActivityByProject(abp);
         setOpenIssues(oi);
+        setNextWeekPlan(nwp);
         setRisk(rk);
         setStale(st);
         setAgingWip(aw);
@@ -411,6 +415,7 @@ export function MonitoringPage() {
               exportable
               openIssues={openIssues}
               review={review}
+              plan={nextWeekPlan}
             />
           </div>
           <OpenIssuesSection
@@ -500,7 +505,7 @@ function buildReviewMarkdown(review: WeeklyReview, t: TFunction): string {
   return lines.join('\n');
 }
 
-function buildWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null): string {
+function buildWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null, plan: NextWeekPlanByProject[] = []): string {
   const weekStart = data.weekStart.slice(0, 10);
   // 종료일 = 주 시작 + 4일 (월~금)
   const start = new Date(weekStart);
@@ -508,9 +513,8 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: Open
   end.setDate(end.getDate() + 4);
   const endIso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
 
-  const fields: { key: 'done' | 'plan' | 'issues'; label: string }[] = [
+  const fields: { key: 'done' | 'issues'; label: string }[] = [
     { key: 'done',   label: t('monitoring:fields.done') },
-    { key: 'plan',   label: t('monitoring:fields.plan') },
     { key: 'issues', label: t('monitoring:fields.issues') },
   ];
 
@@ -560,11 +564,26 @@ function buildWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: Open
     lines.push(...issueLines);
     lines.push('');
   }
+
+  // 다음 주 계획 — '[프로젝트명] 제목 — 시작/마감 날짜 (담당자)'.
+  const planLines = plan.flatMap((p) =>
+    p.items.map((it) => {
+      const reason = it.reason === 'start' ? t('monitoring:markdown.planStart') : t('monitoring:markdown.planDue');
+      const who = it.assigneeName ? ` (${it.assigneeName})` : '';
+      return `- [${p.projectName}] ${it.title} — ${reason} ${it.date}${who}`;
+    }),
+  );
+  if (planLines.length > 0) {
+    lines.push(`## ${t('monitoring:markdown.planTitle')}`);
+    lines.push('');
+    lines.push(...planLines);
+    lines.push('');
+  }
   return lines.join('\n');
 }
 
-function downloadWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null) {
-  const md = buildWeeklyMarkdown(data, t, openIssues, review);
+function downloadWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: OpenIssuesByProject[] = [], review: WeeklyReview | null = null, plan: NextWeekPlanByProject[] = []) {
+  const md = buildWeeklyMarkdown(data, t, openIssues, review, plan);
   const weekStart = data.weekStart.slice(0, 10);
   const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -580,7 +599,7 @@ function downloadWeeklyMarkdown(data: WeeklyWorkLog, t: TFunction, openIssues: O
 type WeeklyVariant = 'current' | 'muted';
 
 function WeeklySection({
-  title, data, loading, onProjectClick, variant = 'current', exportable = false, openIssues = [], review = null,
+  title, data, loading, onProjectClick, variant = 'current', exportable = false, openIssues = [], review = null, plan = [],
 }: {
   title: string;
   data: WeeklyWorkLog | null;
@@ -590,6 +609,7 @@ function WeeklySection({
   exportable?: boolean;
   openIssues?: OpenIssuesByProject[];
   review?: WeeklyReview | null;
+  plan?: NextWeekPlanByProject[];
 }) {
   const { t } = useTranslation();
   const muted = variant === 'muted';
@@ -597,7 +617,9 @@ function WeeklySection({
   const iconCls = muted ? 'text-muted' : 'text-accent';
   const reviewHasContent = !!review
     && review.completed.length + review.missedDeadlines.length + review.upcomingNextWeek.length > 0;
-  const canExport = exportable && !!data && (data.projects.length > 0 || reviewHasContent);
+  const planHasContent = plan.some((p) => p.items.length > 0);
+  const hasLogs = !!data && data.projects.length > 0;
+  const canExport = exportable && !!data && (hasLogs || reviewHasContent || planHasContent);
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-2">
@@ -614,7 +636,7 @@ function WeeklySection({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => downloadWeeklyMarkdown(data!, t, openIssues, review)}
+            onClick={() => downloadWeeklyMarkdown(data!, t, openIssues, review, plan)}
             leadingIcon={<Download size={14} />}
             title={t('monitoring:logs.exportTitle')}
           >
@@ -624,18 +646,61 @@ function WeeklySection({
       </div>
       {loading ? (
         <Spinner label={t('common:loading')} />
-      ) : !data || data.projects.length === 0 ? (
-        <Card padding="spacious" variant={muted ? 'subtle' : 'default'} className="text-center text-muted text-sm">
-          {t('monitoring:logs.noRecord')}
-        </Card>
       ) : (
         <div className="space-y-3">
-          {data.projects.map((p) => (
-            <ProjectWeekCard key={p.projectId} project={p} onProjectClick={onProjectClick} variant={variant} />
-          ))}
+          {hasLogs ? (
+            data!.projects.map((p) => (
+              <ProjectWeekCard key={p.projectId} project={p} onProjectClick={onProjectClick} variant={variant} />
+            ))
+          ) : (
+            <Card padding="spacious" variant={muted ? 'subtle' : 'default'} className="text-center text-muted text-sm">
+              {t('monitoring:logs.noRecord')}
+            </Card>
+          )}
+          {planHasContent && <NextWeekPlanBlock plan={plan} onProjectClick={onProjectClick} />}
         </div>
       )}
     </section>
+  );
+}
+
+// 다음 주 계획 — 프로젝트별 다음 주 시작/마감 예정 작업·이슈. '이번 주' 주간 병합에 첨부.
+function NextWeekPlanBlock({ plan, onProjectClick }: {
+  plan: NextWeekPlanByProject[];
+  onProjectClick: (id: number) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <Card padding="normal" variant="subtle">
+      <p className="h-section flex items-center gap-2 text-primary mb-2">
+        <Calendar size={16} className="text-accent" />
+        {t('monitoring:logs.planTitle')}
+      </p>
+      <div className="space-y-3">
+        {plan.map((p) => (
+          <div key={p.projectId}>
+            <button
+              onClick={() => onProjectClick(p.projectId)}
+              className="text-sm font-bold text-primary hover:text-accent transition-colors"
+            >
+              {p.projectName}
+            </button>
+            <ul className="mt-1 space-y-1">
+              {p.items.map((it) => (
+                <li key={`${it.kind}-${it.id}`} className="text-sm text-secondary flex flex-wrap items-baseline gap-x-1.5">
+                  <Badge variant={it.reason === 'start' ? 'accent' : 'warning'} size="sm">
+                    {it.reason === 'start' ? t('monitoring:logs.planStart') : t('monitoring:logs.planDue')}
+                  </Badge>
+                  <span className="font-medium text-primary">{it.title}</span>
+                  <span className="text-muted">{it.date}</span>
+                  {it.assigneeName && <Badge variant="neutral" size="sm">{it.assigneeName}</Badge>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 

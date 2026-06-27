@@ -35,7 +35,10 @@
     "noRecord": "No records",
     "issuesTitle": "Issue list",
     "openCount": "(open: {{count}})",
-    "noOpenIssues": "No open issues"
+    "noOpenIssues": "No open issues",
+    "planTitle": "Next week plan",
+    "planStart": "Start",
+    "planDue": "Due"
   },
   "fields": {
     "done": "Done",
@@ -106,7 +109,10 @@
     "due": "Due",
     "worklogTitle": "Work Log",
     "noRecord": "(no records)",
-    "issuesTitle": "Issue List"
+    "issuesTitle": "Issue List",
+    "planTitle": "Next Week Plan",
+    "planStart": "Start",
+    "planDue": "Due"
   },
   "charts": {
     "statusTitle": "Project status breakdown",

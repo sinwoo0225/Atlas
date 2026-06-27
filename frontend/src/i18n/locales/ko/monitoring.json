@@ -35,7 +35,10 @@
     "noRecord": "기록 없음",
     "issuesTitle": "이슈 목록",
     "openCount": "(미해결 {{count}}건)",
-    "noOpenIssues": "미해결 이슈 없음"
+    "noOpenIssues": "미해결 이슈 없음",
+    "planTitle": "다음 주 계획",
+    "planStart": "시작",
+    "planDue": "마감"
   },
   "fields": {
     "done": "한 일",
@@ -106,7 +109,10 @@
     "due": "마감",
     "worklogTitle": "업무일지",
     "noRecord": "(기록 없음)",
-    "issuesTitle": "이슈 목록"
+    "issuesTitle": "이슈 목록",
+    "planTitle": "다음 주 계획",
+    "planStart": "시작",
+    "planDue": "마감"
   },
   "charts": {
     "statusTitle": "프로젝트 상태 분포",

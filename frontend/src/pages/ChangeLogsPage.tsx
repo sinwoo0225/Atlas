@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
@@ -19,6 +19,8 @@ import { WbsTreePicker } from '../components/WbsTreePicker';
 import { impactBadge } from '../utils/statusMaps';
 import { useThemeMode, getChartColors } from '../utils/themeColors';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useIntersectionLoader } from '../hooks/useIntersectionLoader';
 import { useCreateForm } from '../hooks/useCreateForm';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import { findItemName } from '../utils/wbsHelpers';
@@ -466,6 +468,7 @@ export function ChangeLogsPage() {
 
   useCreateForm(() => { setEditing(null); setShowForm(true); });
   const [keyword, setKeyword] = useState('');
+  const debouncedKeyword = useDebouncedValue(keyword, 200);
   const [impactFilter, setImpactFilter] = useState<ImpactLevel | 'All'>('All');
   const [sourceFilter, setSourceFilter] = useState<'all' | 'withSource' | 'noSource'>('all');
   const [favOnly, setFavOnly] = useState(false);
@@ -521,7 +524,7 @@ export function ChangeLogsPage() {
   useHighlightFromQuery([logs.length]);
 
   const filtered = useMemo(() => {
-    const kw = keyword.trim().toLowerCase();
+    const kw = debouncedKeyword.trim().toLowerCase();
     const filterIssueIdNum = filterSourceIssue != null ? Number(filterSourceIssue) : null;
     const filterWbsIdNum = filterSourceWbs != null ? Number(filterSourceWbs) : null;
     return favoritesFirst(logs.filter((l) => {
@@ -539,7 +542,15 @@ export function ChangeLogsPage() {
       }
       return true;
     }));
-  }, [logs, keyword, impactFilter, sourceFilter, favOnly, filterSourceIssue, filterSourceWbs]);
+  }, [logs, debouncedKeyword, impactFilter, sourceFilter, favOnly, filterSourceIssue, filterSourceWbs]);
+
+  // 점진 렌더링 — 초기 PAGE 건만 렌더, 하단 sentinel 교차 시 확장. 필터 변경 시 리셋.
+  const PAGE = 40;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  useEffect(() => { setVisibleCount(PAGE); }, [debouncedKeyword, impactFilter, sourceFilter, favOnly, filterSourceIssue, filterSourceWbs]);
+  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  useIntersectionLoader(sentinelRef, visible.length < filtered.length, () => setVisibleCount((c) => c + PAGE));
 
   // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
   const toggleFavorite = useCallback((log: ChangeLog) => {
@@ -677,7 +688,9 @@ export function ChangeLogsPage() {
               ? t('changelog:empty.descNone')
               : t('changelog:empty.descAdjust')}
           />
-        ) : filtered.map((log) => {
+        ) : (
+        <>
+        {visible.map((log) => {
           const meetingIds = extractMeetingIds(log.relatedDocLinks);
           const otherLinks = extractOtherLinks(log.relatedDocLinks);
           const linkedMeetings = meetingIds
@@ -727,11 +740,12 @@ export function ChangeLogsPage() {
                   <FavoriteStar active={!!log.isFavorite} onToggle={() => toggleFavorite(log)} size={15} />
                   <button
                     onClick={() => setExpanded(expanded === log.id ? null : log.id)}
-                    className="px-2 text-xs text-muted hover:text-primary transition-colors"
+                    className="text-muted hover:text-primary transition-colors"
                     aria-expanded={expanded === log.id}
                     aria-label={t('changelog:card.toggleAria', { state: expanded === log.id ? t('changelog:card.collapse') : t('changelog:card.expand'), date: log.date.slice(0, 10) })}
+                    title={expanded === log.id ? t('changelog:card.collapse') : t('changelog:card.expand')}
                   >
-                    {expanded === log.id ? t('changelog:card.collapse') : t('changelog:card.expand')}
+                    {expanded === log.id ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </button>
                   <button onClick={() => setEditing(log)} className="p-1 text-muted hover:text-primary transition-colors" title={t('common:edit')} aria-label={t('changelog:card.editAria', { date: log.date.slice(0, 10) })}>
                     <Pencil size={14} />
@@ -786,6 +800,9 @@ export function ChangeLogsPage() {
             </Card>
           );
         })}
+        {visible.length < filtered.length && <div ref={sentinelRef} className="h-1" aria-hidden />}
+        </>
+        )}
       </div>
       )}
 

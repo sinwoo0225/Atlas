@@ -269,6 +269,8 @@ export type IssuePriority = 'Low' | 'Medium' | 'High';
 export interface Issue {
   id: number;
   projectId: number;
+  // 프로젝트별 1-기반 표시용 번호(전역 id 와 별개). 백엔드에서 부여, 표시 전용.
+  sequenceNumber?: number;
   title: string;
   description: string;
   status: IssueStatus;
@@ -427,6 +429,22 @@ export interface OpenIssuesByProject {
   projectId: number;
   projectName: string;
   issues: OpenIssue[];
+}
+
+// 주간 통합 '다음 주 계획' — 프로젝트별 다음 주 시작(StartDate) 예정 작업 + 다음 주 마감(EndDate/DueDate) 미해결 작업·이슈.
+export interface NextWeekPlanItem {
+  kind: 'wbs' | 'issue';
+  id: number;
+  title: string;
+  assigneeName?: string | null;
+  date: string; // yyyy-MM-dd (시작일 또는 마감일)
+  reason: 'start' | 'due';
+}
+
+export interface NextWeekPlanByProject {
+  projectId: number;
+  projectName: string;
+  items: NextWeekPlanItem[];
 }
 
 // 주간 회고 다이제스트 ('일지' 탭 상단) — 완료한 항목 / 놓친 마감 / 다음 주 마감 예정.

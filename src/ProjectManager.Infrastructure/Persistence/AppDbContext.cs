@@ -187,6 +187,7 @@ public class AppDbContext(
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Title).IsRequired().HasMaxLength(300);
+            e.Property(x => x.SequenceNumber).HasDefaultValue(0);
             e.Property(x => x.Category).HasMaxLength(64).HasDefaultValue("");
             e.Property(x => x.CustomFieldsJson).HasColumnType("TEXT").HasDefaultValue("");
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
@@ -195,6 +196,8 @@ public class AppDbContext(
             e.HasOne(x => x.Project).WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.AssigneeResource).WithMany().HasForeignKey(x => x.AssigneeResourceId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => x.ProjectId);
+            // 프로젝트별 시퀀스 — 생성 시 max 조회·표시 정렬에 사용(단일 사용자라 비유니크).
+            e.HasIndex(x => new { x.ProjectId, x.SequenceNumber });
             e.HasIndex(x => x.AssigneeResourceId);
             // 히트맵·모니터링이 DueDate 범위로 across-project 필터 (MonitoringService) → 데이터 多 시 인덱스.
             e.HasIndex(x => x.DueDate);

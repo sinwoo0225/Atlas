@@ -7,6 +7,9 @@ public class Issue : IAuditable
 {
     public int Id { get; set; }
     public int ProjectId { get; set; }
+    // 프로젝트별 1-기반 표시용 시퀀스 번호(전역 Id 와 별개). 생성 시 해당 프로젝트 max+1 자동 부여.
+    // 기존 데이터는 CreatedAt 순으로 1회 backfill(AppHostFactory). 0 = 미부여(생성 직전 일시값).
+    public int SequenceNumber { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public IssueStatus Status { get; set; } = IssueStatus.Open;

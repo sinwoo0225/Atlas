@@ -10,7 +10,7 @@ public record IssueDto(
     int? AssigneeResourceId, string? AssigneeName,
     DateTime? DueDate, DateTime? OccurredOn, DateTime CreatedAt, DateTime UpdatedAt,
     DateTime? ResolvedDate = null, string Category = "", string CustomFieldsJson = "",
-    bool IsFavorite = false);
+    bool IsFavorite = false, int SequenceNumber = 0);
 
 public record CreateIssueDto(
     int ProjectId, string Title, string Description,

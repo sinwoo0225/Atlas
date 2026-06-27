@@ -99,6 +99,7 @@ public class WbsService(
 
         var wasDone = item.Status == WbsStatus.Done;
         var wasPlanned = item.Status == WbsStatus.Planned;
+        var wasInProgress = item.Status == WbsStatus.InProgress;
         var nameChanged = item.Name != dto.Name;
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
@@ -124,15 +125,45 @@ public class WbsService(
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
         // 자유텍스트 Assignee → WbsAssignment 동기화(배정·배분율 정본).
         await assignmentService.ReconcileFromFreeTextAsync(updated);
-        // 리프(자식 없음)만 업무일지 자동 등록 — 자식이 있는 상위 업무는 요약 노드라 완료해도 등록 제외.
-        // item 은 GetByIdAsync 로 .Include(Children) 로드되어 추가 쿼리 없이 판별 가능.
-        if (!wasDone && updated.Status == WbsStatus.Done && updated.Children.Count == 0)
-            await workLogService.AppendDoneAsync(updated.ProjectId, DateTime.Today,
-                WorkLogService.FormatDoneLine("작업", updated.Name, updated.Assignee, DateTime.Today));
+        // 리프(자식 없음)만 업무일지 자동 등록 — 자식이 있는 상위 업무는 요약 노드라 컨텍스트로만 등장.
+        // item 은 GetByIdAsync 로 .Include(Children) 로드되어 추가 쿼리 없이 리프 판별 가능.
+        // 시작(InProgress)·완료(Done) 전환 시 부모 체인과 함께 계층형으로 당일 '한 일'에 upsert.
+        if (updated.Children.Count == 0)
+        {
+            if (!wasInProgress && updated.Status == WbsStatus.InProgress)
+            {
+                var ancestors = await BuildAncestorNamesAsync(updated);
+                await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
+                    ancestors, "작업", updated.Name, updated.Assignee, WorkLogMerge.DoneMarker.Started);
+            }
+            else if (!wasDone && updated.Status == WbsStatus.Done)
+            {
+                var ancestors = await BuildAncestorNamesAsync(updated);
+                await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
+                    ancestors, "작업", updated.Name, updated.Assignee, WorkLogMerge.DoneMarker.Completed);
+            }
+        }
         // C-1 양방향 sync (B 방향) — Name 변경 시 회의록 ActionItem.content 도 갱신.
         if (nameChanged)
             await meetingRepo.SyncPromotedWbsContentAsync(updated.ProjectId, updated.Id, updated.Name);
         return ToDto(updated, []);
+    }
+
+    // 리프의 부모 체인 이름을 최상위→직속 부모 순으로. (업무일지 계층 등록용)
+    // GetByIdAsync 는 Parent 를 로드하지 않으므로 프로젝트 전체를 한 번 읽어 ParentId 로 워크.
+    private async Task<IReadOnlyList<string>> BuildAncestorNamesAsync(WbsItem leaf)
+    {
+        if (leaf.ParentId is null) return [];
+        var all = (await repo.GetByProjectAsync(leaf.ProjectId, null)).ToDictionary(x => x.Id);
+        var chain = new List<string>();
+        var cursor = leaf.ParentId;
+        while (cursor is int pid && all.TryGetValue(pid, out var parent))
+        {
+            chain.Add(parent.Name);
+            cursor = parent.ParentId;
+        }
+        chain.Reverse(); // 최상위 → 직속 부모
+        return chain;
     }
 
     // 칸반 드래그 — 상태만 변경. 현재 엔티티 값으로 UpdateDto 를 구성해 기존 UpdateAsync 재사용

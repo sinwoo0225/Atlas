@@ -74,6 +74,16 @@ public class IssueRepository(AppDbContext db) : IIssueRepository
 
     public async Task<Issue> CreateAsync(Issue issue)
     {
+        // 프로젝트별 시퀀스 자동 부여 — 모든 생성 경로(서비스·액션아이템 승격)의 단일 choke point.
+        // 로컬 단일 사용자라 max+1 경쟁 무시. 명시값(>0)이 들어오면 보존.
+        if (issue.SequenceNumber <= 0)
+        {
+            var maxSeq = await db.Issues
+                .Where(x => x.ProjectId == issue.ProjectId)
+                .Select(x => (int?)x.SequenceNumber)
+                .MaxAsync() ?? 0;
+            issue.SequenceNumber = maxSeq + 1;
+        }
         db.Issues.Add(issue);
         await db.SaveChangesAsync();
         return issue;

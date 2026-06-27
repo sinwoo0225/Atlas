@@ -48,6 +48,7 @@
     "descFiltered": "No issues match the filters. Try resetting them."
   },
   "row": {
+    "seqTitle": "Issue number within project",
     "expand": "Expand",
     "collapse": "Collapse",
     "editTitle": "Click to edit title",

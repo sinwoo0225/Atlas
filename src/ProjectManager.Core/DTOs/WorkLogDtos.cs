@@ -31,3 +31,14 @@ public record OpenIssuesByProjectDto(
     int ProjectId,
     string ProjectName,
     IReadOnlyList<OpenIssueDto> Issues);
+
+// 주간 업무일지 통합에 첨부하는 '다음 주 계획' — 프로젝트별:
+// 다음 주 시작(StartDate) 예정 WBS + 다음 주 마감(EndDate/DueDate) 미해결 WBS·이슈.
+// Reason: "start"(다음 주 시작) | "due"(다음 주 마감). Date 는 yyyy-MM-dd.
+public record NextWeekPlanItemDto(
+    string Kind, int Id, string Title, string? AssigneeName, string Date, string Reason);
+
+public record NextWeekPlanByProjectDto(
+    int ProjectId,
+    string ProjectName,
+    IReadOnlyList<NextWeekPlanItemDto> Items);

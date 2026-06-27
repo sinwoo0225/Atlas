@@ -63,7 +63,8 @@ public class ActionItemPromotionService(
             full.Id, full.ProjectId, full.Title, full.Description,
             full.Status, full.Priority,
             full.AssigneeResourceId, full.AssigneeResource?.Name,
-            full.DueDate, full.OccurredOn, full.CreatedAt, full.UpdatedAt, full.ResolvedDate);
+            full.DueDate, full.OccurredOn, full.CreatedAt, full.UpdatedAt, full.ResolvedDate,
+            full.Category, full.CustomFieldsJson, full.IsFavorite, full.SequenceNumber);
     }
 
     public async Task<WbsItemDto> PromoteToWbsAsync(int meetingId, string actionItemId)

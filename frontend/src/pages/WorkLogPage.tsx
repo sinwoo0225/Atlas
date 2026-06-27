@@ -11,9 +11,9 @@ import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import type { WorkLog } from '../types';
 
 const DAY_LABEL_KEYS = ['worklog:day.mon', 'worklog:day.tue', 'worklog:day.wed', 'worklog:day.thu', 'worklog:day.fri'];
-const FIELDS: { key: 'done' | 'plan' | 'issues'; labelKey: string; placeholderKey: string }[] = [
+// '계획'은 일지에서 제거(다음 주 계획은 통합 모니터링 주간 병합에서 제공). plan 데이터·컬럼은 보존하되 UI 비노출.
+const FIELDS: { key: 'done' | 'issues'; labelKey: string; placeholderKey: string }[] = [
   { key: 'done',   labelKey: 'worklog:field.doneLabel',   placeholderKey: 'worklog:field.donePlaceholder' },
-  { key: 'plan',   labelKey: 'worklog:field.planLabel',   placeholderKey: 'worklog:field.planPlaceholder' },
   { key: 'issues', labelKey: 'worklog:field.issuesLabel', placeholderKey: 'worklog:field.issuesPlaceholder' },
 ];
 
@@ -37,6 +37,16 @@ function isoDate(d: Date): string {
 }
 function fmtMD(d: Date): string {
   return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+// 주말이면 가장 가까운 평일(금)로 — 자동 등록(백엔드 WorkLogService.ToWeekdayDate)과 일관.
+// 업무일지 진입 시 기본 선택 요일에 사용(주말엔 월요일 대신 금요일이 보이도록).
+function weekdayToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay(); // 0=일, 6=토
+  if (day === 6) d.setDate(d.getDate() - 1);
+  else if (day === 0) d.setDate(d.getDate() - 2);
+  return d;
 }
 
 type DayEntry = { date: string; done: string; plan: string; issues: string };
@@ -76,9 +86,9 @@ export function WorkLogPage() {
   const weekStartIso = isoDate(weekStart);
 
   useEffect(() => {
-    const todayIso = isoDate(new Date());
-    const todayIdx = weekDates.findIndex((d) => isoDate(d) === todayIso);
-    setSelectedIdx(todayIdx >= 0 ? todayIdx : 0);
+    const targetIso = isoDate(weekdayToday()); // 주말이면 금요일
+    const idx = weekDates.findIndex((d) => isoDate(d) === targetIso);
+    setSelectedIdx(idx >= 0 ? idx : 0);
   }, [weekStartIso]);
 
   useEffect(() => {
@@ -127,7 +137,7 @@ export function WorkLogPage() {
     if (!kw) return new Set<number>();
     const acc = new Set<number>();
     entries.forEach((e, i) => {
-      if (`${e.done} ${e.plan} ${e.issues}`.toLowerCase().includes(kw)) acc.add(i);
+      if (`${e.done} ${e.issues}`.toLowerCase().includes(kw)) acc.add(i);
     });
     return acc;
   }, [entries, keyword]);
@@ -147,8 +157,8 @@ export function WorkLogPage() {
 
   // Ctrl+N — "신규" 가 없는 페이지라 가장 자연스러운 액션: 오늘 요일로 점프 (오늘이 다른 주면 이번 주로 전환).
   useGlobalShortcut('mod+n', () => {
-    const todayIso = isoDate(new Date());
-    const idxInWeek = weekDates.findIndex((d) => isoDate(d) === todayIso);
+    const targetIso = isoDate(weekdayToday()); // 주말이면 금요일
+    const idxInWeek = weekDates.findIndex((d) => isoDate(d) === targetIso);
     if (idxInWeek >= 0) setSelectedIdx(idxInWeek);
     else setWeekStart(startOfWeek(new Date()));
   });
@@ -298,7 +308,7 @@ function DayEditor({
         <span className="ml-2 text-xs text-muted">{t('worklog:editSelected')}</span>
         {isToday && <span className="text-[10px] text-accent uppercase tracking-wider ml-auto">Today</span>}
       </div>
-      <div className="p-4 grid gap-4 grid-cols-1 md:grid-cols-3">
+      <div className="p-4 grid gap-4 grid-cols-1 md:grid-cols-2">
         {FIELDS.map((f) => (
           <div key={f.key} className="flex flex-col">
             <label className="block text-xs text-muted mb-1 font-medium">{t(f.labelKey)}</label>
