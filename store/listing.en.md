@@ -47,9 +47,13 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Issue category + custom columns — free-text Category (with autocomplete) left of the issue title, plus your own columns of type text / date / number
-- Simpler meeting attendee entry — type attendees per organization separated by comma or Enter, with autocomplete from your resources (department shown); organization grouping preserved
-- Autocomplete dropdown clipping fixed — category, attendee, and WBS assignee dropdowns now float above tables/cards instead of being clipped
+- Hierarchical work-log auto entries — moving a task to In progress/Done records the task hierarchy with indentation in your log, toggling start/done in place (WBS tasks and issues)
+- Per-project issue numbers — each issue gets a #1, #2 … sequence (existing issues backfilled in creation order)
+- WBS subtasks · actual dates · start-delay insight — task checklists, actual start/completion dates separate from the plan, and an insight for overdue-to-start tasks
+- Project list favorites — pin frequently used projects to the top
+- Form layout redesign — WBS task form in 3 columns (Basics & schedule / Relations / Details), Work-info form in 2 columns (Common / type-specific), parent task via a floating dropdown
+- Monitoring overview regrouped + WBS template preview — Portfolio + Attention two-up at the top, nine cards in a themed 3×3, and a preview of task names a template will create
+- Change-log and issue lists are lighter with incremental rendering + search debounce
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
