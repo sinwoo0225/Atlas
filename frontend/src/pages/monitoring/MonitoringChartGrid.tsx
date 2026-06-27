@@ -22,128 +22,166 @@ const PRIORITY_KEYS: IssuePriority[] = ['High', 'Medium', 'Low'];
 // 모든 차트 카드를 280px 균등으로 통일 — 3×2 그리드에서 시각 일관성, 가독성 확보.
 const CHART_HEIGHT = 280;
 
-interface Props {
+interface GridCardProps {
   data: MonitoringChartsData | null;
-  activityByProject: ActivityByProject[];
   loading: boolean;
-  onProjectClick: (id: number) => void;
-  onActivityProjectClick: (id: number) => void;
-  /** 그리드 끝에 같은 3열 그리드 안으로 이어 붙일 추가 카드(개요 Stale·Aging 등). */
-  children?: React.ReactNode;
 }
 
-export function MonitoringChartGrid({
-  data, activityByProject, loading, onProjectClick, onActivityProjectClick, children,
-}: Props) {
+// 개요 하단 차트 그리드 — 9개 카드를 같은 3열 그리드에 균등 배치하는 얇은 래퍼.
+// 5개 빌트인 카드(상태분포·이슈매트릭스·마일스톤·활동량·WBS진척)를 아래 개별 컴포넌트로 분리해,
+// MonitoringPage 에서 KPI·카테고리·방치·AgingWIP 와 임의 순서로 섞어 렌더할 수 있게 한다.
+export function MonitoringChartGrid({ children }: { children: React.ReactNode }) {
+  return <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">{children}</section>;
+}
+
+// 프로젝트 상태 분포 — 도넛 + 프로젝트 리스트.
+export function StatusBreakdownCard({
+  data, loading, onProjectClick,
+}: GridCardProps & { onProjectClick: (id: number) => void }) {
   const { t } = useTranslation();
   const theme = useThemeMode();
   const colors = getChartColors(theme);
-
   return (
-    <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <Card padding="normal">
-        <h3 className="h-card flex items-center gap-2 mb-1">
-          <PieChart size={16} className="text-muted" />
-          {t('monitoring:charts.statusTitle')}
-        </h3>
-        {loading || !data ? (
-          <Skeleton height={CHART_HEIGHT} />
-        ) : (
-          <ProjectStatusBreakdownWidget
-            data={data}
-            colors={colors}
-            theme={effectiveLightDark(theme)}
-            onProjectClick={onProjectClick}
-          />
-        )}
-      </Card>
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <PieChart size={16} className="text-muted" />
+        {t('monitoring:charts.statusTitle')}
+      </h3>
+      {loading || !data ? (
+        <Skeleton height={CHART_HEIGHT} />
+      ) : (
+        <ProjectStatusBreakdownWidget
+          data={data}
+          colors={colors}
+          theme={effectiveLightDark(theme)}
+          onProjectClick={onProjectClick}
+        />
+      )}
+    </Card>
+  );
+}
 
-      <Card padding="normal">
-        <h3 className="h-card flex items-center gap-2 mb-1">
-          <AlertTriangle size={16} className="text-muted" />
-          {t('monitoring:charts.matrixTitle')}
-        </h3>
-        {loading || !data ? (
-          <Skeleton height={CHART_HEIGHT} />
-        ) : data.issueMatrix.every((c) => c.count === 0) ? (
-          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noIssues')}</p>
-        ) : (
-          <ReactECharts
-            option={buildIssueMatrixOption(data, colors, effectiveLightDark(theme), t)}
-            style={{ height: CHART_HEIGHT }}
-          />
-        )}
-      </Card>
+// 이슈 매트릭스 — 상태×우선순위 히트맵.
+export function IssueMatrixCard({ data, loading }: GridCardProps) {
+  const { t } = useTranslation();
+  const theme = useThemeMode();
+  const colors = getChartColors(theme);
+  return (
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <AlertTriangle size={16} className="text-muted" />
+        {t('monitoring:charts.matrixTitle')}
+      </h3>
+      {loading || !data ? (
+        <Skeleton height={CHART_HEIGHT} />
+      ) : data.issueMatrix.every((c) => c.count === 0) ? (
+        <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noIssues')}</p>
+      ) : (
+        <ReactECharts
+          option={buildIssueMatrixOption(data, colors, effectiveLightDark(theme), t)}
+          style={{ height: CHART_HEIGHT }}
+        />
+      )}
+    </Card>
+  );
+}
 
-      <Card padding="normal">
-        <h3 className="h-card flex items-center gap-2 mb-1">
-          <Diamond size={16} className="text-muted" />
-          {t('monitoring:charts.milestoneTitle')}
-        </h3>
-        {loading || !data ? (
-          <Skeleton height={CHART_HEIGHT} />
-        ) : data.upcomingMilestones.length === 0 ? (
-          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noMilestones')}</p>
-        ) : (
-          <ReactECharts
-            option={buildMilestoneOption(data, colors)}
-            style={{ height: CHART_HEIGHT }}
-          />
-        )}
-      </Card>
+// 임박 마일스톤 — 타임라인 스캐터.
+export function MilestoneCard({ data, loading }: GridCardProps) {
+  const { t } = useTranslation();
+  const theme = useThemeMode();
+  const colors = getChartColors(theme);
+  return (
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <Diamond size={16} className="text-muted" />
+        {t('monitoring:charts.milestoneTitle')}
+      </h3>
+      {loading || !data ? (
+        <Skeleton height={CHART_HEIGHT} />
+      ) : data.upcomingMilestones.length === 0 ? (
+        <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noMilestones')}</p>
+      ) : (
+        <ReactECharts
+          option={buildMilestoneOption(data, colors)}
+          style={{ height: CHART_HEIGHT }}
+        />
+      )}
+    </Card>
+  );
+}
 
-      <Card padding="normal">
-        <h3 className="h-card flex items-center gap-2 mb-1">
-          <Activity size={16} className="text-muted" />
-          {t('monitoring:charts.activityTitle')} <span className="text-xs text-muted font-normal">{t('monitoring:charts.activitySub')}</span>
-        </h3>
-        {loading ? (
-          <Skeleton height={CHART_HEIGHT} />
-        ) : activityByProject.length === 0 ? (
-          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noActivity')}</p>
-        ) : (
-          <ReactECharts
-            option={buildActivityByProjectOption(activityByProject, colors, t)}
-            style={{ height: CHART_HEIGHT }}
-            onEvents={{
-              click: (params: any) => {
-                if (typeof params?.dataIndex === 'number') {
-                  const row = activityByProject[params.dataIndex];
-                  if (row) onActivityProjectClick(row.projectId);
-                }
-              },
-            }}
-          />
-        )}
-      </Card>
+// 프로젝트별 활동량 — 가로 막대(클릭 시 활동 탭으로 이동).
+export function ActivityByProjectCard({
+  activityByProject, loading, onActivityProjectClick,
+}: {
+  activityByProject: ActivityByProject[];
+  loading: boolean;
+  onActivityProjectClick: (id: number) => void;
+}) {
+  const { t } = useTranslation();
+  const theme = useThemeMode();
+  const colors = getChartColors(theme);
+  return (
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <Activity size={16} className="text-muted" />
+        {t('monitoring:charts.activityTitle')} <span className="text-xs text-muted font-normal">{t('monitoring:charts.activitySub')}</span>
+      </h3>
+      {loading ? (
+        <Skeleton height={CHART_HEIGHT} />
+      ) : activityByProject.length === 0 ? (
+        <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noActivity')}</p>
+      ) : (
+        <ReactECharts
+          option={buildActivityByProjectOption(activityByProject, colors, t)}
+          style={{ height: CHART_HEIGHT }}
+          onEvents={{
+            click: (params: any) => {
+              if (typeof params?.dataIndex === 'number') {
+                const row = activityByProject[params.dataIndex];
+                if (row) onActivityProjectClick(row.projectId);
+              }
+            },
+          }}
+        />
+      )}
+    </Card>
+  );
+}
 
-      <Card padding="normal">
-        <h3 className="h-card flex items-center gap-2 mb-1">
-          <BarChart3 size={16} className="text-muted" />
-          {t('monitoring:charts.wbsTitle')}
-        </h3>
-        {loading || !data ? (
-          <Skeleton height={CHART_HEIGHT} />
-        ) : data.wbsProgress.length === 0 ? (
-          <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noWbs')}</p>
-        ) : (
-          <ReactECharts
-            option={buildWbsProgressOption(data, colors)}
-            style={{ height: CHART_HEIGHT }}
-            onEvents={{
-              click: (params: any) => {
-                if (typeof params?.dataIndex === 'number') {
-                  const p = data.wbsProgress[params.dataIndex];
-                  if (p) onProjectClick(p.projectId);
-                }
-              },
-            }}
-          />
-        )}
-      </Card>
-
-      {children}
-    </section>
+// WBS 진척률 — 프로젝트별 가로 막대(클릭 시 대시보드로 이동).
+export function WbsProgressCard({
+  data, loading, onProjectClick,
+}: GridCardProps & { onProjectClick: (id: number) => void }) {
+  const { t } = useTranslation();
+  const theme = useThemeMode();
+  const colors = getChartColors(theme);
+  return (
+    <Card padding="normal">
+      <h3 className="h-card flex items-center gap-2 mb-1">
+        <BarChart3 size={16} className="text-muted" />
+        {t('monitoring:charts.wbsTitle')}
+      </h3>
+      {loading || !data ? (
+        <Skeleton height={CHART_HEIGHT} />
+      ) : data.wbsProgress.length === 0 ? (
+        <p className="text-sm text-muted py-12 text-center">{t('monitoring:charts.noWbs')}</p>
+      ) : (
+        <ReactECharts
+          option={buildWbsProgressOption(data, colors)}
+          style={{ height: CHART_HEIGHT }}
+          onEvents={{
+            click: (params: any) => {
+              if (typeof params?.dataIndex === 'number') {
+                const p = data.wbsProgress[params.dataIndex];
+                if (p) onProjectClick(p.projectId);
+              }
+            },
+          }}
+        />
+      )}
+    </Card>
   );
 }
 

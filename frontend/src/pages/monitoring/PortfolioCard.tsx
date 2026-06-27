@@ -6,13 +6,14 @@ import type { PortfolioRollup } from '../../types';
 interface Props {
   data: PortfolioRollup | null;
   loading: boolean;
+  className?: string;
 }
 
 // 카테고리별 포트폴리오 롤업 — 프로젝트수·WBS진척·미결이슈·자원수요·위험을 한 행으로. 관리자 한눈 뷰.
-export function PortfolioCard({ data, loading }: Props) {
+export function PortfolioCard({ data, loading, className = '' }: Props) {
   const { t } = useTranslation();
   return (
-    <Card padding="normal">
+    <Card padding="normal" className={className}>
       <h3 className="h-card flex items-center gap-2 mb-2">
         <LayoutGrid size={16} className="text-muted" />
         {t('monitoring:portfolio.title')}

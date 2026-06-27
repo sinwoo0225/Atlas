@@ -9,7 +9,14 @@ import { worklogApi } from '../api/worklog';
 import { loadSettings } from '../store/settings';
 import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
-import { MonitoringChartGrid } from './monitoring/MonitoringChartGrid';
+import {
+  MonitoringChartGrid,
+  StatusBreakdownCard,
+  IssueMatrixCard,
+  MilestoneCard,
+  ActivityByProjectCard,
+  WbsProgressCard,
+} from './monitoring/MonitoringChartGrid';
 import { DeadlineCalendar } from './monitoring/DeadlineCalendar';
 import { KanbanBoard } from './monitoring/KanbanBoard';
 import { MonitoringRiskCard } from './monitoring/MonitoringRiskCard';
@@ -269,20 +276,24 @@ export function MonitoringPage() {
 
       {tab === 'overview' && (
         <div className="space-y-4">
-          <AttentionFeedCard data={attention} loading={loading} onSelectTab={(tb) => setTab(tb as MonitoringTab)} />
-          <PortfolioCard data={portfolio} loading={loading} />
+          {/* 상단: 좌=포트폴리오(넓게) · 우=주의(좁게) 한 행. 카드를 그리드 셀로 직접 두어
+              기본 stretch 정렬로 두 카드 높이를 더 높은 쪽에 맞춤. */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <PortfolioCard className="lg:col-span-2" data={portfolio} loading={loading} />
+            <AttentionFeedCard data={attention} loading={loading} onSelectTab={(tb) => setTab(tb as MonitoringTab)} />
+          </div>
           <MonitoringRiskCard risk={risk} />
-          <MonitoringChartGrid
-            data={charts}
-            activityByProject={activityByProject}
-            loading={loading}
-            onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)}
-            onActivityProjectClick={(id) => navigate(`/activity?projectId=${id}`)}
-          >
-            <CategoryBreakdownCard data={categories} loading={loading} />
+          {/* 하단 9개 카드 3×3: 행1=포트폴리오 요약 / 행2=진척·일정 / 행3=리스크·흐름 */}
+          <MonitoringChartGrid>
             <OverviewKpiCard charts={charts} openIssues={openIssues} loading={loading} />
-            <StaleProjectsCard data={stale} loading={loading} />
+            <StatusBreakdownCard data={charts} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)} />
+            <CategoryBreakdownCard data={categories} loading={loading} />
+            <WbsProgressCard data={charts} loading={loading} onProjectClick={(id) => navigate(`/projects/${id}/dashboard`)} />
+            <ActivityByProjectCard activityByProject={activityByProject} loading={loading} onActivityProjectClick={(id) => navigate(`/activity?projectId=${id}`)} />
+            <MilestoneCard data={charts} loading={loading} />
+            <IssueMatrixCard data={charts} loading={loading} />
             <AgingWipCard data={agingWip} loading={loading} />
+            <StaleProjectsCard data={stale} loading={loading} />
           </MonitoringChartGrid>
         </div>
       )}

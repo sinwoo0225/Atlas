@@ -51,5 +51,11 @@
     "anchorDate": "시작 기준일",
     "anchorHint": "작업 날짜를 이 날짜 기준으로 계산",
     "skipWeekends": "주말(토·일) 제외"
+  },
+  "preview": {
+    "title": "등록될 작업",
+    "untitled": "(이름 없음)",
+    "days": "{{count}}일",
+    "empty": "작업이 없습니다."
   }
 }

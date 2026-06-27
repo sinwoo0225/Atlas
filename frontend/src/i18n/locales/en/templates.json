@@ -51,5 +51,11 @@
     "anchorDate": "Start anchor date",
     "anchorHint": "Task dates are computed relative to this date",
     "skipWeekends": "Exclude weekends (Sat·Sun)"
+  },
+  "preview": {
+    "title": "Tasks to be created",
+    "untitled": "(untitled)",
+    "days": "{{count}}d",
+    "empty": "No tasks."
   }
 }

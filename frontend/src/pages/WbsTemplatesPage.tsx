@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Eye, X, Save, ClipboardList, Flag, ChevronRight, 
 import { Button, Card, Modal, Badge, EmptyState, FormField, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsTemplatesApi } from '../api/wbsTemplates';
+import { WbsTemplateTreePreview } from '../components/WbsTemplateTreePreview';
 import type { WbsTemplate, WbsTemplateSummary, WbsTemplateNode } from '../types';
 
 const importanceOptions = [
@@ -228,6 +229,11 @@ function TemplateEditor({ initial, onClose, onSaved }: {
               title={t('templates:editor.emptyTitle')}
               description={readOnly ? undefined : t('templates:editor.emptyDesc')}
             />
+          ) : readOnly ? (
+            // 보기 모드 — 작업명을 주 텍스트로 보이는 읽기전용 미리보기(담당·기간은 보조 칩).
+            <div className="border border-default rounded-md p-3">
+              <WbsTemplateTreePreview nodes={nodes} />
+            </div>
           ) : (
             <div className="border border-default rounded-md p-2">
               {nodes.map((n, i) => (

@@ -43,8 +43,8 @@ const projectNavItems = [
   { path: 'wbs', key: 'wbs' },
   { path: 'worklog', key: 'worklog' },
   { path: 'issues', key: 'issues' },
-  { path: 'changelogs', key: 'changelogs' },
   { path: 'meetings', key: 'meetings' },
+  { path: 'changelogs', key: 'changelogs' },
   { path: 'devinfo', key: 'devinfo' },
   { path: 'map', key: 'map' },
 ];
