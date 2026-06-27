@@ -135,7 +135,7 @@ function DevInfoForm({
       open
       onClose={onCancel}
       title={initial ? t('devinfo:form.editTitle') : t('devinfo:form.newTitle')}
-      size="xxl"
+      size="6xl"
       fixedHeight
       dirty={dirty}
       footer={
@@ -145,183 +145,191 @@ function DevInfoForm({
         </>
       }
     >
-      <div className="flex-1 min-h-0 flex flex-col -mx-2 px-2 gap-4">
-        <FormField label={t('devinfo:form.title')} required>
-          <input value={form.title} onChange={(e) => set('title', e.target.value)} className={inputClass} />
-        </FormField>
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[20rem_1fr] gap-4 -mx-2 px-2">
+        {/* 왼쪽 — 공통: 제목·타입·태그 */}
+        <div className="flex flex-col gap-4 min-h-0 overflow-y-auto">
+          <p className="text-xs text-muted font-semibold uppercase tracking-wide shrink-0">{t('devinfo:form.colCommon')}</p>
+          <FormField label={t('devinfo:form.title')} required>
+            <input value={form.title} onChange={(e) => set('title', e.target.value)} className={inputClass} />
+          </FormField>
 
-        <div>
-          <label className="block text-xs text-muted font-medium mb-1">{t('devinfo:form.type')}</label>
-          <div className="flex gap-2">
-            {(['Markdown', 'File', 'Link', 'GitRepo'] as DevInfoType[]).map((dt) => {
-              const Icon = typeIcon[dt];
-              return (
-                <Button
-                  key={dt}
-                  variant={form.type === dt ? 'primary' : 'secondary'}
-                  size="md"
-                  onClick={() => set('type', dt)}
-                  leadingIcon={<Icon size={14} />}
-                >
-                  {dt}
-                </Button>
-              );
-            })}
+          <div>
+            <label className="block text-xs text-muted font-medium mb-1">{t('devinfo:form.type')}</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(['Markdown', 'File', 'Link', 'GitRepo'] as DevInfoType[]).map((dt) => {
+                const Icon = typeIcon[dt];
+                return (
+                  <Button
+                    key={dt}
+                    variant={form.type === dt ? 'primary' : 'secondary'}
+                    size="md"
+                    onClick={() => set('type', dt)}
+                    leadingIcon={<Icon size={14} />}
+                  >
+                    {dt}
+                  </Button>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        {form.type === 'Markdown' && (
-          <FormField label={t('devinfo:form.contentMd')} hint={t('devinfo:form.contentMdHint')} className="flex-1 min-h-0">
-            <textarea
-              value={form.content}
-              onChange={(e) => set('content', e.target.value)}
-              onKeyDown={(e) => applyTextareaTab(e, (next) => set('content', next))}
-              className={`${inputClass} font-mono flex-1 min-h-0`}
+          <FormField label={t('devinfo:form.tags')} hint={t('devinfo:form.tagsHint')}>
+            <TagSuggestionInput
+              value={form.tags}
+              onChange={(v) => set('tags', v)}
+              suggestions={availableTags}
+              placeholder={t('devinfo:form.tagsPlaceholder')}
             />
           </FormField>
-        )}
+        </div>
 
-        {form.type === 'File' && (
-          <>
-            <FormField label={t('devinfo:form.storageMode')}>
-              <div className="flex flex-col gap-2">
-                <label className="flex items-start gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="storageMode"
-                    checked={form.storageMode === 'Copy'}
-                    onChange={() => { set('storageMode', 'Copy'); set('filePath', ''); }}
-                    className="mt-1"
-                  />
-                  <span className="text-sm">
-                    <span className="text-primary font-medium">{t('devinfo:form.copyMode')}</span>
-                    <span className="text-xs text-muted ml-2">{t('devinfo:form.copyModeRec')}</span>
-                    <span className="block text-xs text-muted">{t('devinfo:form.copyModeDesc')}</span>
-                  </span>
-                </label>
-                <label className={`flex items-start gap-2 ${referenceForbidden ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
-                  <input
-                    type="radio"
-                    name="storageMode"
-                    checked={form.storageMode === 'Reference'}
-                    disabled={referenceForbidden}
-                    onChange={() => { set('storageMode', 'Reference'); set('filePath', ''); }}
-                    className="mt-1"
-                  />
-                  <span className="text-sm">
-                    <span className="text-primary font-medium">{t('devinfo:form.refMode')}</span>
-                    <span className="block text-xs text-muted">{t('devinfo:form.refModeDesc')}</span>
-                    {referenceForbidden && (
-                      <span className="block text-xs text-on-warning mt-1">{t('devinfo:form.refModeClientWarn')}</span>
-                    )}
-                  </span>
-                </label>
-              </div>
+        {/* 오른쪽 — 선택한 타입별 화면 */}
+        <div className="flex flex-col gap-4 min-h-0">
+          <p className="text-xs text-muted font-semibold uppercase tracking-wide shrink-0">{t('devinfo:form.colDetail')}</p>
+          {form.type === 'Markdown' && (
+            <FormField label={t('devinfo:form.contentMd')} hint={t('devinfo:form.contentMdHint')} className="flex-1 min-h-0">
+              <textarea
+                value={form.content}
+                onChange={(e) => set('content', e.target.value)}
+                onKeyDown={(e) => applyTextareaTab(e, (next) => set('content', next))}
+                className={`${inputClass} font-mono flex-1 min-h-0`}
+              />
             </FormField>
+          )}
 
-            <FormField label={t('devinfo:form.filePath')}>
+          {form.type === 'File' && (
+            <>
+              <FormField label={t('devinfo:form.storageMode')}>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="storageMode"
+                      checked={form.storageMode === 'Copy'}
+                      onChange={() => { set('storageMode', 'Copy'); set('filePath', ''); }}
+                      className="mt-1"
+                    />
+                    <span className="text-sm">
+                      <span className="text-primary font-medium">{t('devinfo:form.copyMode')}</span>
+                      <span className="text-xs text-muted ml-2">{t('devinfo:form.copyModeRec')}</span>
+                      <span className="block text-xs text-muted">{t('devinfo:form.copyModeDesc')}</span>
+                    </span>
+                  </label>
+                  <label className={`flex items-start gap-2 ${referenceForbidden ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                    <input
+                      type="radio"
+                      name="storageMode"
+                      checked={form.storageMode === 'Reference'}
+                      disabled={referenceForbidden}
+                      onChange={() => { set('storageMode', 'Reference'); set('filePath', ''); }}
+                      className="mt-1"
+                    />
+                    <span className="text-sm">
+                      <span className="text-primary font-medium">{t('devinfo:form.refMode')}</span>
+                      <span className="block text-xs text-muted">{t('devinfo:form.refModeDesc')}</span>
+                      {referenceForbidden && (
+                        <span className="block text-xs text-on-warning mt-1">{t('devinfo:form.refModeClientWarn')}</span>
+                      )}
+                    </span>
+                  </label>
+                </div>
+              </FormField>
+
+              <FormField label={t('devinfo:form.filePath')}>
+                <div className="flex gap-2">
+                  <input
+                    value={form.filePath}
+                    onChange={(e) => set('filePath', e.target.value)}
+                    placeholder={form.storageMode === 'Reference' ? t('devinfo:form.filePathPlaceholderRef') : t('devinfo:form.filePathPlaceholderCopy')}
+                    className={inputClass}
+                    readOnly={form.storageMode === 'Copy'}
+                  />
+                  {form.storageMode === 'Copy' ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      leadingIcon={<Upload size={16} />}
+                    >
+                      {uploading ? t('devinfo:form.uploading') : t('devinfo:form.browseUpload')}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={async () => {
+                        const path = await pickFile({ title: t('devinfo:form.pickFileTitle') });
+                        if (path) set('filePath', path);
+                      }}
+                      disabled={!bridgeAvailable}
+                      leadingIcon={<FolderOpen size={16} />}
+                    >
+                      {t('devinfo:form.pickFile')}
+                    </Button>
+                  )}
+                </div>
+                {form.storageMode === 'Reference' && !bridgeAvailable && (
+                  <p className="text-xs text-muted mt-1">{t('devinfo:form.nativeOnlyHint')}</p>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleFileChosen(f);
+                  }}
+                />
+              </FormField>
+            </>
+          )}
+
+          {form.type === 'Link' && (
+            <FormField label={t('devinfo:form.url')}>
+              <input
+                value={form.url}
+                onChange={(e) => set('url', e.target.value)}
+                placeholder="https://..."
+                className={inputClass}
+              />
+            </FormField>
+          )}
+
+          {form.type === 'GitRepo' && (
+            <FormField label={t('devinfo:form.gitRepoPath')}>
               <div className="flex gap-2">
                 <input
                   value={form.filePath}
-                  onChange={(e) => set('filePath', e.target.value)}
-                  placeholder={form.storageMode === 'Reference' ? t('devinfo:form.filePathPlaceholderRef') : t('devinfo:form.filePathPlaceholderCopy')}
+                  onChange={(e) => { set('filePath', e.target.value); setGitCheck(null); }}
+                  onBlur={(e) => validateGitPath(e.target.value)}
+                  placeholder={t('devinfo:form.gitRepoPlaceholder')}
                   className={inputClass}
-                  readOnly={form.storageMode === 'Copy'}
                 />
-                {form.storageMode === 'Copy' ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    leadingIcon={<Upload size={16} />}
-                  >
-                    {uploading ? t('devinfo:form.uploading') : t('devinfo:form.browseUpload')}
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={async () => {
-                      const path = await pickFile({ title: t('devinfo:form.pickFileTitle') });
-                      if (path) set('filePath', path);
-                    }}
-                    disabled={!bridgeAvailable}
-                    leadingIcon={<FolderOpen size={16} />}
-                  >
-                    {t('devinfo:form.pickFile')}
+                {bridgeAvailable && !isClientMode && (
+                  <Button variant="secondary" onClick={handlePickGitFolder} leadingIcon={<FolderGit2 size={16} />} className="shrink-0">
+                    {t('devinfo:form.browse')}
                   </Button>
                 )}
               </div>
-              {form.storageMode === 'Reference' && !bridgeAvailable && (
-                <p className="text-xs text-muted mt-1">{t('devinfo:form.nativeOnlyHint')}</p>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handleFileChosen(f);
-                }}
-              />
-            </FormField>
-          </>
-        )}
-
-        {form.type === 'Link' && (
-          <FormField label={t('devinfo:form.url')}>
-            <input
-              value={form.url}
-              onChange={(e) => set('url', e.target.value)}
-              placeholder="https://..."
-              className={inputClass}
-            />
-          </FormField>
-        )}
-
-        {form.type === 'GitRepo' && (
-          <FormField label={t('devinfo:form.gitRepoPath')}>
-            <div className="flex gap-2">
-              <input
-                value={form.filePath}
-                onChange={(e) => { set('filePath', e.target.value); setGitCheck(null); }}
-                onBlur={(e) => validateGitPath(e.target.value)}
-                placeholder={t('devinfo:form.gitRepoPlaceholder')}
-                className={inputClass}
-              />
-              {bridgeAvailable && !isClientMode && (
-                <Button variant="secondary" onClick={handlePickGitFolder} leadingIcon={<FolderGit2 size={16} />} className="shrink-0">
-                  {t('devinfo:form.browse')}
-                </Button>
-              )}
-            </div>
-            {isClientMode ? (
-              <p className="text-xs text-muted mt-1">{t('devinfo:form.gitClientHint')}</p>
-            ) : gitChecking ? (
-              <p className="text-xs text-muted mt-1">{t('devinfo:form.gitChecking')}</p>
-            ) : gitCheck ? (
-              gitCheck.valid ? (
-                <p className="text-xs text-on-success mt-1 flex items-center gap-1">
-                  <Check size={12} /> {t('devinfo:form.gitValid')}
-                </p>
+              {isClientMode ? (
+                <p className="text-xs text-muted mt-1">{t('devinfo:form.gitClientHint')}</p>
+              ) : gitChecking ? (
+                <p className="text-xs text-muted mt-1">{t('devinfo:form.gitChecking')}</p>
+              ) : gitCheck ? (
+                gitCheck.valid ? (
+                  <p className="text-xs text-on-success mt-1 flex items-center gap-1">
+                    <Check size={12} /> {t('devinfo:form.gitValid')}
+                  </p>
+                ) : (
+                  <p className="text-xs text-on-danger mt-1 flex items-center gap-1">
+                    <AlertCircle size={12} /> {gitCheck.error}
+                  </p>
+                )
               ) : (
-                <p className="text-xs text-on-danger mt-1 flex items-center gap-1">
-                  <AlertCircle size={12} /> {gitCheck.error}
-                </p>
-              )
-            ) : (
-              <p className="text-xs text-muted mt-1">{t('devinfo:form.gitHint')}</p>
-            )}
-          </FormField>
-        )}
-
-        <FormField label={t('devinfo:form.tags')} hint={t('devinfo:form.tagsHint')}>
-          <TagSuggestionInput
-            value={form.tags}
-            onChange={(v) => set('tags', v)}
-            suggestions={availableTags}
-            placeholder={t('devinfo:form.tagsPlaceholder')}
-          />
-        </FormField>
+                <p className="text-xs text-muted mt-1">{t('devinfo:form.gitHint')}</p>
+              )}
+            </FormField>
+          )}
+        </div>
       </div>
     </Modal>
   );

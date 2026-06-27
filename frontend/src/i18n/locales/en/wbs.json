@@ -49,6 +49,9 @@
   "form": {
     "addTitle": "Add task",
     "editTitle": "Edit task",
+    "colMain": "Basics & schedule",
+    "colRelations": "Relations",
+    "colDetail": "Details",
     "name": "Task name",
     "assignee": "Assignee (multiple: separate with Enter / comma)",
     "assigneePlaceholder": "Type a name then Enter / comma, or pick from the list",

@@ -12,6 +12,8 @@
   "form": {
     "newTitle": "업무 정보 추가",
     "editTitle": "정보 수정",
+    "colCommon": "공통",
+    "colDetail": "내용",
     "title": "제목",
     "type": "타입",
     "contentMd": "내용 (Markdown)",

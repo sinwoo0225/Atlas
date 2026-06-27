@@ -12,6 +12,8 @@
   "form": {
     "newTitle": "Add work info",
     "editTitle": "Edit info",
+    "colCommon": "Common",
+    "colDetail": "Content",
     "title": "Title",
     "type": "Type",
     "contentMd": "Content (Markdown)",

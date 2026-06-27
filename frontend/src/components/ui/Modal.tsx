@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 import { Card } from './Card';
 import { confirmDialog } from './ConfirmDialog';
 
-type Size = 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | 'wide';
+type Size = 'sm' | 'md' | 'lg' | 'xl' | 'xxl' | '6xl' | '7xl' | 'wide';
 
 interface ModalProps {
   open: boolean;
@@ -30,6 +30,8 @@ const sizeCls: Record<Size, string> = {
   lg:   'max-w-2xl',
   xl:   'max-w-3xl',
   xxl:  'max-w-5xl',
+  '6xl': 'max-w-6xl',
+  '7xl': 'max-w-7xl',
   wide: 'max-w-[95vw]',
 };
 

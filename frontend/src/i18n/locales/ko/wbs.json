@@ -49,6 +49,9 @@
   "form": {
     "addTitle": "작업 추가",
     "editTitle": "작업 수정",
+    "colMain": "기본·일정",
+    "colRelations": "관계",
+    "colDetail": "상세",
     "name": "작업명",
     "assignee": "담당자 (여러 명: Enter / 콤마로 구분)",
     "assigneePlaceholder": "이름 입력 후 Enter / 콤마, 또는 목록에서 선택",

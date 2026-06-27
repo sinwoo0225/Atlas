@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
@@ -61,6 +62,109 @@ type WbsFormData = {
   parentId: number | null; actualStartDate: string; completedDate: string; estimateHours: string;
 };
 
+const PICKER_VIEWPORT_MARGIN = 8;
+
+// 부모 작업 선택 — 트리 드롭다운을 portal+fixed 로 띄워 컬럼 overflow/높이에 안 잡히게 한다(CategoryCombobox 패턴).
+// 버튼 아래로 펼치되 뷰포트 하단 공간 부족 시 위로 flip. 스크롤/리사이즈/외부클릭 시 닫는다.
+function ParentPickerField({ value, items, excludeIds, descendantCount, onSelect }: {
+  value: number | null;
+  items: WbsItem[];
+  excludeIds: Set<number>;
+  descendantCount: number;
+  onSelect: (id: number | null) => void;
+}) {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const [placement, setPlacement] = useState<{ top: number; left: number; width: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const openMenu = () => {
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+    setPlacement(null);
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const node = e.target as Node;
+      if (btnRef.current?.contains(node) || menuRef.current?.contains(node)) return;
+      setOpen(false);
+    };
+    // 드롭다운 내부(트리) 스크롤은 무시 — 바깥(모달/페이지)이 스크롤돼 앵커가 어긋날 때만 닫는다.
+    const onScroll = (e: Event) => {
+      const node = e.target as Node | null;
+      if (node && menuRef.current?.contains(node)) return;
+      setOpen(false);
+    };
+    const onResize = () => setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', onResize);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [open]);
+
+  // 메뉴 높이 측정 후 뷰포트 하단 충돌 시 위로 flip.
+  useLayoutEffect(() => {
+    if (!open || !rect || !menuRef.current) return;
+    const menuH = menuRef.current.offsetHeight;
+    const top = rect.bottom + 4 + menuH + PICKER_VIEWPORT_MARGIN > window.innerHeight
+      ? Math.max(PICKER_VIEWPORT_MARGIN, rect.top - menuH - 4)
+      : rect.bottom + 4;
+    setPlacement({ top, left: rect.left, width: rect.width });
+  }, [open, rect, descendantCount]);
+
+  return (
+    <FormField label={t('wbs:form.parent')}>
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        className={`${inputClass} text-left flex items-center justify-between`}
+      >
+        <span className={value == null ? 'text-muted' : 'text-primary'}>
+          {findItemName(value, items)}
+        </span>
+        {open ? <ChevronDown size={14} className="text-muted" /> : <ChevronRight size={14} className="text-muted" />}
+      </button>
+      {open && rect && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: 'fixed',
+            top: placement?.top ?? rect.bottom + 4,
+            left: placement?.left ?? rect.left,
+            width: placement?.width ?? rect.width,
+            visibility: placement ? 'visible' : 'hidden',
+          }}
+          className="z-50 flex flex-col gap-1 rounded-md border border-default bg-surface-2 p-2 shadow-lg"
+        >
+          <div className="max-h-64 overflow-auto overscroll-contain">
+            <WbsTreePicker
+              items={items}
+              selectedId={value}
+              excludeIds={excludeIds}
+              onSelect={(id) => { onSelect(id); setOpen(false); }}
+            />
+          </div>
+          {descendantCount > 0 && (
+            <p className="text-xs text-muted shrink-0">
+              {t('wbs:form.descendantHint', { count: descendantCount })}
+            </p>
+          )}
+        </div>,
+        document.body,
+      )}
+    </FormField>
+  );
+}
+
 function WbsItemForm({
   projectId, versionId, parentId, initial, resources, allItems, allIssues, allDevInfo,
   onRefreshIssues, onRefreshDevInfo, onLinksChanged, onSave, onCancel,
@@ -93,7 +197,6 @@ function WbsItemForm({
   // 동시성 토큰 (사이클 12) — 충돌 시 [서버 값 보기] 액션으로 갱신.
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
   const [notesEditing, setNotesEditing] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
   const set = <K extends keyof WbsFormData>(k: K, v: WbsFormData[K]) => setForm((f) => ({ ...f, [k]: v }));
 
   // 자기 자신 + 자손은 부모 picker 에서 비활성. 신규(create) 는 자기 자신이 없으므로 빈 Set.
@@ -183,7 +286,7 @@ function WbsItemForm({
       open
       onClose={onCancel}
       title={initial ? t('wbs:form.editTitle') : t('wbs:form.addTitle')}
-      size="xxl"
+      size="7xl"
       fixedHeight
       dirty={dirty}
       footer={
@@ -193,9 +296,12 @@ function WbsItemForm({
         </>
       }
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 min-h-0">
-          {/* 좌측 - 기본 필드. picker 펼침 시 picker 영역이 남은 공간 다 차지 (flex-1). */}
+      <div className={`grid grid-cols-1 gap-4 flex-1 min-h-0 ${initial ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
+          {/* 1열 — 기본·일정. 스칼라 필드들. overflow 미설정 — InfoTip 말풍선(absolute)이 안 잘리도록(원래 좌측 컬럼 동작). */}
           <div className="flex flex-col gap-3 min-h-0">
+            {initial && (
+              <p className="text-xs text-muted font-semibold uppercase tracking-wide shrink-0">{t('wbs:form.colMain')}</p>
+            )}
             <FormField label={t('wbs:form.name')} required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
@@ -207,15 +313,14 @@ function WbsItemForm({
                 placeholder={t('wbs:form.assigneePlaceholder')}
               />
             </FormField>
-            <div className="grid grid-cols-2 gap-3">
-              <FormField label={t('wbs:form.startDate')}>
-                <input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className={inputClass} />
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0 [&_input]:min-w-0 [&_select]:min-w-0">
+              <FormField label={t('wbs:form.status')}>
+                <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
+                  <option value="Planned">{t('status:wbs.Planned')}</option>
+                  <option value="InProgress">{t('status:wbs.InProgress')}</option>
+                  <option value="Done">{t('status:wbs.Done')}</option>
+                </select>
               </FormField>
-              <FormField label={t('wbs:form.endDate')}>
-                <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
-              </FormField>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <FormField label={t('wbs:form.importance')}>
                 <select value={form.importance} onChange={(e) => set('importance', e.target.value)} className={inputClass}>
                   <option value="3">{t('status:importance.High')}</option>
@@ -223,25 +328,17 @@ function WbsItemForm({
                   <option value="1">{t('status:importance.Low')}</option>
                 </select>
               </FormField>
-              <FormField label={t('wbs:form.estimateHours')} help={t('wbs:form.estimateHint')}>
-                <input
-                  type="number" min={0} step={1}
-                  value={form.estimateHours}
-                  onChange={(e) => set('estimateHours', e.target.value)}
-                  className={inputClass}
-                  placeholder="0"
-                />
+            </div>
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0 [&_input]:min-w-0 [&_select]:min-w-0">
+              <FormField label={t('wbs:form.startDate')}>
+                <input type="date" value={form.startDate} onChange={(e) => set('startDate', e.target.value)} className={inputClass} />
+              </FormField>
+              <FormField label={t('wbs:form.endDate')}>
+                <input type="date" value={form.endDate} onChange={(e) => set('endDate', e.target.value)} className={inputClass} />
               </FormField>
             </div>
-            <FormField label={t('wbs:form.status')}>
-              <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
-                <option value="Planned">{t('status:wbs.Planned')}</option>
-                <option value="InProgress">{t('status:wbs.InProgress')}</option>
-                <option value="Done">{t('status:wbs.Done')}</option>
-              </select>
-            </FormField>
             {/* 실적 일자 — 상태에 따라 활성화. 착수일=진행/완료, 완료일=완료. 그 전엔 비활성(읽기 전용). */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0 [&_input]:min-w-0 [&_select]:min-w-0">
               <FormField label={t('wbs:form.actualStartDate')} help={t('wbs:form.actualStartHint')}>
                 <input
                   type="date"
@@ -261,67 +358,59 @@ function WbsItemForm({
                 />
               </FormField>
             </div>
+            <FormField label={t('wbs:form.estimateHours')} help={t('wbs:form.estimateHint')}>
+              <input
+                type="number" min={0} step={1}
+                value={form.estimateHours}
+                onChange={(e) => set('estimateHours', e.target.value)}
+                className={inputClass}
+                placeholder="0"
+              />
+            </FormField>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.isMilestone} onChange={(e) => set('isMilestone', e.target.checked)} className="rounded" />
               <span className="text-sm text-secondary">{t('wbs:form.milestone')}</span>
             </label>
-            {initial && (
-              <FormField label={t('wbs:form.parent')} className={pickerOpen ? 'flex-1 min-h-0' : 'shrink-0'}>
-                <button
-                  type="button"
-                  onClick={() => setPickerOpen((v) => !v)}
-                  className={`${inputClass} text-left flex items-center justify-between shrink-0`}
-                >
-                  <span className={form.parentId == null ? 'text-muted' : 'text-primary'}>
-                    {findItemName(form.parentId, allItems)}
-                  </span>
-                  {pickerOpen ? <ChevronDown size={14} className="text-muted" /> : <ChevronRight size={14} className="text-muted" />}
-                </button>
-                {pickerOpen && (
-                  <div className="mt-2 flex-1 min-h-0 flex flex-col gap-1">
-                    <div className="flex-1 min-h-0">
-                      <WbsTreePicker
-                        items={allItems}
-                        selectedId={form.parentId}
-                        excludeIds={excludeIds}
-                        onSelect={(id) => { set('parentId', id); setPickerOpen(false); }}
-                      />
-                    </div>
-                    {descendantCount > 0 && (
-                      <p className="text-xs text-muted shrink-0">
-                        {t('wbs:form.descendantHint', { count: descendantCount })}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </FormField>
-            )}
+            {/* 부모 작업 — 생성·수정 모두 선택 가능. 트리는 portal+fixed 오버레이로 1열 위에 솟아남(아래로 펼치되 공간 부족 시 flip). */}
+            <ParentPickerField
+              value={form.parentId}
+              items={allItems}
+              excludeIds={excludeIds}
+              descendantCount={descendantCount}
+              onSelect={(id) => set('parentId', id)}
+            />
           </div>
 
-          {/* 우측 - 관련 Issue (수정 시) + 상세 정보 (마크다운). 마크다운이 세로 가득. */}
+          {/* 2열 — 관계 (수정 모드만). 연관 섹션 4종. 길어지면 열 세로 스크롤. */}
+          {initial && (
+            <div className="flex flex-col gap-3 min-h-0 overflow-y-auto">
+              <p className="text-xs text-muted font-semibold uppercase tracking-wide shrink-0">{t('wbs:form.colRelations')}</p>
+              <RelatedIssuesSection
+                wbsItemId={initial.id}
+                projectId={projectId}
+                allIssues={allIssues}
+                onRefreshIssues={onRefreshIssues}
+                onLinksChanged={onLinksChanged}
+              />
+              <RelatedWorkInfoSection
+                wbsItemId={initial.id}
+                projectId={projectId}
+                allDevInfo={allDevInfo}
+                onRefreshDevInfo={onRefreshDevInfo}
+              />
+              <DependenciesSection
+                wbsItem={initial}
+                allItems={allItems}
+                onChanged={onLinksChanged}
+              />
+              <SubtaskSection projectId={projectId} wbsItem={initial} />
+            </div>
+          )}
+
+          {/* 3열 — 상세 정보 (마크다운). 세로 가득. */}
           <div className="flex flex-col min-h-0 gap-3">
             {initial && (
-              <>
-                <RelatedIssuesSection
-                  wbsItemId={initial.id}
-                  projectId={projectId}
-                  allIssues={allIssues}
-                  onRefreshIssues={onRefreshIssues}
-                  onLinksChanged={onLinksChanged}
-                />
-                <RelatedWorkInfoSection
-                  wbsItemId={initial.id}
-                  projectId={projectId}
-                  allDevInfo={allDevInfo}
-                  onRefreshDevInfo={onRefreshDevInfo}
-                />
-                <DependenciesSection
-                  wbsItem={initial}
-                  allItems={allItems}
-                  onChanged={onLinksChanged}
-                />
-                <SubtaskSection projectId={projectId} wbsItem={initial} />
-              </>
+              <p className="text-xs text-muted font-semibold uppercase tracking-wide shrink-0">{t('wbs:form.colDetail')}</p>
             )}
             <FormField label={t('wbs:form.notes')} className="min-h-0 flex-1">
               {notesEditing || !form.notes ? (
