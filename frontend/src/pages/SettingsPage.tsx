@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
 import {
   Save, Settings as SettingsIcon, FolderOpen, Server, Plug, Keyboard, Sparkles,
-  Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon, FileText,
+  Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon, FileText, Bell,
 } from 'lucide-react';
 import { openShortcutsModal } from '../data/shortcuts';
 import { EULA_KO, EULA_EN } from '../data/eula';
@@ -37,6 +37,8 @@ import {
   NamedIcon,
 } from '../utils/iconRegistry';
 import { useProjectStore } from '../store/useProjectStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { showNotificationToast } from '../components/notifications/toast';
 import { Button, Card, FormField, Modal, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { systemApi, type DataFolderInfo, type DataFolderPreview, type BackupConfig, type BackupStatus, type UpdateConfig, type UpdateStatus } from '../api/system';
@@ -67,11 +69,12 @@ const BRAND_ICON_PRESETS: { file: string; labelKey: string }[] = [
   { file: 'atlas-v2-cute-hills.png', labelKey: 'settings:brandPresets.cuteHills' },
 ];
 
-type SettingsTab = 'appearance' | 'behavior' | 'system' | 'backup';
+type SettingsTab = 'appearance' | 'behavior' | 'notifications' | 'system' | 'backup';
 // label 은 렌더 시점에 t('settings:tabs.'+id) 로 해석 (id 가 곧 i18n 키).
 const SETTINGS_TABS: { id: SettingsTab; icon: typeof Palette }[] = [
   { id: 'appearance', icon: Palette },
   { id: 'behavior', icon: Keyboard },
+  { id: 'notifications', icon: Bell },
   { id: 'system', icon: Server },
   { id: 'backup', icon: Download },
 ];
@@ -84,9 +87,10 @@ export function SettingsPage() {
   const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
     const saved = localStorage.getItem(SETTINGS_TAB_KEY);
-    return saved === 'behavior' || saved === 'system' || saved === 'backup' ? saved : 'appearance';
+    return saved === 'behavior' || saved === 'notifications' || saved === 'system' || saved === 'backup' ? saved : 'appearance';
   });
   const { projects } = useProjectStore();
+  const addNotification = useNotificationStore((s) => s.add);
 
   useEffect(() => {
     // 페이지 진입 시 현재 연결 모드 로드 — DataFolderSection 가시성 결정에도 사용.
@@ -119,6 +123,20 @@ export function SettingsPage() {
 
   const update = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
     setSettings((s) => ({ ...s, [k]: v }));
+  };
+
+  // 알림 설정 — 중첩 객체 부분 갱신 헬퍼.
+  const updateNotif = (patch: Partial<AppSettings['notifications']>) =>
+    setSettings((s) => ({ ...s, notifications: { ...s.notifications, ...patch } }));
+  const updateDeadline = (patch: Partial<AppSettings['notifications']['deadline']>) =>
+    setSettings((s) => ({ ...s, notifications: { ...s.notifications, deadline: { ...s.notifications.deadline, ...patch } } }));
+  const updateDaily = (patch: Partial<AppSettings['notifications']['dailySummary']>) =>
+    setSettings((s) => ({ ...s, notifications: { ...s.notifications, dailySummary: { ...s.notifications.dailySummary, ...patch } } }));
+
+  // 테스트 알림 — 샘플을 패널 적재 + 토스트로 띄워 테마/언어/위치 확인.
+  const handleTestNotification = () => {
+    addNotification({ sourceKey: 'test', severity: 'info', i18nKey: 'notifications:sample' });
+    showNotificationToast({ severity: 'info', i18nKey: 'notifications:sample' });
   };
 
   // '나' 신원 통일 — 작성자 이름을 입력하고 포커스를 벗어나면 같은 이름의 Person 리소스를 찾거나 생성해
@@ -208,12 +226,20 @@ export function SettingsPage() {
       const text = await file.text();
       const parsed = JSON.parse(text);
       // defaults 와 머지해 누락 키 보정 후 저장.
+      const def = getDefaultSettings();
+      const pn = parsed.notifications ?? {};
       const merged: AppSettings = {
-        ...getDefaultSettings(),
+        ...def,
         ...parsed,
-        customColors: { ...getDefaultSettings().customColors, ...(parsed.customColors ?? {}) },
+        customColors: { ...def.customColors, ...(parsed.customColors ?? {}) },
         menuIcons: { ...(parsed.menuIcons ?? {}) },
         entityIcons: { ...(parsed.entityIcons ?? {}) },
+        notifications: {
+          ...def.notifications,
+          ...pn,
+          deadline: { ...def.notifications.deadline, ...(pn.deadline ?? {}) },
+          dailySummary: { ...def.notifications.dailySummary, ...(pn.dailySummary ?? {}) },
+        },
       };
       saveSettings(merged);
       setSettings(merged);
@@ -622,6 +648,130 @@ export function SettingsPage() {
           <Button variant="secondary" onClick={handleClaudeTest} disabled={aiTesting} leadingIcon={<Sparkles size={14} />}>
             {aiTesting ? t('settings:behavior.testing') : t('settings:behavior.test')}
           </Button>
+        </FormField>
+      </Section>
+      </>)}
+
+      {activeTab === 'notifications' && (<>
+      <Section title={t('notifications:settings.title')}>
+        <p className="text-sm text-secondary -mt-1">{t('notifications:settings.description')}</p>
+        <FormField label={t('notifications:settings.enable')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.notifications.enabled}
+              onChange={(e) => updateNotif({ enabled: e.target.checked })}
+            />
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
+          </label>
+        </FormField>
+        <FormField label={t('notifications:settings.pollInterval')} hint={t('notifications:settings.pollIntervalHint')}>
+          <input
+            type="number"
+            min={5}
+            max={1440}
+            value={settings.notifications.pollIntervalMinutes}
+            onChange={(e) => updateNotif({ pollIntervalMinutes: Math.max(5, Number(e.target.value) || 5) })}
+            className={`${inputClass} w-28`}
+            disabled={!settings.notifications.enabled}
+          />
+        </FormField>
+        <FormField label={t('notifications:settings.showWhenMinimized')} hint={t('notifications:settings.showWhenMinimizedHint')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.notifications.showWhenMinimized}
+              onChange={(e) => updateNotif({ showWhenMinimized: e.target.checked })}
+              disabled={!settings.notifications.enabled}
+            />
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
+          </label>
+        </FormField>
+        <FormField label={t('notifications:settings.testButton')} hint={t('notifications:settings.testHint')}>
+          <Button variant="secondary" onClick={handleTestNotification} leadingIcon={<Bell size={14} />}>
+            {t('notifications:settings.testButton')}
+          </Button>
+        </FormField>
+      </Section>
+
+      <Section title={t('notifications:settings.deadline.heading')}>
+        <FormField label={t('notifications:settings.deadline.enable')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.notifications.deadline.enabled}
+              onChange={(e) => updateDeadline({ enabled: e.target.checked })}
+              disabled={!settings.notifications.enabled}
+            />
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
+          </label>
+        </FormField>
+        <FormField label={t('notifications:settings.deadline.scope')}>
+          <select
+            value={settings.notifications.deadline.scope}
+            onChange={(e) => updateDeadline({ scope: e.target.value as 'mine' | 'all' })}
+            className={`${inputClass} w-48`}
+            disabled={!settings.notifications.enabled || !settings.notifications.deadline.enabled}
+          >
+            <option value="mine">{t('notifications:settings.deadline.scopeMine')}</option>
+            <option value="all">{t('notifications:settings.deadline.scopeAll')}</option>
+          </select>
+        </FormField>
+        <FormField label={t('notifications:settings.deadline.withinDays')} hint={t('notifications:settings.deadline.withinDaysHint')}>
+          <input
+            type="number"
+            min={0}
+            max={90}
+            value={settings.notifications.deadline.withinDays}
+            onChange={(e) => updateDeadline({ withinDays: Math.max(0, Number(e.target.value) || 0) })}
+            className={`${inputClass} w-28`}
+            disabled={!settings.notifications.enabled || !settings.notifications.deadline.enabled}
+          />
+        </FormField>
+        <FormField label={t('notifications:settings.deadline.includeOverdue')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.notifications.deadline.includeOverdue}
+              onChange={(e) => updateDeadline({ includeOverdue: e.target.checked })}
+              disabled={!settings.notifications.enabled || !settings.notifications.deadline.enabled}
+            />
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
+          </label>
+        </FormField>
+        <FormField label={t('notifications:settings.deadline.aggregateThreshold')} hint={t('notifications:settings.deadline.aggregateThresholdHint')}>
+          <input
+            type="number"
+            min={1}
+            max={50}
+            value={settings.notifications.deadline.aggregateThreshold}
+            onChange={(e) => updateDeadline({ aggregateThreshold: Math.max(1, Number(e.target.value) || 1) })}
+            className={`${inputClass} w-28`}
+            disabled={!settings.notifications.enabled || !settings.notifications.deadline.enabled}
+          />
+        </FormField>
+      </Section>
+
+      <Section title={t('notifications:settings.dailySummary.heading')}>
+        <FormField label={t('notifications:settings.dailySummary.enable')}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.notifications.dailySummary.enabled}
+              onChange={(e) => updateDaily({ enabled: e.target.checked })}
+              disabled={!settings.notifications.enabled}
+            />
+            <span className="text-sm text-secondary">{t('common:enable')}</span>
+          </label>
+        </FormField>
+        <FormField label={t('notifications:settings.dailySummary.time')}>
+          <input
+            type="time"
+            value={settings.notifications.dailySummary.time}
+            onChange={(e) => updateDaily({ time: e.target.value || '09:00' })}
+            className={`${inputClass} w-32`}
+            disabled={!settings.notifications.enabled || !settings.notifications.dailySummary.enabled}
+          />
         </FormField>
       </Section>
       </>)}

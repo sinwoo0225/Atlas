@@ -1,0 +1,66 @@
+{
+  "bell": {
+    "title": "Notifications",
+    "ariaLabel": "Notifications ({{count}} unread)"
+  },
+  "panel": {
+    "title": "Notifications",
+    "empty": "No notifications.",
+    "markAllRead": "Mark all read",
+    "clearAll": "Clear all"
+  },
+  "deadline": {
+    "overdue": {
+      "title": "{{title}}",
+      "body": "{{days}}d overdue{{project}}"
+    },
+    "dueToday": {
+      "title": "{{title}}",
+      "body": "Due today{{project}}"
+    },
+    "dueSoon": {
+      "title": "{{title}}",
+      "body": "Due in {{days}}d{{project}}"
+    },
+    "aggregate": {
+      "title": "{{count}} deadlines approaching",
+      "body": "Some schedules/issues are due soon. Click to review."
+    }
+  },
+  "dailySummary": {
+    "title": "Time to wrap up today's work",
+    "body": "Due today {{dueToday}} · Overdue {{overdue}} · In progress {{inProgress}}"
+  },
+  "sample": {
+    "title": "Test notification",
+    "body": "Notifications are working."
+  },
+  "settings": {
+    "title": "Notifications",
+    "description": "Get deadline and daily-summary alerts as bottom-right toasts.",
+    "enable": "Enable notifications",
+    "pollInterval": "Check interval (min)",
+    "pollIntervalHint": "How often approaching deadlines are checked. Minimum 5 minutes.",
+    "showWhenMinimized": "Show when window is minimized",
+    "showWhenMinimizedHint": "On the desktop app, show alerts even when the window is minimized. Not recorded in the Windows notification center.",
+    "deadline": {
+      "heading": "Approaching deadlines",
+      "enable": "Enable",
+      "scope": "Scope",
+      "scopeMine": "My tasks only",
+      "scopeAll": "All tasks",
+      "withinDays": "Within (days)",
+      "withinDaysHint": "How many days before the due date to alert.",
+      "includeOverdue": "Also alert overdue items",
+      "aggregateThreshold": "Bundle threshold (items)",
+      "aggregateThresholdHint": "If new approaching items exceed this, show a single bundled toast."
+    },
+    "dailySummary": {
+      "heading": "Daily work summary",
+      "enable": "Enable",
+      "time": "Time"
+    },
+    "testButton": "Send test notification",
+    "testHint": "Fire a sample notification to verify toast, panel, theme and language."
+  }
+}

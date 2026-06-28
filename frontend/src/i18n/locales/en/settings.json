@@ -2,6 +2,7 @@
   "tabs": {
     "appearance": "Appearance",
     "behavior": "Behavior",
+    "notifications": "Notifications",
     "system": "System",
     "backup": "Backup & data"
   },

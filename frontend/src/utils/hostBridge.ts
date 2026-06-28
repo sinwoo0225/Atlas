@@ -372,6 +372,63 @@ export function requestActiveWindows(): void {
   bridge.postMessage({ type: 'activeWindowsRequest' });
 }
 
+// ===== 알림 토스트 (최소화 시 네이티브 always-on-top 창) =====
+// 메인 앱(엔진)이 창 최소화 상태에서 토스트를 호스트로 보낸다 → 호스트가 ToastForm(우리 소유 창)에
+// 전달해 우하단에 표시. 우리 창이라 Windows 알림 센터에는 기록되지 않는다. 브릿지 없으면 no-op.
+export interface HostToastPayload {
+  severity: string;
+  i18nKey: string;
+  i18nParams?: Record<string, unknown>;
+}
+
+// 메인 앱 → 호스트(→ 토스트 창). fire-and-forget.
+export function showHostToast(p: HostToastPayload): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'showToast', severity: p.severity, i18nKey: p.i18nKey, i18nParams: p.i18nParams ?? {} });
+}
+
+// 토스트 창(/notify-toast) 전용 — 호스트가 전달한 토스트 payload 구독. 반환값 호출로 해제.
+export function onHostToast(cb: (p: HostToastPayload) => void): () => void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return () => {};
+  const handler = (e: MessageEvent) => {
+    const d = e.data as (HostToastPayload & { type?: string }) | null | undefined;
+    if (!d || typeof d !== 'object' || d.type !== 'showToast') return;
+    cb({ severity: d.severity, i18nKey: d.i18nKey, i18nParams: d.i18nParams });
+  };
+  bridge.addEventListener('message', handler);
+  return () => bridge.removeEventListener('message', handler);
+}
+
+// 토스트 창 → 호스트: React 마운트(메시지 리스너 부착) 완료 신호. 호스트가 대기 중 payload 를 flush.
+export function notifyToastReady(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'toastReady' });
+}
+
+// 토스트 창 → 호스트: 표시 중인 토스트가 모두 사라짐 → 호스트가 창을 숨김.
+export function notifyToastEmpty(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'toastEmpty' });
+}
+
+// 메인 창 최소화/복원 통지 구독 — 호스트가 WindowState 변화 시 push. 반환값 호출로 해제.
+// (WebView2 가 최소화 시 document.visibilityState 를 바꾸지 않으므로 이 신호가 신뢰 가능)
+export function onWindowMinimized(cb: (minimized: boolean) => void): () => void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return () => {};
+  const handler = (e: MessageEvent) => {
+    const d = e.data as { type?: string; minimized?: boolean } | null | undefined;
+    if (!d || typeof d !== 'object' || d.type !== 'windowState') return;
+    cb(!!d.minimized);
+  };
+  bridge.addEventListener('message', handler);
+  return () => bridge.removeEventListener('message', handler);
+}
+
 export function testServerConnection(url: string, apiKey: string | null): Promise<TestConnectionResult | null> {
   return new Promise((resolve) => {
     const bridge = window.chrome?.webview;

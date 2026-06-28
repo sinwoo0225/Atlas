@@ -4,6 +4,7 @@ import { Toaster, toast } from 'sonner';
 import type { ThemeMode } from './store/settings';
 import { Layout } from './components/Layout';
 import { WidgetDashboard } from './pages/WidgetDashboard';
+import { NotifyToastWindow } from './pages/NotifyToastWindow';
 import { ProjectList } from './pages/ProjectList';
 import { Dashboard } from './pages/Dashboard';
 import { WbsPage } from './pages/WbsPage';
@@ -25,6 +26,7 @@ import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
 import { applyAppearance, loadSettings, patchSettings, seedDefaultAuthorIfEmpty, resolveToasterTheme } from './store/settings';
+import { useNotificationEngine } from './notifications/useNotificationEngine';
 import i18n from './i18n';
 import { getMachineAccount } from './utils/hostBridge';
 import { systemApi, EXPECTED_API_VERSION } from './api/system';
@@ -50,6 +52,9 @@ async function ensureMyResourceId(): Promise<void> {
 // 위젯(/widget)은 이 셸 밖에서 독립 렌더되므로 핑·업데이트 토스트·커맨드팔레트가 뜨지 않는다.
 function MainShell() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadSettings().theme);
+
+  // 알림 엔진 — 마감 임박/일일 정리 폴링 + 토스트 디스패치(메인 셸 전용).
+  useNotificationEngine();
 
   useEffect(() => {
     const s = loadSettings();
@@ -124,6 +129,8 @@ export default function App() {
       <Routes>
         {/* 위젯 모드: 사이드바·전역 토스트 없는 독립 셸 (별도 WebView2 창에서 로드) */}
         <Route path="/widget" element={<WidgetDashboard />} />
+        {/* 알림 토스트 창: 최소화 시 노출되는 네이티브 always-on-top 창이 로드 (엔진 미실행) */}
+        <Route path="/notify-toast" element={<NotifyToastWindow />} />
         <Route element={<MainShell />}>
           <Route path="/" element={<ProjectList />} />
           <Route path="/todos" element={<TodosPage />} />

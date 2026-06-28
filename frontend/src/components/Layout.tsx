@@ -12,6 +12,7 @@ import {
   ChevronsLeft,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
+import { NotificationBell } from './notifications/NotificationBell';
 import { loadSettings, patchSettings } from '../store/settings';
 import { isHostBridgeAvailable, toggleWidget } from '../utils/hostBridge';
 import { MenuIcon } from '../utils/iconRegistry';
@@ -353,6 +354,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <Search size={16} />
     </button>
   );
+  // 알림 종 — 검색 아이콘 위에 배치. 레일용(아이콘 풀폭) / 헤더용(컴팩트) 2가지 스타일.
+  const railBell = <NotificationBell className={`${linkClass(false, true)} w-full`} />;
+  const headerBell = <NotificationBell className="p-1 text-muted hover:text-primary transition-colors shrink-0" />;
 
   // ---- 상태 ①접힘 / ②펼침-무프로젝트: 단일 컬럼 (기존 동작 유지) ----
   const singleColumn = (
@@ -360,7 +364,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* collapsed (56px) 에서는 로고/버튼 세로 스택 — 가로 justify-between 으로는 w-full 로고가 버튼을 밀어냄. */}
       <div className={`py-4 border-b border-default ${collapsed ? 'px-2 flex flex-col items-center gap-2' : 'px-4 flex items-center justify-between gap-2'}`}>
         {collapsed ? logoMark : logoFull}
-        {collapseBtn}
+        {collapsed ? (
+          <>
+            {railBell}
+            {collapseBtn}
+          </>
+        ) : (
+          <div className="flex items-center gap-1 shrink-0">
+            {headerBell}
+            {collapseBtn}
+          </div>
+        )}
       </div>
 
       {!collapsed && (
@@ -409,7 +423,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <div className="relative flex-1 flex min-h-0">
         {/* 좌: 통합 레일 (아이콘). relative — 우측 경계 확장 핸들의 기준. */}
         <div className="relative w-14 shrink-0 border-r border-default flex flex-col">
-          <div className="px-2 pt-3 pb-1">{searchIconBtn}</div>
+          <div className="px-2 pt-3 pb-1 space-y-1">{railBell}{searchIconBtn}</div>
           <nav className="flex-1 px-2 pt-1 pb-3 space-y-1 overflow-y-auto">
             {renderGlobalGroups(true)}
           </nav>

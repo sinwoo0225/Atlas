@@ -2,6 +2,7 @@
   "tabs": {
     "appearance": "모양",
     "behavior": "동작",
+    "notifications": "알림",
     "system": "시스템",
     "backup": "백업·관리"
   },

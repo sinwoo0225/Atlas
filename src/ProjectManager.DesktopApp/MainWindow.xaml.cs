@@ -25,6 +25,8 @@ public partial class MainWindow : Window
     // 위젯(보조 always-on-top 창) — 메인 WebView2 의 환경·apiClient·wwwroot 를 공유. WinForms Form 으로 호스팅.
     private CoreWebView2Environment? _env;
     private WidgetForm? _widget;
+    // 최소화 시 노출용 알림 토스트 창 — 메인 WebView2 환경 공유.
+    private ToastForm? _toast;
 
     public MainWindow()
     {
@@ -300,6 +302,11 @@ public partial class MainWindow : Window
             {
                 _widget?.Hide();
             }
+            else if (type == "showToast")
+            {
+                // 메인 앱(엔진)이 창 최소화 상태에서 보낸 토스트 → 토스트 창으로 전달(원본 JSON 그대로).
+                ShowToast(e.WebMessageAsJson);
+            }
         }
         catch (System.Exception ex)
         {
@@ -322,6 +329,14 @@ public partial class MainWindow : Window
         _widget ??= new WidgetForm(_env, () => _apiClient, _wwwroot);
         if (!_widget.Visible) _widget.Show();
         _widget.Activate();
+    }
+
+    // ---------- 알림 토스트 창 ----------
+    private void ShowToast(string json)
+    {
+        if (_env is null || WebView.CoreWebView2 is null) return; // WebView 초기화 전이면 무시
+        _toast ??= new ToastForm(_env, () => _apiClient, _wwwroot);
+        _toast.ShowToast(json); // 포커스는 뺏지 않음(WS_EX_NOACTIVATE)
     }
 
     [DllImport("user32.dll")]
@@ -594,6 +609,11 @@ public partial class MainWindow : Window
             _widget.Close(); // 위젯이 살아있으면 메인 종료 후에도 프로세스가 남음
             _widget = null;
         }
+        if (_toast is not null)
+        {
+            _toast.Close(); // 토스트 창도 메인 종료 시 함께 정리
+            _toast = null;
+        }
         if (_ownsApiClient)
         {
             _apiClient?.Dispose();
@@ -621,10 +641,28 @@ public partial class MainWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e) => Close();
 
+    // 창 최소화 상태를 프론트로 통지 — WebView2 는 WPF 최소화 시 document.visibilityState 를
+    // 'hidden' 으로 안 바꿔, 알림 엔진이 인앱↔네이티브 토스트 경로를 가르는 신뢰 신호로 쓴다.
+    private void PostWindowState()
+    {
+        try
+        {
+            if (WebView?.CoreWebView2 is null) return;
+            var json = JsonSerializer.Serialize(new
+            {
+                type = "windowState",
+                minimized = WindowState == WindowState.Minimized,
+            });
+            WebView.CoreWebView2.PostWebMessageAsJson(json);
+        }
+        catch { /* WebView 미초기화 등 */ }
+    }
+
     // 최대화/복원 상태에 따라 캡션 글리프 토글 (Windows 표준 동작). E922 = 최대화, E923 = 복원.
     protected override void OnStateChanged(System.EventArgs e)
     {
         base.OnStateChanged(e);
+        PostWindowState();
         if (MaximizeButton is not null)
             MaximizeButton.Content = WindowState == WindowState.Maximized ? "" : "";
     }

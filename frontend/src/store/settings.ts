@@ -19,6 +19,52 @@ export function resolveToasterTheme(theme: ThemeMode, customColors: BaseColors):
 }
 export type Language = 'ko' | 'en';
 
+// 알림 설정 — 항목별(마감 임박 / 일일 업무 정리) 활성·주기·범위.
+// 향후 알림 종류 추가 시 이 구조에 하위 객체를 더한다(알림 소스 레지스트리와 1:1).
+export interface NotificationSettings {
+  // 마스터 스위치 — 끄면 모든 알림 비활성.
+  enabled: boolean;
+  // 마감 임박 폴링 주기(분). 최소 5.
+  pollIntervalMinutes: number;
+  // 앱 창이 최소화/숨김일 때 네이티브 always-on-top 창으로도 토스트 노출(데스크톱 전용).
+  showWhenMinimized: boolean;
+  // 마감 임박 일정/이슈.
+  deadline: {
+    enabled: boolean;
+    // 'mine' = 내가 담당인 작업만 / 'all' = 전체 작업.
+    scope: 'mine' | 'all';
+    // 마감 며칠 전부터 임박으로 볼지.
+    withinDays: number;
+    // 이미 지난(마감 초과) 항목도 알릴지.
+    includeOverdue: boolean;
+    // 신규 임박 건수가 이 값을 넘으면 항목별 대신 묶음 토스트 1개.
+    aggregateThreshold: number;
+  };
+  // 일일 업무 정리 — 매일 지정 시각 안내.
+  dailySummary: {
+    enabled: boolean;
+    // 'HH:MM' 24시간.
+    time: string;
+  };
+}
+
+export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
+  enabled: true,
+  pollIntervalMinutes: 30,
+  showWhenMinimized: true,
+  deadline: { enabled: true, scope: 'mine', withinDays: 3, includeOverdue: true, aggregateThreshold: 3 },
+  dailySummary: { enabled: true, time: '09:00' },
+};
+
+// 중첩 객체라 매 로드 시 새 인스턴스로 깊은 복제(참조 공유 방지).
+function cloneNotificationDefaults(): NotificationSettings {
+  return {
+    ...DEFAULT_NOTIFICATION_SETTINGS,
+    deadline: { ...DEFAULT_NOTIFICATION_SETTINGS.deadline },
+    dailySummary: { ...DEFAULT_NOTIFICATION_SETTINGS.dailySummary },
+  };
+}
+
 export interface AppSettings {
   theme: ThemeMode;
   // 화면 텍스트 표시 언어. 기본 ko. 설정에서 토글하면 라이브 전환 + <html lang> 갱신.
@@ -59,6 +105,8 @@ export interface AppSettings {
   // 아이콘 오버라이드 — 슬롯키 → lucide 아이콘 이름. 비어 있으면 기본 아이콘 사용.
   menuIcons: Record<string, string>;
   entityIcons: Record<string, string>;
+  // 알림(마감 임박 / 일일 업무 정리) 설정.
+  notifications: NotificationSettings;
 }
 
 const KEY = 'pm-hub-settings';
@@ -96,6 +144,7 @@ const defaults: AppSettings = {
   brandIcon: '',
   menuIcons: {},
   entityIcons: {},
+  notifications: cloneNotificationDefaults(),
 };
 
 export function loadSettings(): AppSettings {
@@ -105,12 +154,19 @@ export function loadSettings(): AppSettings {
     if (!raw) return { ...defaults };
     const parsed = JSON.parse(raw);
     // 중첩 객체는 얕은 머지로는 누락 키가 생길 수 있어 개별 보정.
+    const pn = parsed.notifications ?? {};
     return {
       ...defaults,
       ...parsed,
       customColors: { ...defaults.customColors, ...(parsed.customColors ?? {}) },
       menuIcons: { ...(parsed.menuIcons ?? {}) },
       entityIcons: { ...(parsed.entityIcons ?? {}) },
+      notifications: {
+        ...DEFAULT_NOTIFICATION_SETTINGS,
+        ...pn,
+        deadline: { ...DEFAULT_NOTIFICATION_SETTINGS.deadline, ...(pn.deadline ?? {}) },
+        dailySummary: { ...DEFAULT_NOTIFICATION_SETTINGS.dailySummary, ...(pn.dailySummary ?? {}) },
+      },
     };
   } catch {
     return { ...defaults };
@@ -118,7 +174,7 @@ export function loadSettings(): AppSettings {
 }
 
 export function getDefaultSettings(): AppSettings {
-  return { ...defaults, customColors: { ...defaults.customColors }, menuIcons: {}, entityIcons: {} };
+  return { ...defaults, customColors: { ...defaults.customColors }, menuIcons: {}, entityIcons: {}, notifications: cloneNotificationDefaults() };
 }
 
 export function saveSettings(settings: AppSettings): void {

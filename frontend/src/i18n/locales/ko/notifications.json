@@ -1,0 +1,66 @@
+{
+  "bell": {
+    "title": "알림",
+    "ariaLabel": "알림 (미확인 {{count}}개)"
+  },
+  "panel": {
+    "title": "알림",
+    "empty": "알림이 없습니다.",
+    "markAllRead": "모두 읽음",
+    "clearAll": "모두 지우기"
+  },
+  "deadline": {
+    "overdue": {
+      "title": "{{title}}",
+      "body": "마감 {{days}}일 지남{{project}}"
+    },
+    "dueToday": {
+      "title": "{{title}}",
+      "body": "오늘 마감{{project}}"
+    },
+    "dueSoon": {
+      "title": "{{title}}",
+      "body": "마감 {{days}}일 전{{project}}"
+    },
+    "aggregate": {
+      "title": "마감 임박 {{count}}건",
+      "body": "마감이 임박한 일정·이슈가 있습니다. 클릭해 확인하세요."
+    }
+  },
+  "dailySummary": {
+    "title": "하루 업무를 정리할 시간입니다",
+    "body": "오늘 마감 {{dueToday}} · 지연 {{overdue}} · 진행 {{inProgress}}"
+  },
+  "sample": {
+    "title": "테스트 알림",
+    "body": "알림이 정상적으로 동작합니다."
+  },
+  "settings": {
+    "title": "알림",
+    "description": "마감 임박·일일 업무 정리 알림을 우측 하단 토스트로 받습니다.",
+    "enable": "알림 사용",
+    "pollInterval": "확인 주기 (분)",
+    "pollIntervalHint": "마감 임박 항목을 이 주기로 확인합니다. 최소 5분.",
+    "showWhenMinimized": "창 최소화 시에도 표시",
+    "showWhenMinimizedHint": "데스크톱 앱에서 창이 최소화되어 있어도 알림을 띄웁니다. Windows 알림 센터에는 기록되지 않습니다.",
+    "deadline": {
+      "heading": "마감 임박 일정/이슈",
+      "enable": "사용",
+      "scope": "대상 범위",
+      "scopeMine": "내 작업만",
+      "scopeAll": "전체 작업",
+      "withinDays": "임박 기준 (일)",
+      "withinDaysHint": "마감 며칠 전부터 알릴지.",
+      "includeOverdue": "마감 초과 항목도 알림",
+      "aggregateThreshold": "묶음 기준 (건)",
+      "aggregateThresholdHint": "신규 임박 건수가 이 값을 넘으면 묶음 토스트 1개로 표시합니다."
+    },
+    "dailySummary": {
+      "heading": "일일 업무 정리",
+      "enable": "사용",
+      "time": "알림 시각"
+    },
+    "testButton": "테스트 알림 보내기",
+    "testHint": "샘플 알림을 띄워 토스트·패널·테마·언어 적용을 확인합니다."
+  }
+}
