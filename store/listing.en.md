@@ -38,6 +38,7 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Work info — Markdown / file / link / Git repo types plus tagging (repo commit graph)
 - Project map — relationship graph (radial / timeline layouts, minimap)
 - Integrated monitoring — cross-project summary charts + assignee × deadline heatmap
+- Notifications — toasts for approaching deadlines & a daily work summary, with a bell-icon panel (shown even when minimized)
 - Global search — Ctrl+K command palette to instantly find tasks, issues, meetings, and notes across projects
 - Worklog — weekly Done / Plan / Issues journal, Markdown export
 - Resources — people & equipment, autocomplete source for WBS assignees
@@ -47,13 +48,12 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Hierarchical work-log auto entries — moving a task to In progress/Done records the task hierarchy with indentation in your log, toggling start/done in place (WBS tasks and issues)
-- Per-project issue numbers — each issue gets a #1, #2 … sequence (existing issues backfilled in creation order)
-- WBS subtasks · actual dates · start-delay insight — task checklists, actual start/completion dates separate from the plan, and an insight for overdue-to-start tasks
-- Project list favorites — pin frequently used projects to the top
-- Form layout redesign — WBS task form in 3 columns (Basics & schedule / Relations / Details), Work-info form in 2 columns (Common / type-specific), parent task via a floating dropdown
-- Monitoring overview regrouped + WBS template preview — Portfolio + Attention two-up at the top, nine cards in a themed 3×3, and a preview of task names a template will create
-- Change-log and issue lists are lighter with incremental rendering + search debounce
+- Notifications — bottom-right toasts for approaching deadlines (schedules/issues) and a daily work summary
+- Bell-icon panel — a bell above the sidebar search with a red dot for unread items; click for a reverse-chronological list
+- Approaching deadlines: choose my tasks/all, set days-ahead and overdue inclusion, one alert per stage
+- Daily work summary: a daily nudge at a set time with counts due today/overdue/in progress
+- Configure per-type enable/time/interval in Settings → Notifications, with a test button
+- Toasts appear even when the app is minimized (not recorded in the Windows notification center); fully localized and themed
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
