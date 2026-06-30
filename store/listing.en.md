@@ -31,7 +31,7 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Project hub — card list + dashboard (overview, budget, members, D-day, recent activity)
 - My work (unified to-dos) — open tasks & issues across projects plus personal to-dos on one screen, recurring & one-click done
 - Project retrospective — compare completed projects (burn-up S-curve, slippage, issue density, avg resolution time)
-- WBS + Gantt chart — hierarchical task tree, milestones, status/priority, multi-assignee, linked work info & repos
+- WBS + Gantt + Kanban — hierarchical task tree, milestones, status (Planned·Waiting·In progress·Done)/priority, multi-assignee, Kanban board (group by status·assignee, drag to change status), linked work info & repos
 - Issue tracking — status (Open/In progress/Resolved/Closed) × priority, inline edits in the table
 - Meetings — internal/external, attendees, decisions, discussion, action items; auto Markdown export
 - Change log — impact level, daily chart, links to related docs and meetings
@@ -40,6 +40,7 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Integrated monitoring — cross-project summary charts + assignee × deadline heatmap
 - Notifications — toasts for approaching deadlines & a daily work summary, with a bell-icon panel (shown even when minimized)
 - Global search — Ctrl+K command palette to instantly find tasks, issues, meetings, and notes across projects
+- Menu favorites — pin frequently used project & integrated menus and specific monitoring tabs to the top of the sidebar
 - Worklog — weekly Done / Plan / Issues journal, Markdown export
 - Resources — people & equipment, autocomplete source for WBS assignees
 - External automation & AI — query & update via atlas-cli / MCP, one-line Claude Code skill install (atlas-cli skill install)
@@ -48,12 +49,12 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Notifications — bottom-right toasts for approaching deadlines (schedules/issues) and a daily work summary
-- Bell-icon panel — a bell above the sidebar search with a red dot for unread items; click for a reverse-chronological list
-- Approaching deadlines: choose my tasks/all, set days-ahead and overdue inclusion, one alert per stage
-- Daily work summary: a daily nudge at a set time with counts due today/overdue/in progress
-- Configure per-type enable/time/interval in Settings → Notifications, with a test button
-- Toasts appear even when the app is minimized (not recorded in the Windows notification center); fully localized and themed
+- Schedule/WBS Kanban view — group by status (Planned·Waiting·In progress·Done) or assignee; drag cards on the status board to change status
+- New WBS 'Waiting' status; move multiple tasks to a new parent at once (Select mode + highlighted move targets)
+- Work log 'Auto-fill in-progress' — adds in-progress/waiting tasks and in-progress issues to that day's log
+- Settings — work-log scope (Mine only / All) and weekly aggregation (By day / Weekly final state)
+- Menu favorites — pin project & integrated menus and specific monitoring tabs to the top of the sidebar
+- Work log screen fills the height with stable edit/preview height; filter dims non-matches; other usability polish
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
