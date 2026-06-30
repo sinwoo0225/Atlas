@@ -1,6 +1,8 @@
 namespace ProjectManager.Core.Domain;
 
-public enum WbsStatus { Planned, InProgress, Done }
+// Waiting(대기) 는 표시 순서상 Planned 와 InProgress 사이지만, DB 는 int ordinal 저장이라
+// 기존 값(Planned=0/InProgress=1/Done=2)을 보존하려 enum 끝에 append(Waiting=3). 표시 순서는 프론트 배열로 제어.
+public enum WbsStatus { Planned, InProgress, Done, Waiting }
 
 public class WbsItem : IAuditable
 {

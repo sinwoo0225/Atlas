@@ -82,6 +82,11 @@ export interface AppSettings {
   defaultTaskView: 'list' | 'calendar' | 'kanban';
   // WBS/일정 필터 기억 옵트인. ON 이면 프로젝트별 필터 선택을 저장(atlas:wbsFilters:<id>)해 다음 방문 시 복원.
   rememberWbsFilters: boolean;
+  // 업무일지 자동 작성/등록 범위. 'all'=전체 작업, 'mine'=내(myResourceId) 담당 작업만.
+  // 적용: WBS/이슈 상태 변경 시 자동 일지 등록 + '진행 항목 자동 작성' 버튼. (X-Atlas-WorkLog-Scope 헤더로 백엔드 전달)
+  workLogScope: 'mine' | 'all';
+  // 주간 업무일지(통합 모니터링 '일지') 통합 방식. 'byDay'=요일별(기존), 'finalState'=요일 합쳐 작업별 최종 상태.
+  weeklyWorkLogMode: 'byDay' | 'finalState';
   // 회의록 'AI 요약' 버튼 노출 여부. 로컬 Claude CLI 가 있어야 동작 — 설정에서 옵트인.
   aiSummaryEnabled: boolean;
   // 위젯 '최근 활성 창' 추적 ON/OFF (프라이버시). 기본 ON. 창 제목은 이 PC 메모리에만, 외부 전송 없음.
@@ -129,6 +134,8 @@ const defaults: AppSettings = {
   sidebarCollapsed: false,
   defaultTaskView: 'list',
   rememberWbsFilters: false,
+  workLogScope: 'all',
+  weeklyWorkLogMode: 'byDay',
   aiSummaryEnabled: false,
   widgetActiveWindowsEnabled: true,
   widgetWeatherLat: null,

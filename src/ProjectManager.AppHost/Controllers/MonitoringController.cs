@@ -151,7 +151,7 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
     }
 
     [HttpGet("worklogs/weekly")]
-    public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart)
+    public async Task<IActionResult> WeeklyWorkLogs([FromQuery] string? weekStart, [FromQuery] string? mode)
     {
         DateTime ws;
         if (!string.IsNullOrWhiteSpace(weekStart)
@@ -159,7 +159,8 @@ public class MonitoringController(MonitoringService svc, WbsService wbsSvc, Issu
             ws = parsed.Date;
         else
             ws = WorkLogService.StartOfWeek(DateTime.Today);
-        return Ok(await svc.GetWeeklyWorkLogsAsync(ws));
+        var finalState = string.Equals(mode, "finalState", StringComparison.OrdinalIgnoreCase);
+        return Ok(await svc.GetWeeklyWorkLogsAsync(ws, finalState));
     }
 
     // 주간 통합에 첨부할 '다음 주 계획' — 프로젝트별 다음 주 시작/마감 예정. weekStart 규약 동일.

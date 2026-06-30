@@ -677,7 +677,7 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
                 if (w.CreatedAt.ToLocalTime().Date > d) continue;
                 switch (StateAt(w.Id, w.Status, d))
                 {
-                    case WbsStatus.Planned: p++; break;
+                    case WbsStatus.Planned: case WbsStatus.Waiting: p++; break;
                     case WbsStatus.InProgress: ip++; break;
                     default: dn++; break;
                 }
@@ -904,7 +904,7 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         }
     }
 
-    public async Task<WeeklyWorkLogDto> GetWeeklyWorkLogsAsync(DateTime weekStart)
+    public async Task<WeeklyWorkLogDto> GetWeeklyWorkLogsAsync(DateTime weekStart, bool finalState = false)
     {
         var start = WorkLogService.StartOfWeek(weekStart);
         var end = start.AddDays(5);
@@ -944,6 +944,18 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
                 || !string.IsNullOrWhiteSpace(d.Issues)))
             .OrderBy(p => p.ProjectName)
             .ToList();
+
+        // 주간 최종 상태(F7) — 요일 구분 없이 프로젝트별 5일치를 작업 기준 최종 상태 한 블록으로 합친다.
+        if (finalState)
+        {
+            grouped = grouped.Select(p =>
+            {
+                var done = WorkLogMerge.FoldFinalState(p.Days.Select(d => d.Done).ToList());
+                var issues = WorkLogMerge.FoldFlatLines(p.Days.Select(d => d.Issues));
+                var day = new WeeklyWorkLogDayDto(0, "주간 최종", IsoDate(start), done, string.Empty, issues);
+                return new WeeklyWorkLogProjectDto(p.ProjectId, p.ProjectName, new[] { day });
+            }).ToList();
+        }
 
         return new WeeklyWorkLogDto(start, grouped);
     }

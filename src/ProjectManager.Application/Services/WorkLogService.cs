@@ -134,13 +134,41 @@ public class WorkLogService(IWorkLogRepository repo)
         new(w.Id, w.ProjectId, w.Date, w.Done, w.Plan, w.Issues, w.CreatedAt, w.UpdatedAt);
 }
 
+// 업무일지 자동 등록 범위 게이트 (설정 '작성 범위'). 자동 일지·진행항목 자동작성에서 공통 사용.
+public static class WorkLogScopeGate
+{
+    // scope=mine 이면 actor 가 담당(콤마 분리 토큰 정확 일치, 대소문자 무시)일 때만 true.
+    // 전체(MineOnly=false) 또는 actor 미상(CLI 등)이면 항상 true(게이트 무력화 → 기존 동작).
+    public static bool ShouldAutoLog(IWorkLogScopeAccessor scope, IActorAccessor actor, string? assignee)
+    {
+        if (!scope.MineOnly) return true;
+        var name = actor.GetActor();
+        if (string.IsNullOrWhiteSpace(name)) return true;
+        if (string.IsNullOrWhiteSpace(assignee)) return false;
+        return assignee
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Any(p => string.Equals(p, name, StringComparison.OrdinalIgnoreCase));
+    }
+}
+
 /// <summary>
 /// 업무일지 Done(마크다운) 텍스트에 작업/이슈 줄을 계층형으로 upsert 하는 순수 함수.
 /// (문자열 in → 문자열 out, I/O 없음 — 단위테스트 용이)
 /// </summary>
 public static class WorkLogMerge
 {
-    public enum DoneMarker { Started, Completed } // [시작] / [완료]
+    public enum DoneMarker { Started, InProgress, Waiting, Completed } // [시작] / [진행] / [대기] / [완료]
+
+    private static string MarkerText(DoneMarker m) => m switch
+    {
+        DoneMarker.Completed => "[완료]",
+        DoneMarker.InProgress => "[진행]",
+        DoneMarker.Waiting => "[대기]",
+        _ => "[시작]",
+    };
+
+    // leaf 식별·교체용 마커 목록(StripMarker 가 선두에서 제거). 새 마커 추가 시 여기에 등록.
+    private static readonly string[] LeafMarkers = { "[완료]", "[진행]", "[대기]", "[시작]" };
 
     private const int IndentPerLevel = 2; // 에디터 Tab(textareaTab.ts) 및 CommonMark 중첩과 일치
 
@@ -234,8 +262,7 @@ public static class WorkLogMerge
     {
         var indent = new string(' ', depth * IndentPerLevel);
         var who = string.IsNullOrWhiteSpace(assignee) ? string.Empty : $" - {assignee.Trim()}";
-        var m = marker == DoneMarker.Completed ? "[완료]" : "[시작]";
-        return $"{indent}- {m} ({kind}) {name}{who}, {date:yyyy-MM-dd}";
+        return $"{indent}- {MarkerText(marker)} ({kind}) {name}{who}, {date:yyyy-MM-dd}";
     }
 
     private static int LeadingSpaces(string s)
@@ -263,7 +290,7 @@ public static class WorkLogMerge
     // 선두 [완료]/[시작] 마커 제거 후 나머지.
     private static string StripMarker(string content)
     {
-        foreach (var marker in new[] { "[완료]", "[시작]" })
+        foreach (var marker in LeafMarkers)
             if (content.StartsWith(marker))
                 return content[marker.Length..].TrimStart(' ');
         return content;
@@ -292,5 +319,81 @@ public static class WorkLogMerge
     {
         while (end - 1 >= start && IsBlank(lines[end - 1])) end--;
         return end;
+    }
+
+    /// <summary>
+    /// 주간 최종 상태(F7) — 여러 날(월→금)의 Done 마크다운을 작업별 최종 상태 한 블록으로 합친다.
+    /// 리프(마커 줄)는 "(종류) 이름[ - 담당자]" 키로 dedup, 가장 나중 줄 채택(시작→완료가 최종 반영).
+    /// 부모 컨텍스트/자유 텍스트 줄은 (들여쓰기+내용) 으로 dedup. 모두 최초 등장 순서 유지.
+    /// </summary>
+    public static string FoldFinalState(IReadOnlyList<string> dailyDoneTexts)
+    {
+        var result = new List<string>();
+        var leafIndex = new Dictionary<string, int>();
+        var otherSeen = new HashSet<string>();
+        foreach (var text in dailyDoneTexts)
+        {
+            if (string.IsNullOrWhiteSpace(text)) continue;
+            foreach (var line in text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n'))
+            {
+                if (IsBlank(line)) continue;
+                if (IsListItem(line))
+                {
+                    var content = ContentOf(line);
+                    if (LeafMarkers.Any(content.StartsWith))
+                    {
+                        var key = LeafKey(line);
+                        if (leafIndex.TryGetValue(key, out var idx)) result[idx] = line; // 최신으로 교체
+                        else { leafIndex[key] = result.Count; result.Add(line); }
+                        continue;
+                    }
+                    if (otherSeen.Add(LeadingSpaces(line) + ":" + content.TrimEnd())) result.Add(line);
+                }
+                else if (otherSeen.Add("free:" + line.Trim()))
+                {
+                    result.Add(line);
+                }
+            }
+        }
+        return string.Join("\n", result);
+    }
+
+    /// <summary>여러 텍스트의 비공백 줄을 정확 일치로 dedup 해 합친다(이슈 등 평면 필드용).</summary>
+    public static string FoldFlatLines(IEnumerable<string> texts)
+    {
+        var seen = new HashSet<string>();
+        var result = new List<string>();
+        foreach (var text in texts)
+        {
+            if (string.IsNullOrWhiteSpace(text)) continue;
+            foreach (var line in text.Replace("\r\n", "\n").Replace("\r", "\n").Split('\n'))
+            {
+                if (IsBlank(line)) continue;
+                if (seen.Add(line.Trim())) result.Add(line);
+            }
+        }
+        return string.Join("\n", result);
+    }
+
+    // 리프 dedup 키 — 마커 제거 + 끝의 ", yyyy-MM-dd" 제거 → "(종류) 이름[ - 담당자]".
+    private static string LeafKey(string line)
+    {
+        var content = StripMarker(ContentOf(line)).TrimEnd();
+        var ci = content.LastIndexOf(", ", StringComparison.Ordinal);
+        if (ci >= 0 && IsDateSuffix(content, ci + 2)) content = content[..ci];
+        return content.Trim();
+    }
+
+    // start 위치부터 끝까지가 정확히 yyyy-MM-dd(10자) 형식인지.
+    private static bool IsDateSuffix(string s, int start)
+    {
+        if (s.Length - start != 10) return false;
+        for (var i = start; i < s.Length; i++)
+        {
+            var rel = i - start;
+            if (rel == 4 || rel == 7) { if (s[i] != '-') return false; }
+            else if (!char.IsDigit(s[i])) return false;
+        }
+        return true;
     }
 }

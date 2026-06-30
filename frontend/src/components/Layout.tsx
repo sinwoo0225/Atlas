@@ -10,12 +10,16 @@ import {
   LayoutGrid,
   ChevronsRight,
   ChevronsLeft,
+  Star,
 } from 'lucide-react';
 import { useProjectStore } from '../store/useProjectStore';
 import { NotificationBell } from './notifications/NotificationBell';
 import { loadSettings, patchSettings } from '../store/settings';
 import { isHostBridgeAvailable, toggleWidget } from '../utils/hostBridge';
 import { MenuIcon } from '../utils/iconRegistry';
+import {
+  listFavorites, toggleFavorite, removeFavorite, matchesFavorite, FAVORITES_EVENT, type FavoriteMenu,
+} from '../utils/menuFavorites';
 import { useRecentTracker } from '../hooks/useRecentTracker';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
 import { useActiveProjectId } from '../hooks/useActiveProjectId';
@@ -144,6 +148,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(() => loadSettings().sidebarCollapsed);
   useRecentTracker();
 
+  // 메뉴 즐겨찾기 — localStorage(menuFavorites). 토글 시 atlas:favorites-updated 이벤트로 재read.
+  const [favorites, setFavorites] = useState<FavoriteMenu[]>(() => listFavorites());
+  useEffect(() => {
+    const onChange = () => setFavorites(listFavorites());
+    window.addEventListener(FAVORITES_EVENT, onChange);
+    return () => window.removeEventListener(FAVORITES_EVENT, onChange);
+  }, []);
+  const favHrefs = new Set(favorites.map((f) => f.href));
+
   // 워드마크 텍스트 + 메뉴 아이콘 오버라이드 — 설정 저장 시(atlas:settings-changed) 즉시 반영.
   const [brand, setBrand] = useState(() => {
     const s = loadSettings();
@@ -229,6 +242,62 @@ export function Layout({ children }: { children: React.ReactNode }) {
         : 'text-secondary hover:bg-surface-2 border-transparent'
     }`;
 
+  // 메뉴 행 우측의 별 토글 — 즐겨찾기면 항상 채운 별, 아니면 hover/focus 시 노출. 행 navigate 와 분리(stopPropagation).
+  const favToggle = (fav: FavoriteMenu) => {
+    const faved = favHrefs.has(fav.href);
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(fav); }}
+        title={t(faved ? 'nav:favoriteRemove' : 'nav:favoriteAdd')}
+        aria-label={t(faved ? 'nav:favoriteRemove' : 'nav:favoriteAdd')}
+        aria-pressed={faved}
+        className={`absolute right-1 top-1/2 -translate-y-1/2 p-1 transition-opacity ${
+          faved ? 'opacity-100 text-on-warning' : 'opacity-0 group-hover:opacity-100 focus:opacity-100 text-muted hover:text-on-warning'
+        }`}
+      >
+        <Star size={13} className={faved ? 'fill-current' : ''} />
+      </button>
+    );
+  };
+
+  // 즐겨찾기 섹션 — 펼침 상태에서만(아이콘 레일 제외). 전역·프로젝트·탭 즐겨찾기 혼합, href 로 활성 판정.
+  const renderFavorites = () => {
+    if (favorites.length === 0) return null;
+    return (
+      <div className="space-y-1 pb-2 mb-1 border-b border-default">
+        <p className="text-[10px] text-muted px-3 font-medium uppercase tracking-wider pb-1">{t('nav:group.favorites')}</p>
+        {favorites.map((fav) => {
+          const active = matchesFavorite(fav.href, location.pathname, location.search);
+          const base = fav.labelKey ? t(fav.labelKey) : (fav.label ?? fav.href);
+          const display = fav.projectName ? `${fav.projectName} › ${base}` : base;
+          return (
+            <div key={fav.href} className="group relative">
+              <Link
+                to={fav.href}
+                className={`${linkClass(active, false)} pr-8`}
+                aria-current={active ? 'page' : undefined}
+                title={display}
+              >
+                <MenuIcon slot={fav.iconSlot} overrides={brand.menuIcons} size={16} />
+                <span className="truncate">{display}</span>
+              </Link>
+              <button
+                type="button"
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFavorite(fav.href); }}
+                title={t('nav:favoriteRemove')}
+                aria-label={t('nav:favoriteRemove')}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-on-warning hover:opacity-70 transition-opacity"
+              >
+                <Star size={13} className="fill-current" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // ---- 공유 렌더 헬퍼 (접힘/무프로젝트/2단 3상태가 같은 링크 마크업을 재사용) ----
   const renderGlobalGroups = (iconOnly: boolean) =>
     navGroups.map((group, gi) => (
@@ -245,18 +314,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {group.items.map(({ path, key }) => {
           const active = location.pathname === path;
           const label = t('nav:' + key);
+          if (iconOnly) {
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={linkClass(active, true)}
+                aria-current={active ? 'page' : undefined}
+                title={label}
+                aria-label={label}
+              >
+                <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
+              </Link>
+            );
+          }
           return (
-            <Link
-              key={path}
-              to={path}
-              className={linkClass(active, iconOnly)}
-              aria-current={active ? 'page' : undefined}
-              title={iconOnly ? label : undefined}
-              aria-label={iconOnly ? label : undefined}
-            >
-              <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
-              {!iconOnly && label}
-            </Link>
+            <div key={path} className="group relative">
+              <Link
+                to={path}
+                className={`${linkClass(active, false)} pr-8`}
+                aria-current={active ? 'page' : undefined}
+              >
+                <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
+                <span className="truncate">{label}</span>
+              </Link>
+              {favToggle({ href: path, iconSlot: path, labelKey: 'nav:' + key })}
+            </div>
           );
         })}
       </div>
@@ -267,18 +350,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
       const fullPath = `/projects/${selectedProjectId}/${path}`;
       const active = location.pathname === fullPath;
       const label = t('nav:' + key);
+      if (iconOnly) {
+        return (
+          <Link
+            key={path}
+            to={fullPath}
+            className={linkClass(active, true)}
+            aria-current={active ? 'page' : undefined}
+            title={label}
+            aria-label={label}
+          >
+            <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
+          </Link>
+        );
+      }
       return (
-        <Link
-          key={path}
-          to={fullPath}
-          className={linkClass(active, iconOnly)}
-          aria-current={active ? 'page' : undefined}
-          title={iconOnly ? label : undefined}
-          aria-label={iconOnly ? label : undefined}
-        >
-          <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
-          {!iconOnly && label}
-        </Link>
+        <div key={path} className="group relative">
+          <Link
+            to={fullPath}
+            className={`${linkClass(active, false)} pr-8`}
+            aria-current={active ? 'page' : undefined}
+          >
+            <MenuIcon slot={path} overrides={brand.menuIcons} size={16} />
+            <span className="truncate">{label}</span>
+          </Link>
+          {favToggle({ href: fullPath, iconSlot: path, labelKey: 'nav:' + key, projectName: selectedProject?.name })}
+        </div>
       );
     });
 
@@ -384,6 +481,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       )}
 
       <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
+        {!collapsed && renderFavorites()}
         {renderGlobalGroups(collapsed)}
 
         {/* 프로젝트 선택 드롭다운 — 펼침 상태에서만(무프로젝트일 때 프로젝트 고르기). */}
@@ -449,6 +547,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <ProjectSwitcher />
           </div>
           <nav className="flex-1 px-2 pt-3 pb-3 space-y-1 overflow-y-auto">
+            {renderFavorites()}
             {renderProjectMenu(false)}
           </nav>
         </div>

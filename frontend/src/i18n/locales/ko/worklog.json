@@ -7,6 +7,12 @@
   "searchPlaceholder": "이번 주 본문 검색…",
   "editSelected": "선택한 요일 편집",
   "clickToEdit": "클릭하여 편집",
+  "autoProgress": {
+    "button": "진행 항목 자동 작성",
+    "running": "작성 중…",
+    "hint": "현재 프로젝트의 ‘진행’·‘대기’ 상태 WBS와 ‘진행’ 이슈를 이 날짜의 ‘한 일’에 [진행]·[대기]로 자동 추가합니다. 기존 줄은 현재 상태로 덮어씁니다.",
+    "done": "진행·대기 항목 {{count}}건을 반영했습니다."
+  },
   "day": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금" },
   "field": {
     "doneLabel": "한 일",

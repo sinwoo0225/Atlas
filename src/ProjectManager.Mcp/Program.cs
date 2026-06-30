@@ -26,6 +26,7 @@ var actor = Environment.GetEnvironmentVariable("ATLAS_MCP_ACTOR")
             ?? Environment.GetEnvironmentVariable("ATLAS_CLI_ACTOR");
 if (string.IsNullOrWhiteSpace(actor)) actor = "claude-code-mcp";
 builder.Services.AddSingleton<IActorAccessor>(new FixedActorAccessor(actor));
+builder.Services.AddSingleton<IWorkLogScopeAccessor>(new FixedWorkLogScopeAccessor());
 
 // MCP 서버는 long-lived — ActivityLogCleanupService 활성화 (24h 주기 prune).
 builder.Services.AddAtlasServices(pathResolver, bootstrap, includeHostedServices: true);

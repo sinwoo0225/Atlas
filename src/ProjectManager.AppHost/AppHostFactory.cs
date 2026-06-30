@@ -40,6 +40,8 @@ public static class AppHostFactory
         // X-Atlas-Actor 헤더 (작성자 자동 추적) 를 AppDbContext.SaveChanges 가 읽을 수 있게 등록.
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddScoped<IActorAccessor, HttpActorAccessor>();
+        // X-Atlas-WorkLog-Scope 헤더('mine'|'all') — 업무일지 자동 등록 범위(설정 '자신만') 게이팅.
+        builder.Services.AddScoped<IWorkLogScopeAccessor, HttpWorkLogScopeAccessor>();
 
         // DbContext + repository + service 그래프는 CLI/MCP 와 공유되는 헬퍼로 일원화.
         builder.Services.AddAtlasServices(pathResolver, bootstrap, includeHostedServices: true);

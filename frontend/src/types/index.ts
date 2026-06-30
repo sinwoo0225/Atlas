@@ -1,4 +1,4 @@
-export type WbsStatus = 'Planned' | 'InProgress' | 'Done';
+export type WbsStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done';
 export type ImpactLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type DevInfoType = 'Markdown' | 'File' | 'Link' | 'GitRepo';
 // Planned 는 '대기/보류'(Waiting)로 통합 — 기존 데이터 호환 위해 타입엔 남기되 UI 옵션에선 미노출.

@@ -7,6 +7,12 @@
   "searchPlaceholder": "Search this week…",
   "editSelected": "Editing the selected day",
   "clickToEdit": "Click to edit",
+  "autoProgress": {
+    "button": "Auto-fill in-progress",
+    "running": "Filling…",
+    "hint": "Adds this project's in-progress / waiting WBS tasks and in-progress issues to this day's ‘Done’ as [진행]/[대기], overwriting existing lines with the current status.",
+    "done": "Applied {{count}} in-progress/waiting item(s)."
+  },
   "day": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri" },
   "field": {
     "doneLabel": "Done",

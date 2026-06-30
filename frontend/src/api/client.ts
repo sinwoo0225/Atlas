@@ -12,10 +12,13 @@ export interface RequestOptions {
 
 async function request<T>(path: string, init?: RequestInit, opts?: RequestOptions): Promise<T> {
   // X-Atlas-Actor: 작성자 자동 추적 메타데이터. encodeURIComponent 로 한글 헤더 보호.
-  const actor = loadSettings().defaultAuthor;
+  // X-Atlas-WorkLog-Scope: 업무일지 자동 등록 범위(설정 '자신만'/'전체') — 백엔드 자동 일지 게이팅.
+  const settings = loadSettings();
+  const actor = settings.defaultAuthor;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(actor ? { 'X-Atlas-Actor': encodeURIComponent(actor) } : {}),
+    'X-Atlas-WorkLog-Scope': settings.workLogScope,
     ...(init?.headers as Record<string, string> | undefined),
   };
 

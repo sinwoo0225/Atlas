@@ -28,6 +28,7 @@ builder.Logging.ClearProviders();
 var actor = Environment.GetEnvironmentVariable("ATLAS_CLI_ACTOR");
 if (string.IsNullOrWhiteSpace(actor)) actor = "claude-code";
 builder.Services.AddSingleton<IActorAccessor>(new FixedActorAccessor(actor));
+builder.Services.AddSingleton<IWorkLogScopeAccessor>(new FixedWorkLogScopeAccessor());
 builder.Services.AddAtlasServices(pathResolver, bootstrap, includeHostedServices: false);
 
 using var app = builder.Build();

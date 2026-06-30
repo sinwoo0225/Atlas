@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { toast } from 'sonner';
-import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate, Code2, GitBranch, Bookmark, Flag } from 'lucide-react';
+import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate, Code2, GitBranch, Bookmark, Flag, FolderTree } from 'lucide-react';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor,
   closestCenter, useSensor, useSensors,
@@ -22,7 +22,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import {
-  collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName, flattenWbsTree,
+  collectAncestorIds, collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName, flattenWbsTree,
   applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
 import { wbsStatusBadge, devInfoTypeBadge } from '../utils/statusMaps';
@@ -38,6 +38,7 @@ import { DevInfoPicker } from '../components/DevInfoPicker';
 import { GanttChart } from './wbs/GanttChart';
 import { ReschedulePreviewModal } from './wbs/ReschedulePreviewModal';
 import { SortableWbsRow } from './wbs/SortableWbsRow';
+import { WbsKanban } from './wbs/WbsKanban';
 import { WbsDragOverlayRow } from './wbs/WbsDragOverlayRow';
 import { computeSiblingReorder } from './wbs/wbsReorder';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
@@ -317,6 +318,7 @@ function WbsItemForm({
               <FormField label={t('wbs:form.status')}>
                 <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
                   <option value="Planned">{t('status:wbs.Planned')}</option>
+                  <option value="Waiting">{t('status:wbs.Waiting')}</option>
                   <option value="InProgress">{t('status:wbs.InProgress')}</option>
                   <option value="Done">{t('status:wbs.Done')}</option>
                 </select>
@@ -343,9 +345,9 @@ function WbsItemForm({
                 <input
                   type="date"
                   value={form.actualStartDate}
-                  disabled={form.status === 'Planned'}
+                  disabled={form.status === 'Planned' || form.status === 'Waiting'}
                   onChange={(e) => set('actualStartDate', e.target.value)}
-                  className={`${inputClass} ${form.status === 'Planned' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`${inputClass} ${form.status === 'Planned' || form.status === 'Waiting' ? 'opacity-50 cursor-not-allowed' : ''}`}
                 />
               </FormField>
               <FormField label={t('wbs:form.completedDate')} help={t('wbs:form.completedHint')}>
@@ -854,7 +856,7 @@ function DateEditModal({
   const [actualStart, setActualStart] = useState(item.actualStartDate?.slice(0, 10) ?? '');
   const [completed, setCompleted] = useState(item.completedDate?.slice(0, 10) ?? '');
   // 실적 일자 활성 조건 — 착수일=진행/완료, 완료일=완료. 상태는 이 모달에서 바꾸지 않음(작업 폼에서).
-  const actualStartDisabled = item.status === 'Planned';
+  const actualStartDisabled = item.status === 'Planned' || item.status === 'Waiting';
   const completedDisabled = item.status !== 'Done';
 
   const handleSave = async () => {
@@ -925,7 +927,7 @@ export function WbsPage() {
   const [linkCountByWbs, setLinkCountByWbs] = useState<Map<number, number>>(new Map());
   const [sourceCountByWbs, setSourceCountByWbs] = useState<Record<number, number>>({});
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
-  const [view, setView] = useState<'table' | 'gantt'>('table');
+  const [view, setView] = useState<'table' | 'gantt' | 'kanban'>('table');
   // 임계경로(CPM) 작업 id 집합 — 간트 막대 적색 테두리 강조. 간트 뷰에서 지연 로드.
   const [criticalIds, setCriticalIds] = useState<Set<number>>(new Set());
   // 의존성 — 간트 화살표용. 간트 뷰에서 지연 로드.
@@ -955,6 +957,12 @@ export function WbsPage() {
   const [applyingTemplate, setApplyingTemplate] = useState(false);
   const [saveTemplateForm, setSaveTemplateForm] = useState<{ name: string; description: string; category: string } | null>(null);
   const [savingTemplate, setSavingTemplate] = useState(false);
+  // 멀티선택 부모 이동 — 선택 모드에서만 체크박스/플로팅 바 노출(평소 표는 기존과 동일).
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBulkMove, setShowBulkMove] = useState(false);
+  const [bulkParentTarget, setBulkParentTarget] = useState<number | null>(null);
+  const [movingBulk, setMovingBulk] = useState(false);
 
   useCreateForm(() => { setEditing(null); setAddingChildOf(undefined); setShowForm(true); });
 
@@ -1222,6 +1230,64 @@ export function WbsPage() {
     refresh();
   };
 
+  // 칸반 드롭 상태 변경 — 낙관적 갱신은 KanbanBoardView 가 담당하므로 여기선 영속화+재조회만.
+  // 실패 시 update 가 throw → 보드가 롤백. id 로 트리에서 원본을 찾아 전체 페이로드 전송.
+  const handleKanbanStatusMove = async (id: number, status: WbsStatus) => {
+    const item = findItem(id, items);
+    if (!item || item.status === status) return;
+    const { children: _children, ...rest } = item;
+    await wbsApi.update(pid, id, { ...rest, status });
+    refresh();
+  };
+
+  // ===== 멀티선택 부모 이동 (F4) =====
+  const toggleSelect = (id: number) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const clearSelection = () => setSelectedIds(new Set());
+  const toggleSelectionMode = () => { if (selectionMode) clearSelection(); setSelectionMode((v) => !v); };
+  // 표가 아닌 뷰로 전환 시 선택 모드 자동 종료(체크박스·플로팅 바는 표 전용).
+  useEffect(() => { if (view !== 'table') { setSelectionMode(false); setSelectedIds(new Set()); } }, [view]);
+
+  // 선택 + 그 자손 — 부모 이동 시 함께 옮겨지므로 강조. (이동 대상으로 들어갈 수 없는 순환 가드도 겸함.)
+  const affectedIds = useMemo(() => {
+    const s = new Set<number>();
+    for (const id of selectedIds) for (const d of collectDescendantIds(id, items)) s.add(d);
+    return s;
+  }, [selectedIds, items]);
+
+  // 실제 이동 대상 = 다른 선택 항목의 자손이 아닌 '최상위 선택'만. (자손은 상위와 함께 이동.)
+  const effectiveMoveTargetIds = useMemo(
+    () => [...selectedIds].filter((id) => {
+      for (const a of collectAncestorIds(id, items)) if (selectedIds.has(a)) return false;
+      return true;
+    }),
+    [selectedIds, items],
+  );
+
+  const handleBulkMove = async (parentId: number | null) => {
+    const targets = effectiveMoveTargetIds;
+    if (targets.length === 0) return;
+    setMovingBulk(true);
+    const results = await Promise.allSettled(targets.map((id) => {
+      const item = findItem(id, items);
+      if (!item) return Promise.resolve();
+      const { children: _children, ...rest } = item;
+      return wbsApi.update(pid, id, { ...rest, parentId: parentId ?? undefined }, { silent: true });
+    }));
+    setMovingBulk(false);
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    const moved = targets.length - failed;
+    if (failed > 0) toast.error(t('wbs:bulkMove.partialError', { ok: moved, failed }));
+    else toast.success(t('wbs:bulkMove.moved', { count: moved }));
+    setShowBulkMove(false);
+    setBulkParentTarget(null);
+    clearSelection();
+    refresh();
+  };
+
   // 사이클 13 — 형제 reorder drop 처리. 같은 부모 안에서만 작동, 다른 부모로 드롭 시 무시.
   const handleDragEnd = async (e: DragEndEvent) => {
     setActiveId(null);
@@ -1335,7 +1401,25 @@ export function WbsPage() {
             >
               {t('wbs:page.viewGantt')}
             </Button>
+            <Button
+              variant={view === 'kanban' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setView('kanban')}
+            >
+              {t('wbs:page.viewKanban')}
+            </Button>
           </div>
+          {view === 'table' && items.length > 0 && (
+            <Button
+              variant={selectionMode ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={toggleSelectionMode}
+              leadingIcon={<ListChecks size={16} />}
+              title={t('wbs:bulkMove.selectModeHint')}
+            >
+              {t('wbs:bulkMove.selectMode')}
+            </Button>
+          )}
           {items.length > 0 && (
             <>
               <Button
@@ -1393,6 +1477,8 @@ export function WbsPage() {
           </div>
         )}
 
+        {/* 필터(키워드·상태·담당자·매칭만·저장뷰·기억)는 표·간트 전용 — 칸반은 자체 필터를 쓰므로 숨김. */}
+        {view !== 'kanban' && (
         <div className="ml-auto flex items-center gap-2 flex-wrap">
           {/* 키워드·매칭만 = 표 전용. 상태·담당자·미할당·지연 = 패널 안 공통 필터. */}
           {view === 'table' && (
@@ -1416,13 +1502,6 @@ export function WbsPage() {
             {t('wbs:page.filter')}
             {chipFilterCount > 0 && ` (${chipFilterCount})`}
           </Button>
-          {/* 패널이 닫혀 있을 때만 바에 노출 — 열려 있으면 칩 옆(패널)에서 토글. */}
-          {view === 'table' && hasAnyFilter(filterOpts) && !showFilters && (
-            <label className="text-xs text-muted flex items-center gap-1 cursor-pointer">
-              <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
-              {t('wbs:page.matchOnly')}
-            </label>
-          )}
           {hasAnyFilter(filterOpts) && (
             <Button variant="ghost" size="sm" onClick={resetFilters}>
               {t('common:reset')}
@@ -1455,13 +1534,14 @@ export function WbsPage() {
             {t('wbs:page.rememberFilters')}
           </label>
         </div>
+        )}
       </Card>
 
-      {showFilters && (
+      {view !== 'kanban' && showFilters && (
         <Card padding="tight" className="space-y-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted w-12 shrink-0">{t('wbs:page.filterStatus')}</span>
-            {(['Planned', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
+            {(['Planned', 'Waiting', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
               const active = filterStatuses.has(s);
               return (
                 <button
@@ -1493,6 +1573,21 @@ export function WbsPage() {
             >
               {t('wbs:page.overdueStart')}
             </button>
+            {/* '매칭만' — 상태 행 우측에 항상 고정(필터 선택해도 패널 높이 불변). 표 전용, 필터 없으면 비활성. */}
+            {view === 'table' && (
+              <label
+                className={`ml-auto flex items-center gap-1 ${hasAnyFilter(filterOpts) ? 'text-muted cursor-pointer' : 'text-muted opacity-40 cursor-not-allowed'}`}
+                title={t('wbs:page.matchOnlyFull')}
+              >
+                <input
+                  type="checkbox"
+                  checked={matchOnly}
+                  disabled={!hasAnyFilter(filterOpts)}
+                  onChange={(e) => setMatchOnly(e.target.checked)}
+                />
+                {t('wbs:page.matchOnly')}
+              </label>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted w-12 shrink-0">{t('wbs:page.filterAssignee')}</span>
@@ -1519,17 +1614,9 @@ export function WbsPage() {
                 );
               })}
           </div>
-          {view === 'table' && hasAnyFilter(filterOpts) && (
-            <div className="flex items-center gap-2 pt-1 border-t border-default">
-              <span className="text-muted w-12 shrink-0">{t('wbs:page.filterView')}</span>
-              <label className="flex items-center gap-1 cursor-pointer">
-                <input type="checkbox" checked={matchOnly} onChange={(e) => setMatchOnly(e.target.checked)} />
-                {t('wbs:page.matchOnlyFull')}
-              </label>
-            </div>
-          )}
         </Card>
       )}
+
 
       {loading ? (
         <Card padding="spacious">
@@ -1575,6 +1662,14 @@ export function WbsPage() {
             }
           />
         </Card>
+      ) : view === 'kanban' ? (
+        <Card padding="normal">
+          <WbsKanban
+            items={items}
+            onMoveStatus={handleKanbanStatusMove}
+            onOpen={setEditing}
+          />
+        </Card>
       ) : (
         <Card padding="none" className="overflow-x-auto">
           <DndContext
@@ -1618,6 +1713,10 @@ export function WbsPage() {
                         item={item}
                         projectId={pid}
                         matchedIds={matchedIds}
+                        filterActive={hasAnyFilter(filterOpts)}
+                        selectedIds={selectionMode ? selectedIds : undefined}
+                        affectedIds={selectionMode ? affectedIds : undefined}
+                        onToggleSelect={selectionMode ? toggleSelect : undefined}
                         linkCountByWbs={linkCountByWbs}
                         sourceCountByWbs={sourceCountByWbs}
                         reorderDisabled={reorderDisabled}
@@ -1737,6 +1836,62 @@ export function WbsPage() {
                 className={inputClass}
               />
             </FormField>
+          </div>
+        </Modal>
+      )}
+
+      {/* 멀티선택 부모이동 — 플로팅 바(fixed). 표를 밀지 않도록 오버레이. 모달보다 낮은 z. */}
+      {view === 'table' && selectionMode && selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-2 rounded-full bg-surface border border-accent shadow-lg">
+          <span className="text-sm text-primary font-medium">
+            {t('wbs:bulkMove.selected', { count: selectedIds.size })}
+          </span>
+          <Button variant="primary" size="sm" onClick={() => { setBulkParentTarget(null); setShowBulkMove(true); }} leadingIcon={<FolderTree size={14} />}>
+            {t('wbs:bulkMove.action')}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={clearSelection}>
+            {t('wbs:bulkMove.clear')}
+          </Button>
+          <button
+            type="button"
+            onClick={() => { clearSelection(); setSelectionMode(false); }}
+            title={t('wbs:bulkMove.exit')}
+            aria-label={t('wbs:bulkMove.exit')}
+            className="p-1 text-muted hover:text-primary transition-colors"
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
+      {showBulkMove && (
+        <Modal
+          open
+          onClose={() => setShowBulkMove(false)}
+          title={t('wbs:bulkMove.title', { count: effectiveMoveTargetIds.length })}
+          size="md"
+          fixedHeight
+          showCloseButton
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setShowBulkMove(false)} leadingIcon={<X size={16} />}>
+                {t('common:cancel')}
+              </Button>
+              <Button variant="primary" onClick={() => handleBulkMove(bulkParentTarget)} disabled={movingBulk} leadingIcon={<FolderTree size={16} />}>
+                {movingBulk ? t('wbs:bulkMove.moving') : t('wbs:bulkMove.confirm')}
+              </Button>
+            </>
+          }
+        >
+          <div className="flex flex-col gap-2 min-h-0 h-full">
+            <p className="text-xs text-muted shrink-0">{t('wbs:bulkMove.desc')}</p>
+            <WbsTreePicker
+              items={items}
+              selectedId={bulkParentTarget}
+              excludeIds={affectedIds}
+              onSelect={setBulkParentTarget}
+              showRoot
+            />
           </div>
         </Modal>
       )}

@@ -12,6 +12,17 @@
     "ko": "한국어",
     "en": "English"
   },
+  "worklog": {
+    "title": "업무일지",
+    "scope": "작성 범위",
+    "scopeHint": "‘자신만’ 선택 시, 설정의 ‘내 이름’이 담당인 작업·이슈의 상태 변경과 ‘진행 항목 자동 작성’만 일지에 기록됩니다.",
+    "scopeAll": "전체",
+    "scopeMine": "자신만",
+    "weeklyMode": "주간 통합 방식",
+    "weeklyModeHint": "통합 모니터링 ‘일지’ 탭의 주간 일지 표시 방식. ‘주간 최종 상태’는 요일 구분 없이 작업별 최종 상태로 합칩니다.",
+    "weeklyByDay": "요일별",
+    "weeklyFinalState": "주간 최종 상태"
+  },
   "page": {
     "title": "설정",
     "saved": "저장되었습니다."

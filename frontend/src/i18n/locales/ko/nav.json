@@ -2,8 +2,11 @@
   "group": {
     "main": "주요",
     "insights": "분석",
-    "manage": "관리"
+    "manage": "관리",
+    "favorites": "즐겨찾기"
   },
+  "favoriteAdd": "즐겨찾기 추가",
+  "favoriteRemove": "즐겨찾기 해제",
   "projects": "프로젝트 목록",
   "todos": "내 업무",
   "monitoring": "통합 모니터링",

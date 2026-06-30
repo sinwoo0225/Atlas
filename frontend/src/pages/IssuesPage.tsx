@@ -865,8 +865,7 @@ function DescriptionField({ value, onSave }: { value: string; onSave: (next: str
           onKeyDown={(e) => applyTextareaTab(e, setDraft)}
           onFocus={() => setEditing(true)}
           onBlur={() => { setEditing(false); if (draft !== value) onSave(draft); }}
-          rows={8}
-          className={`${inputClass} resize-y font-mono`}
+          className={`${inputClass} font-mono resize-none h-[14rem] overflow-auto`}
           placeholder={t('issues:descriptionPlaceholder')}
           autoFocus={editing}
         />
@@ -877,7 +876,7 @@ function DescriptionField({ value, onSave }: { value: string; onSave: (next: str
   return (
     <div
       onClick={() => setEditing(true)}
-      className="markdown-body markdown-body--wide min-h-[120px] cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
+      className="markdown-body markdown-body--wide h-[14rem] overflow-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
     >
       <ReactMarkdown>{value}</ReactMarkdown>
     </div>

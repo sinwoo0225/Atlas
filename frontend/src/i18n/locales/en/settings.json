@@ -12,6 +12,17 @@
     "ko": "한국어",
     "en": "English"
   },
+  "worklog": {
+    "title": "Work log",
+    "scope": "Logging scope",
+    "scopeHint": "When set to ‘Mine only’, only status changes and ‘auto-fill in-progress’ for tasks/issues assigned to your configured name are written to the log.",
+    "scopeAll": "All",
+    "scopeMine": "Mine only",
+    "weeklyMode": "Weekly aggregation",
+    "weeklyModeHint": "How the weekly log renders on the integrated monitoring ‘Logs’ tab. ‘Weekly final state’ merges all days into a final state per task.",
+    "weeklyByDay": "By day",
+    "weeklyFinalState": "Weekly final state"
+  },
   "page": {
     "title": "Settings",
     "saved": "Saved."

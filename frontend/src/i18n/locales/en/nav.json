@@ -2,8 +2,11 @@
   "group": {
     "main": "Main",
     "insights": "Insights",
-    "manage": "Manage"
+    "manage": "Manage",
+    "favorites": "Favorites"
   },
+  "favoriteAdd": "Add to favorites",
+  "favoriteRemove": "Remove from favorites",
   "projects": "Projects",
   "todos": "My work",
   "monitoring": "Monitoring",

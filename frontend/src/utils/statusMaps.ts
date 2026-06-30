@@ -15,6 +15,7 @@ export const projectStatusBadge: Record<ProjectStatus, { labelKey: string; varia
 
 export const wbsStatusBadge: Record<WbsStatus, { labelKey: string; variant: BadgeVariant }> = {
   Planned:    { labelKey: 'status:wbs.Planned', variant: 'neutral' },
+  Waiting:    { labelKey: 'status:wbs.Waiting', variant: 'info' },
   InProgress: { labelKey: 'status:wbs.InProgress', variant: 'warning' },
   Done:       { labelKey: 'status:wbs.Done', variant: 'success' },
 };

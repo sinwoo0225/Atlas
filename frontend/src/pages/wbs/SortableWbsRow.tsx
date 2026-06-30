@@ -17,6 +17,12 @@ interface Props {
   projectId: number;
   depth?: number;
   matchedIds?: Set<number>;
+  // 필터 활성 시 비매칭 행을 흐리게(하이라이트 대신 비대상 dim). 매칭 색은 더 이상 칠하지 않는다.
+  filterActive?: boolean;
+  // 멀티선택 부모 이동 — selectedIds=직접 선택, affectedIds=선택+자손(함께 이동, 강조).
+  selectedIds?: Set<number>;
+  affectedIds?: Set<number>;
+  onToggleSelect?: (id: number) => void;
   linkCountByWbs: Map<number, number>;
   sourceCountByWbs: Record<number, number>;
   reorderDisabled: boolean;
@@ -30,7 +36,8 @@ interface Props {
 // drag handle (GripVertical) 만 listeners 받아 status BadgeMenu / 액션 버튼 클릭과 분리.
 // children 재귀 시 부모마다 SortableContext 발급 → 같은 부모 형제 안에서만 정렬.
 export function SortableWbsRow({
-  item, projectId, depth = 0, matchedIds,
+  item, projectId, depth = 0, matchedIds, filterActive,
+  selectedIds, affectedIds, onToggleSelect,
   linkCountByWbs, sourceCountByWbs, reorderDisabled,
   onEdit, onDelete, onAddChild, onStatusChange,
 }: Props) {
@@ -41,7 +48,12 @@ export function SortableWbsRow({
   const [expanded, setExpanded] = useState(true);
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.importance);
-  const isMatched = matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
+  const isMatched = !!matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
+  // 필터가 켜져 있고 이 행이 매칭이 아니면 흰 칠 대신 흐리게(저장 뷰에서도 잔상 없음).
+  const dimmed = !!filterActive && !isMatched;
+  const selected = !!selectedIds?.has(item.id);
+  // 선택 본인 또는 선택의 자손 → 부모 이동 시 함께 옮겨지므로 강조(흐림보다 우선).
+  const affected = !!affectedIds?.has(item.id);
 
   // 부모 행 날짜 fallback — 본인 값이 없으면 자손 합산 min/max 를 흐리게 표시.
   const computedSpan = hasChildren && (!item.startDate || !item.endDate)
@@ -60,7 +72,7 @@ export function SortableWbsRow({
   const nameColor =
     item.status === 'Done'
       ? 'item-done'
-      : item.status === 'Planned'
+      : (item.status === 'Planned' || item.status === 'Waiting')
         ? (overdueStart ? levelColor : 'text-muted')
         : levelColor;
 
@@ -77,7 +89,8 @@ export function SortableWbsRow({
   const style: CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.4 : 1,
+    // 인라인 opacity 가 Tailwind opacity 클래스보다 우선하므로 dim 도 여기서 처리. 이동 대상(affected)은 항상 또렷.
+    opacity: isDragging ? 0.4 : affected ? 1 : dimmed ? 0.4 : 1,
   };
 
   return (
@@ -87,11 +100,22 @@ export function SortableWbsRow({
         style={style}
         {...attributes}
         data-highlight-id={item.id}
-        className={`border-b border-default hover:bg-surface-2 transition-colors ${isMatched ? 'bg-accent-soft' : ''}`}
+        className={`border-b border-default hover:bg-surface-2 transition-colors ${affected ? 'bg-accent-soft' : ''}`}
         onDoubleClick={() => onEdit(item)}
       >
         <td className="py-2 px-4">
           <div className="flex items-center gap-1" style={{ paddingLeft: depth * 20 }}>
+            {onToggleSelect && (
+              <input
+                type="checkbox"
+                checked={selected}
+                onChange={() => onToggleSelect(item.id)}
+                onClick={(e) => e.stopPropagation()}
+                className="shrink-0 accent-accent cursor-pointer"
+                aria-label={t('wbs:row.selectAria', { name: item.name })}
+                title={t('wbs:row.selectTitle')}
+              />
+            )}
             <button
               ref={setActivatorNodeRef}
               {...listeners}
@@ -188,6 +212,7 @@ export function SortableWbsRow({
               value={item.status}
               options={[
                 { value: 'Planned',    label: t('status:wbs.Planned'),    variant: 'neutral' },
+                { value: 'Waiting',    label: t('status:wbs.Waiting'),    variant: 'info'    },
                 { value: 'InProgress', label: t('status:wbs.InProgress'), variant: 'warning' },
                 { value: 'Done',       label: t('status:wbs.Done'),       variant: 'success' },
               ]}
@@ -237,6 +262,10 @@ export function SortableWbsRow({
               projectId={projectId}
               depth={depth + 1}
               matchedIds={matchedIds}
+              filterActive={filterActive}
+              selectedIds={selectedIds}
+              affectedIds={affectedIds}
+              onToggleSelect={onToggleSelect}
               linkCountByWbs={linkCountByWbs}
               sourceCountByWbs={sourceCountByWbs}
               reorderDisabled={reorderDisabled}

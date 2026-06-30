@@ -4,9 +4,18 @@ using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Application.Services;
 
-public class IssueService(IIssueRepository repo, WorkLogService workLogService, IMeetingRepository meetingRepo)
+public class IssueService(
+    IIssueRepository repo,
+    WorkLogService workLogService,
+    IMeetingRepository meetingRepo,
+    IActorAccessor actorAccessor,
+    IWorkLogScopeAccessor workLogScope)
 {
     private static bool IsCompleted(IssueStatus s) => s == IssueStatus.Resolved || s == IssueStatus.Closed;
+
+    // 자동 일지 기록 여부 — '작성 범위'(설정) 가 '자신만'이면 actor 담당 이슈에만.
+    private bool ShouldAutoLog(string? assigneeName) =>
+        WorkLogScopeGate.ShouldAutoLog(workLogScope, actorAccessor, assigneeName);
 
     public async Task<IEnumerable<IssueDto>> GetByProjectAsync(int projectId, IssueListFilter? filter = null) =>
         (await repo.GetByProjectAsync(projectId, filter)).Select(ToDto);
@@ -45,9 +54,10 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         };
         var created = await repo.CreateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(created.Id))!;
-        // 신규 이슈는 등록 당일 업무일지의 '이슈' 필드에 자동 추가.
-        await workLogService.AppendIssuesAsync(reloaded.ProjectId, DateTime.Today,
-            WorkLogService.FormatIssueLine(reloaded.Title, reloaded.AssigneeResource?.Name));
+        // 신규 이슈는 등록 당일 업무일지의 '이슈' 필드에 자동 추가. (범위='자신만'이면 내 담당 이슈만)
+        if (ShouldAutoLog(reloaded.AssigneeResource?.Name))
+            await workLogService.AppendIssuesAsync(reloaded.ProjectId, DateTime.Today,
+                WorkLogService.FormatIssueLine(reloaded.Title, reloaded.AssigneeResource?.Name));
         return ToDto(reloaded);
     }
 
@@ -77,13 +87,16 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
         var updated = await repo.UpdateAsync(issue);
         var reloaded = (await repo.GetByIdAsync(updated.Id))!;
         // 시작(InProgress)·완료(Resolved/Closed) 전환 시 당일 '한 일'에 upsert(이슈는 평면).
-        // 같은 날 시작→완료면 [시작] 줄이 [완료]로 교체됨(WorkLogMerge).
-        if (!wasInProgress && updated.Status == IssueStatus.InProgress)
-            await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
-                [], "이슈", reloaded.Title, reloaded.AssigneeResource?.Name, WorkLogMerge.DoneMarker.Started);
-        else if (!wasCompleted && IsCompleted(updated.Status))
-            await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
-                [], "이슈", reloaded.Title, reloaded.AssigneeResource?.Name, WorkLogMerge.DoneMarker.Completed);
+        // 같은 날 시작→완료면 [시작] 줄이 [완료]로 교체됨(WorkLogMerge). 범위='자신만'이면 내 담당 이슈만.
+        if (ShouldAutoLog(reloaded.AssigneeResource?.Name))
+        {
+            if (!wasInProgress && updated.Status == IssueStatus.InProgress)
+                await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
+                    [], "이슈", reloaded.Title, reloaded.AssigneeResource?.Name, WorkLogMerge.DoneMarker.Started);
+            else if (!wasCompleted && IsCompleted(updated.Status))
+                await workLogService.UpsertDoneHierarchicalAsync(updated.ProjectId, DateTime.Today,
+                    [], "이슈", reloaded.Title, reloaded.AssigneeResource?.Name, WorkLogMerge.DoneMarker.Completed);
+        }
         // C-1 양방향 sync (B 방향) — Title 변경 시 회의록 ActionItem.content 도 갱신.
         if (titleChanged)
             await meetingRepo.SyncPromotedIssueContentAsync(updated.ProjectId, updated.Id, updated.Title);
@@ -103,6 +116,22 @@ public class IssueService(IIssueRepository repo, WorkLogService workLogService, 
             issue.DueDate, issue.OccurredOn, issue.ResolvedDate, issue.Category, issue.CustomFieldsJson);
         await UpdateAsync(id, dto);
         return true;
+    }
+
+    // '진행 항목 자동 작성'(F5) — 프로젝트의 '진행(InProgress)' 이슈를 당일 '한 일'에 [진행]으로 일괄 upsert.
+    // 같은 이슈의 기존 [시작] 줄은 [진행]으로 in-place 덮어쓰기(WorkLogMerge). 평면·범위 게이트는 자동 등록과 동일. 등록 건수 반환.
+    public async Task<int> AutoLogInProgressAsync(int projectId, DateTime date)
+    {
+        var issues = await repo.GetByProjectAsync(projectId, new IssueListFilter(Statuses: new[] { IssueStatus.InProgress }));
+        var count = 0;
+        foreach (var issue in issues)
+        {
+            if (!ShouldAutoLog(issue.AssigneeResource?.Name)) continue;
+            await workLogService.UpsertDoneHierarchicalAsync(projectId, date,
+                [], "이슈", issue.Title, issue.AssigneeResource?.Name, WorkLogMerge.DoneMarker.InProgress);
+            count++;
+        }
+        return count;
     }
 
     public async Task<bool> DeleteAsync(int id)

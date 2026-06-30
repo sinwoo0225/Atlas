@@ -7,6 +7,8 @@ import ReactMarkdown from 'react-markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
 import { loadSettings } from '../store/settings';
+import { isFavorite, toggleFavorite, FAVORITES_EVENT } from '../utils/menuFavorites';
+import { FavoriteStar } from '../components/FavoriteStar';
 import { Button, Card, Badge, EmptyState, Skeleton, Spinner } from '../components/ui';
 import { wbsStatusBadge } from '../utils/statusMaps';
 import {
@@ -118,6 +120,24 @@ export function MonitoringPage() {
     setSearchParams(params, { replace: true });
   };
 
+  // 현재 탭/뷰를 메뉴 즐겨찾기로 토글 (예: '/monitoring?tab=tasks&view=kanban'). 라벨=모니터링 · 탭[· 뷰].
+  const [favVersion, setFavVersion] = useState(0);
+  useEffect(() => {
+    const on = () => setFavVersion((v) => v + 1);
+    window.addEventListener(FAVORITES_EVENT, on);
+    return () => window.removeEventListener(FAVORITES_EVENT, on);
+  }, []);
+  const qs = searchParams.toString();
+  const currentHref = `/monitoring${qs ? `?${qs}` : ''}`;
+  // favVersion 은 즐겨찾기 토글(이벤트) 시 재평가를 위한 의도적 의존성.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const currentViewFav = useMemo(() => isFavorite(currentHref), [currentHref, favVersion]);
+  const toggleCurrentViewFav = () => {
+    const tabLabel = t(TABS.find((x) => x.value === tab)?.labelKey ?? 'monitoring:tabs.overview');
+    const viewLabel = tab === 'tasks' ? ` · ${t(TASK_VIEWS.find((v) => v.value === taskView)?.labelKey ?? '')}` : '';
+    toggleFavorite({ href: currentHref, iconSlot: '/monitoring', label: `${t('monitoring:title')} · ${tabLabel}${viewLabel}` });
+  };
+
   const [items, setItems] = useState<TodayWbs[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -160,10 +180,11 @@ export function MonitoringPage() {
     setCapacityLoading(false);
     const thisMon = startOfWeek(new Date());
     const lastMon = addDays(thisMon, -7);
+    const weeklyMode = loadSettings().weeklyWorkLogMode;
     Promise.all([
       monitoringApi.getToday(),
-      worklogApi.weeklyMonitoring(isoDate(thisMon)),
-      worklogApi.weeklyMonitoring(isoDate(lastMon)),
+      worklogApi.weeklyMonitoring(isoDate(thisMon), weeklyMode),
+      worklogApi.weeklyMonitoring(isoDate(lastMon), weeklyMode),
       monitoringApi.getCharts(),
       monitoringApi.getResourceHeatmap(),
       monitoringApi.getActivityByProject(30),
@@ -272,7 +293,14 @@ export function MonitoringPage() {
         <div className="p-3 bg-danger-soft border border-default rounded-md text-on-danger text-sm">{error}</div>
       )}
 
-      <TabBar value={tab} onChange={setTab} />
+      <div className="flex items-center gap-1">
+        <TabBar value={tab} onChange={setTab} />
+        <FavoriteStar
+          active={currentViewFav}
+          onToggle={toggleCurrentViewFav}
+          className={currentViewFav ? '' : 'opacity-70 hover:opacity-100'}
+        />
+      </div>
 
       {tab === 'overview' && (
         <div className="space-y-4">

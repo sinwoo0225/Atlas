@@ -8,6 +8,7 @@
   },
   "wbs": {
     "Planned": "Planned",
+    "Waiting": "Waiting",
     "InProgress": "In progress",
     "Done": "Done"
   },

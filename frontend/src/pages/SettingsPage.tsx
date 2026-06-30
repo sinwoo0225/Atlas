@@ -610,6 +610,29 @@ export function SettingsPage() {
         </FormField>
       </Section>
 
+      <Section title={t('settings:worklog.title')}>
+        <FormField label={t('settings:worklog.scope')} hint={t('settings:worklog.scopeHint')}>
+          <select
+            value={settings.workLogScope}
+            onChange={(e) => update('workLogScope', e.target.value as AppSettings['workLogScope'])}
+            className={inputClass}
+          >
+            <option value="all">{t('settings:worklog.scopeAll')}</option>
+            <option value="mine">{t('settings:worklog.scopeMine')}</option>
+          </select>
+        </FormField>
+        <FormField label={t('settings:worklog.weeklyMode')} hint={t('settings:worklog.weeklyModeHint')}>
+          <select
+            value={settings.weeklyWorkLogMode}
+            onChange={(e) => update('weeklyWorkLogMode', e.target.value as AppSettings['weeklyWorkLogMode'])}
+            className={inputClass}
+          >
+            <option value="byDay">{t('settings:worklog.weeklyByDay')}</option>
+            <option value="finalState">{t('settings:worklog.weeklyFinalState')}</option>
+          </select>
+        </FormField>
+      </Section>
+
       <Section title={t('settings:behavior.shortcuts')}>
         <FormField
           label={t('settings:behavior.shortcutsHelp')}

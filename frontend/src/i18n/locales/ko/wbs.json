@@ -3,6 +3,7 @@
     "title": "일정 / WBS",
     "viewTable": "표",
     "viewGantt": "간트",
+    "viewKanban": "칸반",
     "applyTemplate": "템플릿 적용",
     "saveTemplate": "템플릿으로 저장",
     "addTask": "작업 추가",
@@ -193,6 +194,22 @@
     "addChildTitle": "하위 작업 추가",
     "addChildAria": "{{name}} 의 하위 작업 추가",
     "editAria": "{{name}} 수정",
-    "deleteAria": "{{name}} 삭제"
+    "deleteAria": "{{name}} 삭제",
+    "selectAria": "{{name}} 선택",
+    "selectTitle": "선택 (부모 이동 대상)"
+  },
+  "bulkMove": {
+    "selectMode": "선택",
+    "selectModeHint": "여러 작업을 선택해 한 번에 부모를 이동합니다.",
+    "exit": "선택 모드 종료",
+    "selected": "{{count}}개 선택됨",
+    "action": "부모 이동",
+    "clear": "선택 해제",
+    "title": "선택 항목 부모 이동 ({{count}}개)",
+    "desc": "선택한 작업과 그 하위 작업이 함께 새 부모로 이동합니다. 새 부모를 선택하세요.",
+    "confirm": "이동",
+    "moving": "이동 중…",
+    "moved": "{{count}}개 작업을 이동했습니다.",
+    "partialError": "{{ok}}개 이동, {{failed}}개 실패."
   }
 }

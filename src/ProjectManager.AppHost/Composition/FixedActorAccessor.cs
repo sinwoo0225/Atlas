@@ -9,3 +9,9 @@ public sealed class FixedActorAccessor(string actor) : IActorAccessor
 {
     public string GetActor() => actor;
 }
+
+// 비-HTTP 호스트(CLI/MCP)용 고정 업무일지 범위 — 항상 전체(MineOnly=false). 자동화는 '자신만' 게이팅 없이 기록.
+public sealed class FixedWorkLogScopeAccessor(bool mineOnly = false) : IWorkLogScopeAccessor
+{
+    public bool MineOnly { get; } = mineOnly;
+}

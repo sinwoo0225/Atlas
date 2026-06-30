@@ -3,7 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import ReactMarkdown from 'react-markdown';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, CalendarDays, Search } from 'lucide-react';
+import { toast } from 'sonner';
+import { ChevronLeft, ChevronRight, CalendarDays, Search, ListPlus } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
 import { Button, Card, Spinner, DirtyDot, inputClass } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
@@ -91,27 +92,44 @@ export function WorkLogPage() {
     setSelectedIdx(idx >= 0 ? idx : 0);
   }, [weekStartIso]);
 
+  // 주(week) 일지 응답을 5일치 DayEntry 로 매핑 (초기 로드 + 자동 작성 후 갱신 공용).
+  const mapLogsToEntries = (logs: WorkLog[]): DayEntry[] => {
+    const byDate = new Map(logs.map((l) => [l.date.slice(0, 10), l]));
+    return weekDates.map((d) => {
+      const k = isoDate(d);
+      const log = byDate.get(k);
+      return { date: k, done: log?.done ?? '', plan: log?.plan ?? '', issues: log?.issues ?? '' };
+    });
+  };
+
   useEffect(() => {
     if (!pid) return;
     let cancelled = false;
     setLoading(true);
     worklogApi.getWeek(pid, weekStartIso).then((logs) => {
       if (cancelled) return;
-      const byDate = new Map(logs.map((l: WorkLog) => [l.date.slice(0, 10), l]));
-      setEntries(weekDates.map((d) => {
-        const k = isoDate(d);
-        const log = byDate.get(k);
-        return {
-          date: k,
-          done: log?.done ?? '',
-          plan: log?.plan ?? '',
-          issues: log?.issues ?? '',
-        };
-      }));
+      setEntries(mapLogsToEntries(logs));
       setLoading(false);
     });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pid, weekStartIso]);
+
+  const [autoProgressing, setAutoProgressing] = useState(false);
+  // '진행 항목 자동 작성' — 편집 중 내용 저장 후, 진행 WBS·이슈를 [시작]으로 당일 '한 일'에 추가하고 주 일지 갱신.
+  const handleAutoProgress = async () => {
+    const e = entries[selectedIdx];
+    if (!e || autoProgressing) return;
+    setAutoProgressing(true);
+    try {
+      await persist(selectedIdx);
+      const res = await worklogApi.autoProgress(pid, e.date);
+      setEntries(mapLogsToEntries(res.week));
+      toast.success(t('worklog:autoProgress.done', { count: res.wbs + res.issues }));
+    } finally {
+      setAutoProgressing(false);
+    }
+  };
 
   const updateField = (idx: number, field: FieldKey, value: string) => {
     setEntries((prev) => {
@@ -164,8 +182,8 @@ export function WorkLogPage() {
   });
 
   return (
-    <div className="p-6 space-y-4">
-      <header className="flex items-center gap-3 flex-wrap">
+    <div className="p-6 h-full flex flex-col gap-4 min-h-0">
+      <header className="flex items-center gap-3 flex-wrap shrink-0">
         <h1 className="h-page flex items-center gap-2 min-w-0">
           <CalendarDays size={18} className="text-muted shrink-0" />
           {project && (
@@ -204,8 +222,8 @@ export function WorkLogPage() {
       {loading ? (
         <Spinner label={t('common:loading')} />
       ) : (
-        <>
-          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
+        <div className="flex-1 min-h-0 flex flex-col gap-4">
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-5 shrink-0">
             {entries.map((entry, idx) => (
               <PreviewCard
                 key={entry.date}
@@ -227,9 +245,11 @@ export function WorkLogPage() {
               entry={selectedEntry}
               onChange={(field, value) => updateField(selectedIdx, field, value)}
               onBlur={() => persist(selectedIdx)}
+              onAutoProgress={handleAutoProgress}
+              autoProgressing={autoProgressing}
             />
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -257,7 +277,7 @@ function PreviewCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`text-left bg-surface border rounded-lg overflow-hidden transition-all flex flex-col h-full ${borderCls} ${dimmed ? 'opacity-50' : ''}`}
+      className={`text-left bg-surface border rounded-lg overflow-hidden transition-all flex flex-col h-full min-h-[6.5rem] ${borderCls} ${dimmed ? 'opacity-50' : ''}`}
     >
       <div className={`px-3 py-2 border-b border-default flex items-baseline gap-2 shrink-0 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
@@ -281,7 +301,7 @@ function PreviewField({ label, value }: { label: string; value: string }) {
       {empty ? (
         <div className="text-xs text-muted italic leading-tight">—</div>
       ) : (
-        <div className="markdown-body text-xs leading-tight max-h-[3.6em] overflow-hidden">
+        <div className="markdown-body text-xs leading-tight max-h-[5em] overflow-hidden">
           <ReactMarkdown>{value}</ReactMarkdown>
         </div>
       )}
@@ -290,35 +310,54 @@ function PreviewField({ label, value }: { label: string; value: string }) {
 }
 
 function DayEditor({
-  dayLabel, date, entry, onChange, onBlur,
+  dayLabel, date, entry, onChange, onBlur, onAutoProgress, autoProgressing,
 }: {
   dayLabel: string;
   date: Date;
   entry: DayEntry;
   onChange: (field: FieldKey, value: string) => void;
   onBlur: () => void;
+  onAutoProgress: () => void;
+  autoProgressing: boolean;
 }) {
   const { t } = useTranslation();
   const isToday = isoDate(date) === isoDate(new Date());
   return (
-    <Card padding="none" className="overflow-hidden">
-      <div className={`px-4 py-2 border-b border-default flex items-baseline gap-2 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
+    <Card padding="none" className="overflow-hidden flex-1 min-h-[16rem] flex flex-col">
+      <div className={`px-4 py-2 border-b border-default flex items-baseline gap-2 shrink-0 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
         <span className="text-xs text-muted">{fmtMD(date)}</span>
         <span className="ml-2 text-xs text-muted">{t('worklog:editSelected')}</span>
         {isToday && <span className="text-[10px] text-accent uppercase tracking-wider ml-auto">Today</span>}
       </div>
-      <div className="p-4 grid gap-4 grid-cols-1 md:grid-cols-2">
+      <div className="p-4 flex flex-col md:flex-row gap-4 flex-1 min-h-0">
         {FIELDS.map((f) => (
-          <div key={f.key} className="flex flex-col">
-            <label className="block text-xs text-muted mb-1 font-medium">{t(f.labelKey)}</label>
-            <EditablePreviewField
-              key={`${entry.date}-${f.key}`}
-              value={entry[f.key]}
-              placeholder={t(f.placeholderKey)}
-              onChange={(v) => onChange(f.key, v)}
-              onBlur={onBlur}
-            />
+          <div key={f.key} className="flex-1 min-h-0 flex flex-col">
+            {/* 헤더 행 고정 높이 — '한 일'(자동작성 버튼)·'이슈'(버튼 없음)의 본문 시작선·높이 일치. */}
+            <div className="flex items-center justify-between gap-2 mb-1 min-h-[30px]">
+              <label className="block text-xs text-muted font-medium">{t(f.labelKey)}</label>
+              {f.key === 'done' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onAutoProgress}
+                  disabled={autoProgressing}
+                  leadingIcon={<ListPlus size={14} />}
+                  title={t('worklog:autoProgress.hint')}
+                >
+                  {autoProgressing ? t('worklog:autoProgress.running') : t('worklog:autoProgress.button')}
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 min-h-0">
+              <EditablePreviewField
+                key={`${entry.date}-${f.key}`}
+                value={entry[f.key]}
+                placeholder={t(f.placeholderKey)}
+                onChange={(v) => onChange(f.key, v)}
+                onBlur={onBlur}
+              />
+            </div>
           </div>
         ))}
       </div>
@@ -355,7 +394,7 @@ function EditablePreviewField({
 
   if (editing) {
     return (
-      <div className="relative">
+      <div className="relative h-full">
         <DirtyDot visible={dirty} className="absolute top-2 right-2 z-10" />
         <textarea
           ref={textareaRef}
@@ -368,8 +407,7 @@ function EditablePreviewField({
             setEditing(false);
           }}
           placeholder={placeholder}
-          rows={12}
-          className="w-full text-sm font-mono resize-y px-2 py-1.5"
+          className="w-full h-full text-sm font-mono resize-none overflow-auto px-2 py-1.5"
         />
       </div>
     );
@@ -387,7 +425,7 @@ function EditablePreviewField({
           setEditing(true);
         }
       }}
-      className="w-full min-h-[18rem] cursor-text rounded border border-default bg-surface-2/30 hover:bg-surface-2/60 px-2 py-1.5 transition-colors"
+      className="w-full h-full overflow-auto cursor-text rounded border border-default bg-surface-2/30 hover:bg-surface-2/60 px-2 py-1.5 transition-colors"
       title={t('worklog:clickToEdit')}
     >
       {empty ? (

@@ -3,6 +3,7 @@
     "title": "Schedule / WBS",
     "viewTable": "Table",
     "viewGantt": "Gantt",
+    "viewKanban": "Kanban",
     "applyTemplate": "Apply template",
     "saveTemplate": "Save as template",
     "addTask": "Add task",
@@ -193,6 +194,22 @@
     "addChildTitle": "Add sub-task",
     "addChildAria": "Add a sub-task to {{name}}",
     "editAria": "Edit {{name}}",
-    "deleteAria": "Delete {{name}}"
+    "deleteAria": "Delete {{name}}",
+    "selectAria": "Select {{name}}",
+    "selectTitle": "Select (move-parent target)"
+  },
+  "bulkMove": {
+    "selectMode": "Select",
+    "selectModeHint": "Select multiple tasks to move their parent at once.",
+    "exit": "Exit selection mode",
+    "selected": "{{count}} selected",
+    "action": "Move parent",
+    "clear": "Clear",
+    "title": "Move selected tasks ({{count}})",
+    "desc": "The selected tasks and their sub-tasks move together to the new parent. Pick a new parent.",
+    "confirm": "Move",
+    "moving": "Moving…",
+    "moved": "Moved {{count}} task(s).",
+    "partialError": "{{ok}} moved, {{failed}} failed."
   }
 }
