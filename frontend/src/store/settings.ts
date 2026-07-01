@@ -114,6 +114,8 @@ export interface AppSettings {
   entityIcons: Record<string, string>;
   // 알림(마감 임박 / 일일 업무 정리) 설정.
   notifications: NotificationSettings;
+  // 설정 마법사(온보딩)를 1회 노출했는지. 최초 실행 시 자동, 기존 사용자에겐 1회 안내 후 true.
+  onboardingCompleted: boolean;
 }
 
 const KEY = 'pm-hub-settings';
@@ -155,7 +157,13 @@ const defaults: AppSettings = {
   menuIcons: {},
   entityIcons: {},
   notifications: cloneNotificationDefaults(),
+  onboardingCompleted: false,
 };
+
+// pm-hub-settings 키가 아예 없으면 첫 실행(신규 설치)로 간주 — 설정 마법사 자동 노출 판단용.
+export function hasStoredSettings(): boolean {
+  try { return typeof window !== 'undefined' && localStorage.getItem(KEY) !== null; } catch { return false; }
+}
 
 export function loadSettings(): AppSettings {
   if (typeof window === 'undefined') return { ...defaults };

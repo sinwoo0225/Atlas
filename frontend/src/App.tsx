@@ -25,7 +25,8 @@ import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
-import { applyAppearance, loadSettings, patchSettings, seedDefaultAuthorIfEmpty, resolveToasterTheme } from './store/settings';
+import { applyAppearance, loadSettings, patchSettings, seedDefaultAuthorIfEmpty, resolveToasterTheme, hasStoredSettings } from './store/settings';
+import { SetupWizard } from './components/onboarding/SetupWizard';
 import { useNotificationEngine } from './notifications/useNotificationEngine';
 import i18n from './i18n';
 import { getMachineAccount } from './utils/hostBridge';
@@ -52,11 +53,16 @@ async function ensureMyResourceId(): Promise<void> {
 // 위젯(/widget)은 이 셸 밖에서 독립 렌더되므로 핑·업데이트 토스트·커맨드팔레트가 뜨지 않는다.
 function MainShell() {
   const [theme, setTheme] = useState<ThemeMode>(() => loadSettings().theme);
+  // 설정 마법사(온보딩) — 최초 실행 자동 / 기존 사용자 1회 안내.
+  const [showWizard, setShowWizard] = useState(false);
+  const closeWizard = () => { setShowWizard(false); patchSettings({ onboardingCompleted: true }); };
 
   // 알림 엔진 — 마감 임박/일일 정리 폴링 + 토스트 디스패치(메인 셸 전용).
   useNotificationEngine();
 
   useEffect(() => {
+    // pm-hub-settings 키 존재 여부로 신규 설치 판별 — 시드/패치 전에 캡처.
+    const freshInstall = !hasStoredSettings();
     const s = loadSettings();
     applyAppearance(s);
 
@@ -81,6 +87,22 @@ function MainShell() {
       ensureMyResourceId();
     }
 
+    // 설정 마법사(온보딩) — 아직 안 봤으면 1회. 신규 설치는 자동 실행, 기존 사용자는 가벼운 안내 후 선택 실행.
+    let onboardTimer: number | undefined;
+    if (!s.onboardingCompleted) {
+      if (freshInstall) {
+        setShowWizard(true); // 닫을 때 onboardingCompleted 저장(closeWizard).
+      } else {
+        patchSettings({ onboardingCompleted: true }); // 기존 사용자는 안내 1회 후 다시 묻지 않음.
+        onboardTimer = window.setTimeout(() => {
+          toast(i18n.t('onboarding:prompt.message'), {
+            duration: 12000,
+            action: { label: i18n.t('onboarding:prompt.action'), onClick: () => setShowWizard(true) },
+          });
+        }, 1500);
+      }
+    }
+
     // 시작 시 백엔드 ping — apiVersion 불일치 시 경고, 연결 실패 시 에러.
     systemApi.ping().then((r) => {
       if (r.apiVersion !== EXPECTED_API_VERSION) {
@@ -100,7 +122,10 @@ function MainShell() {
       }
     }).catch(() => {});
 
-    return () => window.removeEventListener('atlas:settings-changed', onSettings);
+    return () => {
+      window.removeEventListener('atlas:settings-changed', onSettings);
+      if (onboardTimer) clearTimeout(onboardTimer);
+    };
   }, []);
 
   return (
@@ -116,6 +141,7 @@ function MainShell() {
       <ConfirmDialogHost />
       <CommandPalette />
       <ShortcutsModal />
+      {showWizard && <SetupWizard onClose={closeWizard} />}
       <Layout>
         <Outlet />
       </Layout>

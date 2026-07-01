@@ -8,6 +8,7 @@ import {
   Palette, Download, Upload, RotateCcw, AlertTriangle, Search as SearchIcon, FileText, Bell,
 } from 'lucide-react';
 import { openShortcutsModal } from '../data/shortcuts';
+import { SetupWizard } from '../components/onboarding/SetupWizard';
 import { EULA_KO, EULA_EN } from '../data/eula';
 import { aiApi } from '../api/ai';
 import { resourcesApi } from '../api/resources';
@@ -84,6 +85,8 @@ export function SettingsPage() {
   const { t } = useTranslation();
   const [settings, setSettings] = useState<AppSettings>(loadSettings());
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  // 설정 마법사(온보딩) — 상단 버튼으로 실행. 마법사는 patchSettings 로 즉시 저장하므로 닫을 때 로컬 상태 재동기화.
+  const [showWizard, setShowWizard] = useState(false);
   const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
     const saved = localStorage.getItem(SETTINGS_TAB_KEY);
@@ -326,7 +329,20 @@ export function SettingsPage() {
             </button>
           );
         })}
+        {/* 탭 끝 — 설정 마법사 실행 버튼. */}
+        <button
+          type="button"
+          onClick={() => setShowWizard(true)}
+          className="ml-auto flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 border-transparent -mb-px text-accent hover:opacity-80 transition-opacity"
+        >
+          <Sparkles size={14} />
+          {t('onboarding:start')}
+        </button>
       </div>
+
+      {showWizard && (
+        <SetupWizard onClose={() => { setShowWizard(false); setSettings(loadSettings()); }} />
+      )}
 
       {activeTab === 'appearance' && (<>
       <Section title={t('settings:appearance.title')}>

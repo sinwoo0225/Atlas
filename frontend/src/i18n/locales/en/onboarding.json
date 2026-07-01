@@ -1,0 +1,68 @@
+{
+  "title": "Setup wizard",
+  "start": "Setup wizard",
+  "prompt": {
+    "message": "Use the setup wizard to quickly configure language, your identity, theme, and more.",
+    "action": "Run wizard"
+  },
+  "nav": {
+    "back": "Back",
+    "next": "Next",
+    "finish": "Finish",
+    "skip": "Skip",
+    "step": "Step {{current}} / {{total}}"
+  },
+  "changeableHint": "You can change this later anytime in Settings.",
+  "intro": {
+    "title": "Welcome 👋",
+    "body": "Let's quickly set up a few things to make Atlas comfortable to use. You can skip any step, and change everything later in Settings."
+  },
+  "language": {
+    "title": "Language",
+    "desc": "Choose the display language.",
+    "ko": "한국어",
+    "en": "English"
+  },
+  "identity": {
+    "title": "My identity",
+    "desc": "Registering your name makes the TODO (My work) view and auto journal work around you.",
+    "placeholder": "Your name",
+    "save": "Register",
+    "resolved": "Registered as '{{name}}'.",
+    "changeable": "You can change this later in Settings > Behavior > My identity."
+  },
+  "taskView": {
+    "title": "Tasks tab default view",
+    "desc": "The view shown by default when opening the monitoring 'Tasks' tab. Pick an example below.",
+    "list": "List",
+    "listDesc": "Dense table rows",
+    "calendar": "Calendar",
+    "calendarDesc": "See it by date",
+    "kanban": "Kanban",
+    "kanbanDesc": "Board by status"
+  },
+  "theme": {
+    "title": "Theme",
+    "desc": "The overall color theme. Applied instantly when you pick one."
+  },
+  "markdown": {
+    "title": "Markdown viewer",
+    "desc": "Font size and line height for markdown text such as descriptions and notes.",
+    "fontSize": "Font size",
+    "lineHeight": "Line height",
+    "sampleTitle": "Preview",
+    "sampleHeading": "Markdown preview",
+    "sampleBody": "An example sentence shown with bold, italic, and a list."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "desc": "Deadline and daily summary notifications.",
+    "enabled": "Enable notifications",
+    "minimized": "Also show native toasts when the app is minimized"
+  },
+  "done": {
+    "title": "All set 🎉",
+    "body": "Basic setup is done. More options such as brand, icons, backup, and shortcuts are available in Settings.",
+    "hint": "Open Settings anytime from the bottom-left, and re-run this wizard from the top of Settings."
+  }
+}
