@@ -82,7 +82,9 @@
     "label": "서브태스크",
     "addPlaceholder": "서브태스크 추가 후 Enter…",
     "toggleAria": "{{title}} 완료 토글",
-    "deleteAria": "{{title}} 삭제"
+    "deleteAria": "{{title}} 삭제",
+    "editAria": "{{title}} 제목 편집",
+    "editHint": "클릭하여 제목 편집"
   },
   "deps": {
     "title": "선행 작업 · 의존성 ({{count}})",

@@ -82,7 +82,9 @@
     "label": "Subtasks",
     "addPlaceholder": "Add a subtask then Enter…",
     "toggleAria": "Toggle {{title}} done",
-    "deleteAria": "Delete {{title}}"
+    "deleteAria": "Delete {{title}}",
+    "editAria": "Edit title of {{title}}",
+    "editHint": "Click to edit title"
   },
   "deps": {
     "title": "Predecessors · dependencies ({{count}})",

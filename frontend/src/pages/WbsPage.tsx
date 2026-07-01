@@ -767,6 +767,8 @@ function SubtaskSection({ projectId, wbsItem }: { projectId: number; wbsItem: Wb
   const [subtasks, setSubtasks] = useState<WbsSubtask[]>(wbsItem.subtasks ?? []);
   const [newTitle, setNewTitle] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
   const reload = useCallback(async () => {
     try { setSubtasks(await wbsApi.listSubtasks(projectId, wbsItem.id)); } catch { /* keep current */ }
@@ -799,6 +801,19 @@ function SubtaskSection({ projectId, wbsItem }: { projectId: number; wbsItem: Wb
     catch { reload(); }
   };
 
+  const beginEdit = (st: WbsSubtask) => { setEditingId(st.id); setEditingTitle(st.title); };
+  const cancelEdit = () => { setEditingId(null); setEditingTitle(''); };
+  const commitEdit = async (st: WbsSubtask) => {
+    const title = editingTitle.trim();
+    setEditingId(null);
+    setEditingTitle('');
+    if (!title || title === st.title) return;
+    const prev = st.title;
+    setSubtasks((s) => s.map((x) => (x.id === st.id ? { ...x, title } : x)));
+    try { await wbsApi.updateSubtask(projectId, wbsItem.id, st.id, { title }); }
+    catch { setSubtasks((s) => s.map((x) => (x.id === st.id ? { ...x, title: prev } : x))); }
+  };
+
   const doneCount = subtasks.filter((s) => s.isDone).length;
 
   return (
@@ -813,7 +828,29 @@ function SubtaskSection({ projectId, wbsItem }: { projectId: number; wbsItem: Wb
               className="rounded shrink-0"
               aria-label={t('wbs:subtasks.toggleAria', { title: st.title })}
             />
-            <span className={`text-sm flex-1 break-words ${st.isDone ? 'line-through text-muted' : 'text-primary'}`}>{st.title}</span>
+            {editingId === st.id ? (
+              <input
+                autoFocus
+                value={editingTitle}
+                onChange={(e) => setEditingTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitEdit(st); }
+                  else if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); }
+                }}
+                onBlur={() => commitEdit(st)}
+                aria-label={t('wbs:subtasks.editAria', { title: st.title })}
+                className="flex-1 bg-surface border border-accent rounded px-1 py-0.5 text-sm text-primary focus:outline-none"
+              />
+            ) : (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={() => beginEdit(st)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); beginEdit(st); } }}
+                title={t('wbs:subtasks.editHint')}
+                className={`text-sm flex-1 break-words cursor-text ${st.isDone ? 'line-through text-muted' : 'text-primary'}`}
+              >{st.title}</span>
+            )}
             <button
               type="button"
               onClick={() => remove(st)}
