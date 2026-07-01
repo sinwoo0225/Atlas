@@ -49,12 +49,13 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Schedule/WBS Kanban view — group by status (Planned·Waiting·In progress·Done) or assignee; drag cards on the status board to change status
-- New WBS 'Waiting' status; move multiple tasks to a new parent at once (Select mode + highlighted move targets)
-- Work log 'Auto-fill in-progress' — adds in-progress/waiting tasks and in-progress issues to that day's log
-- Settings — work-log scope (Mine only / All) and weekly aggregation (By day / Weekly final state)
-- Menu favorites — pin project & integrated menus and specific monitoring tabs to the top of the sidebar
-- Work log screen fills the height with stable edit/preview height; filter dims non-matches; other usability polish
+- Setup wizard (first-run onboarding) — set language, your identity, the Tasks tab default view, theme, markdown viewer, and notifications in one flow (re-run from the top of Settings)
+- Create a new project straight from the project dropdown, without leaving your screen
+- Collapse/expand the Schedule/WBS tree in bulk — Expand all / 2·3 levels / Collapse all (shared by table & Gantt)
+- Inline-edit WBS subtask (checklist) titles
+- Creating a WBS task as Waiting/In progress/Done records it in that day's work log
+- Choose how the integrated menu expands (click / hover); open the notification bell from the expanded menu
+- Taller work-log preview; renamed 'Default author name' to 'My identity'
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
