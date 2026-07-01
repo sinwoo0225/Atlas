@@ -251,9 +251,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // 통합(전역) 메뉴 펼침 — 확장 버튼 클릭 또는(설정 시) 좌측 레일 마우스오버로 여는 모달 드로어(미영속).
   const [integratedExpanded, setIntegratedExpanded] = useState(false);
+  // 드로어 헤더의 알림 패널이 열려 있는 동안엔 마우스오버 자동 닫힘을 보류(패널이 드로어 밖 우측에 뜨므로).
+  const [bellPanelOpen, setBellPanelOpen] = useState(false);
   const expandBtnRef = useRef<HTMLButtonElement | null>(null);
   const closeIntegrated = () => {
     setIntegratedExpanded(false);
+    setBellPanelOpen(false);
     // 닫힐 때 트리거(확장 버튼)로 포커스 복귀 — 키보드 맥락 유지.
     requestAnimationFrame(() => expandBtnRef.current?.focus());
   };
@@ -602,10 +605,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
             />
             <div
               className="sidebar-drawer-in absolute inset-y-0 left-0 w-48 z-40 bg-sidebar sidebar-edge border-r border-default shadow-xl flex flex-col"
-              onMouseLeave={menuExpandMode === 'hover' ? () => setIntegratedExpanded(false) : undefined}
+              onMouseLeave={menuExpandMode === 'hover' ? () => { if (!bellPanelOpen) setIntegratedExpanded(false); } : undefined}
             >
-              <div className="px-3 pt-3 pb-1">
-                <SearchTrigger />
+              {/* 헤더 — 검색 + 알림 종. 마우스오버 모드에선 드로어가 레일의 종을 덮으므로 여기에도 둔다. */}
+              <div className="px-3 pt-3 pb-1 flex items-center gap-1.5">
+                <div className="flex-1 min-w-0"><SearchTrigger /></div>
+                <NotificationBell
+                  className="p-1 text-muted hover:text-primary transition-colors shrink-0"
+                  onOpenChange={(o) => { setBellPanelOpen(o); if (!o && menuExpandMode === 'hover') setIntegratedExpanded(false); }}
+                />
               </div>
               <nav
                 className="flex-1 px-2 pt-2 pb-3 space-y-1 overflow-y-auto"

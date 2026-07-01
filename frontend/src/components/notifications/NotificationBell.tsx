@@ -13,10 +13,12 @@ const MARGIN = 8;
 interface Props {
   // 배치별 버튼 스타일(레일 아이콘 / 헤더 아이콘 등).
   className?: string;
+  // 패널 열림/닫힘 통지 — 통합 메뉴 드로어(마우스오버)가 패널 열려 있는 동안 닫히지 않게 하는 데 사용.
+  onOpenChange?: (open: boolean) => void;
 }
 
 // 사이드바 종 아이콘 + 미확인 빨간 점 + 알림 패널(시간 역순). 검색 아이콘 위에 배치(요구사항 7).
-export function NotificationBell({ className = '' }: Props) {
+export function NotificationBell({ className = '', onOpenChange }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const notifications = useNotificationStore((s) => s.notifications);
@@ -37,6 +39,14 @@ export function NotificationBell({ className = '' }: Props) {
     setOpen(true);
   };
   const close = () => setOpen(false);
+
+  // 열림 상태 변화를 부모에 통지(마운트 초기 false 는 건너뜀 — 드로어 자동 닫힘 방지).
+  const firstRef = useRef(true);
+  useEffect(() => {
+    if (firstRef.current) { firstRef.current = false; return; }
+    onOpenChange?.(open);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
