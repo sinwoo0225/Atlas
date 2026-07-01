@@ -87,6 +87,8 @@ export function SettingsPage() {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   // 설정 마법사(온보딩) — 상단 버튼으로 실행. 마법사는 patchSettings 로 즉시 저장하므로 닫을 때 로컬 상태 재동기화.
   const [showWizard, setShowWizard] = useState(false);
+  // MSIX(Microsoft Store) 빌드 여부 — 작업표시줄 아이콘 컨트롤 노출 판단. managedExternally = AppPackaging.IsPackaged.
+  const [packaged, setPackaged] = useState(false);
   const [connectionMode, setConnectionMode] = useState<ConnectionMode | null>(null);
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => {
     const saved = localStorage.getItem(SETTINGS_TAB_KEY);
@@ -101,6 +103,8 @@ export function SettingsPage() {
       if (c) setConnectionMode(c.mode);
       else setConnectionMode('Local'); // 브릿지 미가용 환경(dev) 은 Local 로 가정
     });
+    // 스토어(MSIX) 빌드면 런타임 아이콘 변경이 작업표시줄에 반영되지 않으므로 컨트롤을 안내로 대체.
+    systemApi.getUpdateConfig().then((c) => setPackaged(c.managedExternally)).catch(() => {});
   }, []);
 
   // 외관(테마·커스텀색·로고색·제목·아이콘·마크다운) 라이브 프리뷰 — 저장 전에도 즉시 반영.
@@ -485,6 +489,13 @@ export function SettingsPage() {
           label={t('settings:brand.appIcon')}
           hint={t('settings:brand.appIconHint')}
         >
+          {packaged ? (
+            <div className="flex items-start gap-2 rounded-md border border-default bg-surface-2 p-3 text-sm text-muted">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5 text-on-warning" />
+              <span>{t('settings:brand.appIconStoreNote')}</span>
+            </div>
+          ) : (
+          <>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="w-10 h-10 rounded-md border border-default bg-surface-2 flex items-center justify-center overflow-hidden shrink-0">
               {settings.brandIcon
@@ -532,6 +543,8 @@ export function SettingsPage() {
               ))}
             </div>
           </div>
+          </>
+          )}
         </FormField>
       </Section>
 

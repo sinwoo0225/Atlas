@@ -57,6 +57,7 @@
     "windowTitleHint": "Used as the browser tab and desktop app window title. (Applied on save.)",
     "appIcon": "App icon (taskbar)",
     "appIconHint": "Used as the running taskbar/window icon. Small PNG/ICO recommended (SVG unsupported). The exe's own icon and the pinned taskbar icon don't change.",
+    "appIconStoreNote": "The Microsoft Store build's taskbar icon and app identity are fixed by the package manifest, so runtime icon changes are not reflected on the taskbar. (Only the window's title-bar icon changes.) Use the GitHub release (installer) build to customize the icon.",
     "appIconAlt": "App icon",
     "iconDefault": "Default",
     "pickImage": "Choose image",
