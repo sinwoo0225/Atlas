@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useCurrentProject } from '../hooks/useCurrentProject';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { toast } from 'sonner';
 import { Plus, X, Save, ChevronDown, ChevronRight, CalendarDays, Search, ListChecks, Filter, LayoutTemplate, Code2, GitBranch, Bookmark, Flag, FolderTree } from 'lucide-react';
 import {
@@ -437,7 +437,7 @@ function WbsItemForm({
                   onClick={() => setNotesEditing(true)}
                   className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
                 >
-                  <ReactMarkdown>{form.notes}</ReactMarkdown>
+                  <Markdown>{form.notes}</Markdown>
                 </div>
               )}
             </FormField>

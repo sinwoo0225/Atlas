@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { useTranslation } from 'react-i18next';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { FileText, Folder, Link as LinkIcon, Plus, Pencil, X, Save, Code2, Upload, FolderOpen, Search, ArrowUpDown, ChevronRight, FolderGit2, Check, AlertCircle, Star } from 'lucide-react';
@@ -385,7 +385,7 @@ function FilePreview({ projectId, item }: { projectId: number; item: DevInfoItem
     if (ext === 'md') {
       return (
         <div className="markdown-body markdown-body--wide text-secondary">
-          <ReactMarkdown>{text}</ReactMarkdown>
+          <Markdown>{text}</Markdown>
         </div>
       );
     }
@@ -723,7 +723,7 @@ export function DevInfoPage() {
 
               {selected.type === 'Markdown' && (
                 <div className="markdown-body markdown-body--wide text-secondary">
-                  <ReactMarkdown>{selected.content}</ReactMarkdown>
+                  <Markdown>{selected.content}</Markdown>
                 </div>
               )}
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, FileText, Building2, Search, AlertTriangle, ListTree, Sparkles, Mic, Star } from 'lucide-react';
@@ -530,7 +530,7 @@ function MeetingForm({ projectId, initial, onSave, onCancel }: {
                 onClick={() => setDiscussionEditing(true)}
                 className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
-                <ReactMarkdown>{discussion}</ReactMarkdown>
+                <Markdown>{discussion}</Markdown>
               </div>
             )}
           </FormField>
@@ -678,7 +678,7 @@ function MeetingDetail({ meeting, projectId, onChange }: {
         <div>
           <p className="text-xs text-muted font-medium mb-1">{t('meetings:detail.discussion')}</p>
           <div className="markdown-body markdown-body--wide">
-            <ReactMarkdown>{meeting.discussion}</ReactMarkdown>
+            <Markdown>{meeting.discussion}</Markdown>
           </div>
         </div>
       )}

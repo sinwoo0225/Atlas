@@ -1,5 +1,5 @@
 import { AlertTriangle, CalendarDays, Code2, ExternalLink, FileText, GitBranch, Link as LinkIcon, Network, X } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../../components/ui/Markdown';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { ChangeLog, DevInfoItem, Issue, Meeting, Project, WbsItem } from '../../types';
@@ -211,7 +211,7 @@ function ChangeView({ entity }: { entity: ChangeLog }) {
       )}
       <Section label={t('map:field.changeContent')}>
         <div className="markdown-body">
-          <ReactMarkdown>{entity.content}</ReactMarkdown>
+          <Markdown>{entity.content}</Markdown>
         </div>
       </Section>
       {entity.relatedDocLinks && (
@@ -291,7 +291,7 @@ function DevView({ entity }: { entity: DevInfoItem }) {
       </div>
       {entity.type === 'Markdown' && entity.content && (
         <div className="markdown-body">
-          <ReactMarkdown>{entity.content}</ReactMarkdown>
+          <Markdown>{entity.content}</Markdown>
         </div>
       )}
       {entity.type === 'File' && entity.filePath && (

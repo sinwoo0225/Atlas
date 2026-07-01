@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Activity, RefreshCw, Calendar, NotebookPen, Download, AlertCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { monitoringApi } from '../api/monitoring';
 import { worklogApi } from '../api/worklog';
 import { loadSettings } from '../store/settings';
@@ -783,7 +783,7 @@ function DayBlock({ day, field }: { day: WeeklyWorkLogDay; field: WorkLogField }
   return (
     <div>
       <p className="text-xs font-semibold text-secondary">{day.dayLabel}</p>
-      <div className="markdown-body pl-3"><ReactMarkdown>{day[field]}</ReactMarkdown></div>
+      <div className="markdown-body pl-3"><Markdown>{day[field]}</Markdown></div>
     </div>
   );
 }

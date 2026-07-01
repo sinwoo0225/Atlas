@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useCurrentProject } from '../hooks/useCurrentProject';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, CalendarDays, Search, ListPlus } from 'lucide-react';
@@ -302,7 +302,7 @@ function PreviewField({ label, value }: { label: string; value: string }) {
         <div className="text-xs text-muted italic leading-tight">—</div>
       ) : (
         <div className="markdown-body text-xs leading-tight max-h-[7em] overflow-hidden">
-          <ReactMarkdown>{value}</ReactMarkdown>
+          <Markdown>{value}</Markdown>
         </div>
       )}
     </div>
@@ -432,7 +432,7 @@ function EditablePreviewField({
         <span className="text-sm text-muted italic whitespace-pre-wrap">{placeholder}</span>
       ) : (
         <div className="markdown-body markdown-body--wide text-sm">
-          <ReactMarkdown>{value}</ReactMarkdown>
+          <Markdown>{value}</Markdown>
         </div>
       )}
     </div>

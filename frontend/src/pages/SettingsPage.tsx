@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import i18n from '../i18n';
@@ -576,7 +576,7 @@ export function SettingsPage() {
         </FormField>
         <FormField label={t('settings:markdown.preview')}>
           <div className="markdown-body bg-surface-2 border border-default rounded-md px-3 py-2">
-            <ReactMarkdown>{t('settings:markdown.sample')}</ReactMarkdown>
+            <Markdown>{t('settings:markdown.sample')}</Markdown>
           </div>
         </FormField>
       </Section>
@@ -1028,7 +1028,7 @@ function AboutSection() {
         showCloseButton
       >
         <div className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-auto text-sm leading-relaxed">
-          <ReactMarkdown>{eulaText}</ReactMarkdown>
+          <Markdown>{eulaText}</Markdown>
         </div>
       </Modal>
       <Modal

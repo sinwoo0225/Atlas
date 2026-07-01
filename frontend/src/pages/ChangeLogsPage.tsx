@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import ReactECharts from 'echarts-for-react';
 import { useTranslation } from 'react-i18next';
 import { Plus, Pencil, X, Save, GitBranch, Paperclip, Link as LinkIcon, Search, AlertTriangle, ListTree, ChevronDown, ChevronRight, Star } from 'lucide-react';
@@ -434,7 +434,7 @@ function ChangeLogForm({ projectId, initial, issues, wbsItems, onRefreshIssues, 
                 onClick={() => setContentEditing(true)}
                 className="markdown-body markdown-body--wide flex-1 min-h-0 overflow-y-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
               >
-                <ReactMarkdown>{content}</ReactMarkdown>
+                <Markdown>{content}</Markdown>
               </div>
             )}
           </FormField>
@@ -757,7 +757,7 @@ export function ChangeLogsPage() {
               </div>
               {expanded === log.id ? (
                 <div className="markdown-body markdown-body--wide mt-2" onClick={(e) => e.stopPropagation()}>
-                  <ReactMarkdown>{log.content}</ReactMarkdown>
+                  <Markdown>{log.content}</Markdown>
                 </div>
               ) : (
                 <p className="text-sm text-secondary mt-2 line-clamp-2">{log.content}</p>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ReactMarkdown from 'react-markdown';
+import { Markdown } from '../components/ui/Markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ChevronDown, ChevronRight, CornerDownLeft, FileText, Link as LinkIcon, ListTree, Plus, Search, Star, X } from 'lucide-react';
@@ -878,7 +878,7 @@ function DescriptionField({ value, onSave }: { value: string; onSave: (next: str
       onClick={() => setEditing(true)}
       className="markdown-body markdown-body--wide h-[14rem] overflow-auto cursor-text bg-surface-2 border border-default rounded-md px-3 py-2 hover:border-strong transition-colors"
     >
-      <ReactMarkdown>{value}</ReactMarkdown>
+      <Markdown>{value}</Markdown>
     </div>
   );
 }

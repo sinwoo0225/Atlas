@@ -811,6 +811,10 @@ table { font-variant-numeric: tabular-nums; }
   margin: 1rem 0;
 }
 .markdown-body img { max-width: 100%; border-radius: var(--radius-md); }
+/* GFM 체크리스트(- [ ]) — 불릿 제거하고 체크박스를 텍스트 앞에 정렬. */
+.markdown-body .task-list-item { list-style: none; }
+.markdown-body .task-list-item input[type="checkbox"] { margin: 0 0.4rem 0 -1.25rem; vertical-align: middle; }
+.markdown-body del { color: var(--text-muted); }
 
 /* ========== Logo (Atlas) — 토큰 참조. 워드마크 hex 변경은 :root/html.light 의 --logo-* 에서. */
 .logo-primary {
