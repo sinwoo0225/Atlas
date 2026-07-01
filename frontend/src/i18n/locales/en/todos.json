@@ -5,7 +5,7 @@
   "personal": "Personal",
   "dueShort": "Due",
   "summary": "{{total}} total · {{overdue}} overdue",
-  "noIdentityHint": "Set 'Default author name (me)' in Settings > Behavior to see only the work assigned to you. Showing everything for now.",
+  "noIdentityHint": "Set your name in 'My identity' under Settings > Behavior to see only the work assigned to you. Showing everything for now.",
   "scope": {
     "mine": "My work",
     "all": "All",
