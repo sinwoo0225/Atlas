@@ -815,6 +815,18 @@ table { font-variant-numeric: tabular-nums; }
 .markdown-body .task-list-item { list-style: none; }
 .markdown-body .task-list-item input[type="checkbox"] { margin: 0 0.4rem 0 -1.25rem; vertical-align: middle; }
 .markdown-body del { color: var(--text-muted); }
+/* 코드 구문 강조(highlight.js) — 별도 테마 파일 대신 앱 디자인 토큰에 매핑해 전 테마 자동 적응. */
+.markdown-body .hljs { color: var(--text-secondary); background: transparent; }
+.markdown-body .hljs-comment, .markdown-body .hljs-quote { color: var(--text-muted); font-style: italic; }
+.markdown-body .hljs-keyword, .markdown-body .hljs-selector-tag, .markdown-body .hljs-built_in, .markdown-body .hljs-name, .markdown-body .hljs-tag { color: var(--accent); }
+.markdown-body .hljs-string, .markdown-body .hljs-attr, .markdown-body .hljs-regexp, .markdown-body .hljs-addition { color: var(--success); }
+.markdown-body .hljs-number, .markdown-body .hljs-literal, .markdown-body .hljs-type, .markdown-body .hljs-symbol, .markdown-body .hljs-bullet, .markdown-body .hljs-link { color: var(--warning); }
+.markdown-body .hljs-title, .markdown-body .hljs-section, .markdown-body .hljs-selector-id, .markdown-body .hljs-selector-class, .markdown-body .hljs-attribute { color: var(--info); }
+.markdown-body .hljs-variable, .markdown-body .hljs-template-variable, .markdown-body .hljs-params { color: var(--text-primary); }
+.markdown-body .hljs-meta { color: var(--text-muted); }
+.markdown-body .hljs-deletion { color: var(--danger); }
+.markdown-body .hljs-emphasis { font-style: italic; }
+.markdown-body .hljs-strong { font-weight: 600; }
 
 /* ========== Logo (Atlas) — 토큰 참조. 워드마크 hex 변경은 :root/html.light 의 --logo-* 에서. */
 .logo-primary {

@@ -74,7 +74,7 @@
     "fontSizeHint": "Applied instantly to markdown rendering (meetings, work log, WBS details, etc.).",
     "lineHeight": "Line height — {{value}}",
     "preview": "Preview",
-    "sample": "# Meeting sample\n\nThis paragraph previews the **current font size** and *line height*. A single newline<br/>now breaks the line too.\n\n- [x] A finished item\n- [ ] A remaining item — ~~strikethrough~~ and `inline code`\n\n| Feature | Status |\n| --- | --- |\n| Table | Supported |\n| Link | [Atlas](https://example.com) |\n"
+    "sample": "# Meeting sample\n\nThis paragraph previews the **current font size** and *line height*. A single newline<br/>now breaks the line too.\n\n- [x] A finished item\n- [ ] A remaining item — ~~strikethrough~~ and `inline code`\n\n```js\nconst n = 42; // highlighted\n```\n\n| Feature | Status |\n| --- | --- |\n| Table | Supported |\n| Link | [Atlas](https://example.com) |\n"
   },
   "behavior": {
     "title": "Defaults",
