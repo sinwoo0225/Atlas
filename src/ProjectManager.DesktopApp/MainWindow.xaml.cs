@@ -132,6 +132,9 @@ public partial class MainWindow : Window
         // atlas.local/* 정적파일 서빙 + /api 프록시는 WebViewServer 로 위임(위젯 창과 공유).
         new WebViewServer(WebView.CoreWebView2, () => _apiClient, _wwwroot).Attach();
 
+        // 마크다운 등 본문의 외부 링크(target=_blank)를 시스템 브라우저로.
+        ExternalLinkHandler.Attach(WebView.CoreWebView2);
+
         // 프론트엔드 ↔ WPF 호스트 메시지 브릿지(네이티브 다이얼로그·연결설정·브랜드·위젯 토글).
         WebView.CoreWebView2.WebMessageReceived += OnHostMessageReceived;
 

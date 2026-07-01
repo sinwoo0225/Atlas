@@ -77,6 +77,7 @@ public sealed class WidgetForm : Form
         {
             await _webView.EnsureCoreWebView2Async(_env);
             new WebViewServer(_webView.CoreWebView2, _apiClient, _wwwroot).Attach();
+            ExternalLinkHandler.Attach(_webView.CoreWebView2);
             _webView.CoreWebView2.WebMessageReceived += OnWidgetMessage;
             _webView.CoreWebView2.Navigate(WidgetUrl);
 
