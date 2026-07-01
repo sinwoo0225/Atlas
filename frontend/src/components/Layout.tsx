@@ -11,8 +11,12 @@ import {
   ChevronsRight,
   ChevronsLeft,
   Star,
+  Plus,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { useProjectStore } from '../store/useProjectStore';
+import { projectsApi } from '../api/projects';
+import { ProjectForm, type ProjectSaveData } from '../pages/projects/ProjectForm';
 import { NotificationBell } from './notifications/NotificationBell';
 import { loadSettings, patchSettings } from '../store/settings';
 import { isHostBridgeAvailable, toggleWidget } from '../utils/hostBridge';
@@ -82,9 +86,11 @@ function ProjectSwitcher() {
   const projects = useProjectStore((s) => s.projects);
   const selectedId = useProjectStore((s) => s.selectedProjectId);
   const selectProject = useProjectStore((s) => s.selectProject);
+  const addProject = useProjectStore((s) => s.addProject);
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -103,6 +109,18 @@ function ProjectSwitcher() {
     if (subMatch) navigate(`/projects/${id}/${subMatch[1]}`);
     else navigate(`/projects/${id}/dashboard`);
     setOpen(false);
+  };
+
+  // 드롭다운에서 바로 신규 프로젝트 등록 — ProjectList 의 생성 흐름 재사용(전체 폼 모달).
+  const handleCreate = async (data: ProjectSaveData) => {
+    try {
+      const p = await projectsApi.create(data);
+      addProject(p);
+      setShowCreate(false);
+      selectProject(p.id);
+      navigate(`/projects/${p.id}/dashboard`);
+      toast.success(p.name ? t('projects:toast.created', { name: p.name }) : t('projects:toast.createdNoName'));
+    } catch { toast.error(t('projects:error.createFailed')); }
   };
 
   return (
@@ -133,7 +151,23 @@ function ProjectSwitcher() {
               </button>
             </li>
           ))}
+          {/* 신규 프로젝트 등록 — 목록 하단 고정 항목. */}
+          <li className="border-t border-default sticky bottom-0 bg-surface">
+            <button
+              onClick={() => { setOpen(false); setShowCreate(true); }}
+              className="w-full text-left px-3 py-2 text-sm flex items-center gap-2 text-accent hover:bg-surface-2"
+            >
+              <Plus size={14} className="shrink-0" />
+              <span className="truncate">{t('projects:newBtn')}</span>
+            </button>
+          </li>
         </ul>
+      )}
+      {showCreate && (
+        <ProjectForm
+          onSave={handleCreate}
+          onCancel={() => setShowCreate(false)}
+        />
       )}
     </div>
   );
