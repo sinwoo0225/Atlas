@@ -162,10 +162,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const s = loadSettings();
     return { primary: s.brandPrimaryText, accent: s.brandAccentText, menuIcons: s.menuIcons };
   });
+  // 통합 메뉴 펼치기 방식(클릭/마우스오버) — 설정 저장 시 즉시 반영.
+  const [menuExpandMode, setMenuExpandMode] = useState<'click' | 'hover'>(() => loadSettings().integratedMenuExpandMode);
   useEffect(() => {
     const onChange = () => {
       const s = loadSettings();
       setBrand({ primary: s.brandPrimaryText, accent: s.brandAccentText, menuIcons: s.menuIcons });
+      setMenuExpandMode(s.integratedMenuExpandMode);
     };
     window.addEventListener('atlas:settings-changed', onChange);
     return () => window.removeEventListener('atlas:settings-changed', onChange);
@@ -212,7 +215,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // 프로젝트 작업 중(펼침+프로젝트 선택)에는 3행 레이아웃 — 2행이 좌(전역 아이콘 레일)+우(프로젝트 라벨 메인).
   const dualPane = !collapsed && !!selectedProject;
 
-  // 통합(전역) 메뉴 펼침 — 명시적 확장 버튼으로 토글하는 모달 드로어(호버 아님, 미영속).
+  // 통합(전역) 메뉴 펼침 — 확장 버튼 클릭 또는(설정 시) 좌측 레일 마우스오버로 여는 모달 드로어(미영속).
   const [integratedExpanded, setIntegratedExpanded] = useState(false);
   const expandBtnRef = useRef<HTMLButtonElement | null>(null);
   const closeIntegrated = () => {
@@ -519,8 +522,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       {/* 2행 — 좌 전역 아이콘 레일 / 우 프로젝트 메뉴(메인). 통합 펼침 시 드로어+scrim 오버레이. */}
       <div className="relative flex-1 flex min-h-0">
-        {/* 좌: 통합 레일 (아이콘). relative — 우측 경계 확장 핸들의 기준. */}
-        <div className="relative w-14 shrink-0 border-r border-default flex flex-col">
+        {/* 좌: 통합 레일 (아이콘). relative — 우측 경계 확장 핸들의 기준. 마우스오버 모드면 진입 시 드로어 오픈. */}
+        <div
+          className="relative w-14 shrink-0 border-r border-default flex flex-col"
+          onMouseEnter={menuExpandMode === 'hover' ? () => setIntegratedExpanded(true) : undefined}
+        >
           <div className="px-2 pt-3 pb-1 space-y-1">{railBell}{searchIconBtn}</div>
           <nav className="flex-1 px-2 pt-1 pb-3 space-y-1 overflow-y-auto">
             {renderGlobalGroups(true)}
@@ -560,7 +566,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               onClick={closeIntegrated}
               aria-hidden="true"
             />
-            <div className="sidebar-drawer-in absolute inset-y-0 left-0 w-48 z-40 bg-sidebar sidebar-edge border-r border-default shadow-xl flex flex-col">
+            <div
+              className="sidebar-drawer-in absolute inset-y-0 left-0 w-48 z-40 bg-sidebar sidebar-edge border-r border-default shadow-xl flex flex-col"
+              onMouseLeave={menuExpandMode === 'hover' ? () => setIntegratedExpanded(false) : undefined}
+            >
               <div className="px-3 pt-3 pb-1">
                 <SearchTrigger />
               </div>

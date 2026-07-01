@@ -608,6 +608,20 @@ export function SettingsPage() {
             <option value="kanban">{t('settings:behavior.viewKanban')}</option>
           </select>
         </FormField>
+
+        <FormField
+          label={t('settings:behavior.integratedMenuMode')}
+          hint={t('settings:behavior.integratedMenuModeHint')}
+        >
+          <select
+            value={settings.integratedMenuExpandMode}
+            onChange={(e) => update('integratedMenuExpandMode', e.target.value as AppSettings['integratedMenuExpandMode'])}
+            className={inputClass}
+          >
+            <option value="click">{t('settings:behavior.integratedMenuClick')}</option>
+            <option value="hover">{t('settings:behavior.integratedMenuHover')}</option>
+          </select>
+        </FormField>
       </Section>
 
       <Section title={t('settings:worklog.title')}>

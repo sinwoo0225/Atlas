@@ -80,6 +80,8 @@ export interface AppSettings {
   sidebarCollapsed: boolean;
   // 통합 모니터링 '작업' 탭을 열 때 기본 보기 (URL 에 view 파라미터가 없을 때 적용).
   defaultTaskView: 'list' | 'calendar' | 'kanban';
+  // 통합(전역) 메뉴 드로어 펼침 방식. 'click'=확장 버튼 클릭(기본), 'hover'=좌측 레일에 마우스 오버 시 펼침.
+  integratedMenuExpandMode: 'click' | 'hover';
   // WBS/일정 필터 기억 옵트인. ON 이면 프로젝트별 필터 선택을 저장(atlas:wbsFilters:<id>)해 다음 방문 시 복원.
   rememberWbsFilters: boolean;
   // 업무일지 자동 작성/등록 범위. 'all'=전체 작업, 'mine'=내(myResourceId) 담당 작업만.
@@ -133,6 +135,7 @@ const defaults: AppSettings = {
   markdownLineHeight: 1.7,
   sidebarCollapsed: false,
   defaultTaskView: 'list',
+  integratedMenuExpandMode: 'click',
   rememberWbsFilters: false,
   workLogScope: 'all',
   weeklyWorkLogMode: 'byDay',
