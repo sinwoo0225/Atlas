@@ -277,7 +277,7 @@ function PreviewCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`text-left bg-surface border rounded-lg overflow-hidden transition-all flex flex-col h-full min-h-[6.5rem] ${borderCls} ${dimmed ? 'opacity-50' : ''}`}
+      className={`text-left bg-surface border rounded-lg overflow-hidden transition-all flex flex-col h-full min-h-[8.5rem] ${borderCls} ${dimmed ? 'opacity-50' : ''}`}
     >
       <div className={`px-3 py-2 border-b border-default flex items-baseline gap-2 shrink-0 ${isToday ? 'bg-accent-soft' : 'bg-surface-2'}`}>
         <span className={`font-semibold ${isToday ? 'text-accent' : 'text-primary'}`}>{dayLabel}</span>
@@ -301,7 +301,7 @@ function PreviewField({ label, value }: { label: string; value: string }) {
       {empty ? (
         <div className="text-xs text-muted italic leading-tight">—</div>
       ) : (
-        <div className="markdown-body text-xs leading-tight max-h-[5em] overflow-hidden">
+        <div className="markdown-body text-xs leading-tight max-h-[7em] overflow-hidden">
           <ReactMarkdown>{value}</ReactMarkdown>
         </div>
       )}
