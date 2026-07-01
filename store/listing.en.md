@@ -49,6 +49,8 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
+- Much better Markdown rendering across the app (meeting notes, work log, issues, change logs, WBS notes, …) — tables, checklists, strikethrough, autolinks, safe HTML such as `<br/>`, single-newline line breaks, and code-block syntax highlighting
+- External links in Markdown open in your default browser
 - Setup wizard (first-run onboarding) — set language, your identity, the Tasks tab default view, theme, markdown viewer, and notifications in one flow (re-run from the top of Settings)
 - Create a new project straight from the project dropdown, without leaving your screen
 - Collapse/expand the Schedule/WBS tree in bulk — Expand all / 2·3 levels / Collapse all (shared by table & Gantt)
