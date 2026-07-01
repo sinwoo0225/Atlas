@@ -54,6 +54,19 @@ export function flattenWbsTree(items: WbsItem[]): { item: WbsItem; depth: number
   return out;
 }
 
+// 접기 가능한(자식 보유) 부모 노드 id 집합. 트리 접기 컨트롤용.
+// level 미지정 → 모든 부모(= 모두 접기, 최상위만 표시).
+// level=N → depth(0-based) >= N-1 인 부모만 → 표시 레벨 N까지 남기고 그 아래를 접음.
+//   (level=1 = 모두 접기, level=2 = 2레벨까지 표시, …)
+export function collectCollapsibleIds(items: WbsItem[], level?: number): Set<number> {
+  const ids = new Set<number>();
+  for (const { item, depth } of flattenWbsTree(items)) {
+    const hasChildren = (item.children?.length ?? 0) > 0;
+    if (hasChildren && (level === undefined || depth >= level - 1)) ids.add(item.id);
+  }
+  return ids;
+}
+
 export function collectMatchedIds(items: WbsItem[], o: WbsFilterOpts, acc: Set<number> = new Set()): Set<number> {
   for (const item of items) {
     if (matchWbsItem(item, o)) acc.add(item.id);

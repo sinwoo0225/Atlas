@@ -173,6 +173,14 @@
     "expand": "펼치기",
     "collapse": "접기"
   },
+  "collapse": {
+    "expandAll": "모두 펼치기",
+    "collapseAll": "모두 접기",
+    "level": "{{n}}레벨",
+    "expandAllHint": "모든 하위 작업 펼치기",
+    "collapseAllHint": "최상위만 남기고 모두 접기",
+    "levelHint": "{{n}}레벨까지 표시"
+  },
   "treePicker": {
     "search": "작업명·담당자 검색…",
     "root": "(루트)",

@@ -3,7 +3,7 @@
 // echarts-for-react 의 EChartsInstance 자체가 any 이고 ECharts 공식 콜백 시그니처가
 // 동적이라 좁힌 타입을 부여해도 캐스팅이 누적된다. 다른 페이지(WbsPage·Dashboard 등)
 // 와 일관성을 위해 파일 단위로 any 룰을 끈다.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsInstance } from 'echarts-for-react';
 import * as htmlToImage from 'html-to-image';
@@ -269,6 +269,8 @@ export function GanttChart({
   criticalIds,
   dependencies,
   onDateChanged,
+  collapsed,
+  setCollapsed,
 }: {
   items: WbsItem[];
   projectId: number;
@@ -287,6 +289,9 @@ export function GanttChart({
   criticalIds?: Set<number>;
   /** 작업 의존성 — 막대 사이 화살표(선행 종료 → 후행 시작)로 표시. */
   dependencies?: WbsDependency[];
+  /** 접힘 상태 — WbsPage 소유(표 뷰와 공유). 접힌 부모 id 집합. */
+  collapsed: Set<number>;
+  setCollapsed: Dispatch<SetStateAction<Set<number>>>;
 }) {
   const { t } = useTranslation();
   const theme = useThemeMode();
@@ -298,7 +303,6 @@ export function GanttChart({
   // 현재 차트 영역에서 hover 중인 row 인덱스 — 핸들 graphic 중복 갱신 방지.
   const lastHoverRowRef = useRef<number | null>(null);
 
-  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   const [scale, setScale] = useState<Scale>('day');
   const [showBaseline, setShowBaseline] = useState(false);
   const hasBaseline = items.some(function hb(i): boolean {

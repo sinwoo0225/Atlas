@@ -173,6 +173,14 @@
     "expand": "Expand",
     "collapse": "Collapse"
   },
+  "collapse": {
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "level": "{{n}} levels",
+    "expandAllHint": "Expand every level",
+    "collapseAllHint": "Collapse to the top level only",
+    "levelHint": "Show {{n}} levels"
+  },
   "treePicker": {
     "search": "Search task or assignee…",
     "root": "(root)",

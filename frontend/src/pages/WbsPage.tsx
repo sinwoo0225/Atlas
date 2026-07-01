@@ -22,7 +22,7 @@ import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import {
-  collectAncestorIds, collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName, flattenWbsTree,
+  collectAncestorIds, collectCollapsibleIds, collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName, flattenWbsTree,
   applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
 import { wbsStatusBadge, devInfoTypeBadge } from '../utils/statusMaps';
@@ -965,6 +965,8 @@ export function WbsPage() {
   const [sourceCountByWbs, setSourceCountByWbs] = useState<Record<number, number>>({});
   const [currentVersion, setCurrentVersion] = useState<number | undefined>();
   const [view, setView] = useState<'table' | 'gantt' | 'kanban'>('table');
+  // 트리 접힘 상태 — 표·간트 뷰가 공유(접힌 부모 id 집합). 다중 접기/펼치기 컨트롤이 조작.
+  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
   // 임계경로(CPM) 작업 id 집합 — 간트 막대 적색 테두리 강조. 간트 뷰에서 지연 로드.
   const [criticalIds, setCriticalIds] = useState<Set<number>>(new Set());
   // 의존성 — 간트 화살표용. 간트 뷰에서 지연 로드.
@@ -1120,6 +1122,21 @@ export function WbsPage() {
     const base = (matchOnly && hasAnyFilter(filterOpts)) ? filterWbsTree(items, filterOpts) : items;
     return sortWbsTree(base);
   }, [items, filterOpts, matchOnly]);
+
+  // 트리 접기/펼치기 — 표·간트 공유. 개별 토글 + 다중(모두/레벨별) 컨트롤.
+  const toggleCollapse = useCallback((id: number) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const expandAll = useCallback(() => setCollapsed(new Set()), []);
+  const collapseAll = useCallback(() => setCollapsed(collectCollapsibleIds(items)), [items]);
+  const collapseToLevel = useCallback((level: number) => setCollapsed(collectCollapsibleIds(items, level)), [items]);
+  // 자식을 가진 부모가 하나라도 있으면 접기 컨트롤 노출. 최대 depth 도 레벨 버튼 노출 판단에 사용.
+  const maxDepth = useMemo(() => flattenWbsTree(items).reduce((m, { depth }) => Math.max(m, depth), 0), [items]);
+  const hasCollapsible = useMemo(() => items.some((i) => (i.children?.length ?? 0) > 0), [items]);
 
   // 사이클 13 — dnd-kit 형제 reorder (P8-4). matchOnly 시 화면 형제 ⊂ 원본이라 reorder 비활성.
   const reorderDisabled = matchOnly && hasAnyFilter(filterOpts);
@@ -1514,6 +1531,16 @@ export function WbsPage() {
           </div>
         )}
 
+        {/* 트리 다중 접기/펼치기 — 표·간트 공유(칸반은 트리 아님). 깊이에 따라 레벨 버튼 노출. */}
+        {(view === 'table' || view === 'gantt') && hasCollapsible && (
+          <div className="flex items-center gap-1 bg-surface border border-default rounded-md p-1">
+            <Button variant="ghost" size="sm" onClick={expandAll} title={t('wbs:collapse.expandAllHint')}>{t('wbs:collapse.expandAll')}</Button>
+            {maxDepth >= 2 && <Button variant="ghost" size="sm" onClick={() => collapseToLevel(2)} title={t('wbs:collapse.levelHint', { n: 2 })}>{t('wbs:collapse.level', { n: 2 })}</Button>}
+            {maxDepth >= 3 && <Button variant="ghost" size="sm" onClick={() => collapseToLevel(3)} title={t('wbs:collapse.levelHint', { n: 3 })}>{t('wbs:collapse.level', { n: 3 })}</Button>}
+            <Button variant="ghost" size="sm" onClick={collapseAll} title={t('wbs:collapse.collapseAllHint')}>{t('wbs:collapse.collapseAll')}</Button>
+          </div>
+        )}
+
         {/* 필터(키워드·상태·담당자·매칭만·저장뷰·기억)는 표·간트 전용 — 칸반은 자체 필터를 쓰므로 숨김. */}
         {view !== 'kanban' && (
         <div className="ml-auto flex items-center gap-2 flex-wrap">
@@ -1684,6 +1711,8 @@ export function WbsPage() {
             criticalIds={criticalIds}
             dependencies={dependencies}
             onDateChanged={handleDateChanged}
+            collapsed={collapsed}
+            setCollapsed={setCollapsed}
           />
         </Card>
       ) : items.length === 0 ? (
@@ -1754,6 +1783,8 @@ export function WbsPage() {
                         selectedIds={selectionMode ? selectedIds : undefined}
                         affectedIds={selectionMode ? affectedIds : undefined}
                         onToggleSelect={selectionMode ? toggleSelect : undefined}
+                        collapsedIds={collapsed}
+                        onToggleCollapse={toggleCollapse}
                         linkCountByWbs={linkCountByWbs}
                         sourceCountByWbs={sourceCountByWbs}
                         reorderDisabled={reorderDisabled}

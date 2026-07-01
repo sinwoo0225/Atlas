@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -23,6 +23,9 @@ interface Props {
   selectedIds?: Set<number>;
   affectedIds?: Set<number>;
   onToggleSelect?: (id: number) => void;
+  // 접기/펼치기 — WbsPage 소유(간트와 공유). collapsedIds 에 있으면 접힘.
+  collapsedIds: Set<number>;
+  onToggleCollapse: (id: number) => void;
   linkCountByWbs: Map<number, number>;
   sourceCountByWbs: Record<number, number>;
   reorderDisabled: boolean;
@@ -38,6 +41,7 @@ interface Props {
 export function SortableWbsRow({
   item, projectId, depth = 0, matchedIds, filterActive,
   selectedIds, affectedIds, onToggleSelect,
+  collapsedIds, onToggleCollapse,
   linkCountByWbs, sourceCountByWbs, reorderDisabled,
   onEdit, onDelete, onAddChild, onStatusChange,
 }: Props) {
@@ -45,7 +49,7 @@ export function SortableWbsRow({
   const navigate = useNavigate();
   const linkCount = linkCountByWbs.get(item.id) ?? 0;
   const sourceCount = sourceCountByWbs[item.id] ?? 0;
-  const [expanded, setExpanded] = useState(true);
+  const expanded = !collapsedIds.has(item.id);
   const hasChildren = (item.children?.length ?? 0) > 0;
   const importance = wbsImportanceBadge(item.importance);
   const isMatched = !!matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
@@ -134,7 +138,7 @@ export function SortableWbsRow({
             </button>
             {hasChildren ? (
               <button
-                onClick={() => setExpanded(!expanded)}
+                onClick={() => onToggleCollapse(item.id)}
                 className="text-muted hover:text-primary transition-colors"
                 aria-label={expanded ? t('wbs:row.collapseAria', { name: item.name }) : t('wbs:row.expandAria', { name: item.name })}
                 aria-expanded={expanded}
@@ -266,6 +270,8 @@ export function SortableWbsRow({
               selectedIds={selectedIds}
               affectedIds={affectedIds}
               onToggleSelect={onToggleSelect}
+              collapsedIds={collapsedIds}
+              onToggleCollapse={onToggleCollapse}
               linkCountByWbs={linkCountByWbs}
               sourceCountByWbs={sourceCountByWbs}
               reorderDisabled={reorderDisabled}
