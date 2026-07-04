@@ -74,7 +74,7 @@ Atlas 는 두 가지 외부 진입로를 제공합니다 — `Atlas-Cli.exe` (CL
 
 둘 다 GUI 와 같은 데이터 폴더를 자동 발견 (`%LOCALAPPDATA%\Atlas\config.json`), SQLite WAL 모드로 Atlas.exe 가 켜진 상태에서도 동시 안전. 활동 로그에 actor (`claude-code` / `claude-code-mcp`) 로 기록되어 GUI 활동 페이지에서 사람 작업과 분리 추적. Store 설치본의 alias 는 GUI 와 같은 패키지로 실행돼 데이터 뷰가 항상 일치합니다.
 
-도구 57 종 (project · issue · wbs(+context) · meeting · changelog · worklog · devinfo · resource · 연결 · search) · 전엔티티 필터/셰이핑 · 에이전틱 워크플로우 · CLI vs MCP 선택 매트릭스는 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md)(라우터) + `cli-docs/`.
+도구 74 종 (project · issue · wbs(+context) · todo(+my-work) · template · meeting · changelog · worklog · devinfo · resource(+용량/가동률) · 일정(의존성·임계경로·리스케줄·plan) · 연결 · search) · 전엔티티 필터/셰이핑 · 에이전틱 워크플로우 · CLI vs MCP 선택 매트릭스는 [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md)(라우터) + `cli-docs/`.
 
 ## 스크린샷
 
@@ -202,7 +202,7 @@ Atlas provides two external entry points — `Atlas-Cli.exe` (CLI) and `Atlas-Mc
 
 Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config.json`); SQLite WAL keeps writes safe while `Atlas.exe` is open. Each entry point stamps the activity log with its own actor (`claude-code` / `claude-code-mcp`) so external automation is filterable from human edits. On a Store install the aliases run under the same package identity as the GUI, so their data view always matches.
 
-57 tools (project · issue · wbs(+context) · meeting · changelog · worklog · devinfo · resource · links · search), per-entity filters/shaping, an agentic workflow guide, and a CLI-vs-MCP decision matrix are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md) (router) + `cli-docs/`.
+74 tools (project · issue · wbs(+context) · todo(+my-work) · template · meeting · changelog · worklog · devinfo · resource(+capacity/utilization) · scheduling(deps·critical-path·reschedule·plan) · links · search), per-entity filters/shaping, an agentic workflow guide, and a CLI-vs-MCP decision matrix are in [`ATLAS-CLI-USAGE.md`](./ATLAS-CLI-USAGE.md) (router) + `cli-docs/`.
 
 ### Screenshots
 
