@@ -49,9 +49,10 @@ Source: "..\publish\Atlas-Cli.exe";      DestDir: "{app}"; Flags: ignoreversion 
 Source: "..\publish\Atlas-Mcp.exe";      DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\publish\ATLAS-CLI-USAGE.md"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\publish\wwwroot\*";          DestDir: "{app}\wwwroot"; Flags: ignoreversion recursesubdirs createallsubdirs
-; Claude Code 스킬 + CLI 문서 — atlas-cli skill install 이 {app}\skills\atlas 를 ~/.claude/skills 로 복사.
+; Claude Code 스킬 + 커맨드 + CLI 문서 — atlas-cli skill install 이 {app}\skills\atlas·commands 를 ~/.claude 로 복사.
 Source: "..\publish\skills\*";            DestDir: "{app}\skills";   Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 Source: "..\publish\cli-docs\*";          DestDir: "{app}\cli-docs"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
+Source: "..\publish\commands\*";          DestDir: "{app}\commands"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
 
 [Icons]
 ; AppUserModelID 는 App.xaml.cs 의 SetCurrentProcessExplicitAppUserModelID 와 동일해야 한다 —

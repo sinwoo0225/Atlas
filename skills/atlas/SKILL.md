@@ -89,6 +89,16 @@ search   <query> [--project N] [--type ...] [--limit N]
 심화(엔티티별 전체 플래그·예시)는 Atlas 레포의 `cli-docs/<기능>.md`(또는 CLI 옆 동봉본) / `cli-docs/agentic-workflow.md`.
 용량·일정 지능·plan context·회의록 승격은 **`cli-docs/scheduling.md`**. 용량인지 리스케줄은 `plan context` → 검토 → `wbs reschedule --apply`.
 
+## 업무 연동 & 커맨드
+
+Atlas를 **업무 시스템 오브 레코드**로 쓰면 개발 산출물이 데이터로 연결된다(정책: **`cli-docs/integration.md`**). 매핑: 일정→WBS · repo/문서→DevInfo(GitRepo/Markdown) · 변경→ChangeLog(`--source-wbs`) · 이슈→Issue · 대화·결정→Meeting. 한 작업 중심으로 링크되어 `wbs context --id W` 한 방 복원이 판정 기준.
+
+`atlas-cli skill install`이 함께 설치하는 슬래시 커맨드(기존 설정 무침습, `atlas-` 프리픽스):
+- **`/atlas-log <완료 작업>`** — WBS Done + `changelog --source-wbs` + repo/문서 DevInfo 등록·연결(워크플로 무관).
+- **`/atlas-meeting [주제]`** — 대화·최종 결정을 회의록으로 기록 + ActionItem 승격.
+- **`/atlas-sync`** — 설치 버전 확인 후 스킬·커맨드 갱신, 신규 verb/도구 보고.
+
 ## 주의
 - 포터블/절대경로로 호출하면 위 `allowed-tools` 가 안 맞을 수 있음 — 그 경우 settings 권한에 `Bash(*Atlas-Cli.exe *)` 추가.
 - 신규 MCP 도구는 새 `Atlas-Mcp.exe` 재등록 후 노출.
+- 커맨드는 `~/.claude/commands/atlas-*.md` 로 설치되며 사용자가 자유롭게 수정/삭제 가능(기존 커맨드·CLAUDE.md·settings 불변).

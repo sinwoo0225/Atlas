@@ -70,7 +70,7 @@ Atlas 는 두 가지 외부 진입로를 제공합니다 — `Atlas-Cli.exe` (CL
   claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
   ```
 
-- **Claude Code 스킬** — `atlas-cli skill install` 한 번이면 사용 가이드가 `~/.claude/skills/atlas` 에 설치되어, **어느 프로젝트에서 Claude Code 를 켜든** "atlas-cli 로 …" 한마디에 자동으로 적용됩니다(작업 컨텍스트 수집·필터 조회·상태 갱신 워크플로우 포함). 스킬은 Store·포터블·인스톨러 배포에 함께 동봉됩니다.
+- **Claude Code 스킬·커맨드** — `atlas-cli skill install` 한 번이면 사용 가이드가 `~/.claude/skills/atlas` 에, 슬래시 커맨드(`/atlas-log`·`/atlas-meeting`·`/atlas-sync`)가 `~/.claude/commands/` 에 설치되어, **어느 프로젝트에서 Claude Code 를 켜든** 자동 적용됩니다(작업 컨텍스트 수집·상태 갱신·회의록 기록 포함). **이미 쓰던 Claude Code 설정(CLAUDE.md·settings·다른 커맨드)은 건드리지 않아** 기존 하네스와 충돌 없이 통합·커스텀할 수 있습니다. 스킬·커맨드는 Store·포터블·인스톨러 배포에 함께 동봉됩니다.
 
 둘 다 GUI 와 같은 데이터 폴더를 자동 발견 (`%LOCALAPPDATA%\Atlas\config.json`), SQLite WAL 모드로 Atlas.exe 가 켜진 상태에서도 동시 안전. 활동 로그에 actor (`claude-code` / `claude-code-mcp`) 로 기록되어 GUI 활동 페이지에서 사람 작업과 분리 추적. Store 설치본의 alias 는 GUI 와 같은 패키지로 실행돼 데이터 뷰가 항상 일치합니다.
 
@@ -198,7 +198,7 @@ Atlas provides two external entry points — `Atlas-Cli.exe` (CLI) and `Atlas-Mc
   claude mcp add --scope user atlas "C:\...\publish\Atlas-Mcp.exe"
   ```
 
-- **Claude Code skill** — run `atlas-cli skill install` once and the usage guide is installed to `~/.claude/skills/atlas`, so **whichever project you open Claude Code in**, a request like "use atlas-cli to …" applies it automatically (including the gather-context / filter-query / update-status workflow). The skill is bundled in the Store, portable, and installer distributions.
+- **Claude Code skill & commands** — run `atlas-cli skill install` once and the usage guide is installed to `~/.claude/skills/atlas` and slash commands (`/atlas-log`, `/atlas-meeting`, `/atlas-sync`) to `~/.claude/commands/`, so **whichever project you open Claude Code in** they apply automatically (gather-context, update-status, meeting-log workflow). **Your existing Claude Code setup (CLAUDE.md, settings, other commands) is left untouched**, so it composes with any harness you already use. The skill and commands are bundled in the Store, portable, and installer distributions.
 
 Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config.json`); SQLite WAL keeps writes safe while `Atlas.exe` is open. Each entry point stamps the activity log with its own actor (`claude-code` / `claude-code-mcp`) so external automation is filterable from human edits. On a Store install the aliases run under the same package identity as the GUI, so their data view always matches.
 

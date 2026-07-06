@@ -195,8 +195,8 @@ if ($Msix) {
     foreach ($f in @($stageExe, $stageWww, $stageCli, $stageMcp)) { if (-not (Test-Path $f)) { throw "필수 파일 누락: $f" } }
     Write-Host "  - Atlas.exe / wwwroot / Atlas-Cli.exe / Atlas-Mcp.exe : OK" -ForegroundColor Green
 
-    # Claude Code 스킬 + CLI 문서 동봉 — atlas-cli skill install 이 패키지 루트의 skills/atlas 를 ~/.claude/skills 로 복사.
-    foreach ($d in @('skills', 'cli-docs')) {
+    # Claude Code 스킬 + 커맨드 + CLI 문서 동봉 — atlas-cli skill install 이 패키지 루트의 skills/atlas·commands 를 ~/.claude 로 복사.
+    foreach ($d in @('skills', 'cli-docs', 'commands')) {
         $srcDir = Join-Path $root $d
         if (Test-Path $srcDir) {
             Copy-Item $srcDir -Destination (Join-Path $stage $d) -Recurse -Force
@@ -325,8 +325,8 @@ if (Test-Path $usage) {
     Write-Host "  - ATLAS-CLI-USAGE : OK" -ForegroundColor Green
 }
 
-# Claude Code 스킬 + CLI 문서 동봉 — atlas-cli skill install 이 publish 옆 skills/atlas 를 ~/.claude/skills 로 복사.
-foreach ($d in @('skills', 'cli-docs')) {
+# Claude Code 스킬 + 커맨드 + CLI 문서 동봉 — atlas-cli skill install 이 publish 옆 skills/atlas·commands 를 ~/.claude 로 복사.
+foreach ($d in @('skills', 'cli-docs', 'commands')) {
     $srcDir = Join-Path $root $d
     if (Test-Path $srcDir) {
         Copy-Item $srcDir -Destination (Join-Path $publishDir $d) -Recurse -Force
