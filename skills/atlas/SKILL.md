@@ -98,6 +98,8 @@ Atlas를 **업무 시스템 오브 레코드**로 쓰면 개발 산출물이 데
 - **`/atlas-meeting [주제]`** — 대화·최종 결정을 회의록으로 기록 + ActionItem 승격.
 - **`/atlas-sync`** — 설치 버전 확인 후 스킬·커맨드 갱신, 신규 verb/도구 보고.
 
+> 커맨드는 **반복되는 다단계 쓰기 워크플로**만 패키징한다. 조회·단일 호출·컨텍스트 수집(`wbs context`·`list`·`plan context`·`todo my-work`·`search`)은 커맨드가 아니라 **이 스킬 + 자연어**로 — 최소·무침습 유지.
+
 ## 주의
 - 포터블/절대경로로 호출하면 위 `allowed-tools` 가 안 맞을 수 있음 — 그 경우 settings 권한에 `Bash(*Atlas-Cli.exe *)` 추가.
 - 신규 MCP 도구는 새 `Atlas-Mcp.exe` 재등록 후 노출.
