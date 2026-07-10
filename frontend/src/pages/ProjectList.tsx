@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,7 @@ import { StartPageWidgets } from './projectList/StartPageWidgets';
 import { ProjectForm } from './projects/ProjectForm';
 import { getRecent, type RecentItem } from '../utils/recentItems';
 import { useCreateForm } from '../hooks/useCreateForm';
+import { DEFAULT_PROJECT_CATEGORIES } from '../types';
 import type { ImportPreviewItem, Project, StartPageData } from '../types';
 
 export function ProjectList() {
@@ -34,6 +35,15 @@ export function ProjectList() {
   // 새 프로젝트 생성 후 템플릿 적용 플로우 — 생성된 프로젝트를 들고 피커를 띄운다.
   const [templateTarget, setTemplateTarget] = useState<Project | null>(null);
   const [applyingTemplate, setApplyingTemplate] = useState(false);
+
+  // 구분 자유 텍스트 자동완성 후보 — 기존 프로젝트의 distinct 구분 값 + 기본 시드.
+  const categorySuggestions = useMemo(
+    () => Array.from(new Set([
+      ...(projects.map((p) => p.category?.trim()).filter(Boolean) as string[]),
+      ...DEFAULT_PROJECT_CATEGORIES,
+    ])),
+    [projects],
+  );
 
   useCreateForm(() => { setEditing(null); setShowForm(true); });
 
@@ -282,12 +292,20 @@ export function ProjectList() {
 
       {showForm && (
         <ProjectForm
+          categorySuggestions={categorySuggestions}
           onSave={handleCreate}
           onSaveWithTemplate={handleCreateWithTemplate}
           onCancel={() => setShowForm(false)}
         />
       )}
-      {editing && <ProjectForm initial={editing} onSave={handleUpdate} onCancel={() => setEditing(null)} />}
+      {editing && (
+        <ProjectForm
+          initial={editing}
+          categorySuggestions={categorySuggestions}
+          onSave={handleUpdate}
+          onCancel={() => setEditing(null)}
+        />
+      )}
 
       <WbsTemplatePicker
         open={templateTarget !== null}

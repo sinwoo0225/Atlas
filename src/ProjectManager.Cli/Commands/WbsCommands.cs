@@ -49,7 +49,7 @@ internal static class WbsCommands
         var projOpt = new Option<int>("--project", "프로젝트 ID") { IsRequired = true };
         var verOpt = new Option<int?>("--version", "WBS 버전 ID (없으면 현재 버전)");
         var statusOpt = CliOptions.EnumList<WbsStatus>("--status", "상태 필터 (다중: Planned,InProgress / 반복 가능)");
-        var openOpt = new Option<bool>("--open", "미완만 (Planned|InProgress) — --status 미지정 시 적용");
+        var openOpt = new Option<bool>("--open", "미완만 (Planned|Waiting|InProgress) — --status 미지정 시 적용");
         var activeOnOpt = CliOptions.DateOrKeyword("--active-on", "그 날 진행 중 (시작<=날짜<=종료). today|now 또는 YYYY-MM-DD");
         var startFromOpt = new Option<DateTime?>("--start-from", "시작일 >= YYYY-MM-DD");
         var startToOpt = new Option<DateTime?>("--start-to", "시작일 <= YYYY-MM-DD (해당일 포함)");
@@ -123,7 +123,7 @@ internal static class WbsCommands
         var assignOpt = new Option<string?>("--assignee", "담당자 (콤마 구분 가능)");
         var startOpt = new Option<DateTime?>("--start", "시작일 YYYY-MM-DD");
         var endOpt = new Option<DateTime?>("--end", "종료일 YYYY-MM-DD");
-        var statusOpt = new Option<WbsStatus?>("--status", "Planned(기본)|InProgress|Done");
+        var statusOpt = new Option<WbsStatus?>("--status", "Planned(기본)|Waiting|InProgress|Done|Suspended");
         var msOpt = new Option<bool?>("--milestone", "마일스톤 여부");
         var importanceOpt = new Option<int?>("--importance", "중요도 1=낮음 / 2=중간 (기본) / 3=높음");
         importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환 (옛 --order = 중요도 의미)
@@ -166,7 +166,7 @@ internal static class WbsCommands
         var assignOpt = new Option<string?>("--assignee", "담당자");
         var startOpt = new Option<DateTime?>("--start", "시작일 YYYY-MM-DD");
         var endOpt = new Option<DateTime?>("--end", "종료일 YYYY-MM-DD");
-        var statusOpt = new Option<WbsStatus?>("--status", "Planned|InProgress|Done");
+        var statusOpt = new Option<WbsStatus?>("--status", "Planned|Waiting|InProgress|Done|Suspended");
         var msOpt = new Option<bool?>("--milestone", "마일스톤 여부");
         var importanceOpt = new Option<int?>("--importance", "중요도 1=낮음 / 2=중간 / 3=높음");
         importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환

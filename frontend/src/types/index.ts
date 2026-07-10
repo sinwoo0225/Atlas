@@ -1,9 +1,12 @@
-export type WbsStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done';
+export type WbsStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done' | 'Suspended';
 export type ImpactLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type DevInfoType = 'Markdown' | 'File' | 'Link' | 'GitRepo';
 // Planned 는 '대기/보류'(Waiting)로 통합 — 기존 데이터 호환 위해 타입엔 남기되 UI 옵션에선 미노출.
 export type ProjectStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done' | 'Maintenance';
+// 프로젝트 구분 기본값(시드). Project.category 는 자유 문자열(string)이라 사용자가 임의 값을 등록 가능 —
+// 아래 상수는 폼 자동완성의 초기 후보로만 쓰인다(고정 enum 아님).
 export type ProjectCategory = '과제' | '내부' | '사업';
+export const DEFAULT_PROJECT_CATEGORIES: ProjectCategory[] = ['과제', '내부', '사업'];
 export type TodoStatus = 'Open' | 'Done';
 export type TodoRecurrence = 'None' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
 

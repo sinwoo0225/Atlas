@@ -148,7 +148,7 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
 
     public async Task<IEnumerable<WbsItem>> GetOpenAcrossProjectsAsync() =>
         await db.WbsItems
-            .Where(x => x.Status != WbsStatus.Done)
+            .Where(x => x.Status != WbsStatus.Done && x.Status != WbsStatus.Suspended)
             .Include(x => x.Project)
             .ToListAsync();
 }

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, Save, LayoutTemplate } from 'lucide-react';
 import { Button, Modal, FormField, inputClass } from '../../components/ui';
-import type { Project, ProjectCategory, ProjectStatus } from '../../types';
+import { CategoryCombobox } from '../../components/CategoryCombobox';
+import type { Project, ProjectStatus } from '../../types';
 
 // 라벨은 status 네임스페이스 재사용 — 렌더 시점 t(labelKey).
 const statusOptions: { value: ProjectStatus; labelKey: string }[] = [
@@ -12,18 +13,18 @@ const statusOptions: { value: ProjectStatus; labelKey: string }[] = [
   { value: 'Maintenance', labelKey: 'status:project.Maintenance' },
 ];
 
-// 카테고리는 저장 데이터값(한글 enum)이라 그대로 노출(범위 밖) — Phase 2 후속에서 표시 매핑 검토.
-const categoryOptions: ProjectCategory[] = ['과제', '내부', '사업'];
-
 export type ProjectSaveData = Omit<Project, 'id' | 'folderPath' | 'createdAt' | 'updatedAt'>;
 
 export function ProjectForm({
   initial,
+  categorySuggestions = [],
   onSave,
   onSaveWithTemplate,
   onCancel,
 }: {
   initial?: Partial<Project>;
+  // 구분 자유 텍스트의 자동완성 후보(기존 프로젝트의 구분 값 + 기본 시드). 부모에서 주입.
+  categorySuggestions?: string[];
   onSave: (data: ProjectSaveData) => void;
   // 생성 모드에서만 — 프로젝트 생성 후 템플릿 선택 플로우로 이어감.
   onSaveWithTemplate?: (data: ProjectSaveData) => void;
@@ -93,12 +94,13 @@ export function ProjectForm({
           {/* 좌측 - 기본 정보 */}
           <div className="space-y-3">
             <FormField label={t('projects:form.category')}>
-              <select value={form.category} onChange={(e) => set('category', e.target.value)} className={inputClass}>
-                <option value="">{t('projects:form.categoryNone')}</option>
-                {categoryOptions.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <CategoryCombobox
+                value={form.category}
+                suggestions={categorySuggestions}
+                onCommit={(v) => set('category', v)}
+                placeholder={t('projects:form.categoryNone')}
+                className={inputClass}
+              />
             </FormField>
             <FormField label={t('projects:form.name')} required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />

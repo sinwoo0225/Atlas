@@ -47,6 +47,7 @@ import type { WbsItem, WbsSubtask, WbsVersion, Resource, WbsStatus, Issue, Issue
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
 import { loadSettings, patchSettings } from '../store/settings';
 import { loadWbsFilters, saveWbsFilters, clearWbsFilters, type StoredWbsFilters } from '../utils/wbsFilterStore';
+import { loadWbsCollapsed, saveWbsCollapsed } from '../utils/wbsCollapseStore';
 import { listSavedViews, saveView, deleteView, type SavedWbsView } from '../utils/wbsSavedViews';
 
 function patchStatus(items: WbsItem[], id: number, status: WbsStatus): WbsItem[] {
@@ -321,6 +322,7 @@ function WbsItemForm({
                   <option value="Waiting">{t('status:wbs.Waiting')}</option>
                   <option value="InProgress">{t('status:wbs.InProgress')}</option>
                   <option value="Done">{t('status:wbs.Done')}</option>
+                  <option value="Suspended">{t('status:wbs.Suspended')}</option>
                 </select>
               </FormField>
               <FormField label={t('wbs:form.importance')}>
@@ -1088,6 +1090,20 @@ export function WbsPage() {
     else clearWbsFilters(pid);
   };
 
+  // 트리 접힘 상태 보존 — 프로젝트별 localStorage, 옵트인 없이 상시(사이드바 접힘처럼 뷰 편의).
+  // 하이드레이션 직후 1회 저장 스킵(방금 복원한 값의 되쓰기 방지).
+  const skipNextCollapseSaveRef = useRef(true);
+  useEffect(() => {
+    skipNextCollapseSaveRef.current = true;
+    setCollapsed(loadWbsCollapsed(pid) ?? new Set());
+  }, [pid]);
+  useEffect(() => {
+    const skip = skipNextCollapseSaveRef.current;
+    skipNextCollapseSaveRef.current = false;
+    if (skip) return;
+    saveWbsCollapsed(pid, collapsed);
+  }, [collapsed, pid]);
+
   // 저장 뷰(명명 필터셋) — '필터 기억'(마지막 복원)과 별개로 명시 저장/적용.
   const [savedViews, setSavedViews] = useState<SavedWbsView[]>(() => listSavedViews(pid));
   useEffect(() => { setSavedViews(listSavedViews(pid)); }, [pid]);
@@ -1605,7 +1621,7 @@ export function WbsPage() {
         <Card padding="tight" className="space-y-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted w-12 shrink-0">{t('wbs:page.filterStatus')}</span>
-            {(['Planned', 'Waiting', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
+            {(['Planned', 'Waiting', 'InProgress', 'Done', 'Suspended'] as WbsStatus[]).map((s) => {
               const active = filterStatuses.has(s);
               return (
                 <button

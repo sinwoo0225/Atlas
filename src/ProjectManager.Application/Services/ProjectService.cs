@@ -75,13 +75,13 @@ public class ProjectService(
         // 각 list cap 10. UI 가 섹션당 5건 표시 + "외 N건" 더보기. 부모(자식 보유) WBS 는 제외(leaf only).
         var dueSoonCutoff = today.AddDays(7);
         var overdueWbs = allWbs
-            .Where(w => !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date < today && w.Status != WbsStatus.Done)
+            .Where(w => !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date < today && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)
             .OrderBy(w => w.EndDate)
             .Take(10)
             .Select(WbsToDto)
             .ToList();
         var dueSoonWbs = allWbs
-            .Where(w => !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date >= today && w.EndDate.Value.Date <= dueSoonCutoff && w.Status != WbsStatus.Done)
+            .Where(w => !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date >= today && w.EndDate.Value.Date <= dueSoonCutoff && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)
             .OrderBy(w => w.EndDate)
             .Take(10)
             .Select(WbsToDto)

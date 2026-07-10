@@ -43,7 +43,7 @@ public class PlanContextService(
         var diags = new List<PlanDiagnosticDto>();
 
         foreach (var t in tasks.Where(t =>
-            t.Status != WbsStatus.Done && !t.IsMilestone && t.EndDate.HasValue && t.EndDate.Value.Date < today))
+            t.Status != WbsStatus.Done && t.Status != WbsStatus.Suspended && !t.IsMilestone && t.EndDate.HasValue && t.EndDate.Value.Date < today))
             diags.Add(new PlanDiagnosticDto("overdue", t.Id, $"마감 초과 {t.EndDate:yyyy-MM-dd}: {t.Name}"));
 
         foreach (var d in deps)

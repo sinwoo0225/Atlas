@@ -96,6 +96,7 @@ Atlas를 **업무 시스템 오브 레코드**로 쓰면 개발 산출물이 데
 `atlas-cli skill install`이 함께 설치하는 슬래시 커맨드(기존 설정 무침습, `atlas-` 프리픽스):
 - **`/atlas-log <완료 작업>`** — WBS Done + `changelog --source-wbs` + repo/문서 DevInfo 등록·연결(워크플로 무관).
 - **`/atlas-meeting [주제]`** — 대화·최종 결정을 회의록으로 기록 + ActionItem 승격.
+- **`/atlas-meeting-summary [id|주제]`** — 저장된 회의록을 읽어 요약·결정·액션아이템 자동 정리(앱 AI 요약 대체, get→요약→update).
 - **`/atlas-sync`** — 설치 버전 확인 후 스킬·커맨드 갱신, 신규 verb/도구 보고.
 
 > 커맨드는 **반복되는 다단계 쓰기 워크플로**만 패키징한다. 조회·단일 호출·컨텍스트 수집(`wbs context`·`list`·`plan context`·`todo my-work`·`search`)은 커맨드가 아니라 **이 스킬 + 자연어**로 — 최소·무침습 유지.

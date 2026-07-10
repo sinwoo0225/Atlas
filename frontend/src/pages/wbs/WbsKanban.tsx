@@ -4,8 +4,8 @@ import { KanbanBoardView, type KanbanStatusColumn } from '../../components/kanba
 import type { KanbanItem, WbsItem, WbsStatus } from '../../types';
 
 // 프로젝트 일정/WBS 칸반 — 통합 모니터링 칸반(KanbanBoardView) 재활용.
-// 리프 작업만 카드로(부모는 집계 노드). 상태축 4컬럼(예정·대기·진행·완료) 1:1 매핑, 담당자 그룹 지원. 이슈 미포함.
-const WBS_STATUS_ORDER: WbsStatus[] = ['Planned', 'Waiting', 'InProgress', 'Done'];
+// 리프 작업만 카드로(부모는 집계 노드). 상태축 5컬럼(예정·대기·진행·완료·중단) 1:1 매핑, 담당자 그룹 지원. 이슈 미포함.
+const WBS_STATUS_ORDER: WbsStatus[] = ['Planned', 'Waiting', 'InProgress', 'Done', 'Suspended'];
 
 function collectLeaves(items: WbsItem[], out: WbsItem[] = []): WbsItem[] {
   for (const it of items) {

@@ -2,7 +2,8 @@ namespace ProjectManager.Core.Domain;
 
 // Waiting(대기) 는 표시 순서상 Planned 와 InProgress 사이지만, DB 는 int ordinal 저장이라
 // 기존 값(Planned=0/InProgress=1/Done=2)을 보존하려 enum 끝에 append(Waiting=3). 표시 순서는 프론트 배열로 제어.
-public enum WbsStatus { Planned, InProgress, Done, Waiting }
+// Suspended(중단=4)도 같은 이유로 끝에 append. 중단은 '종료(비완료)' 상태 — 완료도 잔여도 아니게 지표에서 제외(모니터링 참고).
+public enum WbsStatus { Planned, InProgress, Done, Waiting, Suspended }
 
 public class WbsItem : IAuditable
 {

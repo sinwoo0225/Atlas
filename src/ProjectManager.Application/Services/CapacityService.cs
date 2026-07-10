@@ -26,7 +26,7 @@ public class CapacityService(AppDbContext db)
         var parentIds = await db.WbsItems.Where(w => w.ParentId != null)
             .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
         var items = await db.WbsItems
-            .Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Assignments.Any())
+            .Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended && w.Assignments.Any())
             .Include(w => w.Assignments).ThenInclude(a => a.Resource)
             .ToListAsync();
 
@@ -96,7 +96,7 @@ public class CapacityService(AppDbContext db)
         var parentIds = await db.WbsItems.Where(w => w.ParentId != null)
             .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
         var items = await db.WbsItems
-            .Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done
+            .Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended
                 && w.Assignments.Any(a => a.ResourceId == resourceId))
             .Include(w => w.Assignments.Where(a => a.ResourceId == resourceId))
             .ToListAsync();

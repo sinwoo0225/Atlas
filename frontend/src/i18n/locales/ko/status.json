@@ -10,7 +10,8 @@
     "Planned": "예정",
     "Waiting": "대기",
     "InProgress": "진행",
-    "Done": "완료"
+    "Done": "완료",
+    "Suspended": "중단"
   },
   "issue": {
     "Open": "열림",
