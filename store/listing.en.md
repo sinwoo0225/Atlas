@@ -28,10 +28,10 @@ AI & automation setup — installing from the Store also installs the automation
 It suits anyone who wants a lightweight single-user tool, prefers to keep data off the cloud, and likes to see a whole portfolio of projects on one screen.
 
 ## Features (bullets)
-- Project hub — card list + dashboard (overview, budget, members, D-day, recent activity)
+- Project hub — card list + dashboard (overview, budget, members, D-day, recent activity), with custom free-text "category"
 - My work (unified to-dos) — open tasks & issues across projects plus personal to-dos on one screen, recurring & one-click done
 - Project retrospective — compare completed projects (burn-up S-curve, slippage, issue density, avg resolution time)
-- WBS + Gantt + Kanban — hierarchical task tree, milestones, status (Planned·Waiting·In progress·Done)/priority, multi-assignee, Kanban board (group by status·assignee, drag to change status), linked work info & repos
+- WBS + Gantt + Kanban — hierarchical task tree, milestones, status (Planned·Waiting·In progress·Done·Suspended)/priority, multi-assignee, Kanban board (group by status·assignee, drag to change status), linked work info & repos
 - Issue tracking — status (Open/In progress/Resolved/Closed) × priority, inline edits in the table
 - Meetings — internal/external, attendees, decisions, discussion, action items; auto Markdown export
 - Change log — impact level, daily chart, links to related docs and meetings
@@ -49,14 +49,12 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Much better Markdown rendering across the app (meeting notes, work log, issues, change logs, WBS notes, …) — tables, checklists, strikethrough, autolinks, safe HTML such as `<br/>`, single-newline line breaks, and code-block syntax highlighting
+- Custom project "category" — register any category via free text + autocomplete, instead of a fixed list
+- New "Suspended" status for Schedule/WBS — mark stopped/won't-continue work; excluded from progress metrics (completion %, burn-up, overdue) but still shown on the board, list, and Gantt
+- Schedule/WBS tree collapse state is remembered per project (persists across reloads and project switches)
+- Meeting-summary Claude Code skill (/atlas-meeting-summary) — reads a stored meeting and auto-fills its summary, decisions, and action items
+- Much better Markdown rendering across the app — tables, checklists, strikethrough, autolinks, safe HTML such as `<br/>`, single-newline line breaks, and code-block syntax highlighting
 - External links in Markdown open in your default browser
-- Setup wizard (first-run onboarding) — set language, your identity, the Tasks tab default view, theme, markdown viewer, and notifications in one flow (re-run from the top of Settings)
-- Create a new project straight from the project dropdown, without leaving your screen
-- Collapse/expand the Schedule/WBS tree in bulk — Expand all / 2·3 levels / Collapse all (shared by table & Gantt)
-- Inline-edit WBS subtask (checklist) titles
-- Creating a WBS task as Waiting/In progress/Done records it in that day's work log
-- Choose how the integrated menu expands (click / hover); open the notification bell from the expanded menu
 - Taller work-log preview; renamed 'Default author name' to 'My identity'
 
 ## License (EULA)
