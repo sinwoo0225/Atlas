@@ -60,7 +60,7 @@ public class WbsService(
         await assignmentService.ReconcileFromFreeTextAsync(created);
         // 예정(Planned)이 아닌 상태(대기·진행·완료)로 생성되면 상태 전환과 동일하게 업무일지에 자동 등록.
         // 신규 항목은 항상 리프라 자식 검사 불필요. '작성 범위'(설정)가 '자신만'이면 actor 담당 작업만 기록.
-        if (created.Status != WbsStatus.Planned && WorkLogScopeGate.ShouldAutoLog(workLogScope, actorAccessor, created.Assignee))
+        if (created.Status != WbsStatus.Planned && created.Status != WbsStatus.Suspended && WorkLogScopeGate.ShouldAutoLog(workLogScope, actorAccessor, created.Assignee))
         {
             // 생성=최초 상태이므로 진행은 [시작](Update 경로 일관), 대기는 [대기], 완료는 [완료].
             var marker = created.Status switch

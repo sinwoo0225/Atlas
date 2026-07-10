@@ -10,7 +10,8 @@
     "Planned": "Planned",
     "Waiting": "Waiting",
     "InProgress": "In progress",
-    "Done": "Done"
+    "Done": "Done",
+    "Suspended": "Suspended"
   },
   "issue": {
     "Open": "Open",

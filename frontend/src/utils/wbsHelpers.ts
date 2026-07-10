@@ -5,6 +5,11 @@ export function splitAssignees(raw: string | null | undefined): string[] {
   return (raw ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 }
 
+// 종료 상태 집합 = 완료(Done) + 중단(Suspended). '잔여/active' 판정·완료율 분모·지연 대상에서 제외한다.
+// (중단은 종료지만 '완료'는 아니다 — 완료 카운트는 Status==='Done' 만.)
+export const isClosedWbs = (s: WbsStatus): boolean => s === 'Done' || s === 'Suspended';
+export const isActiveWbs = (s: WbsStatus): boolean => !isClosedWbs(s);
+
 // 필터 조건. 빈 키워드/필터는 통과.
 export interface WbsFilterOpts {
   kw: string;                  // lowercase, trimmed
@@ -29,7 +34,7 @@ export function matchWbsItem(item: WbsItem, o: WbsFilterOpts): boolean {
   }
   if (o.late) {
     if (!item.endDate) return false;
-    if (item.status === 'Done') return false;
+    if (isClosedWbs(item.status)) return false; // 완료·중단은 지연 대상 아님
     if (new Date(item.endDate).getTime() >= o.todayMs) return false;
   }
   if (o.overdueStart) {

@@ -44,7 +44,7 @@ public class RetrospectiveService(AppDbContext db)
             }
 
             // WBS 완료/지연 — 계획 종료일(EndDate)보다 늦게 완료된 비율.
-            var wbsTotal = leafWbs.Count;
+            var wbsTotal = leafWbs.Count(w => w.Status != WbsStatus.Suspended); // 중단(종료)은 회고 총계에서 제외
             var wbsDone = leafWbs.Count(w => w.Status == WbsStatus.Done);
             var late = leafWbs.Count(w => w.CompletedDate is DateTime cd && w.EndDate is DateTime ed && cd.Date > ed.Date);
             var lateRatio = wbsDone > 0 ? Math.Round((double)late / wbsDone, 3) : 0.0;

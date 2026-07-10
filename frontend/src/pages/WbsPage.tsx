@@ -322,6 +322,7 @@ function WbsItemForm({
                   <option value="Waiting">{t('status:wbs.Waiting')}</option>
                   <option value="InProgress">{t('status:wbs.InProgress')}</option>
                   <option value="Done">{t('status:wbs.Done')}</option>
+                  <option value="Suspended">{t('status:wbs.Suspended')}</option>
                 </select>
               </FormField>
               <FormField label={t('wbs:form.importance')}>
@@ -1620,7 +1621,7 @@ export function WbsPage() {
         <Card padding="tight" className="space-y-2 text-xs">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-muted w-12 shrink-0">{t('wbs:page.filterStatus')}</span>
-            {(['Planned', 'Waiting', 'InProgress', 'Done'] as WbsStatus[]).map((s) => {
+            {(['Planned', 'Waiting', 'InProgress', 'Done', 'Suspended'] as WbsStatus[]).map((s) => {
               const active = filterStatuses.has(s);
               return (
                 <button

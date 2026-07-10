@@ -29,9 +29,10 @@ function startOfWeekSun(d: Date): Date {
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 const MAX_CHIPS = 3;
 
+// '종료(비활성)' 여부 — 캘린더에서 마감 임박/지연 압박에서 빠질 항목. WBS 는 완료(Done)뿐 아니라 중단(Suspended)도 종료.
 function isCompleted(e: CalendarEvent): boolean {
   return e.kind === 'wbs'
-    ? e.status === 'Done'
+    ? e.status === 'Done' || e.status === 'Suspended'
     : e.status === 'Resolved' || e.status === 'Closed';
 }
 

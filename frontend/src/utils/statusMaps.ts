@@ -18,6 +18,8 @@ export const wbsStatusBadge: Record<WbsStatus, { labelKey: string; variant: Badg
   Waiting:    { labelKey: 'status:wbs.Waiting', variant: 'info' },
   InProgress: { labelKey: 'status:wbs.InProgress', variant: 'warning' },
   Done:       { labelKey: 'status:wbs.Done', variant: 'success' },
+  // 중단 = 종료(비완료). 닫힘(issue Closed)과 같은 de-emphasized neutral. 행 dim + 라벨로 Planned 와 구분.
+  Suspended:  { labelKey: 'status:wbs.Suspended', variant: 'neutral' },
 };
 
 export const impactBadge: Record<ImpactLevel, { variant: BadgeVariant }> = {

@@ -52,7 +52,7 @@ public sealed record WbsListFilter(
 {
     public static readonly WbsListFilter None = new();
 
-    // --open 편의 플래그가 해석되는 미완 상태 집합 (WbsRepository.GetOpenAcrossProjectsAsync 의 !Done 과 동치).
+    // --open 편의 플래그가 해석되는 미완(활성) 상태 집합 — 완료(Done)·중단(Suspended) 제외. GetOpenAcrossProjectsAsync 의 !Done && !Suspended 와 동치.
     public static readonly IReadOnlyList<WbsStatus> OpenStatuses =
         new[] { WbsStatus.Planned, WbsStatus.Waiting, WbsStatus.InProgress };
 

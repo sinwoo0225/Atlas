@@ -19,7 +19,7 @@ public class AttentionService(AppDbContext db, CapacityService capacity, Monitor
             .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
 
         // leaf(요약 부모 제외) · 미완 WBS 기준.
-        var leafOpen = db.WbsItems.Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done);
+        var leafOpen = db.WbsItems.Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended);
         var openIssues = db.Issues.Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress);
 
         var overdue = await leafOpen.CountAsync(w => !w.IsMilestone && w.EndDate != null && w.EndDate.Value < today)

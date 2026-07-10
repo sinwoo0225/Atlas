@@ -69,6 +69,7 @@ export function SortableWbsRow({
 
   // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태.
   // 완료(Done): item-done(흐림+또렷한 취소선) 공통 스타일.
+  // 중단(Suspended): 종료(비완료) — 흐림(text-muted)만, 취소선은 없음(완료 아님).
   // 예정(Planned): 계획 시작일 전이면 흐림(text-muted), 계획 시작일이 지났는데 미착수면 진하게(착수 환기). 그 외: 레벨색.
   const overdueStart = isOverdueToStart(item);
   const levelColor = depth === 0 ? 'text-accent' : 'text-primary';
@@ -76,9 +77,11 @@ export function SortableWbsRow({
   const nameColor =
     item.status === 'Done'
       ? 'item-done'
-      : (item.status === 'Planned' || item.status === 'Waiting')
-        ? (overdueStart ? levelColor : 'text-muted')
-        : levelColor;
+      : item.status === 'Suspended'
+        ? 'text-muted'
+        : (item.status === 'Planned' || item.status === 'Waiting')
+          ? (overdueStart ? levelColor : 'text-muted')
+          : levelColor;
 
   const {
     attributes, listeners,
@@ -219,6 +222,7 @@ export function SortableWbsRow({
                 { value: 'Waiting',    label: t('status:wbs.Waiting'),    variant: 'info'    },
                 { value: 'InProgress', label: t('status:wbs.InProgress'), variant: 'warning' },
                 { value: 'Done',       label: t('status:wbs.Done'),       variant: 'success' },
+                { value: 'Suspended',  label: t('status:wbs.Suspended'),  variant: 'neutral' },
               ]}
               onChange={(next) => onStatusChange(item, next)}
               title={t('wbs:row.statusChange')}
