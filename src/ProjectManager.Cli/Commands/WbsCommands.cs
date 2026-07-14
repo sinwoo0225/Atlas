@@ -59,12 +59,13 @@ internal static class WbsCommands
         var milestoneOpt = new Option<bool?>("--milestone", "마일스톤만(true)/마일스톤 제외(false)");
         var keywordOpt = new Option<string?>("--keyword", "이름·메모 부분일치");
         var overdueStartOpt = new Option<bool>("--overdue-start", "시작 지연 — 계획 시작일이 지났는데 아직 Planned(미착수)");
+        var kindOpt = new Option<WbsKind?>("--kind", "역할 필터 Task|Group. Task 만 지표에 잡힌다(그룹은 묶기 전용)");
         var view = new ListViewOptions();
 
         var c = new Command("list",
             "프로젝트 WBS 조회. 필터/셰이핑 없으면 트리(root+children), 있으면 평면 리스트(ParentId 포함)")
         { projOpt, verOpt, statusOpt, openOpt, activeOnOpt, startFromOpt, startToOpt,
-          endFromOpt, endToOpt, assigneeOpt, milestoneOpt, keywordOpt, overdueStartOpt };
+          endFromOpt, endToOpt, assigneeOpt, milestoneOpt, keywordOpt, overdueStartOpt, kindOpt };
         view.AddTo(c);
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
@@ -85,7 +86,8 @@ internal static class WbsCommands
                 Assignee: pr.GetValueForOption(assigneeOpt),
                 Milestone: pr.GetValueForOption(milestoneOpt),
                 Keyword: pr.GetValueForOption(keywordOpt),
-                OverdueStart: pr.GetValueForOption(overdueStartOpt));
+                OverdueStart: pr.GetValueForOption(overdueStartOpt),
+                Kind: pr.GetValueForOption(kindOpt));
             var listView = view.Read(pr, BriefPresets.Wbs);
             var shaped = listView.Count || listView.Limit is not null || listView.Fields is { Count: > 0 };
 
@@ -129,11 +131,12 @@ internal static class WbsCommands
         importanceOpt.AddAlias("--order"); // 사이클 13 사용자 호환 (옛 --order = 중요도 의미)
         var notesOpt = new Option<string?>("--notes", "메모");
         var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동");
-        var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, leaf 에 입력");
+        var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, 작업(Task)에 입력");
         var actualStartOpt = new Option<DateTime?>("--actual-start", "착수일(실적) YYYY-MM-DD — 생략 시 진행/완료면 오늘 자동");
+        var kindOpt = new Option<WbsKind?>("--kind", "역할 Task(기본)=1급 작업 / Group=묶기 전용(모든 지표에서 제외, 표시는 자손에서 파생)");
 
         var c = new Command("create", "WBS 항목 생성 (SortOrder 는 시작일 그룹 끝에 자동 추가)")
-        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt, estimateOpt, actualStartOpt };
+        { projOpt, nameOpt, parentOpt, verOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, notesOpt, completedOpt, estimateOpt, actualStartOpt, kindOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -151,7 +154,8 @@ internal static class WbsCommands
                 Notes: pr.GetValueForOption(notesOpt) ?? string.Empty,
                 CompletedDate: pr.GetValueForOption(completedOpt),
                 EstimateHours: pr.GetValueForOption(estimateOpt),
-                ActualStartDate: pr.GetValueForOption(actualStartOpt));
+                ActualStartDate: pr.GetValueForOption(actualStartOpt),
+                Kind: pr.GetValueForOption(kindOpt) ?? WbsKind.Task);
             var svc = services.GetRequiredService<WbsService>();
             CliJson.WriteSuccess(await svc.CreateAsync(dto));
         }));
@@ -173,11 +177,12 @@ internal static class WbsCommands
         var sortOrderOpt = new Option<int?>("--sort-order", "정렬 위치 (드물게 수동, 보통 dnd-kit reorder 사용)");
         var notesOpt = new Option<string?>("--notes", "메모");
         var completedOpt = new Option<DateTime?>("--completed", "완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능");
-        var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, leaf 에 입력");
+        var estimateOpt = new Option<double?>("--estimate-hours", "공수 추정(시간) — 용량 계획 기준, 작업(Task)에 입력");
         var actualStartOpt = new Option<DateTime?>("--actual-start", "착수일(실적) YYYY-MM-DD — 진행/완료 전환 시 자동, 직접 보정 가능");
+        var kindOpt = new Option<WbsKind?>("--kind", "역할 Task|Group. Group 은 묶기 전용(모든 지표에서 제외). 미지정이면 변경 없음");
 
         var c = new Command("update", "WBS 항목 부분 갱신 (지정한 옵션만 덮어쓰기)")
-        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt, estimateOpt, actualStartOpt };
+        { idOpt, nameOpt, parentOpt, assignOpt, startOpt, endOpt, statusOpt, msOpt, importanceOpt, sortOrderOpt, notesOpt, completedOpt, estimateOpt, actualStartOpt, kindOpt };
         c.SetHandler(ctx => HandlerHelpers.RunAsync(ctx, async () =>
         {
             var pr = ctx.ParseResult;
@@ -199,7 +204,10 @@ internal static class WbsCommands
                 CompletedDate: pr.GetValueForOption(completedOpt) ?? existing.CompletedDate,
                 UpdatedAt: existing.UpdatedAt,
                 EstimateHours: pr.GetValueForOption(estimateOpt) ?? existing.EstimateHours,
-                ActualStartDate: pr.GetValueForOption(actualStartOpt) ?? existing.ActualStartDate);
+                ActualStartDate: pr.GetValueForOption(actualStartOpt) ?? existing.ActualStartDate,
+                // 다른 필드와 달리 `?? existing.Kind` 로 채우지 않는다 — UpdateWbsItemDto.Kind 는 null 자체가
+                // '미변경' 이다. 그대로 넘기면 서버가 기존 값을 유지한다.
+                Kind: pr.GetValueForOption(kindOpt));
             CliJson.WriteSuccess(await svc.UpdateAsync(id, dto));
         }));
         return c;

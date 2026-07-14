@@ -6,10 +6,13 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   Plus, Pencil, X, Diamond, ChevronDown, ChevronRight,
   Link as LinkIcon, FileText, GripVertical, ListChecks,
+  FolderTree, AlertTriangle,
 } from 'lucide-react';
 import { Badge, BadgeMenu } from '../../components/ui';
-import { wbsImportanceBadge } from '../../utils/statusMaps';
+import { wbsImportanceBadge, wbsStatusBadge } from '../../utils/statusMaps';
 import { spanOf, toIsoDate, isOverdueToStart } from '../../utils/wbsSpan';
+import { isGroupWbs, effectiveWbsStatus } from '../../utils/wbsHelpers';
+import { wbsProgressOf } from '../../utils/wbsProgress';
 import type { WbsItem, WbsStatus } from '../../types';
 
 interface Props {
@@ -33,6 +36,8 @@ interface Props {
   onDelete: (id: number) => void;
   onAddChild: (parentId: number) => void;
   onStatusChange: (item: WbsItem, status: WbsStatus) => void;
+  // 역할 토글 — 작업 ⇄ 그룹. 그룹은 모든 지표에서 빠지므로 되돌릴 수 있어야 한다.
+  onToggleKind: (item: WbsItem) => void;
 }
 
 // 사이클 13 — 기존 인라인 WbsRow 의 useSortable 통합 버전.
@@ -43,14 +48,22 @@ export function SortableWbsRow({
   selectedIds, affectedIds, onToggleSelect,
   collapsedIds, onToggleCollapse,
   linkCountByWbs, sourceCountByWbs, reorderDisabled,
-  onEdit, onDelete, onAddChild, onStatusChange,
+  onEdit, onDelete, onAddChild, onStatusChange, onToggleKind,
 }: Props) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const linkCount = linkCountByWbs.get(item.id) ?? 0;
   const sourceCount = sourceCountByWbs[item.id] ?? 0;
   const expanded = !collapsedIds.has(item.id);
+  // 두 축을 구분한다 — 구조(hasChildren)와 역할(isGroup)은 별개다.
+  //   구조: 접기 chevron, 들여쓰기, 재귀 렌더. 자식이 있는 Task(상위 작업)도 접을 수 있어야 한다.
+  //   역할: 상태 배지 편집 가능 여부, 담당자·중요도 셀, 지표 포함 여부. 자식이 없는 Group(빈 그룹)도 성립한다.
   const hasChildren = (item.children?.length ?? 0) > 0;
+  const isGroup = isGroupWbs(item);
+  // 그룹은 자기 status 가 아니라 자손에서 파생한 상태로 표시한다. 도입 전에는 부모의 자기 status 를 그대로 써서
+  // 자식이 전부 완료돼도 부모가 'Planned' 로 남아 흐리게 표시됐다.
+  const effStatus = effectiveWbsStatus(item);
+  const progress = wbsProgressOf(item);
   const importance = wbsImportanceBadge(item.importance);
   const isMatched = !!matchedIds && matchedIds.size > 0 && matchedIds.has(item.id);
   // 필터가 켜져 있고 이 행이 매칭이 아니면 흰 칠 대신 흐리게(저장 뷰에서도 잔상 없음).
@@ -60,26 +73,31 @@ export function SortableWbsRow({
   const affected = !!affectedIds?.has(item.id);
 
   // 부모 행 날짜 fallback — 본인 값이 없으면 자손 합산 min/max 를 흐리게 표시.
-  const computedSpan = hasChildren && (!item.startDate || !item.endDate)
-    ? spanOf(item) : undefined;
-  const showStart = item.startDate ?? (computedSpan?.start ? toIsoDate(computedSpan.start) : undefined);
-  const showEnd   = item.endDate   ?? (computedSpan?.end   ? toIsoDate(computedSpan.end)   : undefined);
-  const startIsComputed = !item.startDate && !!computedSpan?.start;
-  const endIsComputed   = !item.endDate   && !!computedSpan?.end;
+  // 서버가 rollupStart/End 를 내려주지만(트리 조회에서만) 낙관적 갱신 직후엔 비어 있을 수 있어 spanOf 로 폴백.
+  const localSpan = hasChildren && (!item.startDate || !item.endDate) ? spanOf(item) : undefined;
+  const rollupStart = item.rollupStart
+    ?? (localSpan?.start !== undefined ? toIsoDate(localSpan.start) : undefined);
+  const rollupEnd = item.rollupEnd
+    ?? (localSpan?.end !== undefined ? toIsoDate(localSpan.end) : undefined);
+  const showStart = item.startDate ?? rollupStart ?? undefined;
+  const showEnd   = item.endDate   ?? rollupEnd   ?? undefined;
+  const startIsComputed = !item.startDate && !!rollupStart;
+  const endIsComputed   = !item.endDate   && !!rollupEnd;
 
-  // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태.
-  // 완료(Done): item-done(흐림+또렷한 취소선) 공통 스타일.
+  // 제목 글자 — 굵기는 레벨(1레벨 강조), 색·취소선은 상태(그룹이면 자손에서 파생한 effStatus).
+  // 완료(Done): item-done(흐림+또렷한 취소선) 공통 스타일 → 그룹도 자식이 전부 끝나면 완료처럼 보인다.
   // 중단(Suspended): 종료(비완료) — 흐림(text-muted)만, 취소선은 없음(완료 아님).
   // 예정(Planned): 계획 시작일 전이면 흐림(text-muted), 계획 시작일이 지났는데 미착수면 진하게(착수 환기). 그 외: 레벨색.
-  const overdueStart = isOverdueToStart(item);
+  // 그룹은 착수 지연 판정(overdueStart) 대상이 아니다 — 마감은 자손이 들고 있다.
+  const overdueStart = !isGroup && isOverdueToStart(item);
   const levelColor = depth === 0 ? 'text-accent' : 'text-primary';
   const nameWeight = depth === 0 ? 'font-semibold' : '';
   const nameColor =
-    item.status === 'Done'
+    effStatus === 'Done'
       ? 'item-done'
-      : item.status === 'Suspended'
+      : effStatus === 'Suspended'
         ? 'text-muted'
-        : (item.status === 'Planned' || item.status === 'Waiting')
+        : (effStatus === 'Planned' || effStatus === 'Waiting')
           ? (overdueStart ? levelColor : 'text-muted')
           : levelColor;
 
@@ -151,10 +169,15 @@ export function SortableWbsRow({
             ) : (
               <span className="w-4 inline-block" />
             )}
-            {item.isMilestone && <Diamond size={12} className="text-accent" />}
+            {/* 그룹은 마일스톤이 될 수 없다(배타) — 혹시 남아 있는 레거시 값이 있어도 표시하지 않는다. */}
+            {!isGroup && item.isMilestone && <Diamond size={12} className="text-accent" />}
+            {isGroup && (
+              <FolderTree size={12} className="text-muted shrink-0" aria-hidden />
+            )}
             <span
               className={`text-sm ${nameWeight} ${nameColor} hover:text-accent cursor-pointer transition-colors`}
               onClick={() => onEdit(item)}
+              title={isGroup ? t('wbs:kind.groupNameTitle') : undefined}
             >
               {item.name}
             </span>
@@ -194,9 +217,25 @@ export function SortableWbsRow({
                 </Badge>
               </span>
             )}
+            {/* 자식 진행률 — 그룹은 이게 주 표시, 자식 있는 Task 는 자기 상태 배지 옆의 보조 정보. */}
+            {hasChildren && progress !== null && (
+              <span className="ml-1 shrink-0" title={t('wbs:kind.rollupProgressTitle')}>
+                <Badge variant={progress >= 1 ? 'success' : 'neutral'} size="sm">
+                  {Math.round(progress * 100)}%
+                </Badge>
+              </span>
+            )}
+            {/* 빈 그룹 — 자식이 없으면 지표에서 조용히 빠진 채로 남는다. 눈에 띄게 경고. */}
+            {isGroup && !hasChildren && (
+              <span className="ml-1 shrink-0" title={t('wbs:kind.emptyGroupTitle')}>
+                <Badge variant="warning" size="sm">
+                  <AlertTriangle size={10} className="mr-0.5" /> {t('wbs:kind.emptyGroup')}
+                </Badge>
+              </span>
+            )}
           </div>
         </td>
-        <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={hasChildren ? undefined : (item.assignee || undefined)}>{hasChildren ? '' : item.assignee}</td>
+        <td className="py-2 px-3 text-sm text-secondary whitespace-nowrap truncate max-w-[7rem]" title={isGroup ? undefined : (item.assignee || undefined)}>{isGroup ? '' : item.assignee}</td>
         <td
           className={`py-2 px-3 text-xs whitespace-nowrap ${startIsComputed ? 'text-muted opacity-60 italic' : overdueStart ? 'text-on-warning font-medium' : 'text-muted'}`}
           title={overdueStart ? t('wbs:row.overdueStartTitle') : startIsComputed ? t('wbs:row.computedStartTitle') : undefined}
@@ -209,21 +248,28 @@ export function SortableWbsRow({
         >
           {showEnd?.slice(0, 10)}
         </td>
-        {/* 하위 항목이 있는 부모 행은 그루핑 역할 — 중요도·상태는 빈 셀로(자식 값으로 흐려지지 않게). */}
+        {/* 그룹 행은 그루핑 역할 — 중요도·상태는 자기 값이 무의미하다(지표에서도 빠진다). */}
         <td className="py-2 px-3 whitespace-nowrap">
-          {!hasChildren && <Badge variant={importance.variant} size="sm">{t(importance.labelKey)}</Badge>}
+          {!isGroup && <Badge variant={importance.variant} size="sm">{t(importance.labelKey)}</Badge>}
         </td>
         <td className="py-2 px-3 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-          {!hasChildren && (
+          {isGroup ? (
+            // 그룹의 상태는 자손에서 파생한 읽기 전용 값 — 직접 바꿀 수 없다.
+            // 자손이 없으면(빈 그룹) 표시할 상태 자체가 없다.
+            item.rollupStatus ? (
+              <Badge variant={wbsStatusBadge[item.rollupStatus].variant} size="sm" title={t('wbs:kind.derivedStatusTitle')}>
+                {t(wbsStatusBadge[item.rollupStatus].labelKey)}
+              </Badge>
+            ) : null
+          ) : (
+            // 자식이 있어도 Task 면 자기 상태를 직접 바꿀 수 있다 — 그게 '상위 작업' 의 의미다.
             <BadgeMenu<WbsStatus>
               value={item.status}
-              options={[
-                { value: 'Planned',    label: t('status:wbs.Planned'),    variant: 'neutral' },
-                { value: 'Waiting',    label: t('status:wbs.Waiting'),    variant: 'info'    },
-                { value: 'InProgress', label: t('status:wbs.InProgress'), variant: 'warning' },
-                { value: 'Done',       label: t('status:wbs.Done'),       variant: 'success' },
-                { value: 'Suspended',  label: t('status:wbs.Suspended'),  variant: 'neutral' },
-              ]}
+              options={(['Planned', 'Waiting', 'InProgress', 'Done', 'Suspended'] as WbsStatus[]).map((s) => ({
+                value: s,
+                label: t(wbsStatusBadge[s].labelKey),
+                variant: wbsStatusBadge[s].variant,
+              }))}
               onChange={(next) => onStatusChange(item, next)}
               title={t('wbs:row.statusChange')}
             />
@@ -238,6 +284,14 @@ export function SortableWbsRow({
               className="p-1 text-muted hover:text-primary transition-colors"
             >
               <Plus size={14} />
+            </button>
+            <button
+              onClick={() => onToggleKind(item)}
+              title={isGroup ? t('wbs:kind.toTaskTitle') : t('wbs:kind.toGroupTitle')}
+              aria-label={isGroup ? t('wbs:kind.toTaskAria', { name: item.name }) : t('wbs:kind.toGroupAria', { name: item.name })}
+              className={`p-1 transition-colors ${isGroup ? 'text-accent hover:opacity-80' : 'text-muted hover:text-primary'}`}
+            >
+              <FolderTree size={14} />
             </button>
             <button
               onClick={() => onEdit(item)}
@@ -283,6 +337,7 @@ export function SortableWbsRow({
               onDelete={onDelete}
               onAddChild={onAddChild}
               onStatusChange={onStatusChange}
+              onToggleKind={onToggleKind}
             />
           ))}
         </SortableContext>

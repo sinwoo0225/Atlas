@@ -14,9 +14,6 @@ public class RetrospectiveService(AppDbContext db)
         if (projectIds is null || projectIds.Count == 0) return new RetrospectiveDto(result);
 
         var ids = projectIds.Distinct().ToList();
-        // 부모(자식 보유) WBS 는 그루핑 노드 — 모든 집계/번업에서 제외(leaf only).
-        var parentSet = (await db.WbsItems.Where(w => w.ParentId != null)
-            .Select(w => w.ParentId!.Value).Distinct().ToListAsync()).ToHashSet();
 
         var projects = (await db.Projects.Where(p => ids.Contains(p.Id)).ToListAsync())
             .ToDictionary(p => p.Id);
@@ -25,8 +22,10 @@ public class RetrospectiveService(AppDbContext db)
         {
             if (!projects.TryGetValue(pid, out var p)) continue;
 
+            // 그룹(그루핑 노드)은 모든 집계/번업에서 제외.
             var leafWbs = await db.WbsItems
-                .Where(w => w.ProjectId == pid && !parentSet.Contains(w.Id) && !w.IsMilestone)
+                .OnlyTasks()
+                .Where(w => w.ProjectId == pid && !w.IsMilestone)
                 .ToListAsync();
             var issues = await db.Issues.Where(i => i.ProjectId == pid).ToListAsync();
 
@@ -100,7 +99,9 @@ public class RetrospectiveService(AppDbContext db)
     private static IReadOnlyList<SCurvePointDto> BuildBurnUp(
         List<WbsItem> leaf, DateTime? start, DateTime? end, DateTime? actual)
     {
-        var total = leaf.Count;
+        // 분모에서 중단(종료·비완료)을 뺀다 — 위 wbsTotal 과 같은 모수여야 한다.
+        // 안 빼면 중단 항목이 있는 프로젝트의 번업 곡선이 영원히 100% 에 못 닿는다(완료될 수 없는 걸 분모에 넣으므로).
+        var total = leaf.Count(w => w.Status != WbsStatus.Suspended);
         var completed = leaf
             .Where(w => w.CompletedDate is DateTime)
             .OrderBy(w => w.CompletedDate!.Value)

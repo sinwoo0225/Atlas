@@ -23,7 +23,7 @@ import { AssigneeTagInput } from '../components/AssigneeTagInput';
 import { applyTextareaTab } from '../utils/textareaTab';
 import {
   collectAncestorIds, collectCollapsibleIds, collectDescendantIds, collectMatchedIds, filterWbsTree, findItem, findItemName, flattenWbsTree,
-  applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, type WbsFilterOpts,
+  applySortOrderPatchesLocal, hasAnyFilter, uniqueAssigneesSplit, isGroupWbs, type WbsFilterOpts,
 } from '../utils/wbsHelpers';
 import { wbsStatusBadge, devInfoTypeBadge } from '../utils/statusMaps';
 import { sortWbsTree } from '../utils/wbsSort';
@@ -43,7 +43,7 @@ import { WbsDragOverlayRow } from './wbs/WbsDragOverlayRow';
 import { computeSiblingReorder } from './wbs/wbsReorder';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
 import { useCreateForm } from '../hooks/useCreateForm';
-import type { WbsItem, WbsSubtask, WbsVersion, Resource, WbsStatus, Issue, IssueWbsLinkType, DevInfoItem, WbsDependency, WbsDependencyType, RescheduleResult } from '../types';
+import type { WbsItem, WbsSubtask, WbsVersion, Resource, WbsStatus, WbsKind, Issue, IssueWbsLinkType, DevInfoItem, WbsDependency, WbsDependencyType, RescheduleResult } from '../types';
 import { linkTypeOptions } from '../utils/issueWbsLinkType';
 import { loadSettings, patchSettings } from '../store/settings';
 import { loadWbsFilters, saveWbsFilters, clearWbsFilters, type StoredWbsFilters } from '../utils/wbsFilterStore';
@@ -62,6 +62,7 @@ type WbsFormData = {
   name: string; assignee: string; startDate: string; endDate: string;
   status: string; isMilestone: boolean; importance: string; notes: string;
   parentId: number | null; actualStartDate: string; completedDate: string; estimateHours: string;
+  kind: WbsKind;
 };
 
 const PICKER_VIEWPORT_MARGIN = 8;
@@ -192,6 +193,7 @@ function WbsItemForm({
     actualStartDate: initial?.actualStartDate?.slice(0, 10) ?? '',
     completedDate: initial?.completedDate?.slice(0, 10) ?? '',
     estimateHours: initial?.estimateHours != null ? String(initial.estimateHours) : '',
+    kind: initial?.kind ?? 'Task',
   };
   const [form, setForm] = useState<WbsFormData>(initialForm);
   const [initialSnapshot, setInitialSnapshot] = useState(() => JSON.stringify(initialForm));
@@ -200,6 +202,8 @@ function WbsItemForm({
   const [snapshotUpdatedAt, setSnapshotUpdatedAt] = useState<string | undefined>(initial?.updatedAt);
   const [notesEditing, setNotesEditing] = useState(false);
   const set = <K extends keyof WbsFormData>(k: K, v: WbsFormData[K]) => setForm((f) => ({ ...f, [k]: v }));
+  // 그룹은 상태·담당자·중요도·공수·마일스톤을 갖지 않는다 — 입력은 막되 기존 값은 보존한다(서버도 무시만 함).
+  const isGroupForm = form.kind === 'Group';
 
   // 자기 자신 + 자손은 부모 picker 에서 비활성. 신규(create) 는 자기 자신이 없으므로 빈 Set.
   const excludeIds = useMemo(
@@ -221,6 +225,7 @@ function WbsItemForm({
       actualStartDate: form.actualStartDate || null,
       completedDate: form.completedDate || null,
       estimateHours: form.estimateHours.trim() === '' ? null : Number(form.estimateHours),
+      kind: form.kind,
       ...(initial ? { updatedAt: snapshotUpdatedAt, sortOrder: initial.sortOrder } : {}),
     };
     if (initial) {
@@ -252,6 +257,8 @@ function WbsItemForm({
                     actualStartDate: fresh.actualStartDate?.slice(0, 10) ?? '',
                     completedDate: fresh.completedDate?.slice(0, 10) ?? '',
                     estimateHours: fresh.estimateHours != null ? String(fresh.estimateHours) : '',
+                    // kind 를 빠뜨리면 충돌 복구 후 저장 시 역할이 유실된다(폼 기본값 Task 로 되돌아감).
+                    kind: fresh.kind,
                   };
                   setForm(freshForm);
                   setInitialSnapshot(JSON.stringify(freshForm));
@@ -307,17 +314,39 @@ function WbsItemForm({
             <FormField label={t('wbs:form.name')} required>
               <input value={form.name} onChange={(e) => set('name', e.target.value)} className={inputClass} />
             </FormField>
-            <FormField label={t('wbs:form.assignee')}>
-              <AssigneeTagInput
-                value={form.assignee}
-                onChange={(v) => set('assignee', v)}
-                resources={resources}
-                placeholder={t('wbs:form.assigneePlaceholder')}
-              />
+            {/* 역할 — 그룹이면 아래 상태·담당자·공수·마일스톤은 지표에 반영되지 않는다(입력은 보존). */}
+            <FormField label={t('wbs:kind.label')} help={t('wbs:kind.hint')}>
+              <select
+                value={form.kind}
+                onChange={(e) => set('kind', e.target.value as WbsKind)}
+                className={inputClass}
+              >
+                <option value="Task">{t('wbs:kind.task')}</option>
+                <option value="Group">{t('wbs:kind.group')}</option>
+              </select>
             </FormField>
+            {isGroupForm && (
+              <p className="text-xs text-on-warning -mt-2">{t('wbs:kind.groupFieldsDisabled')}</p>
+            )}
+            {/* 그룹은 담당자를 갖지 않는다 — 필드 자체를 숨겨 '입력해도 무시된다' 는 혼란을 없앤다(기존 값은 보존). */}
+            {!isGroupForm && (
+              <FormField label={t('wbs:form.assignee')}>
+                <AssigneeTagInput
+                  value={form.assignee}
+                  onChange={(v) => set('assignee', v)}
+                  resources={resources}
+                  placeholder={t('wbs:form.assigneePlaceholder')}
+                />
+              </FormField>
+            )}
             <div className="grid grid-cols-2 gap-3 [&>*]:min-w-0 [&_input]:min-w-0 [&_select]:min-w-0">
               <FormField label={t('wbs:form.status')}>
-                <select value={form.status} onChange={(e) => set('status', e.target.value)} className={inputClass}>
+                <select
+                  value={form.status}
+                  onChange={(e) => set('status', e.target.value)}
+                  disabled={isGroupForm}
+                  className={`${inputClass} ${isGroupForm ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
                   <option value="Planned">{t('status:wbs.Planned')}</option>
                   <option value="Waiting">{t('status:wbs.Waiting')}</option>
                   <option value="InProgress">{t('status:wbs.InProgress')}</option>
@@ -326,7 +355,12 @@ function WbsItemForm({
                 </select>
               </FormField>
               <FormField label={t('wbs:form.importance')}>
-                <select value={form.importance} onChange={(e) => set('importance', e.target.value)} className={inputClass}>
+                <select
+                  value={form.importance}
+                  onChange={(e) => set('importance', e.target.value)}
+                  disabled={isGroupForm}
+                  className={`${inputClass} ${isGroupForm ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
                   <option value="3">{t('status:importance.High')}</option>
                   <option value="2">{t('status:importance.Medium')}</option>
                   <option value="1">{t('status:importance.Low')}</option>
@@ -367,12 +401,19 @@ function WbsItemForm({
                 type="number" min={0} step={1}
                 value={form.estimateHours}
                 onChange={(e) => set('estimateHours', e.target.value)}
-                className={inputClass}
+                disabled={isGroupForm}
+                className={`${inputClass} ${isGroupForm ? 'opacity-50 cursor-not-allowed' : ''}`}
                 placeholder="0"
               />
             </FormField>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={form.isMilestone} onChange={(e) => set('isMilestone', e.target.checked)} className="rounded" />
+            <label className={`flex items-center gap-2 ${isGroupForm ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}>
+              <input
+                type="checkbox"
+                checked={!isGroupForm && form.isMilestone}
+                disabled={isGroupForm}
+                onChange={(e) => set('isMilestone', e.target.checked)}
+                className="rounded"
+              />
               <span className="text-sm text-secondary">{t('wbs:form.milestone')}</span>
             </label>
             {/* 부모 작업 — 생성·수정 모두 선택 가능. 트리는 portal+fixed 오버레이로 1열 위에 솟아남(아래로 펼치되 공간 부족 시 flip). */}
@@ -1300,6 +1341,49 @@ export function WbsPage() {
     refresh();
   };
 
+  // 역할 전환 — 작업 ⇄ 그룹. 그룹이 되면 모든 지표에서 빠지므로 그 방향만 확인을 받는다.
+  const setKind = async (item: WbsItem, kind: WbsKind) => {
+    const { children: _children, ...rest } = item;
+    await wbsApi.update(pid, item.id, { ...rest, kind });
+    refresh();
+  };
+
+  const handleToggleKind = async (item: WbsItem) => {
+    if (isGroupWbs(item)) {
+      await setKind(item, 'Task');
+      toast.success(t('wbs:kind.toTaskDone', { name: item.name }));
+      return;
+    }
+    const ok = await confirmDialog({
+      title: t('wbs:kind.toGroupConfirmTitle'),
+      message: t('wbs:kind.toGroupConfirmBody', { name: item.name }),
+      confirmLabel: t('wbs:kind.toGroupConfirmOk'),
+    });
+    if (!ok) return;
+    await setKind(item, 'Group');
+    toast.success(t('wbs:kind.toGroupDone', { name: item.name }));
+  };
+
+  // 하위 작업 추가 후 — 부모가 자동으로 그룹이 됐으면 알리고 되돌릴 기회를 준다.
+  // 서버가 별도 신호를 주지 않으므로, 추가 직전 부모의 역할을 기억해 두고 재조회 결과와 비교한다.
+  const handleChildCreated = async (parentId: number | undefined) => {
+    if (parentId === undefined) return;
+    const before = findItem(parentId, items);
+    if (!before || isGroupWbs(before)) return;   // 원래 그룹이었으면 알릴 게 없다
+    const fresh = await wbsApi.get(pid, parentId).catch(() => null);
+    if (!fresh || !isGroupWbs(fresh)) return;    // 승격이 안 일어났다(프로젝트 설정 OFF 등)
+    toast.info(t('wbs:kind.autoGrouped', { name: fresh.name }), {
+      duration: 8000,
+      action: {
+        label: t('wbs:kind.keepAsTask'),
+        onClick: async () => {
+          await setKind(fresh, 'Task');
+          toast.success(t('wbs:kind.toTaskDone', { name: fresh.name }));
+        },
+      },
+    });
+  };
+
   // 칸반 드롭 상태 변경 — 낙관적 갱신은 KanbanBoardView 가 담당하므로 여기선 영속화+재조회만.
   // 실패 시 update 가 throw → 보드가 롤백. id 로 트리에서 원본을 찾아 전체 페이로드 전송.
   const handleKanbanStatusMove = async (id: number, status: WbsStatus) => {
@@ -1808,6 +1892,7 @@ export function WbsPage() {
                         onDelete={handleDelete}
                         onAddChild={(parentId) => { setAddingChildOf(parentId); setShowForm(true); }}
                         onStatusChange={handleStatusChange}
+                        onToggleKind={handleToggleKind}
                       />
                     ))}
                   </SortableContext>
@@ -1831,7 +1916,13 @@ export function WbsPage() {
           onRefreshIssues={refreshIssues}
           onRefreshDevInfo={refreshDevInfo}
           onLinksChanged={refreshLinkCounts}
-          onSave={(createdId) => { setShowForm(false); setAddingChildOf(undefined); refresh(); if (createdId) setScrollToId(createdId); }}
+          onSave={(createdId) => {
+            const parentOfNew = addingChildOf;
+            setShowForm(false); setAddingChildOf(undefined); refresh();
+            if (createdId) setScrollToId(createdId);
+            // 부모가 자동으로 그룹이 됐는지 확인 — 됐으면 '작업으로 유지' 되돌리기 토스트.
+            void handleChildCreated(parentOfNew);
+          }}
           onCancel={() => { setShowForm(false); setAddingChildOf(undefined); }}
         />
       )}

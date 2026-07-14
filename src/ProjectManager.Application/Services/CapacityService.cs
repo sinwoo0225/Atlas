@@ -22,11 +22,10 @@ public class CapacityService(AppDbContext db)
         var horizonEnd = weekStart0.AddDays(weeks * 7 - 1);
         var weekStarts = Enumerable.Range(0, weeks).Select(i => IsoDate(weekStart0.AddDays(i * 7))).ToList();
 
-        // leaf(자식 없는) · 미완 · 배정 있는 작업만. 부모는 요약 노드라 제외.
-        var parentIds = await db.WbsItems.Where(w => w.ParentId != null)
-            .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
+        // 집계 대상(그룹 제외) · 미완 · 배정 있는 작업만. 그룹은 그루핑 노드라 수요를 만들지 않는다.
         var items = await db.WbsItems
-            .Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended && w.Assignments.Any())
+            .OnlyTasks().OnlyOpen()
+            .Where(w => w.Assignments.Any())
             .Include(w => w.Assignments).ThenInclude(a => a.Resource)
             .ToListAsync();
 
@@ -93,11 +92,9 @@ public class CapacityService(AppDbContext db)
         var horizonEnd = weekStart0.AddDays(weeks * 7 - 1);
         var weekStarts = Enumerable.Range(0, weeks).Select(i => IsoDate(weekStart0.AddDays(i * 7))).ToList();
 
-        var parentIds = await db.WbsItems.Where(w => w.ParentId != null)
-            .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
         var items = await db.WbsItems
-            .Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended
-                && w.Assignments.Any(a => a.ResourceId == resourceId))
+            .OnlyTasks().OnlyOpen()
+            .Where(w => w.Assignments.Any(a => a.ResourceId == resourceId))
             .Include(w => w.Assignments.Where(a => a.ResourceId == resourceId))
             .ToListAsync();
 

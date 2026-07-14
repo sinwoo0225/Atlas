@@ -1,3 +1,5 @@
+using ProjectManager.Core.Domain;
+
 namespace ProjectManager.Core.DTOs;
 
 // 템플릿 작업 노드 — 빌트인 JSON 파일과 커스텀 템플릿의 NodesJson 이 공용으로 쓰는 스키마.
@@ -14,6 +16,10 @@ public record WbsTemplateNodeDto
     public bool IsMilestone { get; init; }
     public int Importance { get; init; } = 2;
     public string Notes { get; init; } = string.Empty;
+    // 역할. null = 미지정 → 적용 시 자식 유무로 판정(자식 있으면 Group). 기존 템플릿·빌트인 JSON 은 전부 null 이라
+    // 손대지 않아도 도입 전과 같은 구조로 생성된다. '자식이 있지만 그 자체가 일감' 인 상위 작업을 템플릿에
+    // 담고 싶을 때만 "kind": "Task" 를 명시한다.
+    public WbsKind? Kind { get; init; }
     public List<WbsTemplateNodeDto> Children { get; init; } = new();
 }
 

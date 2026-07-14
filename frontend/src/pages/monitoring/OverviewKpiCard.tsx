@@ -16,7 +16,8 @@ export function OverviewKpiCard({
 }) {
   const { t } = useTranslation();
   const ps = charts?.projectStatus;
-  const total = ps ? ps.planned + ps.waiting + ps.inProgress + ps.done : 0;
+  // maintenance 를 빼먹으면 '총 프로젝트' 가 실제보다 적게 나온다 — ProjectStatusBreakdown 은 5개 상태를 모두 싣는다.
+  const total = ps ? ps.planned + ps.waiting + ps.inProgress + ps.done + ps.maintenance : 0;
   const wbsProg = charts?.wbsProgress ?? [];
   const avgProgress = wbsProg.length
     ? Math.round(wbsProg.reduce((s, w) => s + w.progressPercent, 0) / wbsProg.length)

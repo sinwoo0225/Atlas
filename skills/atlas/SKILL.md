@@ -58,12 +58,25 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 필터는 DB-side. 같은 개념 = 같은 플래그.
 - `--status A,B`(다중, 콤마/반복) · `--open`(미해결/미완) · `--active-on today|YYYY-MM-DD`(그 날 진행 중, WBS·프로젝트).
 - 날짜 범위 `--due-from/-to`·`--from/-to`·`--start-from`·`--updated-to` 등(to 는 해당일 포함).
-- `--type/--impact/--priority`(다중) · `--tag`(AND) · `--assignee-id`/`--assignee-name` · `--overdue` · `--milestone` · `--source-issue/-wbs` · `--keyword`.
+- `--type/--impact/--priority`(다중) · `--tag`(AND) · `--assignee-id`/`--assignee-name` · `--overdue` · `--milestone` · `--kind`(WBS 역할) · `--source-issue/-wbs` · `--keyword`.
 - **셰이핑(토큰 절감)**: `--count`(개수만) · `--limit N` · `--brief`(핵심 필드) · `--fields a,b,c`.
 
 예: `atlas-cli issue list --project 1 --open --priority High --count` / `atlas-cli wbs list --project 1 --status InProgress --active-on today`.
 
 > WBS `list` 는 필터/셰이핑 없으면 트리(root+children), 있으면 평면(각 항목 `parentId` 포함).
+
+## WBS 역할 — 작업(Task) vs 그룹(Group)
+
+WBS 항목은 `kind` 를 갖는다. **구조(자식 유무)와 별개 축**이다.
+
+- **`Task`** — 1급 작업. 자식이 있어도(= 상위 작업) 모든 지표에 **1건으로 잡힌다**.
+- **`Group`** — 묶기 전용. 완료율·잔여·지연·미할당·용량·번업 **전부에서 제외**되고, 상태·기간·진행률은 **자손 Task 에서 파생**한다. 자기 상태/담당자/공수는 보존되지만 무시된다.
+
+에이전트가 알아야 할 것:
+- **지표가 세는 것과 같은 집합을 보려면 `--kind Task`.** 그냥 `wbs list` 하면 그룹까지 나온다.
+- 하위 작업을 만들면 부모가 **자동으로 Group 으로 승격**된다. 그 부모가 실제 일감이면 `wbs update --id <부모> --kind Task` 로 되돌린다.
+- `wbs update` 에서 `--kind` 를 **생략하면 역할은 안 바뀐다**(다른 필드와 달리 '미지정 = 미변경').
+- 그룹에 담당자·공수를 넣어도 용량 계획·미할당 큐에 반영되지 않는다.
 
 ## CLI vs MCP
 

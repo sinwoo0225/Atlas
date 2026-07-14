@@ -6,6 +6,7 @@ import { resourcesApi } from '../api/resources';
 import { Button, Card, Modal, Badge, EmptyState, FilterBar, FormField, Spinner, CopyButton, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
 import { wbsStatusBadge } from '../utils/statusMaps';
+import { isClosedWbs } from '../utils/wbsHelpers';
 import { useCreateForm } from '../hooks/useCreateForm';
 import type { Resource, ResourceType, ResourceAssignment } from '../types';
 
@@ -204,13 +205,14 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
       .finally(() => setLoading(false));
   }, [resource.id, t]);
 
-  // 프로젝트별 그룹 — 진행/예정(active) vs 완료(done) 분리. activeOnly 면 active 없는 그룹 제외.
+  // 프로젝트별 그룹 — 진행/예정(active) vs 종료(done) 분리. activeOnly 면 active 없는 그룹 제외.
+  // 종료 = 완료(Done) + 중단(Suspended). 중단을 active 로 두면 이 사람이 아직 붙들고 있는 일처럼 보인다.
   const groups = useMemo(() => {
     const byProject = new Map<number, { name: string; active: ResourceAssignment[]; done: ResourceAssignment[] }>();
     for (const a of items) {
       let g = byProject.get(a.projectId);
       if (!g) { g = { name: a.projectName, active: [], done: [] }; byProject.set(a.projectId, g); }
-      (a.status === 'Done' ? g.done : g.active).push(a);
+      (isClosedWbs(a.status) ? g.done : g.active).push(a);
     }
     let list = [...byProject.values()];
     if (activeOnly) list = list.filter((g) => g.active.length > 0);
@@ -219,7 +221,7 @@ function AssignmentsModal({ resource, onClose }: { resource: Resource; onClose: 
 
   const hiddenCount = items.length === 0
     ? 0
-    : items.filter((a) => a.status === 'Done').length; // 참고용(완료 총건수)
+    : items.filter((a) => isClosedWbs(a.status)).length; // 참고용(종료 총건수)
 
   return (
     <Modal

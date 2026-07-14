@@ -28,6 +28,7 @@ public static class WbsTools
         [Description("마일스톤만(true)/제외(false)")] bool? milestone = null,
         [Description("이름·메모 부분일치")] string? keyword = null,
         [Description("시작 지연 — 계획 시작일이 지났는데 아직 Planned(미착수)")] bool overdueStart = false,
+        [Description("역할 필터 Task|Group. Task 만 지표(완료율·잔여·용량)에 잡힌다 — 그룹은 묶기 전용")] WbsKind? kind = null,
         [Description("개수만 반환")] bool count = false,
         [Description("최대 N 건")] int? limit = null,
         [Description("축약 필드만")] bool brief = false,
@@ -43,7 +44,8 @@ public static class WbsTools
             Assignee: assignee,
             Milestone: milestone,
             Keyword: keyword,
-            OverdueStart: overdueStart);
+            OverdueStart: overdueStart,
+            Kind: kind);
         var view = McpJson.View(count, limit, brief, fields, BriefPresets.Wbs);
         var shaped = view.Count || view.Limit is not null || view.Fields is { Count: > 0 };
 
@@ -92,8 +94,9 @@ public static class WbsTools
         [Description("중요도 1=낮음 / 2=중간 (기본) / 3=높음")] int? importance = null,
         string? notes = null,
         [Description("완료일(실적) YYYY-MM-DD — 생략 시 Done 이면 오늘 자동")] DateTime? completedDate = null,
-        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null,
-        [Description("착수일(실적) YYYY-MM-DD — 생략 시 진행/완료면 오늘 자동")] DateTime? actualStartDate = null) =>
+        [Description("공수 추정(시간) — 용량 계획 기준, 작업(Task)에 입력")] double? estimateHours = null,
+        [Description("착수일(실적) YYYY-MM-DD — 생략 시 진행/완료면 오늘 자동")] DateTime? actualStartDate = null,
+        [Description("역할 Task(기본)=1급 작업 / Group=묶기 전용(모든 지표에서 제외, 표시는 자손에서 파생)")] WbsKind? kind = null) =>
         McpJson.Serialize(await svc.CreateAsync(new CreateWbsItemDto(
             ProjectId: projectId,
             VersionId: versionId,
@@ -108,7 +111,8 @@ public static class WbsTools
             Notes: notes ?? string.Empty,
             CompletedDate: completedDate,
             EstimateHours: estimateHours,
-            ActualStartDate: actualStartDate)));
+            ActualStartDate: actualStartDate,
+            Kind: kind ?? WbsKind.Task)));
 
     [McpServerTool(Name = "atlas_wbs_update"),
      Description("WBS 항목 부분 갱신 — null 인 필드는 기존 값 유지. root 로 옮기려면 atlas_wbs_move 사용")]
@@ -123,8 +127,9 @@ public static class WbsTools
         [Description("정렬 위치 — 보통 생략 (신규 시 자동 끝에 추가, reorder 는 GUI dnd 사용)")] int? sortOrder = null,
         string? notes = null,
         [Description("완료일(실적) YYYY-MM-DD — Done 전환 시 자동, 직접 보정 가능")] DateTime? completedDate = null,
-        [Description("공수 추정(시간) — 용량 계획 기준, leaf 에 입력")] double? estimateHours = null,
-        [Description("착수일(실적) YYYY-MM-DD — 진행/완료 전환 시 자동, 직접 보정 가능")] DateTime? actualStartDate = null)
+        [Description("공수 추정(시간) — 용량 계획 기준, 작업(Task)에 입력")] double? estimateHours = null,
+        [Description("착수일(실적) YYYY-MM-DD — 진행/완료 전환 시 자동, 직접 보정 가능")] DateTime? actualStartDate = null,
+        [Description("역할 Task|Group. Group 은 묶기 전용(모든 지표에서 제외). 생략하면 변경 없음")] WbsKind? kind = null)
     {
         var existing = await svc.GetByIdAsync(id)
             ?? throw new InvalidOperationException($"WbsItem {id} 없음");
@@ -142,7 +147,9 @@ public static class WbsTools
             CompletedDate: completedDate ?? existing.CompletedDate,
             UpdatedAt: existing.UpdatedAt,
             EstimateHours: estimateHours ?? existing.EstimateHours,
-            ActualStartDate: actualStartDate ?? existing.ActualStartDate)));
+            ActualStartDate: actualStartDate ?? existing.ActualStartDate,
+            // 다른 필드와 달리 `?? existing.Kind` 로 채우지 않는다 — null 자체가 '미변경' 이다.
+            Kind: kind)));
     }
 
     [McpServerTool(Name = "atlas_wbs_move"),

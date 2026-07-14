@@ -38,6 +38,8 @@ public class AppDbContext(
             e.Property(x => x.Category).HasMaxLength(32).HasDefaultValue("");
             e.Property(x => x.GitRepoPath).HasMaxLength(500).HasDefaultValue("");
             e.Property(x => x.IssueCustomColumnsJson).HasColumnType("TEXT").HasDefaultValue("");
+            // 기본 true — 기존 행도 true 로 채워져야 도입 전 동작(부모=그루핑 노드)이 그대로 유지된다.
+            e.Property(x => x.AutoGroupParents).HasDefaultValue(true);
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
@@ -55,6 +57,10 @@ public class AppDbContext(
             e.Property(x => x.UpdatedAt).IsConcurrencyToken();
             e.Property(x => x.CreatedBy).HasMaxLength(200);
             e.Property(x => x.UpdatedBy).HasMaxLength(200);
+            // 역할(Task/Group) — string 저장. 인덱스는 두지 않는다: 카디널리티 2 라 SQLite 옵티마이저가 대개 무시하고
+            // 쓰기 증폭만 는다. 게다가 이 술어가 대체하는 옛 술어는 `Id NOT IN (부모 id 전부)` 였어서, 단일 컬럼 비교는
+            // 인덱스 없이도 엄격히 더 싸다. 필요해지면 (Kind, Status) 복합으로.
+            e.Property(x => x.Kind).HasConversion<string>().HasMaxLength(16).HasDefaultValue(WbsKind.Task);
             // ParentId 셀프 참조: Cascade — 부모 WBS 삭제 시 자식 트리 전부 함께 삭제.
             // Project cascade-delete 시 SQLite 가 부모/자식 순서 무관하게 처리할 수 있어야 Project 삭제가 성공한다 (Restrict 면 FK 위반).
             e.HasOne(x => x.Parent).WithMany(x => x.Children).HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Cascade);

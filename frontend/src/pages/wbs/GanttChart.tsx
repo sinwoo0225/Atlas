@@ -13,9 +13,10 @@ import type { WbsItem, WbsStatus, WbsDependency } from '../../types';
 import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
 import { wbsStatusBadge } from '../../utils/statusMaps';
-import { splitAssignees, isClosedWbs } from '../../utils/wbsHelpers';
+import { splitAssignees, isClosedWbs, isGroupWbs, effectiveWbsStatus } from '../../utils/wbsHelpers';
 import { sortSiblings } from '../../utils/wbsSort';
 import { spanOf } from '../../utils/wbsSpan';
+import { wbsProgressOf } from '../../utils/wbsProgress';
 import { Button } from '../../components/ui';
 
 /* ============================================================================
@@ -43,13 +44,14 @@ function flattenForGantt(items: WbsItem[], collapsed: Set<number>): GanttRow[] {
       const isCollapsed = hasChildren && collapsed.has(item.id);
       let effStart: number | undefined;
       let effEnd: number | undefined;
-      let isParentBar = false;
+      // 요약 막대(얇은 음영 + 편집 불가)는 '그룹' 에만. 자식이 있는 Task(상위 작업)는 자기 일정과 의존성을 가진
+      // 1급 작업이므로 일반 막대로 그리고 드래그·리사이즈도 허용한다.
+      const isParentBar = isGroupWbs(item);
       if (hasChildren) {
-        // 부모: 본인 값 우선, 없으면 후손 합산 범위로
+        // 본인 값 우선, 없으면 후손 합산 범위로
         const span = spanOf(item);
         effStart = item.startDate ? new Date(item.startDate).getTime() : span.start;
         effEnd = item.endDate ? new Date(item.endDate).getTime() : span.end;
-        isParentBar = true;
       } else {
         effStart = item.startDate ? new Date(item.startDate).getTime() : undefined;
         effEnd = item.endDate ? new Date(item.endDate).getTime() : undefined;
@@ -112,25 +114,6 @@ function statusColor(status: WbsStatus, colors: ChartColors): string {
   if (status === 'Done') return colors.ganttBarDone;
   if (status === 'InProgress') return colors.ganttBarInProgress;
   return colors.ganttBarPlanned;
-}
-
-// 막대 진행률(0~1) — 서브태스크가 있으면 완료/전체, 없는 부모면 자손 leaf 의 Done 비율(롤업), 그 외 null(미표시).
-// 중단(Suspended) leaf 는 종료(비완료) — 분모에서 제외([완료+중단]만 남으면 100%).
-function progressOf(item: WbsItem): number | null {
-  const stTotal = item.subtaskTotal ?? 0;
-  if (stTotal > 0) return Math.min(1, (item.subtaskDone ?? 0) / stTotal);
-  if ((item.children?.length ?? 0) > 0) {
-    let total = 0, done = 0;
-    const visit = (n: WbsItem) => {
-      const kids = n.children ?? [];
-      if (kids.length === 0) {
-        if (!n.isMilestone && n.status !== 'Suspended') { total++; if (n.status === 'Done') done++; }
-      } else kids.forEach(visit);
-    };
-    visit(item);
-    return total > 0 ? done / total : null;
-  }
-  return null;
 }
 
 // 진행률 막대 — 연한 트랙(전체) 위에 진한 채움(진행분), 막대 우측에 % 라벨. 상태 색은 유지.
@@ -669,16 +652,18 @@ export function GanttChart({
       if (row.effStart == null || row.effEnd == null) return null;
       const dim = filterDim(row.item);
       let kind: 'bar' | 'parent' | 'milestone' = 'bar';
-      let color = statusColor(row.item.status, colors);
-      if (row.item.isMilestone) {
-        kind = 'milestone';
-        color = colors.ganttMilestone;
-      } else if (row.isParentBar) {
+      // 그룹이면 자손에서 파생한 상태로 색을 낸다(자기 status 는 무의미).
+      let color = statusColor(effectiveWbsStatus(row.item), colors);
+      if (row.isParentBar) {
+        // 그룹 — 얇은 음영 요약 막대. 마일스톤과 배타이므로 먼저 본다.
         kind = 'parent';
         color = colors.ganttBarParent;
+      } else if (row.item.isMilestone) {
+        kind = 'milestone';
+        color = colors.ganttMilestone;
       }
       const crit = criticalIds?.has(row.item.id) ? 1 : 0;
-      const progress = progressOf(row.item);
+      const progress = wbsProgressOf(row.item);
       return {
         name: row.item.name,
         itemId: row.item.id,

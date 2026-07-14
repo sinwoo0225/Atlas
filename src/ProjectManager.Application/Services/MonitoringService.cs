@@ -20,23 +20,21 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
 
     private static string IsoDate(DateTime d) => d.ToString("yyyy-MM-dd");
 
-    // 자식을 가진 부모 WBS 의 Id 목록 — 부모는 그루핑 역할이므로 모든 WBS 목록·집계에서 제외(leaf only).
-    // EF 의 Contains 변환(IN/NOT IN)을 위해 List 로 반환.
-    private async Task<List<int>> GetParentWbsIdsAsync() =>
-        await db.WbsItems.Where(w => w.ParentId != null).Select(w => w.ParentId!.Value).Distinct().ToListAsync();
-
+    // 집계 대상(Kind != Group)만 남긴다. 도입 전에는 자식 유무로 추론한 parentWbsIds 를 NOT IN 으로 걸렀다 —
+    // 그래서 부모에 담당자·일정을 넣어도 지표에서 조용히 사라졌고, 리프에 자식을 붙이면 그 작업이 증발했다.
+    // 이제 역할이 데이터에 선언돼 있으므로 단일 컬럼 술어로 끝난다(WbsQueryExtensions).
     public async Task<MonitoringDto> GetTodayAsync()
     {
         var today = DateTime.Now.Date;
         var tomorrow = today.AddDays(1);
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var items = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id) && (w.Status == WbsStatus.InProgress
+            .OnlyTasks()
+            .Where(w => w.Status == WbsStatus.InProgress
                 || (w.StartDate.HasValue && w.EndDate.HasValue
                     && w.StartDate.Value.Date < tomorrow
                     && w.EndDate.Value.Date >= today
-                    && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)))
+                    && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended))
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .OrderBy(x => x.p.Name)
             .ThenBy(x => x.w.EndDate)
@@ -56,11 +54,10 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     {
         var fromDate = from.Date;
         var toDate = to.Date;
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var wbs = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id)
-                && w.EndDate.HasValue
+            .OnlyTasks()
+            .Where(w => w.EndDate.HasValue
                 && w.EndDate.Value.Date >= fromDate
                 && w.EndDate.Value.Date <= toDate)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
@@ -90,9 +87,9 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     // 컬럼(예정/진행/완료) 그룹화는 프론트가 Status 매핑으로 수행(드래그 낙관 갱신).
     public async Task<IReadOnlyList<KanbanItemDto>> GetKanbanAsync(DateTime doneSince)
     {
-        var parentWbsIds = await GetParentWbsIdsAsync();
         var wbs = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id) && (w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended || w.UpdatedAt >= doneSince))
+            .OnlyTasks()
+            .Where(w => w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended || w.UpdatedAt >= doneSince)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
 
@@ -121,7 +118,6 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     {
         var today = DateTime.Today;
         var horizon = today.AddDays(upcomingDays);
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         // 1) 프로젝트 상태 분포
         var statusRaw = await db.Projects
@@ -147,12 +143,11 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
 
         // 3) 다가오는 마일스톤 (오늘부터 N일, 미완료, 종료일 오름차순)
         var milestones = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id)
-                && w.IsMilestone
+            .OnlyTasks().OnlyOpen()
+            .Where(w => w.IsMilestone
                 && w.EndDate.HasValue
                 && w.EndDate.Value.Date >= today
-                && w.EndDate.Value.Date <= horizon
-                && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)
+                && w.EndDate.Value.Date <= horizon)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .OrderBy(x => x.w.EndDate)
             .Select(x => new UpcomingMilestoneDto(
@@ -160,9 +155,10 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
                 x.w.Name, x.w.EndDate!.Value, x.w.Status))
             .ToListAsync();
 
-        // 4) 프로젝트별 WBS 진행률 (마일스톤 제외, 부모 제외, 실제 leaf 작업만)
+        // 4) 프로젝트별 WBS 진행률 (마일스톤 제외, 그룹 제외 — 실제 작업만)
         var wbsRaw = await db.WbsItems
-            .Where(w => !w.IsMilestone && !parentWbsIds.Contains(w.Id))
+            .OnlyTasks()
+            .Where(w => !w.IsMilestone)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
         var wbsProgress = wbsRaw
@@ -223,11 +219,12 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         const int cap = 20;
         var today = DateTime.Now.Date;
         var dueSoonCutoff = today.AddDays(7);
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
+        // !IsMilestone — 마일스톤은 0 기간 표식이라 '지연 작업' 이 아니다. AttentionService 의 overdue/dueSoon 카운트는
+        // 이미 마일스톤을 빼고 있었는데 여기만 안 빼서, 주의 피드 배지 숫자와 Risk Radar 리스트 길이가 어긋났다.
         var wbs = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id) && w.EndDate.HasValue && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended
-                && w.EndDate.Value.Date <= dueSoonCutoff)
+            .OnlyTasks().OnlyOpen()
+            .Where(w => !w.IsMilestone && w.EndDate.HasValue && w.EndDate.Value.Date <= dueSoonCutoff)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .OrderBy(x => x.w.EndDate)
             .ToListAsync();
@@ -298,10 +295,10 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     {
         var today = DateTime.Now.Date;
         var dueSoonCutoff = today.AddDays(7);
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var wbs = await db.WbsItems
-            .Where(w => w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended && !w.IsMilestone && !parentWbsIds.Contains(w.Id))
+            .OnlyTasks().OnlyOpen()
+            .Where(w => !w.IsMilestone)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
         var issues = await db.Issues
@@ -380,10 +377,10 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     public async Task<IReadOnlyList<AgingWipItemDto>> GetAgingWipAsync()
     {
         var now = DateTime.UtcNow;
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var wbs = await db.WbsItems
-            .Where(w => w.Status == WbsStatus.InProgress && !parentWbsIds.Contains(w.Id))
+            .OnlyTasks()
+            .Where(w => w.Status == WbsStatus.InProgress)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
         var issues = await db.Issues
@@ -422,14 +419,13 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     public async Task<PortfolioRollupDto> GetPortfolioRollupAsync()
     {
         var today = DateTime.Now.Date;
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var projects = await db.Projects.Select(p => new { p.Id, p.Category }).ToListAsync();
         var catByProject = projects.ToDictionary(
             p => p.Id, p => string.IsNullOrWhiteSpace(p.Category) ? "" : p.Category.Trim());
 
         var leaf = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id))
+            .OnlyTasks()
             .Select(w => new { w.ProjectId, w.Status, w.EndDate, w.IsMilestone, w.EstimateHours })
             .ToListAsync();
         var issues = await db.Issues
@@ -442,8 +438,12 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             {
                 var pids = g.Select(p => p.Id).ToHashSet();
                 var cw = leaf.Where(w => pids.Contains(w.ProjectId)).ToList();
-                var totalLeaf = cw.Count(w => w.Status != WbsStatus.Suspended); // 중단(종료)은 진행률 분모에서 제외
-                var done = cw.Count(w => w.Status == WbsStatus.Done);
+                // 진행률 모수는 !IsMilestone — GetChartsAsync 의 프로젝트별 진행률과 같은 정의여야 한다.
+                // 여기만 마일스톤을 분모에 넣고 있어서 같은 프로젝트가 두 화면에서 다른 진행률로 보였다.
+                // (demand·atRisk 는 아래에서 자체 술어를 쓰므로 cw 전체를 그대로 둔다.)
+                var cwWork = cw.Where(w => !w.IsMilestone).ToList();
+                var totalLeaf = cwWork.Count(w => w.Status != WbsStatus.Suspended); // 중단(종료)은 진행률 분모에서 제외
+                var done = cwWork.Count(w => w.Status == WbsStatus.Done);
                 var progress = totalLeaf > 0 ? (int)Math.Round(done * 100.0 / totalLeaf) : 0;
                 var ci = issues.Where(i => pids.Contains(i.ProjectId)).ToList();
                 var openIssues = ci.Count(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress);
@@ -503,9 +503,9 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
 
         var events = new List<CompletionEvent>();
 
-        var parentWbsIds = await GetParentWbsIdsAsync();
         var wbs = await db.WbsItems
-            .Where(w => w.Status == WbsStatus.Done && !parentWbsIds.Contains(w.Id))
+            .OnlyTasks()
+            .Where(w => w.Status == WbsStatus.Done)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
         foreach (var x in wbs)
@@ -626,13 +626,13 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     {
         var today = DateTime.Today;
         var events = await GetCompletionEventsAsync();
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
-        // --- D-1 CFD: 비-마일스톤 leaf WBS 의 일별 상태 누적 (전이로그 전방 재구성) ---
+        // --- D-1 CFD: 비-마일스톤 작업(Task)의 일별 상태 누적 (전이로그 전방 재구성) ---
         var days = weeks * 7;
         var day0 = today.AddDays(-(days - 1));
         var wbsAll = await db.WbsItems
-            .Where(w => !w.IsMilestone && !parentWbsIds.Contains(w.Id))
+            .OnlyTasks()
+            .Where(w => !w.IsMilestone)
             .Select(w => new { w.Id, w.Status, w.CreatedAt })
             .ToListAsync();
 
@@ -695,7 +695,7 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             if (idx >= 0 && idx < weeks) wkSample[idx]++;
         }
         var completedTotal = wkSample.Sum();
-        var remaining = await db.WbsItems.CountAsync(w => !w.IsMilestone && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended && !parentWbsIds.Contains(w.Id));
+        var remaining = await db.WbsItems.OnlyTasks().OnlyOpen().CountAsync(w => !w.IsMilestone);
 
         MonteCarloDto monteCarlo;
         if (completedTotal < 5 || remaining <= 0 || !wkSample.Any(s => s > 0))
@@ -729,7 +729,8 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             .Select(p => new { p.Id, p.Name, p.EndDate })
             .ToListAsync();
         var remainingByProject = (await db.WbsItems
-            .Where(w => !w.IsMilestone && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended && !parentWbsIds.Contains(w.Id))
+            .OnlyTasks().OnlyOpen()
+            .Where(w => !w.IsMilestone)
             .GroupBy(w => w.ProjectId)
             .Select(g => new { ProjectId = g.Key, Count = g.Count() })
             .ToListAsync())
@@ -766,7 +767,8 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         if (persons.Any(r => !string.IsNullOrWhiteSpace(r.Department)))
         {
             var openWbsAssignees = await db.WbsItems
-                .Where(w => !w.IsMilestone && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended && !parentWbsIds.Contains(w.Id))
+                .OnlyTasks().OnlyOpen()
+                .Where(w => !w.IsMilestone)
                 .Select(w => w.Assignee).ToListAsync();
             var openIssueNames = await db.Issues
                 .Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress)
@@ -808,14 +810,12 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         var weekStarts = Enumerable.Range(0, weeks)
             .Select(i => IsoDate(weekStart0.AddDays(i * 7)))
             .ToList();
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var wbsItems = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id)
-                && w.EndDate.HasValue
+            .OnlyTasks().OnlyOpen()
+            .Where(w => w.EndDate.HasValue
                 && w.EndDate.Value.Date >= weekStart0
-                && w.EndDate.Value.Date < horizon
-                && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)
+                && w.EndDate.Value.Date < horizon)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
 
@@ -1001,13 +1001,12 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         var start = WorkLogService.StartOfWeek(weekStart);
         var nextStart = start.AddDays(7);
         var nextEnd = start.AddDays(14);
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
-        var due = await GetDeadlineItemsAsync(nextStart, nextEnd, onlyPast: false, parentWbsIds);
+        var due = await GetDeadlineItemsAsync(nextStart, nextEnd, onlyPast: false);
 
         var startingWbs = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended
-                && w.StartDate.HasValue
+            .OnlyTasks().OnlyOpen()
+            .Where(w => w.StartDate.HasValue
                 && w.StartDate.Value.Date >= nextStart && w.StartDate.Value.Date < nextEnd)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();
@@ -1051,7 +1050,6 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         var start = WorkLogService.StartOfWeek(weekStart);
         var weekEndExclusive = start.AddDays(7);
         var nextWeekEndExclusive = start.AddDays(14);
-        var parentWbsIds = await GetParentWbsIdsAsync();
 
         var events = await GetCompletionEventsAsync();
         var completed = events
@@ -1066,8 +1064,8 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
                 IsoDate(e.CompletedAt.ToLocalTime()), e.Approximate))
             .ToList();
 
-        var missed = await GetDeadlineItemsAsync(start, weekEndExclusive, onlyPast: true, parentWbsIds);
-        var upcoming = await GetDeadlineItemsAsync(weekEndExclusive, nextWeekEndExclusive, onlyPast: false, parentWbsIds);
+        var missed = await GetDeadlineItemsAsync(start, weekEndExclusive, onlyPast: true);
+        var upcoming = await GetDeadlineItemsAsync(weekEndExclusive, nextWeekEndExclusive, onlyPast: false);
 
         return new WeeklyReviewDto(IsoDate(start), completed, missed, upcoming);
     }
@@ -1075,13 +1073,13 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
     // 마감일이 [fromInclusive, toExclusive) 인 미완료 WBS·이슈를 ReviewDeadlineItemDto 로.
     // onlyPast=true 면 마감일이 오늘 이전인 것만(놓친 마감). 마감일 오름차순 정렬.
     private async Task<List<ReviewDeadlineItemDto>> GetDeadlineItemsAsync(
-        DateTime fromInclusive, DateTime toExclusive, bool onlyPast, List<int> parentWbsIds)
+        DateTime fromInclusive, DateTime toExclusive, bool onlyPast)
     {
         var today = DateTime.Now.Date;
 
         var wbs = await db.WbsItems
-            .Where(w => !parentWbsIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended
-                && w.EndDate.HasValue
+            .OnlyTasks().OnlyOpen()
+            .Where(w => w.EndDate.HasValue
                 && w.EndDate.Value.Date >= fromInclusive && w.EndDate.Value.Date < toExclusive)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .ToListAsync();

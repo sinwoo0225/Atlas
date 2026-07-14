@@ -117,6 +117,10 @@ public class WbsTemplateService(
         var newItems = flat.Select(f =>
         {
             var (start, end) = ComputeDates(f.Node, anchor, dto.SkipWeekends);
+            // 템플릿 적용은 WbsService.CreateAsync 를 우회하므로 자동 승격 훅이 안 돈다 → 여기서 직접 판정.
+            // 노드가 kind 를 명시하지 않았으면(기존 템플릿·빌트인 전부) 자식 유무로 판정 — 자식을 가진 노드는
+            // 그루핑 노드다. 이 판정이 없으면 모든 단계(Phase) 노드가 Task 로 생성돼 완료율 분모·잔여가 부풀어 오른다.
+            var kind = f.Node.Kind ?? (f.Node.Children.Count > 0 ? WbsKind.Group : WbsKind.Task);
             return new WbsItem
             {
                 ProjectId = projectId,
@@ -127,7 +131,8 @@ public class WbsTemplateService(
                 StartDate = start,
                 EndDate = end,
                 Status = WbsStatus.Planned,
-                IsMilestone = f.Node.IsMilestone,
+                Kind = kind,
+                IsMilestone = kind == WbsKind.Group ? false : f.Node.IsMilestone,   // Group ⇄ 마일스톤 배타
                 Importance = f.Node.Importance is 1 or 2 or 3 ? f.Node.Importance : 2,
                 SortOrder = f.Sort,
                 Notes = f.Node.Notes ?? string.Empty,
@@ -179,6 +184,9 @@ public class WbsTemplateService(
                     IsMilestone = k.IsMilestone,
                     Importance = k.Importance,
                     Notes = k.Notes,
+                    // 역할을 실어야 왕복이 무손실이다 — 자식이 있는 Task(상위 작업)는 kind 를 안 실으면
+                    // 적용 시 자식 유무 판정에 걸려 Group 으로 되살아난다.
+                    Kind = k.Kind,
                     Children = Build(k.Id),
                 }).ToList();
 

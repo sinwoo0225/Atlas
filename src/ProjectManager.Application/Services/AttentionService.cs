@@ -15,11 +15,8 @@ public class AttentionService(AppDbContext db, CapacityService capacity, Monitor
         var soon = today.AddDays(3);
         var milestoneHorizon = today.AddDays(30);
 
-        var parentIds = await db.WbsItems.Where(w => w.ParentId != null)
-            .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
-
-        // leaf(요약 부모 제외) · 미완 WBS 기준.
-        var leafOpen = db.WbsItems.Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended);
+        // 집계 대상(그룹 제외) · 미완 WBS 기준. 여러 CountAsync 가 이 IQueryable 을 재사용한다.
+        var leafOpen = db.WbsItems.OnlyTasks().OnlyOpen();
         var openIssues = db.Issues.Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress);
 
         var overdue = await leafOpen.CountAsync(w => !w.IsMilestone && w.EndDate != null && w.EndDate.Value < today)
@@ -35,7 +32,9 @@ public class AttentionService(AppDbContext db, CapacityService capacity, Monitor
         var milestones = await leafOpen.CountAsync(w => w.IsMilestone && w.EndDate != null
             && w.EndDate.Value >= today && w.EndDate.Value <= milestoneHorizon);
 
-        var unassigned = await leafOpen.CountAsync(w => w.Assignee == "")
+        // Trim() 필수 — 빈 문자열만 보면 공백뿐인 담당자(" ")를 '배정됨' 으로 세어, 모니터링의 미할당 큐
+        // (SplitAssignees 로 토큰 0 개 판정)와 숫자가 어긋났다. EF 가 TRIM() 으로 내린다.
+        var unassigned = await leafOpen.CountAsync(w => w.Assignee.Trim() == "")
             + await openIssues.CountAsync(i => i.AssigneeResourceId == null);
 
         // 이번 주 과배분 자원 수(시간 기반 용량).

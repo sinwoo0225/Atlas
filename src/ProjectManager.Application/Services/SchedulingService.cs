@@ -5,18 +5,19 @@ using ProjectManager.Core.Interfaces;
 
 namespace ProjectManager.Application.Services;
 
-// 일정 지능 — 임계경로(CPM)·의존성 기반 자동 리스케줄(미리보기/적용). leaf 작업 + WbsDependency 만 대상.
-// 부모(요약)는 자손 leaf 중 임계가 있으면 임계로 표시(하이라이트용). 날짜 부족 작업은 indeterminate 로 제외.
+// 일정 지능 — 임계경로(CPM)·의존성 기반 자동 리스케줄(미리보기/적용). 작업(Kind=Task) + WbsDependency 만 대상.
+// 그룹은 자손 작업 중 임계가 있으면 임계로 표시(하이라이트용). 날짜 부족 작업은 indeterminate 로 제외.
+// Task/Group 은 서로소 전수 분할이라 all 의 모든 항목이 정확히 하나의 CriticalPathItemDto 를 받는다
+// (자식이 있는 Task = 상위 작업도 CPM 에 정식 참여한다 — 자기 일정과 의존성을 가지므로).
 public class SchedulingService(IWbsRepository wbsRepo, IWbsDependencyRepository depRepo, WbsService wbsService)
 {
     public async Task<CriticalPathDto> ComputeCriticalPathAsync(int projectId, int? versionId = null, bool skipWeekends = true)
     {
         var all = (await wbsRepo.GetByProjectAsync(projectId, versionId)).ToList();
-        var parentIds = all.Where(x => x.ParentId != null).Select(x => x.ParentId!.Value).ToHashSet();
-        var leaves = all.Where(x => !parentIds.Contains(x.Id)).ToList();
+        var leaves = all.Where(WbsPredicates.IsTask).ToList();
         var edges = (await depRepo.GetByProjectAsync(projectId, versionId)).ToList();
 
-        // 두 날짜 모두 있는 leaf 만 CPM 참여. 나머지는 indeterminate.
+        // 두 날짜 모두 있는 작업만 CPM 참여. 나머지는 indeterminate.
         var dated = leaves.Where(x => x.StartDate.HasValue && x.EndDate.HasValue).ToList();
         if (dated.Count == 0)
             return new CriticalPathDto(null, null, false, [],
@@ -119,10 +120,10 @@ public class SchedulingService(IWbsRepository wbsRepo, IWbsDependencyRepository 
         // 날짜 부족 leaf → indeterminate.
         foreach (var w in leaves.Where(x => !byId.ContainsKey(x.Id)))
             items.Add(Indeterminate(w.Id));
-        // 부모 → 자손 leaf 중 임계 있으면 임계(하이라이트용, float 없음).
-        foreach (var p in all.Where(x => parentIds.Contains(x.Id)))
+        // 그룹 → 자손 작업 중 임계 있으면 임계(하이라이트용, float 없음).
+        foreach (var p in all.Where(WbsPredicates.IsGroup))
         {
-            var anyCritical = DescendantLeafIds(all, p.Id, parentIds).Any(criticalLeafIds.Contains);
+            var anyCritical = DescendantTaskIds(all, p.Id).Any(criticalLeafIds.Contains);
             items.Add(new CriticalPathItemDto(p.Id, anyCritical, null, null, null, null, null, !anyCritical));
         }
 
@@ -249,14 +250,14 @@ public class SchedulingService(IWbsRepository wbsRepo, IWbsDependencyRepository 
     private static CriticalPathItemDto Indeterminate(int id) =>
         new(id, false, null, null, null, null, null, true);
 
-    private static IEnumerable<int> DescendantLeafIds(List<WbsItem> all, int rootId, HashSet<int> parentIds)
+    // 자손 중 CPM 에 참여한 작업(Kind=Task) 의 id. 그룹은 통과해 더 내려간다.
+    // 자식이 있는 Task(상위 작업)는 자기 자신이 CPM 참여자이므로 yield 하고, 그 아래로도 계속 내려간다.
+    private static IEnumerable<int> DescendantTaskIds(List<WbsItem> all, int rootId)
     {
-        var children = all.Where(x => x.ParentId == rootId).ToList();
-        foreach (var c in children)
+        foreach (var c in all.Where(x => x.ParentId == rootId))
         {
-            if (parentIds.Contains(c.Id))
-                foreach (var d in DescendantLeafIds(all, c.Id, parentIds)) yield return d;
-            else yield return c.Id;
+            if (WbsPredicates.IsTask(c)) yield return c.Id;
+            foreach (var d in DescendantTaskIds(all, c.Id)) yield return d;
         }
     }
 

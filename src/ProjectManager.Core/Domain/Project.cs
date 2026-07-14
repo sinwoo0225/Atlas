@@ -29,6 +29,9 @@ public class Project : IAuditable
     // 이슈 리스트의 사용자 정의 커스텀 컬럼 정의. JSON-in-TEXT 배열
     // [{ "key":slug, "name":표시명, "type":"text|date|number", "order":n }]. 값은 Issue.CustomFieldsJson.
     public string IssueCustomColumnsJson { get; set; } = string.Empty;
+    // 리프 작업에 첫 자식이 붙을 때 그 부모를 자동으로 Group 으로 승격할지. 기본 true = 도입 전 동작(부모=그루핑 노드) 보존.
+    // WBS 를 '상위 작업' 중심으로 쓰는 프로젝트는 끄면 된다 — 그때는 부모가 Task 로 남아 지표에 계속 잡힌다.
+    public bool AutoGroupParents { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public string CreatedBy { get; set; } = string.Empty;
