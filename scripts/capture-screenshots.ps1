@@ -11,16 +11,17 @@
 
     Prereqs: frontend deps + Playwright chromium (cd frontend; npm i; npx playwright install chromium).
 .EXAMPLE
-    .\capture-screenshots.ps1
+    .\scripts\capture-screenshots.ps1
 #>
 $ErrorActionPreference = 'Stop'
-$root = $PSScriptRoot
+# 이 스크립트는 scripts/ 안에 있다 — 레포 루트는 한 단계 위.
+$root = Split-Path $PSScriptRoot -Parent
 
 $configPath    = Join-Path $env:LOCALAPPDATA 'Atlas\config.json'
 $backupPath    = "$configPath.screenshot-bak"
 $tempData      = Join-Path $env:TEMP ('atlas-shots-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
-$koOut         = Join-Path $root 'screenshots'
-$enOut         = Join-Path $root 'store/screenshots-en'
+$koOut         = Join-Path $root 'store/screenshots/ko'
+$enOut         = Join-Path $root 'store/screenshots/en'
 $configExisted = Test-Path $configPath
 $backendId     = $null
 $viteId        = $null
@@ -67,7 +68,7 @@ try {
     Write-Host "  - backend OK" -ForegroundColor Green
 
     Write-Host "==> Seed sample data" -ForegroundColor Cyan
-    & (Join-Path $root 'seed-sample-data.ps1')
+    & (Join-Path $PSScriptRoot 'seed-sample-data.ps1')   # 형제 스크립트 (scripts/ 안)
 
     Write-Host "==> Start Vite dev (:5173)" -ForegroundColor Cyan
     $vite = Start-Process -FilePath 'cmd.exe' -ArgumentList @('/c', 'npm run dev') `
@@ -76,7 +77,7 @@ try {
     Wait-Url 'http://localhost:5173' 60 'Vite'
     Write-Host "  - Vite OK" -ForegroundColor Green
 
-    Write-Host "==> Capture (ko -> screenshots/, en -> store/screenshots-en/)" -ForegroundColor Cyan
+    Write-Host "==> Capture (ko -> store/screenshots/ko/, en -> store/screenshots/en/)" -ForegroundColor Cyan
     Push-Location (Join-Path $root 'frontend')
     try {
         & node 'scripts/capture-screenshots.mjs' '--lang' 'ko' '--base' 'http://localhost:5173' '--out' $koOut
@@ -85,7 +86,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw "en capture failed" }
     } finally { Pop-Location }
 
-    Write-Host "Done. screenshots/ (ko) + store/screenshots-en/ (en) generated." -ForegroundColor Green
+    Write-Host "Done. store/screenshots/ko + store/screenshots/en generated." -ForegroundColor Green
 }
 finally {
     Write-Host "==> Cleanup (stop processes + restore config + delete temp)" -ForegroundColor Cyan

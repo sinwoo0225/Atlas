@@ -31,8 +31,8 @@ RestartApplications=no
 WizardStyle=modern
 Compression=lzma2/max
 SolidCompression=yes
-; 산출물: 레포 루트의 Atlas-Setup-<버전>.exe
-OutputDir=..
+; 산출물: 레포 루트 dist/ 의 Atlas-Setup-<버전>.exe (publish.ps1 이 미리 폴더를 만든다)
+OutputDir=..\dist
 OutputBaseFilename=Atlas-Setup-{#MyAppVersion}
 UninstallDisplayIcon={app}\{#MyAppExeName}
 SetupIconFile=..\src\ProjectManager.DesktopApp\Resources\atlas.ico

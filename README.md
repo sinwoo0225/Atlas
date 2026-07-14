@@ -79,31 +79,31 @@ Atlas 는 두 가지 외부 진입로를 제공합니다 — `Atlas-Cli.exe` (CL
 ## 스크린샷
 
 ### 대시보드 — KPI · 주요 마일스톤 · 이슈 · 최근 회의록·변경 이력 위젯
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](store/screenshots/ko/dashboard.png)
 
 ### WBS + 간트차트 — 계층 트리 · 마일스톤 · 드래그 reorder · 표↔간트 정렬 통일
-![WBS Gantt](screenshots/wbs-gantt.png)
+![WBS Gantt](store/screenshots/ko/wbs-gantt.png)
 
 ### 프로젝트 맵 — Cytoscape + dagre. 5 hub 방사형 / 타임라인 레이아웃 + 미니맵
-![Project Map](screenshots/project-map.png)
+![Project Map](store/screenshots/ko/project-map.png)
 
 ### 이슈 관리 — 인라인 BadgeMenu (viewport flip), 상단 quickadd 행
-![Issues](screenshots/issues.png)
+![Issues](store/screenshots/ko/issues.png)
 
 ### 회의록 — 결정 / 논의 / Action Items + `Meetings/` 자동 md export
-![Meetings](screenshots/meetings.png)
+![Meetings](store/screenshots/ko/meetings.png)
 
 ### 변경 이력 — 영향도 · 출처 (Issue/WBS) · 일자별 스택 차트
-![Change Log](screenshots/changelog.png)
+![Change Log](store/screenshots/ko/changelog.png)
 
 ### 업무 정보 — Markdown / File (Copy·Reference) / Link / GitRepo + 태그
-![Work info](screenshots/devinfo.png)
+![Work info](store/screenshots/ko/devinfo.png)
 
 ### 통합 모니터링 — 전 프로젝트 종합 시각화 + 담당자 × 마감 히트맵
-![Monitoring](screenshots/monitoring.png)
+![Monitoring](store/screenshots/ko/monitoring.png)
 
 ### 업무 일지 — 주간 한 일 / 계획 / 이슈, 마크다운 export
-![Worklog](screenshots/worklog.png)
+![Worklog](store/screenshots/ko/worklog.png)
 
 ## 개발 (Contributor)
 
@@ -207,31 +207,31 @@ Both auto-discover the same data folder as the GUI (`%LOCALAPPDATA%\Atlas\config
 ### Screenshots
 
 #### Dashboard — KPIs, milestones, issues, recent meetings & change log widgets
-![Dashboard](screenshots/dashboard.png)
+![Dashboard](store/screenshots/ko/dashboard.png)
 
 #### WBS + Gantt — Hierarchical tree, milestones, drag-reorder, table↔gantt unified sort
-![WBS Gantt](screenshots/wbs-gantt.png)
+![WBS Gantt](store/screenshots/ko/wbs-gantt.png)
 
 #### Project map — Cytoscape + dagre. 5-hub radial / timeline layouts with minimap
-![Project Map](screenshots/project-map.png)
+![Project Map](store/screenshots/ko/project-map.png)
 
 #### Issues — Inline BadgeMenu (viewport flip), top quickadd row
-![Issues](screenshots/issues.png)
+![Issues](store/screenshots/ko/issues.png)
 
 #### Meetings — Decisions / discussion / action items, auto Markdown export to `Meetings/`
-![Meetings](screenshots/meetings.png)
+![Meetings](store/screenshots/ko/meetings.png)
 
 #### Change log — Impact, source (Issue/WBS) backlinks, daily stacked chart
-![Change Log](screenshots/changelog.png)
+![Change Log](store/screenshots/ko/changelog.png)
 
 #### Work info — Markdown / File (Copy·Reference) / Link / GitRepo, tagging
-![Work info](screenshots/devinfo.png)
+![Work info](store/screenshots/ko/devinfo.png)
 
 #### Monitoring — Cross-project summary charts + assignee × deadline heatmap
-![Monitoring](screenshots/monitoring.png)
+![Monitoring](store/screenshots/ko/monitoring.png)
 
 #### Worklog — Weekly Done / Plan / Issues, Markdown export
-![Worklog](screenshots/worklog.png)
+![Worklog](store/screenshots/ko/worklog.png)
 
 ### Development (Contributor)
 

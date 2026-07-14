@@ -36,6 +36,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 
+# 배포 산출물(zip·msix·Setup.exe)은 전부 dist/ 로. 예전엔 레포 루트에 쏟아져서 수백 MB 가 쌓였다.
+# gitignore 의 **/dist/ 가 커버한다.
+$distDir = Join-Path $root 'dist'
+function Ensure-Dist {
+    if (-not (Test-Path $distDir)) { New-Item -ItemType Directory -Path $distDir | Out-Null }
+}
+
 if ($Server) {
     $publishDir = Join-Path $root 'publish/server'
 
@@ -114,7 +121,8 @@ Atlas-Server.exe
 
     if (-not $SkipZip) {
         $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
-        $zipPath = Join-Path $root "Atlas-Server-$tag.zip"
+        Ensure-Dist
+        $zipPath = Join-Path $distDir "Atlas-Server-$tag.zip"
         Write-Host "==> 압축 생성: $zipPath" -ForegroundColor Cyan
         if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
         Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath
@@ -244,7 +252,8 @@ if ($Msix) {
         Write-Warning "makeappx.exe(Windows SDK) 를 찾을 수 없습니다. Windows SDK 설치 후 다시 실행하세요. (스테이징은 $stage 에 준비됨)"
         return
     }
-    $msixOut = Join-Path $root "Atlas-$ver4.msix"
+    Ensure-Dist
+    $msixOut = Join-Path $distDir "Atlas-$ver4.msix"
     if (Test-Path $msixOut) { Remove-Item $msixOut -Force }
     & $makeappx pack /d $stage /p $msixOut /o
     if ($LASTEXITCODE -ne 0) { throw "makeappx pack 실패 (exit $LASTEXITCODE)" }
@@ -265,8 +274,8 @@ if ($Msix) {
         & $signtool sign /fd SHA256 /sha1 $cert.Thumbprint $msixOut
         if ($LASTEXITCODE -ne 0) { throw "signtool 서명 실패 (exit $LASTEXITCODE)" }
         Write-Host "서명 완료. 로컬 설치 전 인증서를 신뢰 저장소에 추가:" -ForegroundColor Yellow
-        Write-Host "  Export-Certificate -Cert Cert:\CurrentUser\My\$($cert.Thumbprint) -FilePath atlas-test.cer" -ForegroundColor DarkGray
-        Write-Host "  (관리자) Import-Certificate -FilePath atlas-test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople" -ForegroundColor DarkGray
+        Write-Host "  Export-Certificate -Cert Cert:\CurrentUser\My\$($cert.Thumbprint) -FilePath dist\atlas-test.cer" -ForegroundColor DarkGray
+        Write-Host "  (관리자) Import-Certificate -FilePath dist\atlas-test.cer -CertStoreLocation Cert:\LocalMachine\TrustedPeople" -ForegroundColor DarkGray
         Write-Host "  그 후: Add-AppxPackage $msixOut" -ForegroundColor DarkGray
     }
     return
@@ -337,7 +346,8 @@ foreach ($d in @('skills', 'cli-docs', 'commands')) {
 $tag = if ($Version) { $Version } else { Get-Date -Format 'yyyyMMdd_HHmmss' }
 
 if (-not $SkipZip) {
-    $zipPath = Join-Path $root "Atlas-$tag.zip"
+    Ensure-Dist
+    $zipPath = Join-Path $distDir "Atlas-$tag.zip"
     Write-Host "==> 압축 생성: $zipPath" -ForegroundColor Cyan
     if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
     Compress-Archive -Path (Join-Path $publishDir '*') -DestinationPath $zipPath
@@ -366,10 +376,11 @@ if ($Installer) {
     if (-not $iscc) {
         Write-Warning "ISCC.exe(Inno Setup 6) 를 찾을 수 없습니다. https://jrsoftware.org/isdl.php 에서 설치 후 다시 실행하세요. (포터블 zip 은 이미 생성됨)"
     } else {
+        Ensure-Dist   # Atlas.iss 의 OutputDir=..\dist 가 여기로 뱉는다.
         $iss = Join-Path $root 'installer\Atlas.iss'
         & $iscc "/DMyAppVersion=$tag" $iss
         if ($LASTEXITCODE -ne 0) { throw "인스톨러 컴파일 실패 (ISCC exit $LASTEXITCODE)" }
-        $setupExe = Join-Path $root "Atlas-Setup-$tag.exe"
+        $setupExe = Join-Path $distDir "Atlas-Setup-$tag.exe"
         if (Test-Path $setupExe) {
             Write-Host "완료. $setupExe 생성됨." -ForegroundColor Green
         } else {

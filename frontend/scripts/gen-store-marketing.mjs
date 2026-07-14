@@ -7,7 +7,7 @@
 //   node scripts/gen-store-marketing.mjs            # both ko + en
 //   node scripts/gen-store-marketing.mjs --lang ko  # one language
 //
-// Inputs : <root>/screenshots/<name>.png (ko), <root>/store/screenshots-en/<name>.png (en)
+// Inputs : <root>/store/screenshots/<lang>/<name>.png
 // Output : <root>/store/marketing-ko/NN-<name>.png, <root>/store/marketing-en/NN-<name>.png
 
 import { chromium } from 'playwright';
@@ -23,7 +23,7 @@ const langArg = (() => { const i = argv.indexOf('--lang'); return i >= 0 ? argv[
 const LANGS = langArg ? [langArg] : ['ko', 'en'];
 
 // raw capture source per language
-const rawDir = (lang) => lang === 'ko' ? join(ROOT, 'screenshots') : join(ROOT, 'store', 'screenshots-en');
+const rawDir = (lang) => join(ROOT, 'store', 'screenshots', lang);
 const outDir = (lang) => join(ROOT, 'store', `marketing-${lang}`);
 const LOGO = join(ROOT, 'frontend', 'public', 'icons', 'atlas-v2-monogram.png');
 

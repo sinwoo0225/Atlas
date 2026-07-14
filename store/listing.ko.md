@@ -2,7 +2,7 @@
 Microsoft Store 등록정보 (한국어 / ko-KR 마켓). Partner Center 의 "Store 등록정보" 필드에 그대로 복사.
 필드 제약(참고): 설명 ≤10,000자 · 기능 항목 ≤20개(각 ≤200자) · 검색어 ≤7개(각 ≤30자) ·
 짧은 설명(요약) ≤1,000자 · 스크린샷 1366×768 이상 PNG(최소 1장, 최대 10장).
-스크린샷 = 레포 `screenshots/*.png` (한국어 UI).
+스크린샷 = 레포 `store/screenshots/ko/*.png` (한국어 UI).
 개인정보처리방침 URL = 기존 GitHub Pages 의 PRIVACY 페이지 URL 사용(필수 입력).
 -->
 
