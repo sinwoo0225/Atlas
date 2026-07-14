@@ -1,9 +1,6 @@
 import { todosApi } from '../../api/todos';
+import { daysUntilDue, dueStageOf } from '../../utils/dueStage';
 import type { NotificationDraft, NotificationSource } from '../types';
-
-function startOfDay(d: Date): number {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-}
 
 function dueLink(sourceType: string, projectId?: number | null): string {
   if (projectId == null) return '/todos';
@@ -31,23 +28,15 @@ export const deadlineSource: NotificationSource = {
       return [];
     }
 
-    const today = startOfDay(now);
     const drafts: NotificationDraft[] = [];
     for (const it of items) {
       if (it.sourceType !== 'wbs' && it.sourceType !== 'issue') continue;
-      if (!it.dueDate) continue;
-      const due = startOfDay(new Date(it.dueDate));
-      const days = Math.round((due - today) / 86400000);
 
-      let stage: 'overdue' | 'today' | 'soon' | null = null;
-      if (days < 0) {
-        if (d.includeOverdue) stage = 'overdue';
-      } else if (days === 0) {
-        stage = 'today';
-      } else if (days <= d.withinDays) {
-        stage = 'soon';
-      }
-      if (!stage) continue;
+      // 단계 판정은 utils/dueStage 공용 — 위젯의 '임박·지연' 구획과 같은 기준이어야 한다.
+      const stage = dueStageOf(it.dueDate, d.withinDays, now);
+      if (stage === 'later') continue;
+      if (stage === 'overdue' && !d.includeOverdue) continue;
+      const days = daysUntilDue(it.dueDate, now) ?? 0;
 
       const i18nKey =
         stage === 'overdue'
