@@ -4,16 +4,16 @@ import { useTranslation } from 'react-i18next';
 import {
   GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward,
   AppWindow, Eye, EyeOff, MapPin, Sun, Moon, Cloud, CloudSun, CloudRain, CloudSnow, CloudFog,
-  CloudLightning, CloudDrizzle, Maximize2, Minimize2, type LucideIcon,
+  CloudLightning, CloudDrizzle, Maximize2, Minimize2, AlertTriangle, type LucideIcon,
 } from 'lucide-react';
-import { monitoringApi } from '../api/monitoring';
 import { issuesApi } from '../api/issues';
 import { projectsApi } from '../api/projects';
-import { wbsApi } from '../api/wbs';
 import { changeLogsApi } from '../api/changelogs';
 import { resourcesApi } from '../api/resources';
+import { todosApi } from '../api/todos';
 import { systemApi, type GeoResult, type WeatherNow } from '../api/system';
-import type { TodayWbs, IssuePriority, Project, WbsStatus, ImpactLevel, ResourceType } from '../types';
+import type { MyWorkItem, IssuePriority, Project, ImpactLevel, ResourceType } from '../types';
+import { daysUntilDue, dueStageOf, isUrgentStage, ddayLabel } from '../utils/dueStage';
 import { applyAppearance, loadSettings, patchSettings, resolveToasterTheme } from '../store/settings';
 import {
   isHostBridgeAvailable, beginWidgetDrag, beginWidgetResize, setWidgetWidth, setWidgetOpacity, setWidgetPinned, closeWidget,
@@ -23,24 +23,12 @@ import {
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-// 오늘 기준 endDate 까지 남은 일수. 음수면 지났음.
-function daysUntil(dateStr?: string): number | null {
-  if (!dateStr) return null;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(dateStr);
-  d.setHours(0, 0, 0, 0);
-  return Math.round((d.getTime() - today.getTime()) / 86_400_000);
-}
-
-interface Badge { labelKey: string; cls: string; }
-function statusBadge(tw: TodayWbs): Badge {
-  const dd = daysUntil(tw.endDate);
-  if (tw.status === 'Done') return { labelKey: 'widget:status.done', cls: 'bg-success-soft text-on-success' };
-  if (dd !== null && dd < 0) return { labelKey: 'widget:status.delayed', cls: 'bg-danger-soft text-on-danger' };
-  if (tw.status === 'InProgress') return { labelKey: 'widget:status.inProgress', cls: 'bg-info-soft text-on-info' };
-  return { labelKey: 'widget:status.planned', cls: 'bg-neutral-soft text-on-neutral' };
-}
+// 항목 종류별 배지 — WBS/이슈/개인 TODO 를 한 목록에 섞으므로 출처가 보여야 한다.
+const SOURCE_META: Record<MyWorkItem['sourceType'], { labelKey: string; cls: string }> = {
+  wbs: { labelKey: 'widget:source.wbs', cls: 'bg-info-soft text-on-info' },
+  issue: { labelKey: 'widget:source.issue', cls: 'bg-warning-soft text-on-warning' },
+  todo: { labelKey: 'widget:source.todo', cls: 'bg-neutral-soft text-on-neutral' },
+};
 
 function Clock() {
   const [now, setNow] = useState(() => new Date());
@@ -164,41 +152,87 @@ function Weather() {
   );
 }
 
-function TodayTasks() {
+// 내 업무 한 줄. 완료 처리는 /api/my-work/complete 가 WBS·이슈·TODO 를 알아서 디스패치한다.
+function MyWorkRow({ item, urgent, busy, onComplete }: {
+  item: MyWorkItem;
+  urgent: boolean;
+  busy: boolean;
+  onComplete: (it: MyWorkItem) => void;
+}) {
   const { t } = useTranslation();
-  const [items, setItems] = useState<TodayWbs[] | null>(null);
+  const src = SOURCE_META[item.sourceType];
+  const days = daysUntilDue(item.dueDate);
+  return (
+    <div className="flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-surface-2">
+      <button
+        type="button"
+        onClick={() => onComplete(item)}
+        disabled={busy}
+        title={t('widget:complete')}
+        aria-label={t('widget:complete')}
+        className="w-4 h-4 rounded shrink-0 flex items-center justify-center border-[1.5px] border-strong hover:border-accent transition-colors disabled:opacity-50"
+      >
+        {busy && <Check size={11} strokeWidth={3} className="opacity-40" />}
+      </button>
+      <span className="flex-1 min-w-0 truncate text-[13px] text-primary">{item.title}</span>
+      {item.projectName && (
+        <span className="text-[11px] text-muted shrink-0 max-w-[72px] truncate">{item.projectName}</span>
+      )}
+      <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${src.cls}`}>{t(src.labelKey)}</span>
+      {days !== null && (
+        <span className={`shrink-0 text-[10px] font-bold tabular-nums ${urgent ? 'text-on-danger' : 'text-muted'}`}>
+          {ddayLabel(days)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// 내게 할당된 미완 업무(WBS + 이슈 + 개인 TODO)를 '임박·지연' 과 '내 작업' 두 구획으로.
+// 한 항목은 한 구획에만 나타난다(임박·지연으로 올라간 건 아래에 다시 안 뜬다).
+//
+// 이전엔 /api/monitoring/today 를 썼는데 그 엔드포인트엔 **담당자 필터가 없어서**
+// "오늘 내 작업" 이라는 라벨로 전원의 진행 중 작업을 보여주고 있었다. 위젯이 myResourceId 를
+// 읽지도 않았다. 이제 /api/my-work?assigneeResourceId= 로 실제 '내 것' 만 가져온다.
+function MyWork() {
+  const { t } = useTranslation();
+  const [items, setItems] = useState<MyWorkItem[] | null>(null);
+  const [busy, setBusy] = useState<number | null>(null);
+
+  const settings = loadSettings();
+  const myResourceId = settings.myResourceId;
+  // 임박 지평은 알림 설정과 공유 — 알림은 왔는데 위젯엔 임박으로 안 보이는 어긋남을 막는다.
+  const withinDays = settings.notifications.deadline.withinDays;
 
   useEffect(() => {
+    if (myResourceId == null) { setItems([]); return; }
     let alive = true;
-    const load = () => monitoringApi.getToday()
+    const load = () => todosApi.myWork(myResourceId)
       .then((d) => { if (alive) setItems(d.items); })
       .catch(() => { if (alive) setItems([]); });
     load();
     const id = setInterval(load, 60_000);
     return () => { alive = false; clearInterval(id); };
-  }, []);
+  }, [myResourceId]);
 
-  const groups = useMemo(() => {
-    const map = new Map<number, { name: string; rows: TodayWbs[] }>();
+  const [urgent, normal] = useMemo(() => {
+    const u: MyWorkItem[] = [];
+    const n: MyWorkItem[] = [];
     for (const it of items ?? []) {
-      const g = map.get(it.projectId) ?? { name: it.projectName, rows: [] };
-      g.rows.push(it);
-      map.set(it.projectId, g);
+      (isUrgentStage(dueStageOf(it.dueDate, withinDays)) ? u : n).push(it);
     }
-    return [...map.values()];
-  }, [items]);
+    // 임박·지연은 급한 순(마감 지난 것부터), 나머지는 마감 가까운 순(마감 없는 건 뒤로).
+    const byDue = (a: MyWorkItem, b: MyWorkItem) =>
+      (daysUntilDue(a.dueDate) ?? Number.MAX_SAFE_INTEGER) - (daysUntilDue(b.dueDate) ?? Number.MAX_SAFE_INTEGER);
+    return [u.sort(byDue), n.sort(byDue)];
+  }, [items, withinDays]);
 
-  // 체크박스 → WBS 상태 토글(완료 ↔ 진행). 동시편집 가드를 위해 전체 항목을 받아 updatedAt 포함 업데이트.
-  const [busy, setBusy] = useState<number | null>(null);
-  const toggleDone = async (t: TodayWbs) => {
+  const complete = async (it: MyWorkItem) => {
     if (busy) return;
-    setBusy(t.wbsItemId);
+    setBusy(it.id);
     try {
-      const full = await wbsApi.get(t.projectId, t.wbsItemId);
-      const next: WbsStatus = full.status === 'Done' ? 'InProgress' : 'Done';
-      const { children: _children, ...rest } = full;
-      await wbsApi.update(t.projectId, t.wbsItemId, { ...rest, status: next });
-      setItems((prev) => prev?.map((x) => (x.wbsItemId === t.wbsItemId ? { ...x, status: next } : x)) ?? prev);
+      await todosApi.completeMyWork(it.sourceType, it.id);
+      setItems((prev) => prev?.filter((x) => !(x.sourceType === it.sourceType && x.id === it.id)) ?? prev);
     } catch {
       /* client.ts 가 토스트 처리 */
     } finally {
@@ -206,53 +240,53 @@ function TodayTasks() {
     }
   };
 
+  // '나' 미지정이면 목록을 안 띄운다 — 전원의 업무를 '내 작업' 이라 부르던 게 바로 고치려는 버그다.
+  if (myResourceId == null) {
+    return (
+      <section className="rounded-xl border border-default bg-surface p-3.5">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">{t('widget:myWork')}</h4>
+        <p className="text-xs text-muted py-3 text-center leading-relaxed">{t('widget:noIdentity')}</p>
+      </section>
+    );
+  }
+
+  const total = items?.length ?? 0;
+
   return (
     <section className="rounded-xl border border-default bg-surface p-3.5">
       <h4 className="flex items-center text-[11px] font-semibold uppercase tracking-wider text-muted mb-2.5">
-        {t('widget:todayTasks')}
-        {items && <span className="ml-auto font-semibold text-secondary normal-case tracking-normal">{t('widget:count', { count: items.length })}</span>}
+        {t('widget:myWork')}
+        {items && <span className="ml-auto font-semibold text-secondary normal-case tracking-normal">{t('widget:count', { count: total })}</span>}
       </h4>
+
       {items === null && <p className="text-xs text-muted py-3 text-center">{t('common:loading')}</p>}
-      {items !== null && items.length === 0 && (
-        <p className="text-xs text-muted py-4 text-center">{t('widget:noTodayTasks')}</p>
-      )}
+      {items !== null && total === 0 && <p className="text-xs text-muted py-4 text-center">{t('widget:noMyWork')}</p>}
+
       <div className="space-y-3">
-        {groups.map((g) => (
-          <div key={g.name}>
-            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-accent mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent" /> {g.name}
+        {urgent.length > 0 && (
+          <div>
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-on-danger mb-1">
+              <AlertTriangle size={11} strokeWidth={2.5} />
+              {t('widget:urgent')}
+              <span className="ml-auto font-semibold text-muted">{t('widget:count', { count: urgent.length })}</span>
             </p>
-            {g.rows.map((tw) => {
-              const b = statusBadge(tw);
-              const dd = daysUntil(tw.endDate);
-              const done = tw.status === 'Done';
-              return (
-                <div key={tw.wbsItemId} className="flex items-center gap-2 px-1.5 py-1.5 rounded-lg hover:bg-surface-2">
-                  <button
-                    type="button"
-                    onClick={() => toggleDone(tw)}
-                    disabled={busy === tw.wbsItemId}
-                    title={done ? t('widget:uncomplete') : t('widget:complete')}
-                    aria-label={done ? t('widget:uncomplete') : t('widget:complete')}
-                    className={`w-4 h-4 rounded shrink-0 flex items-center justify-center border-[1.5px] transition-colors disabled:opacity-50 ${
-                      done ? 'bg-accent border-accent text-on-accent' : 'border-strong hover:border-accent'
-                    }`}
-                  >
-                    {done && <Check size={11} strokeWidth={3} />}
-                  </button>
-                  <span className={`flex-1 min-w-0 truncate text-[13px] ${done ? 'text-muted line-through' : 'text-primary'}`}>{tw.wbsItemName}</span>
-                  {tw.assignee && <span className="text-[11px] text-muted shrink-0 max-w-[72px] truncate">{tw.assignee}</span>}
-                  <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${b.cls}`}>{t(b.labelKey)}</span>
-                  {dd !== null && (
-                    <span className={`shrink-0 text-[10px] font-bold tabular-nums ${dd < 0 ? 'text-on-danger' : 'text-muted'}`}>
-                      {dd === 0 ? 'D-0' : dd > 0 ? `D-${dd}` : `D+${-dd}`}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+            {urgent.map((it) => (
+              <MyWorkRow key={`${it.sourceType}:${it.id}`} item={it} urgent busy={busy === it.id} onComplete={complete} />
+            ))}
           </div>
-        ))}
+        )}
+        {normal.length > 0 && (
+          <div>
+            <p className="flex items-center gap-1.5 text-[11px] font-semibold text-accent mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+              {t('widget:upcoming')}
+              <span className="ml-auto font-semibold text-muted">{t('widget:count', { count: normal.length })}</span>
+            </p>
+            {normal.map((it) => (
+              <MyWorkRow key={`${it.sourceType}:${it.id}`} item={it} urgent={false} busy={busy === it.id} onComplete={complete} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
@@ -690,7 +724,7 @@ export function WidgetDashboard() {
                 <ActiveWindows />
               </div>
               <div className="space-y-3 min-w-0">
-                <TodayTasks />
+                <MyWork />
                 <QuickCreate />
               </div>
             </div>
@@ -699,7 +733,7 @@ export function WidgetDashboard() {
               {hero}
               <NowPlaying />
               <ActiveWindows />
-              <TodayTasks />
+              <MyWork />
               <QuickCreate />
             </div>
           )}

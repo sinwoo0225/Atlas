@@ -1,6 +1,14 @@
 {
   "title": "Atlas widget",
-  "weekday": { "sun": "Sun", "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri", "sat": "Sat" },
+  "weekday": {
+    "sun": "Sun",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat"
+  },
   "citySearch": "Search city",
   "searching": "Searching…",
   "weatherSetup": "Set up weather",
@@ -17,14 +25,29 @@
     "snow": "Snow",
     "thunder": "Thunderstorm"
   },
-  "status": { "done": "Done", "delayed": "Delayed", "inProgress": "In progress", "planned": "Planned" },
-  "todayTasks": "My tasks today",
   "count": "{{count}}",
-  "noTodayTasks": "No tasks in progress today.",
+  "myWork": "My work",
+  "urgent": "Due / overdue",
+  "upcoming": "Upcoming",
+  "noMyWork": "Nothing assigned to you is open.",
+  "noIdentity": "Set who you are in Settings > General\nto see only your work.",
+  "source": {
+    "wbs": "Task",
+    "issue": "Issue",
+    "todo": "TODO"
+  },
   "complete": "Mark complete",
-  "uncomplete": "Mark incomplete",
-  "priority": { "low": "Low", "medium": "Medium", "high": "High" },
-  "impact": { "low": "Low", "medium": "Medium", "high": "High", "critical": "Critical" },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High"
+  },
+  "impact": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
   "register": "Add",
   "issueTitle": "Issue title",
   "changeContent": "Change content",
@@ -32,7 +55,11 @@
   "person": "Person",
   "equipment": "Equipment",
   "deptOptional": "Department (optional)",
-  "tab": { "issue": "Issue", "changelog": "Change log", "resource": "Resource" },
+  "tab": {
+    "issue": "Issue",
+    "changelog": "Change log",
+    "resource": "Resource"
+  },
   "quickCreate": "Quick add",
   "needProject": "Create a project first.",
   "nowPlaying": "Now playing",
@@ -41,7 +68,12 @@
   "next": "Next",
   "pause": "Pause",
   "play": "Play",
-  "dwell": { "sec": "{{n}}s", "min": "{{n}}m", "hour": "{{n}}h", "hourMin": "{{h}}h {{m}}m" },
+  "dwell": {
+    "sec": "{{n}}s",
+    "min": "{{n}}m",
+    "hour": "{{n}}h",
+    "hourMin": "{{h}}h {{m}}m"
+  },
   "activeWindows": "Recent active windows",
   "trackOn": "Turn tracking on",
   "trackOff": "Turn tracking off",
