@@ -146,9 +146,12 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         await db.SaveChangesAsync();
     }
 
+    // OnlyTasks() 가 핵심 — 이게 빠져 있어서 그룹(그루핑 노드)이 '내 업무'(/api/my-work)·시작 화면 위젯·
+    // 마감임박/일일정리 알림에 실제 작업처럼 섞여 나왔다. 다른 모든 지표는 부모를 빼는데 여기만 안 뺐다.
+    // 이 한 줄이 TodoService·StartPageService·알림 2소스를 동시에 고친다(프론트 변경 0).
     public async Task<IEnumerable<WbsItem>> GetOpenAcrossProjectsAsync() =>
         await db.WbsItems
-            .Where(x => x.Status != WbsStatus.Done && x.Status != WbsStatus.Suspended)
+            .OnlyTasks().OnlyOpen()
             .Include(x => x.Project)
             .ToListAsync();
 }
