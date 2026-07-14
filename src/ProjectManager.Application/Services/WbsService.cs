@@ -8,12 +8,26 @@ public class WbsInvalidParentException(string message) : Exception(message);
 
 public class WbsService(
     IWbsRepository repo,
+    IProjectRepository projectRepo,
     WorkLogService workLogService,
     IMeetingRepository meetingRepo,
     WbsAssignmentService assignmentService,
     IActorAccessor actorAccessor,
     IWorkLogScopeAccessor workLogScope)
 {
+    // 부모가 방금 첫 자식을 얻었다 — 정책에 따라 Group 으로 자동 승격(WbsKindPolicy).
+    // '첫 자식일 때만' 인 게 핵심: 사용자가 토스트에서 '작업으로 유지' 를 눌러 Task 로 되돌렸는데
+    // 둘째 자식을 넣는 순간 다시 Group 으로 끌려가면 그 선택이 무의미해진다.
+    private async Task TryAutoPromoteParentAsync(WbsItem? parent, int projectId)
+    {
+        if (parent is null) return;
+        var project = await projectRepo.GetByIdAsync(projectId);
+        if (!WbsKindPolicy.ShouldAutoPromoteToGroup(parent, project)) return;
+        parent.Kind = WbsKind.Group;
+        parent.IsMilestone = false;                 // Group ⇄ 마일스톤 배타
+        await repo.UpdateAsync(parent);             // expectedUpdatedAt 없이 = 내부 갱신(409 대상 아님)
+    }
+
     public async Task<IEnumerable<WbsItemDto>> GetByProjectAsync(int projectId, int? versionId = null)
     {
         var items = await repo.GetByProjectAsync(projectId, versionId);
@@ -59,6 +73,10 @@ public class WbsService(
             CompletedDate = dto.CompletedDate ?? (dto.Status == WbsStatus.Done ? DateTime.Today : null),
         };
         var created = await repo.CreateAsync(item);
+        // 이 생성으로 부모가 '첫 자식' 을 얻었다면 그루핑 노드로 승격(siblings 는 생성 전 기존 자식 목록).
+        if (dto.ParentId is int newParentId && siblings.Count == 0)
+            await TryAutoPromoteParentAsync(
+                allInProject.FirstOrDefault(x => x.Id == newParentId), dto.ProjectId);
         await assignmentService.ReconcileFromFreeTextAsync(created);
         // 예정(Planned)이 아닌 상태(대기·진행·완료)로 생성되면 상태 전환과 동일하게 업무일지에 자동 등록.
         // 신규 항목은 항상 리프라 자식 검사 불필요. '작성 범위'(설정)가 '자신만'이면 actor 담당 작업만 기록.
@@ -114,6 +132,11 @@ public class WbsService(
             // 클라이언트가 보낸 dto.SortOrder 는 옛 부모 기준이라 새 부모에서는 무의미. parentChanged 분기에서 덮어씀.
             var newSiblings = allItems.Where(x => x.ParentId == dto.ParentId && x.Id != id).ToList();
             item.SortOrder = newSiblings.Count > 0 ? newSiblings.Max(x => x.SortOrder) + 1 : 0;
+
+            // 이 이동으로 새 부모가 '첫 자식' 을 얻었다면 그루핑 노드로 승격(생성 경로와 동일 정책).
+            if (dto.ParentId is int movedUnder && newSiblings.Count == 0)
+                await TryAutoPromoteParentAsync(
+                    allItems.FirstOrDefault(x => x.Id == movedUnder), item.ProjectId);
         }
 
         var wasDone = item.Status == WbsStatus.Done;
