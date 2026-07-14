@@ -14,11 +14,17 @@
 
 ## 진행 상태
 
+> ⚠️ **WBS 를 '셀' 때는 `--kind Task` 를 붙여라.** WBS 항목에는 역할이 있어서, `Group`(묶기 전용)은 앱의 모든 지표
+> (완료율·잔여·지연·미할당·용량)에서 제외된다. `--kind` 없이 조회하면 그룹까지 섞여 나와 **앱 화면 숫자와 안 맞는다.**
+> 목록을 눈으로 볼 땐 빼도 되지만, 개수를 세거나 지표를 재현할 땐 필수. → [`wbs.md`](./wbs.md)
+
 | 묻고 싶은 것 | 명령 |
 |---|---|
 | **N 프로젝트의 진행 중인 업무(WBS)** | `atlas-cli wbs list --project N --status InProgress` |
 | **그 중 오늘이 기간 안에 든 것** | `atlas-cli wbs list --project N --status InProgress --active-on today` |
-| N 프로젝트의 미완 업무 전부(Planned+InProgress) | `atlas-cli wbs list --project N --open` |
+| N 프로젝트의 미완 업무 전부(Planned+Waiting+InProgress) | `atlas-cli wbs list --project N --open` |
+| **앱의 '잔여' 와 같은 수** | `atlas-cli wbs list --project N --kind Task --open --count` |
+| 묶기용 그룹 노드만 | `atlas-cli wbs list --project N --kind Group --brief` |
 | **N 프로젝트의 해결/닫힘이 아닌 이슈** | `atlas-cli issue list --project N --open` (= `--status Open,InProgress`) |
 | 진행/대기 중인 프로젝트만 | `atlas-cli project list --open --brief` |
 | 오늘 진행 중인 프로젝트 | `atlas-cli project list --active-on today` |

@@ -20,6 +20,33 @@ public static class AppHostFactory
     public const string ServerEnvVar = "ATLAS_SERVER";
     public const string ApiKeyEnvVar = "ATLAS_API_KEY";
 
+    // dev(Kestrel) 에서 /api 가 아닌 경로로 들어왔을 때의 안내. 이 프로세스는 API 전용이다.
+    // 여기서 SPA 를 서빙하지 않는 이유는 아래 MapFallback 주석 참고.
+    private const string DevUiNoticeHtml = """
+        <!doctype html><meta charset="utf-8"><title>Atlas — API 전용 (dev)</title>
+        <style>
+          body{font:15px/1.7 system-ui,'Segoe UI',sans-serif;background:#0f172a;color:#cbd5e1;
+               display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+          .box{max-width:44rem;padding:2rem 2.5rem;background:#1e293b;border-radius:12px;border:1px solid #334155}
+          h1{margin:0 0 .5rem;font-size:1.25rem;color:#f1f5f9}
+          a{color:#7c8db5} code{background:#0f172a;padding:.1rem .4rem;border-radius:4px;color:#c6b590}
+          ul{padding-left:1.2rem} li{margin:.4rem 0}
+        </style>
+        <div class="box">
+          <h1>이 포트(:5200)는 API 전용입니다</h1>
+          <p>dev 백엔드는 <code>/api/*</code> 만 담당합니다. 화면은 여기서 서빙하지 않습니다.</p>
+          <ul>
+            <li><b>UI 를 보려면</b> → <a href="http://localhost:5173">http://localhost:5173</a> (Vite dev — 라이브 소스, <code>/api</code> 는 이 포트로 프록시)</li>
+            <li>둘 다 한 번에 → 레포 루트에서 <code>./start.ps1</code></li>
+            <li>실제 배포본 확인 → <code>./publish.ps1 -SkipZip</code> 후 <code>publish/Atlas.exe</code></li>
+          </ul>
+          <p style="color:#64748b;font-size:.9em;margin-bottom:0">
+            예전엔 이 포트가 <code>src/ProjectManager.WebService/wwwroot/</code> 를 서빙했지만, 그 폴더를 갱신하는
+            빌드 단계가 없어 낡은 번들이 그대로 나가는 함정이었습니다. 조용히 옛 화면을 보여주느니 이렇게 안내합니다.
+          </p>
+        </div>
+        """;
+
     public static WebApplication Build(WebApplicationBuilder builder)
     {
         builder.Services.AddControllers()
@@ -167,15 +194,18 @@ public static class AppHostFactory
         var inProcess = Environment.GetEnvironmentVariable(InProcessEnvVar) == "1";
         var serverMode = Environment.GetEnvironmentVariable(ServerEnvVar) == "1";
 
-        // 정적파일은 두 경우에 skip:
-        //  - 인프로세스 (DesktopApp 가 wwwroot 를 직접 서빙)
+        // 정적파일은 세 경우 모두 여기서 서빙하지 않는다:
+        //  - 인프로세스 (DesktopApp 의 WebViewServer 가 exe 옆 wwwroot 를 직접 서빙)
         //  - 서버 모드 (옵션 A: 클라이언트 측 wwwroot 사용, 서버는 API 만)
+        //  - dev (Kestrel) — UI 는 Vite dev 서버(:5173)가 라이브 소스로 서빙하고 /api 만 여기로 프록시한다
+        //
+        // dev 에서 SPA 를 여기서 서빙하지 '않는' 이유: `npm run build` 는 frontend/dist/ 로만 뱉고
+        // publish 의 PublishFrontend 는 그걸 publish/wwwroot/ 로 복사한다. 즉 이 프로젝트의 wwwroot/ 를
+        // 갱신하는 주체가 아무도 없어서, 한번 파일이 들어오면 그대로 화석이 된다.
+        // 실제로 사이클 172 에서 두 달 묵은 번들이 서빙되는 바람에 "UI 변경이 반영 안 됐다"고 오판할 뻔했다.
+        // 조용히 옛 화면을 보여주느니 대놓고 안내하는 편이 낫다.
         if (!inProcess && !serverMode)
-        {
-            app.UseDefaultFiles();
-            app.UseStaticFiles();
-            app.MapFallbackToFile("index.html");
-        }
+            app.MapFallback(() => Results.Content(DevUiNoticeHtml, "text/html; charset=utf-8"));
 
         app.UseCors();
 
