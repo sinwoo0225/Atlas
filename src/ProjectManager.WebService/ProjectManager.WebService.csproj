@@ -4,6 +4,11 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- 이 프로젝트는 정적파일을 어느 모드에서도 서빙하지 않는다(인프로세스=DesktopApp 의 WebViewServer,
+         서버모드=API 전용, dev=Vite). 그런데 SDK.Web 의 정적 웹 자산 로더는 Development 환경에서
+         wwwroot/ 가 실재하기를 요구해, 폴더가 없으면 기동 즉시 DirectoryNotFoundException 으로 죽는다
+         (사이클 173 이 화석 wwwroot 를 지운 뒤 `dotnet run` 이 깨진 원인). 애초에 쓰지 않는 기능이라 끈다. -->
+    <StaticWebAssetsEnabled>false</StaticWebAssetsEnabled>
   </PropertyGroup>
 
   <ItemGroup>
