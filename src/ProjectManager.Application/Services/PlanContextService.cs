@@ -42,8 +42,9 @@ public class PlanContextService(
         var byId = tasks.ToDictionary(t => t.Id);
         var diags = new List<PlanDiagnosticDto>();
 
-        foreach (var t in tasks.Where(t =>
-            t.Status != WbsStatus.Done && t.Status != WbsStatus.Suspended && !t.IsMilestone && t.EndDate.HasValue && t.EndDate.Value.Date < today))
+        // 그룹(그루핑 노드)은 진단 대상 아님 — 마감은 자손 작업이 들고 있다.
+        foreach (var t in tasks.Where(t => t.Kind != WbsKind.Group
+            && t.Status != WbsStatus.Done && t.Status != WbsStatus.Suspended && !t.IsMilestone && t.EndDate.HasValue && t.EndDate.Value.Date < today))
             diags.Add(new PlanDiagnosticDto("overdue", t.Id, $"마감 초과 {t.EndDate:yyyy-MM-dd}: {t.Name}"));
 
         foreach (var d in deps)

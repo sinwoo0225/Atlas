@@ -14,9 +14,6 @@ public class RetrospectiveService(AppDbContext db)
         if (projectIds is null || projectIds.Count == 0) return new RetrospectiveDto(result);
 
         var ids = projectIds.Distinct().ToList();
-        // 부모(자식 보유) WBS 는 그루핑 노드 — 모든 집계/번업에서 제외(leaf only).
-        var parentSet = (await db.WbsItems.Where(w => w.ParentId != null)
-            .Select(w => w.ParentId!.Value).Distinct().ToListAsync()).ToHashSet();
 
         var projects = (await db.Projects.Where(p => ids.Contains(p.Id)).ToListAsync())
             .ToDictionary(p => p.Id);
@@ -25,8 +22,10 @@ public class RetrospectiveService(AppDbContext db)
         {
             if (!projects.TryGetValue(pid, out var p)) continue;
 
+            // 그룹(그루핑 노드)은 모든 집계/번업에서 제외.
             var leafWbs = await db.WbsItems
-                .Where(w => w.ProjectId == pid && !parentSet.Contains(w.Id) && !w.IsMilestone)
+                .OnlyTasks()
+                .Where(w => w.ProjectId == pid && !w.IsMilestone)
                 .ToListAsync();
             var issues = await db.Issues.Where(i => i.ProjectId == pid).ToListAsync();
 

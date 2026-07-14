@@ -149,11 +149,11 @@ public class WbsService(
         var updated = await repo.UpdateAsync(item, dto.UpdatedAt);
         // 자유텍스트 Assignee → WbsAssignment 동기화(배정·배분율 정본).
         await assignmentService.ReconcileFromFreeTextAsync(updated);
-        // 리프(자식 없음)만 업무일지 자동 등록 — 자식이 있는 상위 업무는 요약 노드라 컨텍스트로만 등장.
-        // item 은 GetByIdAsync 로 .Include(Children) 로드되어 추가 쿼리 없이 리프 판별 가능.
+        // 그룹(그루핑 노드)만 업무일지 자동 등록에서 제외 — 그룹은 컨텍스트(조상 체인)로만 등장한다.
+        // 자식이 있어도 Task(상위 작업)면 실제 일감이므로 일지에 남는다(도입 전엔 자식만 생기면 조용히 빠졌다).
         // 시작(InProgress)·완료(Done) 전환 시 부모 체인과 함께 계층형으로 당일 '한 일'에 upsert.
         // 자동 일지는 '작성 범위'(설정) 가 '자신만'이면 actor 담당 작업에만 기록.
-        if (updated.Children.Count == 0 && WorkLogScopeGate.ShouldAutoLog(workLogScope, actorAccessor, updated.Assignee))
+        if (WbsPredicates.IsTask(updated) && WorkLogScopeGate.ShouldAutoLog(workLogScope, actorAccessor, updated.Assignee))
         {
             if (!wasInProgress && updated.Status == WbsStatus.InProgress)
             {
@@ -198,18 +198,18 @@ public class WbsService(
         return chain;
     }
 
-    // '진행 항목 자동 작성'(F5) — 프로젝트의 '진행(InProgress)'·'대기(Waiting)' 리프 작업을 당일 '한 일'에
+    // '진행 항목 자동 작성'(F5) — 프로젝트의 '진행(InProgress)'·'대기(Waiting)' 작업을 당일 '한 일'에
     // 각각 [진행]·[대기]로 일괄 upsert. 같은 작업의 기존 [시작]/[완료] 줄은 상태에 맞게 in-place 덮어쓰기(WorkLogMerge).
-    // 리프만·계층 컨텍스트·범위 게이트는 자동 등록과 동일. 등록 건수 반환.
+    // 그룹 제외·계층 컨텍스트·범위 게이트는 자동 등록과 동일. 등록 건수 반환.
     public async Task<int> AutoLogInProgressAsync(int projectId, DateTime date)
     {
         var all = (await repo.GetByProjectAsync(projectId, null)).ToList();
         var byId = all.ToDictionary(x => x.Id);
-        var parentIds = all.Where(x => x.ParentId is not null).Select(x => x.ParentId!.Value).ToHashSet();
         var count = 0;
         foreach (var item in all)
         {
-            if (parentIds.Contains(item.Id)) continue;          // 리프만(자식 있는 부모 제외)
+            // 그룹(그루핑 노드)만 제외. 자식이 있어도 Task 면 실제 작업이므로 일지에 남는다.
+            if (WbsPredicates.IsGroup(item)) continue;
             var marker = item.Status switch
             {
                 WbsStatus.InProgress => WorkLogMerge.DoneMarker.InProgress,

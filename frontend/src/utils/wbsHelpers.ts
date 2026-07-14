@@ -1,4 +1,4 @@
-import type { WbsItem, WbsStatus } from '../types';
+import type { WbsItem, WbsKind, WbsStatus } from '../types';
 
 // 콤마 구분 담당자 문자열을 개인 단위로 분리. 빈 토큰은 제거.
 export function splitAssignees(raw: string | null | undefined): string[] {
@@ -9,6 +9,18 @@ export function splitAssignees(raw: string | null | undefined): string[] {
 // (중단은 종료지만 '완료'는 아니다 — 완료 카운트는 Status==='Done' 만.)
 export const isClosedWbs = (s: WbsStatus): boolean => s === 'Done' || s === 'Suspended';
 export const isActiveWbs = (s: WbsStatus): boolean => !isClosedWbs(s);
+
+// 역할 술어 — 백엔드 WbsPredicates 와 1:1.
+// Group = 순수 그루핑 노드(모든 지표에서 제외, 표시는 자손에서 파생). Task = 1급 작업(자식이 있어도 자기가 1건).
+// `!== 'Group'` 인 이유는 백엔드와 같다: 훗날 kind 가 늘어도 새 값이 조용히 사라지지 않도록(fail-open).
+// 구조(자식 유무)와 혼동하지 말 것 — 접기 chevron·들여쓰기·롤업 막대는 여전히 hasChildren 을 봐야 한다.
+export const isGroupWbs = (i: { kind?: WbsKind }): boolean => i.kind === 'Group';
+export const isTaskWbs = (i: { kind?: WbsKind }): boolean => i.kind !== 'Group';
+
+// 그룹의 표시 상태 — 자손에서 파생한 rollupStatus 를 쓴다(자기 status 는 무시).
+// 도입 전에는 부모의 자기 status 를 그대로 써서, 자식이 전부 완료돼도 부모가 'Planned' 로 남아 흐리게 표시됐다.
+export const effectiveWbsStatus = (i: WbsItem): WbsStatus =>
+  isGroupWbs(i) ? (i.rollupStatus ?? 'Planned') : i.status;
 
 // 필터 조건. 빈 키워드/필터는 통과.
 export interface WbsFilterOpts {

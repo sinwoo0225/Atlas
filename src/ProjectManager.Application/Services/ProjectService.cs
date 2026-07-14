@@ -39,10 +39,10 @@ public class ProjectService(
         var today = DateTime.Today;
         // WBS 전체 1회 조회 후 milestones + 위험 신호(overdue/dueSoon) 모두 처리 — N+1 회피.
         var allWbs = (await wbsRepo.GetByProjectAsync(id)).ToList();
-        // 자식을 가진 부모 WBS 는 그루핑 역할 — 항목 목록·집계에서 제외(leaf only).
-        var parentIds = allWbs.Where(w => w.ParentId.HasValue).Select(w => w.ParentId!.Value).ToHashSet();
-        var milestones = allWbs
-            .Where(w => w.IsMilestone && !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date >= today)
+        // 그룹(그루핑 노드)은 항목 목록·집계에서 제외. 인메모리 경로라 Func 술어를 직접 넘긴다
+        // (IQueryable 확장은 EF 전용 — WbsQueryExtensions 주석 참조).
+        var milestones = allWbs.Where(WbsPredicates.IsTask)
+            .Where(w => w.IsMilestone && w.EndDate.HasValue && w.EndDate.Value.Date >= today)
             .OrderBy(w => w.EndDate)
             .Take(5)
             .Select(WbsToDto);
@@ -72,16 +72,17 @@ public class ProjectService(
         // - overdueWbs: EndDate.Date < today AND Status != Done — 가장 오래 지연된 순(EndDate 오름차순). 오늘 마감은 지연 아님(임박).
         // - dueSoonWbs: today <= EndDate.Date <= today+7d AND Status != Done — 가장 가까운 마감 순
         // - highPriorityOpenIssues: Priority=High AND Status in (Open, InProgress) — dueDate 가까운 순(null 마지막)
-        // 각 list cap 10. UI 가 섹션당 5건 표시 + "외 N건" 더보기. 부모(자식 보유) WBS 는 제외(leaf only).
+        // 각 list cap 10. UI 가 섹션당 5건 표시 + "외 N건" 더보기. 그룹(그루핑 노드)은 제외.
         var dueSoonCutoff = today.AddDays(7);
-        var overdueWbs = allWbs
-            .Where(w => !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date < today && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)
+        var openWbs = allWbs.Where(WbsPredicates.IsTask).Where(WbsPredicates.IsOpen).ToList();
+        var overdueWbs = openWbs
+            .Where(w => w.EndDate.HasValue && w.EndDate.Value.Date < today)
             .OrderBy(w => w.EndDate)
             .Take(10)
             .Select(WbsToDto)
             .ToList();
-        var dueSoonWbs = allWbs
-            .Where(w => !parentIds.Contains(w.Id) && w.EndDate.HasValue && w.EndDate.Value.Date >= today && w.EndDate.Value.Date <= dueSoonCutoff && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended)
+        var dueSoonWbs = openWbs
+            .Where(w => w.EndDate.HasValue && w.EndDate.Value.Date >= today && w.EndDate.Value.Date <= dueSoonCutoff)
             .OrderBy(w => w.EndDate)
             .Take(10)
             .Select(WbsToDto)

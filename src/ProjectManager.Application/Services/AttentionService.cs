@@ -15,11 +15,8 @@ public class AttentionService(AppDbContext db, CapacityService capacity, Monitor
         var soon = today.AddDays(3);
         var milestoneHorizon = today.AddDays(30);
 
-        var parentIds = await db.WbsItems.Where(w => w.ParentId != null)
-            .Select(w => w.ParentId!.Value).Distinct().ToListAsync();
-
-        // leaf(요약 부모 제외) · 미완 WBS 기준.
-        var leafOpen = db.WbsItems.Where(w => !parentIds.Contains(w.Id) && w.Status != WbsStatus.Done && w.Status != WbsStatus.Suspended);
+        // 집계 대상(그룹 제외) · 미완 WBS 기준. 여러 CountAsync 가 이 IQueryable 을 재사용한다.
+        var leafOpen = db.WbsItems.OnlyTasks().OnlyOpen();
         var openIssues = db.Issues.Where(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress);
 
         var overdue = await leafOpen.CountAsync(w => !w.IsMilestone && w.EndDate != null && w.EndDate.Value < today)
