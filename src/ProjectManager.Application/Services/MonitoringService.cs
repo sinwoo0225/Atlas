@@ -220,9 +220,11 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
         var today = DateTime.Now.Date;
         var dueSoonCutoff = today.AddDays(7);
 
+        // !IsMilestone — 마일스톤은 0 기간 표식이라 '지연 작업' 이 아니다. AttentionService 의 overdue/dueSoon 카운트는
+        // 이미 마일스톤을 빼고 있었는데 여기만 안 빼서, 주의 피드 배지 숫자와 Risk Radar 리스트 길이가 어긋났다.
         var wbs = await db.WbsItems
             .OnlyTasks().OnlyOpen()
-            .Where(w => w.EndDate.HasValue && w.EndDate.Value.Date <= dueSoonCutoff)
+            .Where(w => !w.IsMilestone && w.EndDate.HasValue && w.EndDate.Value.Date <= dueSoonCutoff)
             .Join(db.Projects, w => w.ProjectId, p => p.Id, (w, p) => new { w, p })
             .OrderBy(x => x.w.EndDate)
             .ToListAsync();
@@ -436,8 +438,12 @@ public class MonitoringService(AppDbContext db, IWorkLogRepository workLogRepo, 
             {
                 var pids = g.Select(p => p.Id).ToHashSet();
                 var cw = leaf.Where(w => pids.Contains(w.ProjectId)).ToList();
-                var totalLeaf = cw.Count(w => w.Status != WbsStatus.Suspended); // 중단(종료)은 진행률 분모에서 제외
-                var done = cw.Count(w => w.Status == WbsStatus.Done);
+                // 진행률 모수는 !IsMilestone — GetChartsAsync 의 프로젝트별 진행률과 같은 정의여야 한다.
+                // 여기만 마일스톤을 분모에 넣고 있어서 같은 프로젝트가 두 화면에서 다른 진행률로 보였다.
+                // (demand·atRisk 는 아래에서 자체 술어를 쓰므로 cw 전체를 그대로 둔다.)
+                var cwWork = cw.Where(w => !w.IsMilestone).ToList();
+                var totalLeaf = cwWork.Count(w => w.Status != WbsStatus.Suspended); // 중단(종료)은 진행률 분모에서 제외
+                var done = cwWork.Count(w => w.Status == WbsStatus.Done);
                 var progress = totalLeaf > 0 ? (int)Math.Round(done * 100.0 / totalLeaf) : 0;
                 var ci = issues.Where(i => pids.Contains(i.ProjectId)).ToList();
                 var openIssues = ci.Count(i => i.Status == IssueStatus.Open || i.Status == IssueStatus.InProgress);

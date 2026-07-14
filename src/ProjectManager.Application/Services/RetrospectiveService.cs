@@ -99,7 +99,9 @@ public class RetrospectiveService(AppDbContext db)
     private static IReadOnlyList<SCurvePointDto> BuildBurnUp(
         List<WbsItem> leaf, DateTime? start, DateTime? end, DateTime? actual)
     {
-        var total = leaf.Count;
+        // 분모에서 중단(종료·비완료)을 뺀다 — 위 wbsTotal 과 같은 모수여야 한다.
+        // 안 빼면 중단 항목이 있는 프로젝트의 번업 곡선이 영원히 100% 에 못 닿는다(완료될 수 없는 걸 분모에 넣으므로).
+        var total = leaf.Count(w => w.Status != WbsStatus.Suspended);
         var completed = leaf
             .Where(w => w.CompletedDate is DateTime)
             .OrderBy(w => w.CompletedDate!.Value)

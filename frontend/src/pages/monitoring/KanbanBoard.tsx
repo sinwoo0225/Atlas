@@ -4,11 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { monitoringApi } from '../../api/monitoring';
 import { Spinner } from '../../components/ui';
 import { KanbanBoardView, type KanbanStatusColumn } from '../../components/kanban/KanbanBoardView';
-import type { KanbanColumn, KanbanItem } from '../../types';
+import { isClosedWbs } from '../../utils/wbsHelpers';
+import type { KanbanColumn, KanbanItem, WbsStatus } from '../../types';
 
 // 상태축 — WBS+이슈 통합이라 todo/doing/done 3컬럼으로 정규화.
+// 마지막 컬럼은 '종료' 축이다: 이슈는 Resolved 와 Closed 를 함께 넣는다. WBS 도 같은 규칙으로
+// 중단(Suspended = 종료·비완료)을 여기 넣어야 한다 — 안 그러면 중단 항목이 '예정' 컬럼으로 떨어져
+// 아직 할 일처럼 보인다(백엔드는 최근 종료 항목을 의도적으로 보드에 실어 보낸다).
 function statusToColumn(it: KanbanItem): KanbanColumn {
-  if (it.kind === 'wbs') return it.status === 'Done' ? 'done' : it.status === 'InProgress' ? 'doing' : 'todo';
+  if (it.kind === 'wbs')
+    return isClosedWbs(it.status as WbsStatus) ? 'done' : it.status === 'InProgress' ? 'doing' : 'todo';
   return it.status === 'Resolved' || it.status === 'Closed' ? 'done' : it.status === 'InProgress' ? 'doing' : 'todo';
 }
 

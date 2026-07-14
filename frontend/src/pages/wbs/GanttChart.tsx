@@ -16,6 +16,7 @@ import { wbsStatusBadge } from '../../utils/statusMaps';
 import { splitAssignees, isClosedWbs } from '../../utils/wbsHelpers';
 import { sortSiblings } from '../../utils/wbsSort';
 import { spanOf } from '../../utils/wbsSpan';
+import { wbsProgressOf } from '../../utils/wbsProgress';
 import { Button } from '../../components/ui';
 
 /* ============================================================================
@@ -112,25 +113,6 @@ function statusColor(status: WbsStatus, colors: ChartColors): string {
   if (status === 'Done') return colors.ganttBarDone;
   if (status === 'InProgress') return colors.ganttBarInProgress;
   return colors.ganttBarPlanned;
-}
-
-// 막대 진행률(0~1) — 서브태스크가 있으면 완료/전체, 없는 부모면 자손 leaf 의 Done 비율(롤업), 그 외 null(미표시).
-// 중단(Suspended) leaf 는 종료(비완료) — 분모에서 제외([완료+중단]만 남으면 100%).
-function progressOf(item: WbsItem): number | null {
-  const stTotal = item.subtaskTotal ?? 0;
-  if (stTotal > 0) return Math.min(1, (item.subtaskDone ?? 0) / stTotal);
-  if ((item.children?.length ?? 0) > 0) {
-    let total = 0, done = 0;
-    const visit = (n: WbsItem) => {
-      const kids = n.children ?? [];
-      if (kids.length === 0) {
-        if (!n.isMilestone && n.status !== 'Suspended') { total++; if (n.status === 'Done') done++; }
-      } else kids.forEach(visit);
-    };
-    visit(item);
-    return total > 0 ? done / total : null;
-  }
-  return null;
 }
 
 // 진행률 막대 — 연한 트랙(전체) 위에 진한 채움(진행분), 막대 우측에 % 라벨. 상태 색은 유지.
@@ -678,7 +660,7 @@ export function GanttChart({
         color = colors.ganttBarParent;
       }
       const crit = criticalIds?.has(row.item.id) ? 1 : 0;
-      const progress = progressOf(row.item);
+      const progress = wbsProgressOf(row.item);
       return {
         name: row.item.name,
         itemId: row.item.id,
