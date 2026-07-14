@@ -48,7 +48,10 @@ public sealed record WbsListFilter(
     bool? Milestone = null,
     string? Keyword = null,
     // 시작 지연 — 계획 시작일이 오늘(자정) 이전인데 아직 Planned(미착수). 착수 환기·인사이트용.
-    bool OverdueStart = false)
+    bool OverdueStart = false,
+    // 역할 필터. Kind=Task 로 조회하면 모든 지표(완료율·잔여·용량)가 세는 것과 정확히 같은 집합을 얻는다.
+    // 미지정이면 그룹까지 포함한 전체 — 트리 구조를 그대로 보려면 그게 맞다.
+    WbsKind? Kind = null)
 {
     public static readonly WbsListFilter None = new();
 
@@ -64,7 +67,8 @@ public sealed record WbsListFilter(
         string.IsNullOrWhiteSpace(Assignee) &&
         Milestone is null &&
         string.IsNullOrWhiteSpace(Keyword) &&
-        !OverdueStart;
+        !OverdueStart &&
+        Kind is null;
 }
 
 public sealed record ProjectListFilter(

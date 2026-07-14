@@ -55,8 +55,9 @@ public static class BriefPresets
     public static readonly string[] Issue =
         { "id", "projectId", "title", "status", "priority", "assigneeName", "dueDate" };
 
+    // kind 는 축약 뷰에도 넣는다 — Group 이면 status/assignee 가 무의미하므로, 그게 안 보이면 에이전트가 오독한다.
     public static readonly string[] Wbs =
-        { "id", "projectId", "parentId", "name", "status", "assignee", "startDate", "endDate", "isMilestone" };
+        { "id", "projectId", "parentId", "name", "kind", "status", "assignee", "startDate", "endDate", "isMilestone" };
 
     public static readonly string[] Project =
         { "id", "name", "status", "category", "startDate", "endDate" };

@@ -78,6 +78,8 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
         }
         if (f.Milestone is bool ms)
             q = q.Where(x => x.IsMilestone == ms);
+        if (f.Kind is WbsKind kind)
+            q = q.Where(x => x.Kind == kind);
         if (!string.IsNullOrWhiteSpace(f.Keyword))
         {
             var kw = f.Keyword;
@@ -90,7 +92,8 @@ public class WbsRepository(AppDbContext db) : IWbsRepository
             q = q.Where(x => x.Status == WbsStatus.Planned && x.StartDate != null && x.StartDate <= today);
         }
 
-        return await q.Include(x => x.Subtasks).OrderBy(x => x.SortOrder).ToListAsync();
+        // Children 은 ChildCount(빈 그룹 경고·에이전트가 트리 모양을 보는 데 필요)를 채우려 Include.
+        return await q.Include(x => x.Children).Include(x => x.Subtasks).OrderBy(x => x.SortOrder).ToListAsync();
     }
 
     public async Task<WbsItem?> GetByIdAsync(int id) =>
