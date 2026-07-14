@@ -13,7 +13,7 @@ import type { WbsItem, WbsStatus, WbsDependency } from '../../types';
 import { wbsApi } from '../../api/wbs';
 import { useThemeMode, getChartColors, type ChartColors } from '../../utils/themeColors';
 import { wbsStatusBadge } from '../../utils/statusMaps';
-import { splitAssignees, isClosedWbs } from '../../utils/wbsHelpers';
+import { splitAssignees, isClosedWbs, isGroupWbs, effectiveWbsStatus } from '../../utils/wbsHelpers';
 import { sortSiblings } from '../../utils/wbsSort';
 import { spanOf } from '../../utils/wbsSpan';
 import { wbsProgressOf } from '../../utils/wbsProgress';
@@ -44,13 +44,14 @@ function flattenForGantt(items: WbsItem[], collapsed: Set<number>): GanttRow[] {
       const isCollapsed = hasChildren && collapsed.has(item.id);
       let effStart: number | undefined;
       let effEnd: number | undefined;
-      let isParentBar = false;
+      // 요약 막대(얇은 음영 + 편집 불가)는 '그룹' 에만. 자식이 있는 Task(상위 작업)는 자기 일정과 의존성을 가진
+      // 1급 작업이므로 일반 막대로 그리고 드래그·리사이즈도 허용한다.
+      const isParentBar = isGroupWbs(item);
       if (hasChildren) {
-        // 부모: 본인 값 우선, 없으면 후손 합산 범위로
+        // 본인 값 우선, 없으면 후손 합산 범위로
         const span = spanOf(item);
         effStart = item.startDate ? new Date(item.startDate).getTime() : span.start;
         effEnd = item.endDate ? new Date(item.endDate).getTime() : span.end;
-        isParentBar = true;
       } else {
         effStart = item.startDate ? new Date(item.startDate).getTime() : undefined;
         effEnd = item.endDate ? new Date(item.endDate).getTime() : undefined;
@@ -651,13 +652,15 @@ export function GanttChart({
       if (row.effStart == null || row.effEnd == null) return null;
       const dim = filterDim(row.item);
       let kind: 'bar' | 'parent' | 'milestone' = 'bar';
-      let color = statusColor(row.item.status, colors);
-      if (row.item.isMilestone) {
-        kind = 'milestone';
-        color = colors.ganttMilestone;
-      } else if (row.isParentBar) {
+      // 그룹이면 자손에서 파생한 상태로 색을 낸다(자기 status 는 무의미).
+      let color = statusColor(effectiveWbsStatus(row.item), colors);
+      if (row.isParentBar) {
+        // 그룹 — 얇은 음영 요약 막대. 마일스톤과 배타이므로 먼저 본다.
         kind = 'parent';
         color = colors.ganttBarParent;
+      } else if (row.item.isMilestone) {
+        kind = 'milestone';
+        color = colors.ganttMilestone;
       }
       const crit = criticalIds?.has(row.item.id) ? 1 : 0;
       const progress = wbsProgressOf(row.item);
