@@ -38,13 +38,13 @@ Thumbs.db
 # Archive
 *.zip
 
-# Release artifacts (publish.ps1 -Installer 가 레포 루트에 생성)
+# 배포 산출물 — publish.ps1 은 zip·msix·Setup.exe 를 전부 dist/ 에 만든다 (**/dist/ 가 위에서 커버).
+# 아래 패턴은 옛 산출물이 루트에 남아 있어도 커밋되지 않게 하는 안전망.
 Atlas-Setup-*.exe
-# MSIX 패키지 (publish.ps1 -Msix) 와 로컬 테스트 자체서명 인증서
 Atlas-*.msix
 *.cer
 
-# Misc
+# publish.ps1 의 빌드 스테이징 (Atlas.exe + wwwroot). Atlas.iss·DesktopApp.csproj 가 이 경로에 의존.
 publish/
 
 # Claude Code (machine-local settings + working context)

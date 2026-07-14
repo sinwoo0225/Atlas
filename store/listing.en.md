@@ -4,7 +4,7 @@ Partner Center "Store listing" field.
 Field limits (ref): Description ≤10,000 chars · Features ≤20 items (≤200 chars each) ·
 Search terms ≤7 (≤30 chars each) · Short description ≤1,000 chars ·
 Screenshots ≥1366×768 PNG (1–10).
-Screenshots = `store/screenshots-en/*.png` (English UI).
+Screenshots = `store/screenshots/en/*.png` (English UI).
 Privacy policy URL = your existing GitHub Pages PRIVACY page URL (required).
 -->
 
