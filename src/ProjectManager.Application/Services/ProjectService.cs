@@ -249,7 +249,7 @@ public class ProjectService(
     internal static WbsItemDto WbsToDto(WbsItem w) => new(
         w.Id, w.ProjectId, w.VersionId, w.ParentId,
         w.Name, w.Assignee, w.StartDate, w.EndDate,
-        w.Status, w.IsMilestone, w.Importance, w.Notes,
+        w.Status, w.Kind, w.IsMilestone, w.Importance, w.Notes,
         w.CreatedAt, w.UpdatedAt, w.SortOrder,
         w.ActualStartDate, w.CompletedDate,
         w.EstimateHours, w.EstimateHours,
@@ -661,6 +661,8 @@ public class ProjectService(
             StartDate = w.StartDate,
             EndDate = w.EndDate,
             Status = w.Status,
+            // 역할을 반드시 복사할 것 — 빠뜨리면 백업에서 가져온 그룹이 전부 Task 로 되살아나 전 지표를 오염시킨다.
+            Kind = w.Kind,
             IsMilestone = w.IsMilestone,
             Importance = w.Importance,
             SortOrder = w.SortOrder,

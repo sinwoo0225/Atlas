@@ -47,7 +47,9 @@ public class WbsService(
             ProjectId = dto.ProjectId, VersionId = dto.VersionId, ParentId = dto.ParentId,
             Name = dto.Name, Assignee = dto.Assignee,
             StartDate = dto.StartDate, EndDate = dto.EndDate,
-            Status = dto.Status, IsMilestone = dto.IsMilestone,
+            Status = dto.Status, Kind = dto.Kind,
+            // Group 은 자손에서 파생 표시라 마일스톤이 될 수 없다 — 배타 정규화.
+            IsMilestone = dto.Kind == WbsKind.Group ? false : dto.IsMilestone,
             Importance = dto.Importance, Notes = dto.Notes,
             SortOrder = nextSortOrder,
             EstimateHours = dto.EstimateHours,
@@ -122,6 +124,10 @@ public class WbsService(
         item.Name = dto.Name; item.Assignee = dto.Assignee;
         item.StartDate = dto.StartDate; item.EndDate = dto.EndDate;
         item.Status = dto.Status; item.IsMilestone = dto.IsMilestone;
+        // Kind 만 nullable = '미변경' 규약(WbsDtos 주석 참조). kind 를 안 싣는 호출(reorder·칸반 드롭·일괄이동·
+        // CLI 부분갱신)이 Group 을 조용히 Task 로 강등시키지 않도록.
+        if (dto.Kind is WbsKind k) item.Kind = k;
+        if (item.Kind == WbsKind.Group) item.IsMilestone = false;   // Group ⇄ 마일스톤 배타
         item.Importance = dto.Importance;
         if (!parentChanged) item.SortOrder = dto.SortOrder;
         item.Notes = dto.Notes;
@@ -266,24 +272,38 @@ public class WbsService(
     public Task<int> CaptureBaselineAsync(int projectId, int? versionId) => repo.CaptureBaselineAsync(projectId, versionId);
     public Task<int> ClearBaselineAsync(int projectId, int? versionId) => repo.ClearBaselineAsync(projectId, versionId);
 
-    private static WbsItemDto ToDto(WbsItem item, IEnumerable<WbsItem> all)
+    // 자기 자신을 포함한(inclusive) 자손 집계. 후위 순회로 한 번에 접는다 — 부모의 Rollup* 은
+    // '자식들의 inclusive 집계를 합친 것' 이므로 자기 자신을 뺀 자손 전체(descendants-only)가 된다.
+    // Group 은 이 값으로 표시하고, Task 는 '자식 진행' 보조 배지로 쓴다 (둘 다 self 제외라 의미가 일관).
+    private readonly record struct Rollup(
+        int Total, int Done, int InProgress, int Waiting, int Suspended,
+        DateTime? Start, DateTime? End, double? Estimate);
+
+    private static WbsItemDto ToDto(WbsItem item, IEnumerable<WbsItem> all) => ToDtoRollup(item).Dto;
+
+    private static (WbsItemDto Dto, Rollup Inclusive) ToDtoRollup(WbsItem item)
     {
-        var children = item.Children?.Select(c => ToDto(c, all)).ToList();
+        var kids = item.Children?.Select(ToDtoRollup).ToList();
+        var children = kids?.Select(k => k.Dto).ToList();
+
+        // 자손(자기 제외) 집계 = 자식들의 inclusive 집계 합.
+        var d = new Rollup();
+        if (kids is { Count: > 0 })
+            foreach (var (_, c) in kids)
+                d = new Rollup(
+                    d.Total + c.Total, d.Done + c.Done, d.InProgress + c.InProgress,
+                    d.Waiting + c.Waiting, d.Suspended + c.Suspended,
+                    MinDate(d.Start, c.Start), MaxDate(d.End, c.End),
+                    AddEstimate(d.Estimate, c.Estimate));
+
         // 부모는 자손 leaf 의 추정 합(저장 안 함, 표시용). 추정된 자손이 하나도 없으면 null.
-        double? rolled;
-        if (children is { Count: > 0 })
-        {
-            double sum = 0; var any = false;
-            foreach (var c in children)
-                if (c.RolledUpEstimateHours is double v) { sum += v; any = true; }
-            rolled = any ? sum : null;
-        }
-        else rolled = item.EstimateHours;
+        var rolled = kids is { Count: > 0 } ? d.Estimate : item.EstimateHours;
+
         var subs = item.Subtasks?.OrderBy(s => s.SortOrder).ThenBy(s => s.Id).ToList();
-        return new(
+        var dto = new WbsItemDto(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
-            item.Status, item.IsMilestone, item.Importance, item.Notes,
+            item.Status, item.Kind, item.IsMilestone, item.Importance, item.Notes,
             item.CreatedAt, item.UpdatedAt,
             item.SortOrder,
             item.ActualStartDate,
@@ -293,18 +313,71 @@ public class WbsService(
             subs?.Count ?? 0,
             subs?.Count(s => s.IsDone) ?? 0,
             subs?.Select(ToSubtaskDto).ToList(),
-            children);
+            children,
+            ChildCount: children?.Count ?? 0,
+            RollupStatus: RollupStatusOf(d),
+            RollupProgress: RollupProgressOf(d),
+            RollupStart: d.Start,
+            RollupEnd: d.End);
+
+        // 이 노드의 inclusive 집계 — 자손 + (자기가 Task 면) 자기 자신. Group 은 스캐폴딩이라 세지 않는다.
+        // 마일스톤은 진행률 분모에서 빼되(0 기간 표식이라 완료율을 왜곡함) 기간 롤업에는 포함시킨다.
+        var self = d;
+        if (item.Kind != WbsKind.Group)
+        {
+            if (!item.IsMilestone)
+                self = item.Status switch
+                {
+                    WbsStatus.Done => self with { Total = self.Total + 1, Done = self.Done + 1 },
+                    WbsStatus.InProgress => self with { Total = self.Total + 1, InProgress = self.InProgress + 1 },
+                    WbsStatus.Waiting => self with { Total = self.Total + 1, Waiting = self.Waiting + 1 },
+                    // 중단은 종료(비완료) — 진행률 분모에서 빼야 하므로 Total 에 넣지 않는다.
+                    WbsStatus.Suspended => self with { Suspended = self.Suspended + 1 },
+                    _ => self with { Total = self.Total + 1 },   // Planned
+                };
+            self = self with { Estimate = AddEstimate(self.Estimate, item.EstimateHours) };
+        }
+        self = self with
+        {
+            Start = MinDate(self.Start, item.StartDate),
+            End = MaxDate(self.End, item.EndDate),
+        };
+        return (dto, self);
     }
+
+    // 자손 Task 에서 파생한 표시 상태. 결정론 — 자손이 없으면 null(빈 그룹).
+    // 중단만 남은 경우(Total=0, Suspended>0)는 종료(비완료)로 본다.
+    private static WbsStatus? RollupStatusOf(Rollup d)
+    {
+        if (d.Total == 0) return d.Suspended > 0 ? WbsStatus.Suspended : null;
+        var open = d.Total - d.Done;
+        if (open == 0) return WbsStatus.Done;
+        // 하나라도 착수했으면(진행 중이거나 이미 완료된 게 있으면) 그룹도 진행 중.
+        if (d.InProgress > 0 || d.Done > 0) return WbsStatus.InProgress;
+        return d.Waiting == open ? WbsStatus.Waiting : WbsStatus.Planned;
+    }
+
+    // 0~1. 분모 = 자손 Task 중 마일스톤·중단 제외(Total 정의가 이미 그렇다). 분모 0 → null(표시 안 함).
+    private static double? RollupProgressOf(Rollup d) =>
+        d.Total > 0 ? (double)d.Done / d.Total : null;
+
+    private static DateTime? MinDate(DateTime? a, DateTime? b) =>
+        a is null ? b : b is null ? a : (a < b ? a : b);
+    private static DateTime? MaxDate(DateTime? a, DateTime? b) =>
+        a is null ? b : b is null ? a : (a > b ? a : b);
+    private static double? AddEstimate(double? a, double? b) =>
+        a is null ? b : b is null ? a : a + b;
 
     private static WbsSubtaskDto ToSubtaskDto(WbsSubtask s) =>
         new(s.Id, s.WbsItemId, s.Title, s.IsDone, s.SortOrder);
 
     // 평면 결과용 — Children 을 null 로 둬 출력에서 생략(WhenWritingNull). 계층은 ParentId 로 표현.
-    // 평면 컨텍스트라 rollup 불가 → RolledUp 은 자기 추정으로.
+    // 평면 컨텍스트라 rollup 불가 → RolledUp 은 자기 추정으로, Rollup* 은 null.
+    // ChildCount 는 Include(Children) 로 1단계만 로드돼도 채울 수 있다(빈 그룹 경고에 필요).
     private static WbsItemDto ToFlatDto(WbsItem item) => new(
         item.Id, item.ProjectId, item.VersionId, item.ParentId,
         item.Name, item.Assignee, item.StartDate, item.EndDate,
-        item.Status, item.IsMilestone, item.Importance, item.Notes,
+        item.Status, item.Kind, item.IsMilestone, item.Importance, item.Notes,
         item.CreatedAt, item.UpdatedAt,
         item.SortOrder,
         item.ActualStartDate,
@@ -314,7 +387,8 @@ public class WbsService(
         item.Subtasks?.Count ?? 0,
         item.Subtasks?.Count(s => s.IsDone) ?? 0,
         null,
-        null);
+        null,
+        ChildCount: item.Children?.Count ?? 0);
 
     private static WbsVersionDto ToVersionDto(WbsVersion v) => new(
         v.Id, v.ProjectId, v.VersionName, v.Description, v.CreatedAt, v.IsCurrent);

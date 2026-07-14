@@ -103,6 +103,8 @@ public class ActionItemPromotionService(
             StartDate = null,
             EndDate = endDate,
             Status = WbsStatus.Planned,
+            // 회의록 액션아이템 승격은 항상 root 리프 — 실제 할 일이므로 Task(집계 대상). 명시해 둔다.
+            Kind = WbsKind.Task,
             IsMilestone = false,
             Importance = 2,
             Notes = "",
@@ -119,7 +121,7 @@ public class ActionItemPromotionService(
         return new WbsItemDto(
             item.Id, item.ProjectId, item.VersionId, item.ParentId,
             item.Name, item.Assignee, item.StartDate, item.EndDate,
-            item.Status, item.IsMilestone, item.Importance, item.Notes,
+            item.Status, item.Kind, item.IsMilestone, item.Importance, item.Notes,
             item.CreatedAt, item.UpdatedAt, item.SortOrder,
             item.ActualStartDate, item.CompletedDate,
             item.EstimateHours, item.EstimateHours,

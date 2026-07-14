@@ -1,4 +1,7 @@
 export type WbsStatus = 'Planned' | 'Waiting' | 'InProgress' | 'Done' | 'Suspended';
+// 항목의 '역할' — 구조(자식 유무)와는 별개 축. Group = 순수 그루핑(모든 지표에서 제외, 표시는 자손 Task 에서 파생).
+// Task = 1급 작업(자식이 있어도 자기가 1건으로 집계). 백엔드 WbsKind 와 1:1.
+export type WbsKind = 'Task' | 'Group';
 export type ImpactLevel = 'Low' | 'Medium' | 'High' | 'Critical';
 export type DevInfoType = 'Markdown' | 'File' | 'Link' | 'GitRepo';
 // Planned 는 '대기/보류'(Waiting)로 통합 — 기존 데이터 호환 위해 타입엔 남기되 UI 옵션에선 미노출.
@@ -103,6 +106,8 @@ export interface WbsItem {
   startDate?: string;
   endDate?: string;
   status: WbsStatus;
+  // 역할. Group 이면 status/assignee/estimateHours 는 보존만 되고 무시된다 — 표시는 rollup* 을 쓴다.
+  kind: WbsKind;
   isMilestone: boolean;
   // 사이클 14 — order 분리: importance = 중요도 (1/2/3), sortOrder = 정렬 위치 (단일 키, asc).
   importance: number;
@@ -123,6 +128,13 @@ export interface WbsItem {
   subtaskDone?: number;
   subtasks?: WbsSubtask[];
   children?: WbsItem[];
+  // 자손 Task 에서 파생한 값(서버 계산, 저장 안 함). 트리 조회에서만 채워진다 — 단건/평면 조회에선 undefined.
+  // Group 은 이 값으로 표시하고(자기 status 는 무시), Task 는 '자식 진행' 보조 배지로 쓴다.
+  childCount?: number;
+  rollupStatus?: WbsStatus | null;
+  rollupProgress?: number | null;   // 0~1
+  rollupStart?: string | null;
+  rollupEnd?: string | null;
 }
 
 // WbsItem 의 경량 체크리스트 항목. 중첩 WBS 작업(children)과 별개로 한 작업 안의 세부 단계.
