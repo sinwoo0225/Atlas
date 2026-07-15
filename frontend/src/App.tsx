@@ -22,6 +22,7 @@ import { IssuesPage } from './pages/IssuesPage';
 import { WorkLogPage } from './pages/WorkLogPage';
 import { ActivityPage } from './pages/ActivityPage';
 import { CommandPalette } from './components/CommandPalette';
+import { ReleaseNotesModalHost } from './components/update/ReleaseNotesModal';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { GlobalProgressBar } from './components/GlobalProgressBar';
 import { ConfirmDialogHost } from './components/ui/ConfirmDialog';
@@ -115,12 +116,8 @@ function MainShell() {
       toast.error(i18n.t('toast.backendUnreachable'), { duration: 8000 });
     });
 
-    // 백그라운드 업데이트 체크가 새 버전을 발견해 뒀으면 시작 시 안내 (silent — 실패해도 무시).
-    systemApi.getUpdateStatus().then((s) => {
-      if (s.lastResult?.hasUpdate) {
-        toast.info(i18n.t('toast.updateAvailable', { version: s.lastResult.latestVersion }), { duration: 8000 });
-      }
-    }).catch(() => {});
+    // 새 버전 안내는 이제 알림 소스(updateSource)가 담당한다 — 종 패널에도 남고 '릴리즈 노트 보기'
+    // 액션을 실을 수 있다. 예전의 시작 시 맨몸 토스트(놓치면 끝)는 제거했다.
 
     return () => {
       window.removeEventListener('atlas:settings-changed', onSettings);
@@ -141,6 +138,7 @@ function MainShell() {
       <ConfirmDialogHost />
       <CommandPalette />
       <ShortcutsModal />
+      <ReleaseNotesModalHost />
       {showWizard && <SetupWizard onClose={closeWizard} />}
       <Layout>
         <Outlet />

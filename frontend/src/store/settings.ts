@@ -46,6 +46,10 @@ export interface NotificationSettings {
     // 'HH:MM' 24시간.
     time: string;
   };
+  // 새 버전 업데이트 안내(Local 빌드만 — Store 는 스토어가 업데이트를 관리).
+  update: {
+    enabled: boolean;
+  };
 }
 
 export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
@@ -54,6 +58,7 @@ export const DEFAULT_NOTIFICATION_SETTINGS: NotificationSettings = {
   showWhenMinimized: true,
   deadline: { enabled: true, scope: 'mine', withinDays: 3, includeOverdue: true, aggregateThreshold: 3 },
   dailySummary: { enabled: true, time: '09:00' },
+  update: { enabled: true },
 };
 
 // 중첩 객체라 매 로드 시 새 인스턴스로 깊은 복제(참조 공유 방지).
@@ -62,6 +67,7 @@ function cloneNotificationDefaults(): NotificationSettings {
     ...DEFAULT_NOTIFICATION_SETTINGS,
     deadline: { ...DEFAULT_NOTIFICATION_SETTINGS.deadline },
     dailySummary: { ...DEFAULT_NOTIFICATION_SETTINGS.dailySummary },
+    update: { ...DEFAULT_NOTIFICATION_SETTINGS.update },
   };
 }
 
@@ -184,6 +190,7 @@ export function loadSettings(): AppSettings {
         ...pn,
         deadline: { ...DEFAULT_NOTIFICATION_SETTINGS.deadline, ...(pn.deadline ?? {}) },
         dailySummary: { ...DEFAULT_NOTIFICATION_SETTINGS.dailySummary, ...(pn.dailySummary ?? {}) },
+        update: { ...DEFAULT_NOTIFICATION_SETTINGS.update, ...(pn.update ?? {}) },
       },
     };
   } catch {

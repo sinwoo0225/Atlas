@@ -1,5 +1,5 @@
 import type { NotificationSettings } from '../store/settings';
-import type { NotificationSeverity } from '../store/useNotificationStore';
+import type { NotificationSeverity, NotificationAction } from '../store/useNotificationStore';
 
 // 알림 소스가 생성하는 후보 알림. 엔진이 dedupKey 로 중복을 거르고,
 // 신규분만 스토어에 적재 + 토스트로 디스패치한다.
@@ -10,6 +10,8 @@ export interface NotificationDraft {
   i18nKey: string;
   i18nParams?: Record<string, unknown>;
   link?: string;
+  // 클릭 시 실행할 액션(라우트가 아닌 동작). link 보다 우선.
+  action?: NotificationAction;
   // 같은 항목·단계를 재알림하지 않기 위한 고유 키. 예: 'deadline:wbs:42:soon'.
   dedupKey: string;
 }

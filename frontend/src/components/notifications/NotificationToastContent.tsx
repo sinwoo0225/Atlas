@@ -10,10 +10,12 @@ export interface ToastContentProps {
   i18nParams?: Record<string, unknown>;
   onClick?: () => void;
   onClose?: () => void;
+  // 있으면 본문 아래에 액션 버튼을 그린다(예: '릴리즈 노트 보기'). 클릭 시 onClick 실행.
+  actionLabelKey?: string;
 }
 
 // 인앱 토스트 + 최소화 시 네이티브 토스트 창(Phase B)이 공유하는 알림 카드.
-export function NotificationToastContent({ severity, i18nKey, i18nParams, onClick, onClose }: ToastContentProps) {
+export function NotificationToastContent({ severity, i18nKey, i18nParams, onClick, onClose, actionLabelKey }: ToastContentProps) {
   const { t } = useTranslation();
   const Icon = SEVERITY_ICON[severity] ?? Bell;
   const title = t(`${i18nKey}.title`, i18nParams);
@@ -31,6 +33,15 @@ export function NotificationToastContent({ severity, i18nKey, i18nParams, onClic
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-primary leading-snug break-words">{title}</p>
         {body && <p className="text-xs text-secondary mt-0.5 leading-snug break-words">{body}</p>}
+        {actionLabelKey && onClick && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className="mt-2 text-xs font-semibold px-2.5 py-1 rounded-md bg-accent-soft text-accent hover:bg-accent hover:text-on-accent transition-colors"
+          >
+            {t(actionLabelKey)}
+          </button>
+        )}
       </div>
       {onClose && (
         <button

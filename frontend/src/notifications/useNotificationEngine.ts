@@ -6,6 +6,7 @@ import { NOTIFICATION_SOURCES } from './index';
 import { loadNotifiedKeys, markNotified } from './runtime';
 import { showNotificationToast, showAggregateToast } from '../components/notifications/toast';
 import { isHostBridgeAvailable, showHostToast, onWindowMinimized } from '../utils/hostBridge';
+import { runNotificationAction } from './runAction';
 import type { NotificationDraft } from './types';
 
 // 가벼운 하트비트 — 매 30초마다 소스를 점검(시간 기반 일일 정리를 제때 발화시키기 위함).
@@ -87,6 +88,7 @@ export function useNotificationEngine(): void {
             i18nKey: dr.i18nKey,
             i18nParams: dr.i18nParams,
             link: dr.link,
+            action: dr.action,
           }),
         }));
         markNotified(newDrafts.map((d) => d.dedupKey));
@@ -99,16 +101,18 @@ export function useNotificationEngine(): void {
 
         const open = (rec: AppNotification) => {
           markReadRef.current(rec.id);
-          if (rec.link) navRef.current(rec.link);
+          if (rec.action) runNotificationAction(rec.action);
+          else if (rec.link) navRef.current(rec.link);
         };
         const emit = (
           severity: NotificationDraft['severity'],
           i18nKey: string,
           i18nParams: Record<string, unknown> | undefined,
           onClick?: () => void,
+          actionLabelKey?: string,
         ) => {
           if (useNative) showHostToast({ severity, i18nKey, i18nParams });
-          else showNotificationToast({ severity, i18nKey, i18nParams }, onClick);
+          else showNotificationToast({ severity, i18nKey, i18nParams }, onClick, actionLabelKey);
         };
 
         // 마감(deadline): 신규 건수가 임계 초과면 묶음 토스트 1개, 이하면 항목별.
@@ -123,9 +127,10 @@ export function useNotificationEngine(): void {
         } else {
           for (const r of deadlineRecs) emit(r.dr.severity, r.dr.i18nKey, r.dr.i18nParams, () => open(r.rec));
         }
-        // 그 외(일일 정리 등): 항상 개별.
+        // 그 외(일일 정리·업데이트 등): 항상 개별. 액션이 있으면 토스트에 버튼 라벨을 함께 준다.
         for (const r of records.filter((r) => r.dr.sourceKey !== 'deadline')) {
-          emit(r.dr.severity, r.dr.i18nKey, r.dr.i18nParams, () => open(r.rec));
+          const actionLabelKey = r.dr.action?.kind === 'releaseNotes' ? 'notifications:update.action' : undefined;
+          emit(r.dr.severity, r.dr.i18nKey, r.dr.i18nParams, () => open(r.rec), actionLabelKey);
         }
       } finally {
         runningRef.current = false;
