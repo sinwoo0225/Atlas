@@ -118,6 +118,25 @@ public sealed class BootstrapConfig
     [JsonPropertyName("widgetPinned")]
     public bool WidgetPinned { get; set; } = true;
 
+    // ----- 도킹(AppBar) 모드 -----
+    // "floating"(기본, 자유 배치) | "appbar"(작업표시줄처럼 화면 가장자리에 붙어 작업 영역을 예약).
+    // 도킹 중엔 위 widgetX/Y/Width/Height 를 덮어쓰지 않는다 — 도킹 해제 시 원래 자리로 돌아가야 하므로.
+    [JsonPropertyName("widgetDockMode")]
+    public string WidgetDockMode { get; set; } = "floating";
+
+    // 부착 가장자리: "left" | "right".
+    [JsonPropertyName("widgetDockEdge")]
+    public string WidgetDockEdge { get; set; } = "right";
+
+    // 부착할 모니터의 DeviceName(예: \\.\DISPLAY2). 빈 값이면 주 모니터.
+    // 해당 모니터가 사라졌으면(케이블 분리 등) 주 모니터로 폴백한다.
+    [JsonPropertyName("widgetDockMonitor")]
+    public string WidgetDockMonitor { get; set; } = string.Empty;
+
+    // 도킹 시 예약 폭(px). 플로팅 폭(widgetWidth)과 별도로 보존한다.
+    [JsonPropertyName("widgetDockWidth")]
+    public double WidgetDockWidth { get; set; } = 360;
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,
