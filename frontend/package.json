@@ -4,8 +4,11 @@
   "version": "1.34.0",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/gen-release-notes.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/gen-release-notes.mjs",
     "build": "tsc -b && vite build",
+    "gen:relnotes": "node scripts/gen-release-notes.mjs",
     "lint": "eslint .",
     "preview": "vite preview",
     "notices": "node scripts/gen-third-party-notices.mjs",
