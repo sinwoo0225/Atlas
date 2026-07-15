@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   GripHorizontal, Pin, PinOff, X, Plus, Check, Music, Play, Pause, SkipBack, SkipForward,
   AppWindow, Eye, EyeOff, MapPin, Sun, Moon, Cloud, CloudSun, CloudRain, CloudSnow, CloudFog,
-  CloudLightning, CloudDrizzle, Maximize2, Minimize2, AlertTriangle, type LucideIcon,
+  CloudLightning, CloudDrizzle, Maximize2, Minimize2, AlertTriangle, PanelLeft, PanelRight, type LucideIcon,
 } from 'lucide-react';
 import { issuesApi } from '../api/issues';
 import { projectsApi } from '../api/projects';
@@ -19,6 +19,7 @@ import {
   isHostBridgeAvailable, beginWidgetDrag, beginWidgetResize, setWidgetWidth, setWidgetOpacity, setWidgetPinned, closeWidget,
   onMediaUpdate, mediaControl, mediaSeek, requestMedia, type MediaState,
   onActiveWindowsUpdate, setActiveWindowsEnabled, requestActiveWindows, type ActiveWindowItem,
+  onWidgetDockState, requestWidgetDock, setWidgetDock, type WidgetDockState,
 } from '../utils/hostBridge';
 
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -626,6 +627,93 @@ function ActiveWindows() {
   );
 }
 
+// 도킹 설정 팝오버 — 가장자리 고정(작업표시줄처럼 공간 예약) 켜기/끄기 + 모니터 + 좌/우 + 폭.
+function DockPopover({ state, onClose }: { state: WidgetDockState; onClose: () => void }) {
+  const { t } = useTranslation();
+  const [width, setWidth] = useState(state.width);
+  useEffect(() => setWidth(state.width), [state.width]);
+
+  const apply = (patch: Partial<Parameters<typeof setWidgetDock>[0]>) =>
+    setWidgetDock({ docked: state.docked, edge: state.edge, monitorId: state.monitorId, width, ...patch });
+
+  return (
+    <div
+      className="absolute right-2 top-10 z-50 w-64 rounded-xl border border-default bg-surface shadow-xl p-3 space-y-3"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[12px] font-semibold text-primary flex-1">{t('widget:dock.title')}</span>
+        <button onClick={onClose} className="text-muted hover:text-secondary" title={t('common:close')}><X size={13} /></button>
+      </div>
+
+      <label className="flex items-start gap-2 cursor-pointer">
+        <input
+          type="checkbox" checked={state.docked}
+          onChange={(e) => apply({ docked: e.target.checked })}
+          className="mt-0.5 accent-[var(--accent)]"
+        />
+        <span className="min-w-0">
+          <span className="block text-[12px] text-primary">{t('widget:dock.enable')}</span>
+          <span className="block text-[10px] text-muted leading-snug mt-0.5">{t('widget:dock.hint')}</span>
+        </span>
+      </label>
+
+      {state.docked && (
+        <>
+          {state.monitors.length > 1 && (
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">{t('widget:dock.monitor')}</p>
+              <select
+                value={state.monitorId}
+                onChange={(e) => apply({ monitorId: e.target.value })}
+                className="w-full text-[12px] px-2 py-1.5 rounded-md bg-surface-2 text-primary border border-default outline-none"
+              >
+                {state.monitors.map((m) => (
+                  <option key={m.id} value={m.id}>{m.label} · {m.width}×{m.height}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">{t('widget:dock.edge')}</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {(['left', 'right'] as const).map((e) => (
+                <button
+                  key={e}
+                  onClick={() => apply({ edge: e })}
+                  className={`flex items-center justify-center gap-1 text-[12px] py-1.5 rounded-md border transition-colors ${
+                    state.edge === e
+                      ? 'border-accent bg-accent-soft text-accent font-semibold'
+                      : 'border-default text-secondary hover:bg-surface-2'
+                  }`}
+                >
+                  {e === 'left' ? <PanelLeft size={13} /> : <PanelRight size={13} />}
+                  {t(`widget:dock.${e}`)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="flex items-center text-[10px] font-semibold uppercase tracking-wider text-muted mb-1">
+              {t('widget:dock.width')}
+              <span className="ml-auto tabular-nums normal-case">{width}px</span>
+            </p>
+            <input
+              type="range" min={state.minWidth} max={state.maxWidth} step={10} value={width}
+              onChange={(ev) => setWidth(Number(ev.target.value))}
+              onMouseUp={() => apply({ width })}
+              onKeyUp={() => apply({ width })}
+              className="w-full accent-[var(--accent)] cursor-pointer"
+            />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function WidgetDashboard() {
   const { t } = useTranslation();
   const settings = loadSettings();
@@ -635,11 +723,22 @@ export function WidgetDashboard() {
   const [opacity, setOpacity] = useState(92);
   const [pinned, setPinned] = useState(true);
   const [expanded, setExpanded] = useState(() => loadSettings().widgetExpanded);
+  const [dock, setDock] = useState<WidgetDockState | null>(null);
+  const [dockOpen, setDockOpen] = useState(false);
 
   // 테마(다크/라이트)를 메인 앱과 일치시킨다. 창 둥근모서리·반투명은 네이티브가 처리.
   useEffect(() => {
     applyAppearance(loadSettings());
   }, []);
+
+  // 도킹 상태는 호스트가 진실 소스 — 구독하고 마운트 시 한 번 요청한다.
+  useEffect(() => {
+    const off = onWidgetDockState(setDock);
+    requestWidgetDock();
+    return off;
+  }, []);
+
+  const docked = dock?.docked ?? false;
 
   const onOpacity = (v: number) => { setOpacity(v); setWidgetOpacity(v / 100); };
   const onPin = () => { const next = !pinned; setPinned(next); setWidgetPinned(next); };
@@ -664,12 +763,13 @@ export function WidgetDashboard() {
     <div className="h-screen w-screen overflow-hidden text-primary bg-base">
       <Toaster position="top-center" theme={toasterTheme} richColors closeButton duration={3000} />
       <div className="relative flex flex-col h-full bg-base overflow-hidden">
-        {/* 타이틀바 — 드래그 핸들 + 레이아웃 토글 + 투명도 슬라이더 + 핀 + 닫기 */}
+        {/* 타이틀바 — 드래그 핸들 + 레이아웃 토글 + 투명도 + 도킹 + 핀 + 닫기.
+            도킹 중엔 창을 옮길 수 없으므로(가장자리에 예약됨) 드래그·핀은 숨긴다. */}
         <div
           className="flex items-center gap-2 px-3 py-2 border-b border-default select-none"
-          onMouseDown={(e) => { if (e.button === 0) beginWidgetDrag(); }}
+          onMouseDown={(e) => { if (e.button === 0 && !docked) beginWidgetDrag(); }}
         >
-          <GripHorizontal size={14} className="text-muted" />
+          <GripHorizontal size={14} className={docked ? 'text-disabled opacity-40' : 'text-muted'} />
           <span className="text-[12px] font-semibold text-secondary tracking-wide">{t('widget:title')}</span>
           <div className="flex-1" />
           {bridge && (
@@ -692,7 +792,19 @@ export function WidgetDashboard() {
               <span className="text-[10px] tabular-nums text-muted w-7 text-right">{opacity}%</span>
             </label>
           )}
-          {bridge && (
+          {bridge && dock && (
+            <button
+              onClick={() => setDockOpen((v) => !v)}
+              onMouseDown={(e) => e.stopPropagation()}
+              title={t('widget:dock.title')}
+              className={`w-6 h-6 flex items-center justify-center rounded-md ${
+                docked ? 'text-accent bg-accent-soft' : 'text-muted hover:bg-surface-2'
+              }`}
+            >
+              {docked && dock.edge === 'left' ? <PanelLeft size={14} /> : <PanelRight size={14} />}
+            </button>
+          )}
+          {bridge && !docked && (
             <button
               onClick={onPin}
               onMouseDown={(e) => e.stopPropagation()}
@@ -713,6 +825,8 @@ export function WidgetDashboard() {
             </button>
           )}
         </div>
+
+        {dockOpen && dock && <DockPopover state={dock} onClose={() => setDockOpen(false)} />}
 
         {/* 본문 — 컴팩트(1열) / 확장(2열) */}
         <div className="flex-1 overflow-y-auto p-3">
@@ -739,8 +853,9 @@ export function WidgetDashboard() {
           )}
         </div>
 
-        {/* 우하단 리사이즈 그립 — 네이티브 창 리사이즈 시작 */}
-        {bridge && (
+        {/* 리사이즈 핸들.
+            플로팅: 우하단 그립(크기 자유). 도킹: '안쪽' 세로 모서리 — 폭만 바뀌고 예약 영역도 함께 줄어든다. */}
+        {bridge && !docked && (
           <div
             onMouseDown={(e) => { if (e.button === 0) { e.preventDefault(); beginWidgetResize(); } }}
             title={t('widget:resize')}
@@ -751,6 +866,15 @@ export function WidgetDashboard() {
               <path d="M14 6 L6 14 M14 10 L10 14" />
             </svg>
           </div>
+        )}
+        {bridge && docked && (
+          <div
+            onMouseDown={(e) => { if (e.button === 0) { e.preventDefault(); beginWidgetResize(); } }}
+            title={t('widget:dock.resizeWidth')}
+            className={`absolute top-0 bottom-0 w-1.5 cursor-ew-resize hover:bg-accent-soft ${
+              dock?.edge === 'left' ? 'right-0' : 'left-0'
+            }`}
+          />
         )}
       </div>
     </div>

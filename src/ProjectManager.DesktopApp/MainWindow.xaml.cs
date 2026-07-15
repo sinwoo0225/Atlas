@@ -140,6 +140,12 @@ public partial class MainWindow : Window
 
         WebView.CoreWebView2.Navigate(AppUrl);
         LoadingOverlay.Visibility = Visibility.Collapsed;
+
+        // 도킹(AppBar) 모드로 저장돼 있으면 위젯을 자동으로 띄운다.
+        // 작업표시줄처럼 늘 자리를 잡고 있어야 하는데, 매번 수동 토글하게 두면 도킹의 의미가 없다.
+        // 포커스는 뺏지 않는다(activate:false) — 사용자가 부른 적 없는 창이다.
+        if (string.Equals(BootstrapConfig.Load().WidgetDockMode, "appbar", StringComparison.OrdinalIgnoreCase))
+            ShowWidget(activate: false);
     }
 
     private void OnHostMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -326,12 +332,13 @@ public partial class MainWindow : Window
             ShowWidget();
     }
 
-    private void ShowWidget()
+    // activate=false 는 시작 시 자동 표시(도킹 모드)용 — 사용자가 부른 적 없는 창이 포커스를 뺏으면 안 된다.
+    private void ShowWidget(bool activate = true)
     {
         if (_env is null || WebView.CoreWebView2 is null) return; // WebView 초기화 전이면 무시
         _widget ??= new WidgetForm(_env, () => _apiClient, _wwwroot);
         if (!_widget.Visible) _widget.Show();
-        _widget.Activate();
+        if (activate) _widget.Activate();
     }
 
     // ---------- 알림 토스트 창 ----------

@@ -286,11 +286,63 @@ export function beginWidgetResize(): void {
   bridge.postMessage({ type: 'beginWidgetResize' });
 }
 
-// 레이아웃 토글 시 창 너비 변경(컴팩트↔확장).
+// 레이아웃 토글 시 창 너비 변경(컴팩트↔확장). 도킹 중이면 호스트가 '예약 폭' 변경으로 처리한다.
 export function setWidgetWidth(width: number): void {
   const bridge = window.chrome?.webview;
   if (!bridge) return;
   bridge.postMessage({ type: 'setWidgetWidth', width });
+}
+
+// ===== 위젯 도킹 (Windows AppBar — 작업표시줄처럼 작업 영역 예약) =====
+
+export interface WidgetMonitor {
+  id: string;        // Screen.DeviceName (예: \\.\DISPLAY2)
+  label: string;
+  primary: boolean;
+  width: number;
+  height: number;
+}
+
+export interface WidgetDockState {
+  docked: boolean;
+  edge: 'left' | 'right';
+  monitorId: string; // 빈 문자열 = 주 모니터
+  width: number;
+  minWidth: number;
+  maxWidth: number;
+  monitors: WidgetMonitor[];
+}
+
+// 도킹 상태 변화 구독(호스트가 push). 반환값 호출로 해제.
+export function onWidgetDockState(cb: (s: WidgetDockState) => void): () => void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return () => {};
+  const handler = (e: MessageEvent) => {
+    const data = e.data as (WidgetDockState & { type?: string }) | null | undefined;
+    if (!data || typeof data !== 'object' || data.type !== 'widgetDockState') return;
+    cb(data);
+  };
+  bridge.addEventListener('message', handler);
+  return () => bridge.removeEventListener('message', handler);
+}
+
+// 마운트 시 현재 도킹 상태 + 모니터 목록 요청.
+export function requestWidgetDock(): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'getWidgetDock' });
+}
+
+// 도킹 설정 적용. docked=false 면 해제하고 원래 플로팅 자리로 돌아간다.
+export function setWidgetDock(opts: {
+  docked: boolean;
+  edge?: 'left' | 'right';
+  monitorId?: string;
+  width?: number;
+}): void {
+  const bridge = window.chrome?.webview;
+  if (!bridge) return;
+  bridge.postMessage({ type: 'setWidgetDock', ...opts });
 }
 
 // ===== 시스템 미디어(SMTC) — 위젯 Now Playing =====

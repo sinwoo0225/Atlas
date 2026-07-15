@@ -86,6 +86,17 @@
   "pin": "Pin always on top",
   "unpin": "Unpin always on top",
   "resize": "Resize",
+  "dock": {
+    "title": "Dock to edge",
+    "enable": "Reserve desktop space",
+    "hint": "Occupies one side of the screen like the taskbar. Maximized windows will not cover the widget.",
+    "monitor": "Monitor",
+    "edge": "Side",
+    "left": "Left",
+    "right": "Right",
+    "width": "Width",
+    "resizeWidth": "Resize width (drag the inner edge)"
+  },
   "toast": {
     "issueAdded": "Issue added.",
     "changelogAdded": "Change log entry added.",
