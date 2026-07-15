@@ -13,7 +13,13 @@
     "hint": "현재 프로젝트의 ‘진행’·‘대기’ 상태 WBS와 ‘진행’ 이슈를 이 날짜의 ‘한 일’에 [진행]·[대기]로 자동 추가합니다. 기존 줄은 현재 상태로 덮어씁니다.",
     "done": "진행·대기 항목 {{count}}건을 반영했습니다."
   },
-  "day": { "mon": "월", "tue": "화", "wed": "수", "thu": "목", "fri": "금" },
+  "day": {
+    "mon": "월",
+    "tue": "화",
+    "wed": "수",
+    "thu": "목",
+    "fri": "금"
+  },
   "field": {
     "doneLabel": "한 일",
     "donePlaceholder": "- 오늘 진행한 작업\n- WBS / 이슈 완료 시 자동 추가",
@@ -21,5 +27,10 @@
     "planPlaceholder": "- 내일 / 이번 주 계획",
     "issuesLabel": "이슈",
     "issuesPlaceholder": "- 막힌 부분 / 위험"
+  },
+  "weeklyMonitoring": {
+    "button": "주간 통합 보기",
+    "buttonHint": "통합 모니터링의 이번 주 업무일지를 모달로 봅니다.",
+    "modalTitle": "이번 주 통합 업무일지"
   }
 }

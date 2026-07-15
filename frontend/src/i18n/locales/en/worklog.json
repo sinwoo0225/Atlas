@@ -13,7 +13,13 @@
     "hint": "Adds this project's in-progress / waiting WBS tasks and in-progress issues to this day's ‘Done’ as [진행]/[대기], overwriting existing lines with the current status.",
     "done": "Applied {{count}} in-progress/waiting item(s)."
   },
-  "day": { "mon": "Mon", "tue": "Tue", "wed": "Wed", "thu": "Thu", "fri": "Fri" },
+  "day": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri"
+  },
   "field": {
     "doneLabel": "Done",
     "donePlaceholder": "- Tasks done today\n- Auto-added when WBS / issues complete",
@@ -21,5 +27,10 @@
     "planPlaceholder": "- Tomorrow / this week's plan",
     "issuesLabel": "Issues",
     "issuesPlaceholder": "- Blockers / risks"
+  },
+  "weeklyMonitoring": {
+    "button": "Weekly overview",
+    "buttonHint": "View this week’s worklog from Monitoring in a modal.",
+    "modalTitle": "This week — integrated worklog"
   }
 }
