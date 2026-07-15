@@ -30,7 +30,9 @@ function section(md, header, stops) {
 
 let payload = 'null';
 if (existsSync(notePath)) {
-  const md = readFileSync(notePath, 'utf8');
+  // 줄끝 정규화(CRLF/CR → LF) — 안 하면 git autocrlf 로 md 가 CRLF 로 체크아웃될 때
+  // 임베드 문자열이 \r\n 로 바뀌어 매 빌드마다 생성 파일이 dirty 해진다(비결정적 diff).
+  const md = readFileSync(notePath, 'utf8').replace(/\r\n?/g, '\n');
   const ko = section(md, '## 한국어', ['\n---', '\n## English']);
   const en = section(md, '## English', []);
   const both = ko && en ? { ko, en } : { ko: md.trim(), en: md.trim() };
