@@ -4,11 +4,12 @@ import { useCurrentProject } from '../hooks/useCurrentProject';
 import { Markdown } from '../components/ui/Markdown';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
-import { ChevronLeft, ChevronRight, CalendarDays, Search, ListPlus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Search, ListPlus, LayoutList } from 'lucide-react';
 import { worklogApi } from '../api/worklog';
 import { Button, Card, Spinner, DirtyDot, inputClass } from '../components/ui';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { useGlobalShortcut } from '../hooks/useGlobalShortcut';
+import { WeeklyMonitoringModal } from './worklog/WeeklyMonitoringModal';
 import type { WorkLog } from '../types';
 
 const DAY_LABEL_KEYS = ['worklog:day.mon', 'worklog:day.tue', 'worklog:day.wed', 'worklog:day.thu', 'worklog:day.fri'];
@@ -69,6 +70,7 @@ export function WorkLogPage() {
     return startOfWeek(new Date());
   }, []);  // eslint-disable-line react-hooks/exhaustive-deps -- 의도적으로 mount 시점만 사용
   const [weekStart, setWeekStart] = useState<Date>(initialWeekStart);
+  const [weeklyOpen, setWeeklyOpen] = useState(false);
 
   // mount 직후 ?date 쿼리는 제거 — 한 번만 의미가 있고 새로고침 시 잔존하면 혼란.
   useEffect(() => {
@@ -202,6 +204,15 @@ export function WorkLogPage() {
             {t('worklog:weekRange', { start: isoDate(weekStart), end: isoDate(weekEnd) })}
           </span>
         </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setWeeklyOpen(true)}
+          leadingIcon={<LayoutList size={16} />}
+          title={t('worklog:weeklyMonitoring.buttonHint')}
+        >
+          {t('worklog:weeklyMonitoring.button')}
+        </Button>
         <div className="ml-auto relative w-64">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           <input
@@ -251,6 +262,8 @@ export function WorkLogPage() {
           )}
         </div>
       )}
+
+      <WeeklyMonitoringModal open={weeklyOpen} onClose={() => setWeeklyOpen(false)} currentProjectId={pid} />
     </div>
   );
 }
