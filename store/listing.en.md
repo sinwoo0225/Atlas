@@ -49,13 +49,11 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Custom project "category" — register any category via free text + autocomplete, instead of a fixed list
-- New "Suspended" status for Schedule/WBS — mark stopped/won't-continue work; excluded from progress metrics (completion %, burn-up, overdue) but still shown on the board, list, and Gantt
-- Schedule/WBS tree collapse state is remembered per project (persists across reloads and project switches)
-- Meeting-summary Claude Code skill (/atlas-meeting-summary) — reads a stored meeting and auto-fills its summary, decisions, and action items
-- Much better Markdown rendering across the app — tables, checklists, strikethrough, autolinks, safe HTML such as `<br/>`, single-newline line breaks, and code-block syntax highlighting
-- External links in Markdown open in your default browser
-- Taller work-log preview; renamed 'Default author name' to 'My identity'
+- Widget docking — pin the widget to a screen edge so it reserves space like the taskbar (maximized windows won't cover it). Choose monitor, side (left/right), and width; released automatically on exit
+- Widget "My work / Due & overdue" — shows only the open work assigned to you (Schedule, Issues, personal TODOs), with overdue and due-soon grouped at the top
+- Mark a WBS/Schedule item as a "Group" — a pure group drops out of progress metrics (completion %, burn-up, overdue) and shows as done once all children are done
+- "Weekly overview" from the work log — open this week's integrated weekly work log (all projects, retrospective, next-week plan, open issues) in a modal with one button
+- View release notes — open notes from the new-version notification, plus Settings › About › "What's new in this version" viewable even offline
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
