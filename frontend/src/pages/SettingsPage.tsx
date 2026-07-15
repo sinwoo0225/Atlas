@@ -10,6 +10,7 @@ import {
 import { openShortcutsModal } from '../data/shortcuts';
 import { SetupWizard } from '../components/onboarding/SetupWizard';
 import { EULA_KO, EULA_EN } from '../data/eula';
+import { RELEASE_NOTES, RELEASE_NOTES_VERSION } from '../data/releaseNotes.generated';
 import { aiApi } from '../api/ai';
 import { resourcesApi } from '../api/resources';
 import {
@@ -993,6 +994,8 @@ function AboutSection() {
   // 사용권(EULA) 모달 — 전문을 번들 상수에서 직접 표시(fetch 없음 → 오프라인·모든 모드 보장).
   const [eulaOpen, setEulaOpen] = useState(false);
   const eulaText = i18n.language === 'en' ? EULA_EN : EULA_KO;
+  // '이 버전의 새로운 기능' — 번들된 현재 버전 노트를 언어에 맞춰 미리 고른다(오프라인·Store 동작).
+  const whatsNew = RELEASE_NOTES ? (i18n.language === 'en' ? RELEASE_NOTES.en : RELEASE_NOTES.ko) : null;
 
   const openModal = async () => {
     setOpen(true);
@@ -1010,6 +1013,18 @@ function AboutSection() {
 
   return (
     <Section title={t('settings:about.title')}>
+      {whatsNew && (
+        <FormField label={t('settings:about.whatsNew')} hint={t('settings:about.whatsNewHint', { version: RELEASE_NOTES_VERSION })}>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => useReleaseNotesModal.getState().showBundled(RELEASE_NOTES_VERSION, whatsNew)}
+            leadingIcon={<Sparkles size={14} />}
+          >
+            {t('settings:about.viewWhatsNew')}
+          </Button>
+        </FormField>
+      )}
       <FormField label={t('settings:about.eula')} hint={t('settings:about.eulaHint')}>
         <Button variant="secondary" size="md" onClick={() => setEulaOpen(true)} leadingIcon={<FileText size={14} />}>
           {t('settings:about.viewEula')}
@@ -1320,7 +1335,7 @@ function UpdateSection() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => useReleaseNotesModal.getState().show(result.latestVersion)}
+                onClick={() => useReleaseNotesModal.getState().showUpdate(result.latestVersion)}
                 leadingIcon={<FileText size={14} />}
               >
                 {t('settings:update.viewNotes')}

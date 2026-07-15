@@ -7,7 +7,8 @@ import { useReleaseNotesModal } from '../store/useReleaseNotesModal';
 export function runNotificationAction(action: NotificationAction): void {
   switch (action.kind) {
     case 'releaseNotes':
-      useReleaseNotesModal.getState().show(action.version);
+      // 업데이트 알림 → GitHub 노트(온라인). 번들 노트는 설정 '이 버전의 새로운 기능' 쪽.
+      useReleaseNotesModal.getState().showUpdate(action.version);
       break;
   }
 }

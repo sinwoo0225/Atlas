@@ -117,6 +117,9 @@
     "clientDataText": "In Client mode the data folder is managed by the server. Edit dataFolder in the server's %LOCALAPPDATA%\\Atlas\\config.json to change it."
   },
   "about": {
+    "whatsNew": "What’s new",
+    "whatsNewHint": "Changes in the current version (v{{version}}). Available offline.",
+    "viewWhatsNew": "What’s new in this version",
     "title": "About",
     "eula": "License (EULA)",
     "eulaHint": "You may use this app for personal and commercial (business) purposes. Shows the full terms.",

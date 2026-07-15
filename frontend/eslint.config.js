@@ -6,7 +6,8 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // dist = 빌드 산출물, *.generated.ts = 스크립트 생성물(gen-release-notes 등) — 린트 대상 아님.
+  globalIgnores(['dist', 'src/**/*.generated.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
