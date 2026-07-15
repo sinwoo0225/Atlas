@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Trash2 } from 'lucide-react';
 import { useNotificationStore, selectUnreadCount, type AppNotification } from '../../store/useNotificationStore';
+import { runNotificationAction } from '../../notifications/runAction';
 import { relativeTime } from '../../i18n/format';
 import { SEVERITY_ICON, SEVERITY_VAR } from './severity';
 
@@ -87,7 +88,8 @@ export function NotificationBell({ className = '', onOpenChange }: Props) {
   const onRowClick = (n: AppNotification) => {
     markRead(n.id);
     setOpen(false);
-    if (n.link) navigate(n.link);
+    if (n.action) runNotificationAction(n.action);
+    else if (n.link) navigate(n.link);
   };
 
   return (

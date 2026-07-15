@@ -13,7 +13,7 @@ interface ToastInput {
   i18nParams?: Record<string, unknown>;
 }
 
-export function showNotificationToast(n: ToastInput, onClick?: () => void): void {
+export function showNotificationToast(n: ToastInput, onClick?: () => void, actionLabelKey?: string): void {
   toast.custom(
     (id) => (
       <NotificationToastContent
@@ -22,6 +22,7 @@ export function showNotificationToast(n: ToastInput, onClick?: () => void): void
         i18nParams={n.i18nParams}
         onClick={onClick ? () => { onClick(); toast.dismiss(id); } : undefined}
         onClose={() => toast.dismiss(id)}
+        actionLabelKey={actionLabelKey}
       />
     ),
     { position: POSITION, duration: DURATION },

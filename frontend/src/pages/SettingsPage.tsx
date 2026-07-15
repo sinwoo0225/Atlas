@@ -39,6 +39,7 @@ import {
 } from '../utils/iconRegistry';
 import { useProjectStore } from '../store/useProjectStore';
 import { useNotificationStore } from '../store/useNotificationStore';
+import { useReleaseNotesModal } from '../store/useReleaseNotesModal';
 import { showNotificationToast } from '../components/notifications/toast';
 import { Button, Card, FormField, Modal, Spinner, inputClass } from '../components/ui';
 import { confirmDialog } from '../components/ui/ConfirmDialog';
@@ -1316,9 +1317,14 @@ function UpdateSection() {
         >
           <div className="space-y-3">
             {result.releaseNotes && (
-              <div className="max-h-40 overflow-y-auto text-sm text-secondary border border-default rounded-md p-3 whitespace-pre-wrap">
-                {result.releaseNotes}
-              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => useReleaseNotesModal.getState().show(result.latestVersion)}
+                leadingIcon={<FileText size={14} />}
+              >
+                {t('settings:update.viewNotes')}
+              </Button>
             )}
 
             {phase === 'downloading' ? (

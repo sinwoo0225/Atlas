@@ -62,5 +62,10 @@
     },
     "testButton": "Send test notification",
     "testHint": "Fire a sample notification to verify toast, panel, theme and language."
+  },
+  "update": {
+    "title": "Update available",
+    "body": "v{{version}} is available. See what’s new.",
+    "action": "View release notes"
   }
 }

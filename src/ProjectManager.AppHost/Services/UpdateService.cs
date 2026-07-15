@@ -12,7 +12,9 @@ namespace ProjectManager.AppHost.Services;
 public sealed class UpdateService
 {
     // 릴리즈 피드 레포. 자산 이름이 "Atlas-Setup*.exe" 인 것을 인스톨러로 간주.
-    private const string RepoOwner = "sinwoo0225";
+    // owner 는 현재 slnu21 (과거 sinwoo0225 에서 개명). 옛 값은 GitHub 301 리다이렉트로 동작했으나
+    // 근본값으로 교정 — [[updater-repo-rename-redirect]].
+    private const string RepoOwner = "slnu21";
     private const string RepoName = "Atlas";
     private const string AssetPrefix = "Atlas-Setup";
 

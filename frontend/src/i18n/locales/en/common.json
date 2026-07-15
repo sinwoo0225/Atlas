@@ -51,5 +51,10 @@
     "apiConflict": "Someone just made a change. Refresh and try again.",
     "apiServerError": "Server error ({{status}})",
     "apiRequestFailed": "Request failed ({{status}})"
+  },
+  "update": {
+    "releaseNotesTitle": "Release notes",
+    "releaseNotesTitleVersion": "Release notes — v{{version}}",
+    "releaseNotesEmpty": "Could not load release notes for this version."
   }
 }

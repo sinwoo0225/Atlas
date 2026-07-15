@@ -217,7 +217,8 @@
     "launchTitle": "Install update",
     "launchConfirm": "Running the installer will close Atlas and install the new version. Proceed?",
     "launchConfirmSessions": "Running the installer will close the running Atlas and all {{count}} connected Claude (MCP/CLI) session(s). Proceed?",
-    "launchFailed": "Failed to run installer"
+    "launchFailed": "Failed to run installer",
+    "viewNotes": "View release notes"
   },
   "conn": {
     "title": "Connection mode",
@@ -262,18 +263,54 @@
     "saving": "Saving..."
   },
   "colorFields": {
-    "bgBase": { "label": "Base background", "hint": "Main content area background" },
-    "bgSidebar": { "label": "Sidebar background", "hint": "Left navigation" },
-    "bgSurface": { "label": "Card / surface", "hint": "Card & modal background (levels 2·3 auto-derived)" },
-    "textPrimary": { "label": "Primary text", "hint": "Headings & body" },
-    "textSecondary": { "label": "Secondary text", "hint": "Descriptions & labels (muted auto-derived)" },
-    "borderDefault": { "label": "Border", "hint": "Card & input borders (strong border auto-derived)" },
-    "accent": { "label": "Accent", "hint": "Primary buttons & active state (hover·soft·ring auto-derived)" },
-    "accent2": { "label": "Secondary accent", "hint": "Milestones & code highlight (warm gold)" },
-    "success": { "label": "Success", "hint": "Done & success states" },
-    "warning": { "label": "Warning", "hint": "In-progress & caution states" },
-    "danger": { "label": "Danger", "hint": "Error & delete states" },
-    "info": { "label": "Info", "hint": "Notice & info states" }
+    "bgBase": {
+      "label": "Base background",
+      "hint": "Main content area background"
+    },
+    "bgSidebar": {
+      "label": "Sidebar background",
+      "hint": "Left navigation"
+    },
+    "bgSurface": {
+      "label": "Card / surface",
+      "hint": "Card & modal background (levels 2·3 auto-derived)"
+    },
+    "textPrimary": {
+      "label": "Primary text",
+      "hint": "Headings & body"
+    },
+    "textSecondary": {
+      "label": "Secondary text",
+      "hint": "Descriptions & labels (muted auto-derived)"
+    },
+    "borderDefault": {
+      "label": "Border",
+      "hint": "Card & input borders (strong border auto-derived)"
+    },
+    "accent": {
+      "label": "Accent",
+      "hint": "Primary buttons & active state (hover·soft·ring auto-derived)"
+    },
+    "accent2": {
+      "label": "Secondary accent",
+      "hint": "Milestones & code highlight (warm gold)"
+    },
+    "success": {
+      "label": "Success",
+      "hint": "Done & success states"
+    },
+    "warning": {
+      "label": "Warning",
+      "hint": "In-progress & caution states"
+    },
+    "danger": {
+      "label": "Danger",
+      "hint": "Error & delete states"
+    },
+    "info": {
+      "label": "Info",
+      "hint": "Notice & info states"
+    }
   },
   "brandPresets": {
     "compass": "Compass",

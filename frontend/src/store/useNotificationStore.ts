@@ -9,9 +9,15 @@ const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30일
 
 export type NotificationSeverity = 'info' | 'warning' | 'danger' | 'success';
 
+// 알림 클릭/버튼이 실행할 액션 서술자.
+// ⚠ 알림은 localStorage 로 JSON 직렬화되므로 **클로저(onClick 함수)를 담을 수 없다** —
+// 반드시 직렬화 가능한 서술자로 두고, 렌더 시점에 kind → 핸들러로 매핑한다(notifications/runAction).
+// 향후 액션은 이 유니온에 추가한다. link(라우트 이동)로 표현되는 건 여기 넣지 않는다.
+export type NotificationAction = { kind: 'releaseNotes'; version: string };
+
 export interface AppNotification {
   id: string;
-  // 어떤 알림 소스에서 왔는지 — 'deadline' | 'dailySummary' | (향후 추가).
+  // 어떤 알림 소스에서 왔는지 — 'deadline' | 'dailySummary' | 'update' | (향후 추가).
   sourceKey: string;
   severity: NotificationSeverity;
   // i18n 키(렌더 시 번역). 예: 'notifications:deadline.overdue.title'.
@@ -21,6 +27,8 @@ export interface AppNotification {
   read: boolean;
   // 클릭 시 이동할 라우트(있으면).
   link?: string;
+  // 클릭 시 실행할 액션(라우트가 아닌 동작 — 예: 릴리즈 노트 모달). link 보다 우선.
+  action?: NotificationAction;
 }
 
 // add() 입력 — id/createdAt/read 는 스토어가 채운다.
@@ -30,6 +38,7 @@ export interface NewNotification {
   i18nKey: string;
   i18nParams?: Record<string, unknown>;
   link?: string;
+  action?: NotificationAction;
 }
 
 interface NotificationStore {
