@@ -1,0 +1,6 @@
+# 스크립트 생성물은 항상 LF 로 쓰인다(gen-release-notes.mjs 등). autocrlf 와 부딪혀
+# 매번 '수정됨'으로 뜨는 걸 막으려 LF 로 고정한다.
+frontend/src/data/*.generated.ts text eol=lf
+
+# 릴리즈 노트는 LF 로 유지 — 생성기가 이 파일을 읽어 임베드하므로 줄끝이 안정적이어야 한다.
+releasenotes/*.md text eol=lf
