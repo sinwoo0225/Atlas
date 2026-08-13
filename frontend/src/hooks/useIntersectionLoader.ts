@@ -3,10 +3,14 @@ import { useEffect, useRef } from 'react';
 // sentinel 이 viewport 에 들어오면 onIntersect 호출. enabled=false 면 비활성화.
 // rootMargin 200px — 사용자가 끝에 도달하기 직전에 미리 트리거해 연속 로드가 자연스러움.
 // busyRef — onIntersect 진행 중 중복 호출 가드 (intersect 가 여러 번 발생할 수 있음).
+//
+// rootRef — 리스트가 **자체 스크롤 컨테이너 안에** 있으면 그 요소를 넘긴다. 생략하면 viewport 기준이라
+// 조상 overflow 에 클리핑되어 rootMargin 선행 트리거가 무력화된다(끝에 닿아야만 발화).
 export function useIntersectionLoader(
   ref: React.RefObject<HTMLElement | null>,
   enabled: boolean,
   onIntersect: () => void,
+  rootRef?: React.RefObject<HTMLElement | null>,
 ) {
   const busyRef = useRef(false);
   const cbRef = useRef(onIntersect);
@@ -32,9 +36,9 @@ export function useIntersectionLoader(
           setTimeout(() => { busyRef.current = false; }, 200);
         }
       },
-      { root: null, rootMargin: '200px', threshold: 0.01 },
+      { root: rootRef?.current ?? null, rootMargin: '200px', threshold: 0.01 },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [ref, enabled]);
+  }, [ref, enabled, rootRef]);
 }

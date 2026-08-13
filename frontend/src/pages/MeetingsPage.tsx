@@ -808,7 +808,9 @@ export function MeetingsPage() {
   };
 
   return (
-    <div className="p-6 space-y-4">
+    // md 이상에서는 화면 높이를 채우는 flex 컬럼 — 목록/본문이 각자 스크롤한다(아래 그리드).
+    // 1열로 접히는 좁은 폭에서는 예전처럼 페이지 전체 스크롤.
+    <div className="p-6 space-y-4 md:h-full md:flex md:flex-col md:min-h-0">
       <PageHeader
         icon={<FileText size={18} />}
         breadcrumb={project?.name}
@@ -820,7 +822,7 @@ export function MeetingsPage() {
         }
       />
 
-      <FilterBar>
+      <FilterBar className="shrink-0">
         <div className="relative w-72">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
           <input
@@ -876,10 +878,10 @@ export function MeetingsPage() {
             : t('meetings:empty.descAdjust')}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] gap-4 items-start">
-          {/* 좌(1) — 탭 + 선택형 카드 목록 */}
-          <div className="space-y-2">
-            <div className="flex rounded-md border border-default overflow-hidden text-sm" role="tablist">
+        <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,3fr)] gap-4 items-start md:items-stretch md:flex-1 md:min-h-0">
+          {/* 좌(1) — 탭 + 선택형 카드 목록. 탭은 고정, 목록만 스크롤. */}
+          <div className="space-y-2 md:flex md:flex-col md:min-h-0">
+            <div className="flex rounded-md border border-default overflow-hidden text-sm shrink-0" role="tablist">
               {TAB_DEFS.map((td) => (
                 <button
                   key={td.key}
@@ -903,7 +905,7 @@ export function MeetingsPage() {
                 if (e.key === 'ArrowDown') { e.preventDefault(); moveSelection(1); }
                 else if (e.key === 'ArrowUp') { e.preventDefault(); moveSelection(-1); }
               }}
-              className="space-y-2 outline-none rounded-md focus-visible:ring-1 focus-visible:ring-accent"
+              className="space-y-2 outline-none rounded-md focus-visible:ring-1 focus-visible:ring-accent md:flex-1 md:min-h-0 md:overflow-y-auto md:pr-1"
             >
               {tabbed.length === 0 ? (
                 <p className="text-sm text-muted text-center py-8">{t('meetings:empty.titleFiltered')}</p>
@@ -938,8 +940,8 @@ export function MeetingsPage() {
             </div>
           </div>
 
-          {/* 우(3) — 선택 회의록 디테일 (펼치기 없이 상시 표시) */}
-          <div className="min-w-0">
+          {/* 우(3) — 선택 회의록 디테일 (펼치기 없이 상시 표시). 좌측 목록과 독립 스크롤. */}
+          <div className="min-w-0 md:min-h-0 md:overflow-y-auto md:pr-1">
             {selected ? (
               <Card padding="spacious" data-highlight-id={selected.id}>
                 <div className="flex items-start justify-between gap-2">
