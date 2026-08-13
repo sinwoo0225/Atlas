@@ -255,11 +255,18 @@ export function IssuesPage() {
   // 점진 렌더링 — 초기 PAGE 건만 렌더, 하단 sentinel 교차 시 확장. 필터 변경 시 리셋.
   const PAGE = 40;
   const [visibleCount, setVisibleCount] = useState(PAGE);
+  // 표는 자체 스크롤 컨테이너(scrollBoxRef) 안에서 세로/가로로 움직인다.
+  const scrollBoxRef = useRef<HTMLDivElement | null>(null);
   // 정렬 변경도 리셋 대상 — 빠뜨리면 상위 40건만 재정렬된 것처럼 보인다.
-  useEffect(() => { setVisibleCount(PAGE); }, [filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword, sort]);
+  // 목록 순서·구성이 바뀌면 스크롤도 맨 위로 — 안 그러면 새 순서의 중간부터 보게 된다.
+  useEffect(() => {
+    setVisibleCount(PAGE);
+    scrollBoxRef.current?.scrollTo({ top: 0 });
+  }, [filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword, sort]);
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const sentinelRef = useRef<HTMLTableRowElement | null>(null);
-  useIntersectionLoader(sentinelRef, visible.length < filtered.length, () => setVisibleCount((c) => c + PAGE));
+  // sentinel 의 root 도 그 스크롤 컨테이너여야 rootMargin 선행 트리거가 산다.
+  useIntersectionLoader(sentinelRef, visible.length < filtered.length, () => setVisibleCount((c) => c + PAGE), scrollBoxRef);
 
   // 즐겨찾기 토글 — 낙관적 갱신 후 영속(실패 시 롤백).
   const toggleFavorite = useCallback((issue: Issue) => {
@@ -296,10 +303,12 @@ export function IssuesPage() {
   }
 
   return (
-    <div className="p-6 space-y-4">
+    // 화면 높이를 채우는 flex 컬럼 — 세로 스크롤을 표 카드 안쪽에 가둔다.
+    // 페이지 전체가 스크롤되면 표 하단의 가로 스크롤바가 화면 밖으로 밀려 잡을 수가 없다.
+    <div className="p-6 space-y-4 h-full flex flex-col min-h-0">
       <PageHeader icon={<AlertTriangle size={18} />} breadcrumb={project?.name} title={t('issues:title')} />
 
-      <FilterBar className="flex-col items-stretch">
+      <FilterBar className="flex-col items-stretch shrink-0">
         <div className="flex gap-2 flex-wrap items-center">
           <Button variant={filter === 'All' ? 'primary' : 'secondary'} size="sm" onClick={() => setFilter('All')}>
             {t('issues:filter.all', { count: issues.length })}
@@ -381,7 +390,9 @@ export function IssuesPage() {
         </div>
       </FilterBar>
 
-      <Card padding="none" className="overflow-x-auto">
+      {/* 이 카드가 유일한 스크롤 컨테이너(세로+가로). flex-1 min-h-0 으로 남은 높이를 차지하므로
+          가로 스크롤바가 항상 화면 하단에 붙어 있다. min-h 는 화면이 아주 낮을 때의 하한. */}
+      <Card ref={scrollBoxRef} padding="none" className="overflow-auto flex-1 min-h-[16rem]">
         {/* table-fixed + colgroup 으로 열 폭을 확정한다. 컨테이너가 minWidth 보다 좁아지면
             열이 찌그러지는 대신 Card 가 가로 스크롤한다. <col> 개수 = totalCols 여야 한다. */}
         <table className="w-full table-fixed" style={{ minWidth: tableMinWidth(columns.length) }}>
@@ -399,7 +410,9 @@ export function IssuesPage() {
             <col style={{ width: COL_W.actions }} />
           </colgroup>
           <thead>
-            <tr className="text-xs text-muted border-b border-default">
+            {/* sticky 는 <tr> 이 아니라 <th> 에 걸어야 먹는다. border-collapse 라 아래 구분선도
+                border 대신 inset shadow 로 그린다(스크롤 시 테두리가 같이 밀려나므로). */}
+            <tr className="text-xs text-muted [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:bg-[var(--bg-surface)] [&>th]:shadow-[inset_0_-1px_0_var(--border-default)]">
               <th scope="col" className="py-3 px-3" />
               <SortableTh sortKey="category" label={t('issues:th.category')} sort={sort} onSort={handleSort} />
               <SortableTh sortKey="title" label={t('issues:th.title')} sort={sort} onSort={handleSort} />
