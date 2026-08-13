@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "gen:relnotes": "node scripts/gen-release-notes.mjs",
     "lint": "eslint .",
+    "test": "vitest run",
     "preview": "vite preview",
     "notices": "node scripts/gen-third-party-notices.mjs",
     "screenshots": "node scripts/capture-screenshots.mjs"
@@ -57,6 +58,7 @@
     "playwright": "^1.60.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^4.1.10"
   }
 }
