@@ -20,6 +20,10 @@
     "due": "Due",
     "resolved": "Resolved (actual)"
   },
+  "sort": {
+    "byColumn": "Sort by {{column}}",
+    "tooltip": "Click to sort (ascending → descending → default)"
+  },
   "columns": {
     "add": "Add column",
     "manage": "Manage columns",

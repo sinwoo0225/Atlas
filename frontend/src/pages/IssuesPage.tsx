@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Markdown } from '../components/ui/Markdown';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, ChevronDown, ChevronRight, CornerDownLeft, FileText, Link as LinkIcon, ListTree, Plus, Search, Star, X } from 'lucide-react';
+import { AlertTriangle, ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, CornerDownLeft, FileText, Link as LinkIcon, ListTree, Plus, Search, Star, X } from 'lucide-react';
 import { FavoriteStar } from '../components/FavoriteStar';
 import { issuesApi } from '../api/issues';
 import { resourcesApi } from '../api/resources';
@@ -18,6 +18,8 @@ import { CategoryCombobox } from '../components/CategoryCombobox';
 import { IssueColumnsModal } from '../components/issues/IssueColumnsModal';
 import { useIssueColumns } from '../hooks/useIssueColumns';
 import { issueStatusBadge, issuePriorityBadge } from '../utils/statusMaps';
+import { customSortKey, makeIssueComparator, nextSort, type IssueSort, type IssueSortKey } from '../utils/issueSort';
+import { loadIssueSort, saveIssueSort } from '../utils/issueSortStore';
 import { applyTextareaTab } from '../utils/textareaTab';
 import { toIsoDate } from '../utils/wbsSpan';
 import { useHighlightFromQuery } from '../hooks/useHighlightFromQuery';
@@ -31,10 +33,28 @@ import { linkTypeOptions } from '../utils/issueWbsLinkType';
 const STATUS_VALUES: IssueStatus[] = ['Open', 'InProgress', 'Resolved', 'Closed'];
 const PRIORITY_VALUES: IssuePriority[] = ['High', 'Medium', 'Low'];
 
-// 목록 정렬 순서: 진행 → 열림 → 해결됨 → 닫힘.
-const STATUS_SORT_RANK: Record<IssueStatus, number> = {
-  InProgress: 0, Open: 1, Resolved: 2, Closed: 3,
-};
+// 열 폭 단일 진실(px) — <colgroup> 과 table min-width 계산이 같은 값을 쓴다.
+// table-layout:fixed 라 콘텐츠 고유 폭은 무시되므로 여기 숫자가 곧 렌더 결과다.
+// 배지·헤더가 넘치면 해당 값 하나만 조정하면 된다.
+const COL_W = {
+  expand: 64,
+  category: 160,
+  status: 128,
+  priority: 104,
+  assignee: 192,
+  date: 148,
+  custom: 144,
+  actions: 56,
+} as const;
+
+// 제목 열 최소 폭 — 이보다 좁아져야 하는 상황이면 표가 가로 스크롤된다.
+// (예전엔 min-w-[720px] 이 실제 필요 폭보다 작아서, 스크롤 대신 제목 열만 0 까지 찌그러졌다.)
+const TITLE_MIN_W = 320;
+
+const FIXED_COLS_W = COL_W.expand + COL_W.category + COL_W.status + COL_W.priority
+  + COL_W.assignee + COL_W.date * 3 + COL_W.actions;
+const tableMinWidth = (customCount: number) =>
+  FIXED_COLS_W + COL_W.custom * customCount + TITLE_MIN_W;
 
 // 이슈 행 인라인 편집 필드 — 평상시엔 평문처럼(투명 테두리), 호버·포커스 시에만 편집칸으로 강조.
 // 전역 input 스타일(surface-2 배경 + 기본 테두리)을 bg-transparent/border-transparent 로 덮어쓴다.
@@ -67,6 +87,18 @@ export function IssuesPage() {
   const { columns, addColumn, renameColumn, removeColumn, moveColumn } = useIssueColumns(pid);
   const [columnsModalOpen, setColumnsModalOpen] = useState(false);
 
+  // 사용자 지정 정렬 — null 이면 기본 순서(즐겨찾기 → 상태순).
+  // 라우트는 projectId 만 바뀌고 컴포넌트는 재사용되므로(라우트에 key 없음) pid 마다 다시 읽는다.
+  const [sort, setSort] = useState<IssueSort | null>(null);
+  useEffect(() => { setSort(loadIssueSort(pid)); }, [pid]);
+  const handleSort = useCallback((key: IssueSortKey) => {
+    setSort((prev) => {
+      const next = nextSort(prev, key);
+      saveIssueSort(pid, next);
+      return next;
+    });
+  }, [pid]);
+
   // 고정 10열(펼침·분류·제목·상태·우선순위·담당자·발생·기한·해결·액션) + 사용자 N열.
   const totalCols = 10 + columns.length;
   // 분류 자동완성 후보 — 로드된 issues 에서 distinct(비어있지 않은 값). 편집 즉시 재계산.
@@ -74,6 +106,11 @@ export function IssuesPage() {
     () => Array.from(new Set(issues.map((i) => i.category?.trim()).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b)),
     [issues],
+  );
+  // 담당자 정렬용 — issue.assigneeName 은 낙관적 갱신 후 stale 이라 리소스 마스터에서 해석한다.
+  const resourceNameById = useMemo(
+    () => new Map(resources.map((r) => [r.id, r.name] as const)),
+    [resources],
   );
 
   useGlobalShortcut('mod+n', () => {
@@ -192,6 +229,11 @@ export function IssuesPage() {
     toast.success(t('issues:toast.created', { title }));
   };
 
+  const comparator = useMemo(
+    () => makeIssueComparator(sort, { columns, resourceNameById }),
+    [sort, columns, resourceNameById],
+  );
+
   const filtered = useMemo(() => {
     const kw = debouncedKeyword.trim().toLowerCase();
     return issues.filter((i) => {
@@ -206,15 +248,15 @@ export function IssuesPage() {
       }
       return true;
     })
-      // 즐겨찾기 우선 → 상태순(진행→열림→해결됨→닫힘). 동일 그룹 내 순서는 안정 정렬로 기존 순서 유지.
-      .sort((a, b) => (b.isFavorite ? 1 : 0) - (a.isFavorite ? 1 : 0)
-        || STATUS_SORT_RANK[a.status] - STATUS_SORT_RANK[b.status]);
-  }, [issues, filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword]);
+      // 정렬 규칙은 utils/issueSort.ts 단일 진실. 동률은 안정 정렬로 기존 순서 유지.
+      .sort(comparator);
+  }, [issues, filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword, comparator]);
 
   // 점진 렌더링 — 초기 PAGE 건만 렌더, 하단 sentinel 교차 시 확장. 필터 변경 시 리셋.
   const PAGE = 40;
   const [visibleCount, setVisibleCount] = useState(PAGE);
-  useEffect(() => { setVisibleCount(PAGE); }, [filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword]);
+  // 정렬 변경도 리셋 대상 — 빠뜨리면 상위 40건만 재정렬된 것처럼 보인다.
+  useEffect(() => { setVisibleCount(PAGE); }, [filter, priorityFilter, assigneeFilter, favOnly, debouncedKeyword, sort]);
   const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
   const sentinelRef = useRef<HTMLTableRowElement | null>(null);
   useIntersectionLoader(sentinelRef, visible.length < filtered.length, () => setVisibleCount((c) => c + PAGE));
@@ -340,22 +382,37 @@ export function IssuesPage() {
       </FilterBar>
 
       <Card padding="none" className="overflow-x-auto">
-        <table className="w-full min-w-[720px]">
+        {/* table-fixed + colgroup 으로 열 폭을 확정한다. 컨테이너가 minWidth 보다 좁아지면
+            열이 찌그러지는 대신 Card 가 가로 스크롤한다. <col> 개수 = totalCols 여야 한다. */}
+        <table className="w-full table-fixed" style={{ minWidth: tableMinWidth(columns.length) }}>
+          <colgroup>
+            <col style={{ width: COL_W.expand }} />
+            <col style={{ width: COL_W.category }} />
+            <col />{/* 제목 — 폭 미지정. 유일한 auto 열이라 남는 폭을 전부 흡수한다. */}
+            <col style={{ width: COL_W.status }} />
+            <col style={{ width: COL_W.priority }} />
+            <col style={{ width: COL_W.assignee }} />
+            <col style={{ width: COL_W.date }} />
+            <col style={{ width: COL_W.date }} />
+            <col style={{ width: COL_W.date }} />
+            {columns.map((col) => <col key={col.key} style={{ width: COL_W.custom }} />)}
+            <col style={{ width: COL_W.actions }} />
+          </colgroup>
           <thead>
             <tr className="text-xs text-muted border-b border-default">
-              <th className="text-left py-3 px-3 font-medium w-16"></th>
-              <th className="text-left py-3 px-3 font-medium w-40">{t('issues:th.category')}</th>
-              <th className="text-left py-3 px-3 font-medium">{t('issues:th.title')}</th>
-              <th className="text-left py-3 px-3 font-medium w-28">{t('issues:th.status')}</th>
-              <th className="text-left py-3 px-3 font-medium w-24">{t('issues:th.priority')}</th>
-              <th className="text-left py-3 px-3 font-medium w-48">{t('issues:th.assignee')}</th>
-              <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.occurred')}</th>
-              <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.due')}</th>
-              <th className="text-left py-3 px-3 font-medium w-36">{t('issues:th.resolved')}</th>
+              <th scope="col" className="py-3 px-3" />
+              <SortableTh sortKey="category" label={t('issues:th.category')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="title" label={t('issues:th.title')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="status" label={t('issues:th.status')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="priority" label={t('issues:th.priority')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="assignee" label={t('issues:th.assignee')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="occurredOn" label={t('issues:th.occurred')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="dueDate" label={t('issues:th.due')} sort={sort} onSort={handleSort} />
+              <SortableTh sortKey="resolvedDate" label={t('issues:th.resolved')} sort={sort} onSort={handleSort} />
               {columns.map((col) => (
-                <th key={col.key} className="text-left py-3 px-3 font-medium w-36 truncate" title={col.name}>{col.name}</th>
+                <SortableTh key={col.key} sortKey={customSortKey(col.key)} label={col.name} sort={sort} onSort={handleSort} />
               ))}
-              <th className="text-right py-3 px-3 font-medium w-16">
+              <th scope="col" className="text-right py-3 px-3 font-medium">
                 <button
                   type="button"
                   onClick={() => setColumnsModalOpen(true)}
@@ -451,6 +508,41 @@ export function IssuesPage() {
         moveColumn={moveColumn}
       />
     </div>
+  );
+}
+
+// 클릭 정렬 헤더. 3상태 사이클(오름 → 내림 → 기본)이라 별도 '정렬 해제' 버튼이 필요 없다.
+// aria-sort 는 th 에 달아야 스크린리더가 읽는다(버튼 아님).
+function SortableTh({ sortKey, label, sort, onSort }: {
+  sortKey: IssueSortKey;
+  label: string;
+  sort: IssueSort | null;
+  onSort: (key: IssueSortKey) => void;
+}) {
+  const { t } = useTranslation();
+  const active = sort?.key === sortKey;
+  const Icon = !active ? ArrowUpDown : sort.dir === 'asc' ? ArrowUp : ArrowDown;
+  return (
+    <th
+      scope="col"
+      aria-sort={!active ? 'none' : sort.dir === 'asc' ? 'ascending' : 'descending'}
+      className="text-left py-3 px-3 font-medium"
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        aria-label={t('issues:sort.byColumn', { column: label })}
+        title={`${label} — ${t('issues:sort.tooltip')}`}
+        className={`group flex items-center gap-1 max-w-full whitespace-nowrap transition-colors ${active ? 'text-primary' : 'hover:text-primary'}`}
+      >
+        <span className="truncate">{label}</span>
+        <Icon
+          size={12}
+          aria-hidden="true"
+          className={`shrink-0 ${active ? 'text-accent' : 'opacity-30 group-hover:opacity-70'}`}
+        />
+      </button>
+    </th>
   );
 }
 
