@@ -89,16 +89,45 @@ try {
     Write-Host "Done. store/screenshots/ko + store/screenshots/en generated." -ForegroundColor Green
 }
 finally {
-    Write-Host "==> Cleanup (stop processes + restore config + delete temp)" -ForegroundColor Cyan
+    Write-Host "==> Cleanup (restore config + stop processes + delete temp)" -ForegroundColor Cyan
+
+    # config 복원이 최우선이고, 각 단계는 서로 독립적으로 방어한다.
+    # ($ErrorActionPreference='Stop' 이라 한 단계가 터지면 finally 가 통째로 중단된다 —
+    #  예전엔 이미 죽은 PID 에 taskkill 하다 NativeCommandError 가 나면서 복원 줄에 닿지도 못했고,
+    #  사용자 config 가 임시 폴더를 가리킨 채 남아 앱이 "데이터가 사라진" 것처럼 보였다.)
+    try {
+        if ($configExisted) {
+            Copy-Item $backupPath $configPath -Force
+            Remove-Item $backupPath -Force -ErrorAction SilentlyContinue
+        } elseif (Test-Path $configPath) {
+            Remove-Item $configPath -Force -ErrorAction SilentlyContinue
+        }
+        Write-Host "  - config restored" -ForegroundColor Green
+    } catch {
+        Write-Host "  ! config 복원 실패: $_" -ForegroundColor Red
+        Write-Host "    수동 복구: '$backupPath' 를 '$configPath' 로 복사하세요." -ForegroundColor Red
+    }
+
+    # 이미 죽은 PID 는 정상. cmd.exe 래퍼가 먼저 끝나면 자식 node 가 남으므로 포트로도 한 번 더 훑는다.
     foreach ($id in @($viteId, $backendId)) {
-        if ($id) { & taskkill /PID $id /T /F 2>$null | Out-Null }
+        if ($id) { try { Stop-Process -Id $id -Force -ErrorAction Stop } catch { } }
     }
-    if ($configExisted) {
-        Copy-Item $backupPath $configPath -Force
-        Remove-Item $backupPath -Force -ErrorAction SilentlyContinue
-    } elseif (Test-Path $configPath) {
-        Remove-Item $configPath -Force -ErrorAction SilentlyContinue
+    foreach ($port in @(5173, 5200)) {
+        try {
+            Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction Stop |
+                Select-Object -ExpandProperty OwningProcess -Unique |
+                ForEach-Object { try { Stop-Process -Id $_ -Force -ErrorAction Stop } catch { } }
+        } catch { }
     }
-    if (Test-Path $tempData) { Remove-Item $tempData -Recurse -Force -ErrorAction SilentlyContinue }
-    Write-Host "  - config restored / temp data deleted" -ForegroundColor Green
+
+    # DB 핸들이 풀릴 때까지 잠깐 기다린 뒤 지운다.
+    for ($i = 0; $i -lt 5 -and (Test-Path $tempData); $i++) {
+        Start-Sleep -Milliseconds 600
+        Remove-Item $tempData -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if (Test-Path $tempData) {
+        Write-Host "  ! 임시 데이터 폴더가 잠겨 남았습니다: $tempData" -ForegroundColor Yellow
+    } else {
+        Write-Host "  - processes stopped / temp data deleted" -ForegroundColor Green
+    }
 }

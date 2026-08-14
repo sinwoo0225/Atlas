@@ -49,11 +49,10 @@ It suits anyone who wants a lightweight single-user tool, prefers to keep data o
 - Local storage (SQLite + file folders), no account, no remote server
 
 ## What's new in this version
-- Widget docking — pin the widget to a screen edge so it reserves space like the taskbar (maximized windows won't cover it). Choose monitor, side (left/right), and width; released automatically on exit
-- Widget "My work / Due & overdue" — shows only the open work assigned to you (Schedule, Issues, personal TODOs), with overdue and due-soon grouped at the top
-- Mark a WBS/Schedule item as a "Group" — a pure group drops out of progress metrics (completion %, burn-up, overdue) and shows as done once all children are done
-- "Weekly overview" from the work log — open this week's integrated weekly work log (all projects, retrospective, next-week plan, open issues) in a modal with one button
-- View release notes — open notes from the new-version notification, plus Settings › About › "What's new in this version" viewable even offline
+- Click a column header to sort in Issues — category, title, status, priority, assignee, dates, and your own custom columns. Cycles ascending → descending → default; favorites stay pinned on top and empty values sort last. Remembered per project
+- Horizontal scrolling for the issue table — narrowing the window no longer squeezes the Title column; the table scrolls sideways when space runs short (including with extra columns)
+- Column headers stay put while you scroll the issue list, keeping labels and sort buttons in view
+- The page frame stays fixed; only content scrolls — Issues scrolls inside the table so the horizontal scrollbar is always within reach, and Meetings scrolls the list and the body independently
 
 ## License (EULA)
 Under the provided End User License Agreement (EULA), this app may be used for **both personal and commercial (business) purposes**. The license is granted upon acquiring the app (currently free); the **usage scope stays the same** even if pricing or discounts apply later. It does not include source code, redistribution, or resale rights.
